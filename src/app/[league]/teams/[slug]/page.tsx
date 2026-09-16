@@ -1,11 +1,22 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGames, getTeamRoster } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGames, getTeamRoster, formatSeasonLabel, type GameRow, type League } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 
 export const revalidate = 300;
+
+function groupBySeason(league: League, games: GameRow[]): [string, GameRow[]][] {
+  const groups = new Map<string, GameRow[]>();
+  for (const g of games) {
+    const key = formatSeasonLabel(league, g.season_year) ?? "Unknown season";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(g);
+  }
+  // season_year descending — games within a season already arrive most-recent-first
+  return [...groups.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+}
 
 export default async function TeamPage({
   params,
@@ -36,21 +47,28 @@ export default async function TeamPage({
 
       <AdSlot label="Team page top" />
 
-      <section>
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Results &amp; Schedule</h2>
+      <section className="flex flex-col gap-5">
         {games.length === 0 ? (
-          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games found.</p>
+          <>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Results &amp; Schedule</h2>
+            <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games found.</p>
+          </>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {games.map((g) => (
-              <GameCard key={g.espn_id} league={league} game={g} />
-            ))}
-          </div>
+          groupBySeason(league, games).map(([season, seasonGames]) => (
+            <div key={season}>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">{season} Season</h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {seasonGames.map((g) => (
+                  <GameCard key={g.espn_id} league={league} game={g} />
+                ))}
+              </div>
+            </div>
+          ))
         )}
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Roster</h2>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Current Roster</h2>
         {roster.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No roster data yet.</p>
         ) : (
@@ -77,7 +95,11 @@ export default async function TeamPage({
                         ) : (
                           <span className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface-muted)]" />
                         )}
-                        {p.name}
+                        <span>
+                          {p.name}
+                          {p.is_captain && <span className="pill pill-feature ml-2 align-middle">C</span>}
+                          {p.is_wicketkeeper && <span className="pill pill-upcoming ml-1 align-middle">WK</span>}
+                        </span>
                       </Link>
                     </td>
                     <td className="py-2 text-[var(--text-muted)]">{p.position ?? "—"}</td>

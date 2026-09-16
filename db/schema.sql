@@ -28,6 +28,8 @@ create table if not exists players (
   height text,
   weight text,
   age int,
+  is_captain boolean,
+  is_wicketkeeper boolean,
   primary key (league, espn_id),
   unique (league, slug)
 );
@@ -36,6 +38,8 @@ alter table players add column if not exists jersey text;
 alter table players add column if not exists height text;
 alter table players add column if not exists weight text;
 alter table players add column if not exists age int;
+alter table players add column if not exists is_captain boolean;
+alter table players add column if not exists is_wicketkeeper boolean;
 
 create table if not exists games (
   league text not null,
@@ -51,8 +55,10 @@ create table if not exists games (
   away_score_display text,
   home_winner boolean,
   away_winner boolean,
+  season_year int,
   status_state text,
   status_detail text,
+  status_summary text,
   period int,
   clock text,
   completed boolean not null default false,
@@ -62,10 +68,13 @@ create table if not exists games (
 
 alter table games add column if not exists home_score_display text;
 alter table games add column if not exists away_score_display text;
+alter table games add column if not exists season_year int;
+alter table games add column if not exists status_summary text;
 alter table games add column if not exists home_winner boolean;
 alter table games add column if not exists away_winner boolean;
 
 create index if not exists games_league_date_idx on games (league, date);
+create index if not exists games_league_season_idx on games (league, season_year);
 
 create table if not exists player_game_stats (
   league text not null,

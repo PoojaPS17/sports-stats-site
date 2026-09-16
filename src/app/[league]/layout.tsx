@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUES } from "@/lib/queries";
+import { LeagueSubNav } from "@/components/LeagueSubNav";
 
 export function generateStaticParams() {
   return LEAGUES.map((league) => ({ league }));
@@ -14,5 +15,10 @@ export default async function LeagueLayout({
 }) {
   const { league } = await params;
   if (!isLeague(league)) notFound();
-  return children;
+  return (
+    <>
+      <LeagueSubNav league={league} />
+      {children}
+    </>
+  );
 }

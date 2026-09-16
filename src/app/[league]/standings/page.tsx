@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, getStandings } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, getStandings, formatSeasonLabel } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 
@@ -21,7 +21,12 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Standings</h1>
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Standings</h1>
+        {standings[0] && (
+          <p className="mt-0.5 text-sm text-[var(--text-muted)]">{formatSeasonLabel(league, standings[0].season)} Season</p>
+        )}
+      </div>
       <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />
 
       <div className={`grid gap-6 ${byConference.size > 1 ? "lg:grid-cols-2" : ""}`}>
@@ -35,6 +40,7 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
                 <thead>
                   <tr className="text-left text-xs text-[var(--text-muted)]">
                     <th className="py-2 pl-4 font-medium">Team</th>
+                    {mode === "cricket" && <th className="px-2 py-2 text-right font-medium">M</th>}
                     <th className="px-2 py-2 text-right font-medium">W</th>
                     {mode === "soccer" && <th className="px-2 py-2 text-right font-medium">D</th>}
                     <th className="px-2 py-2 text-right font-medium">L</th>
@@ -49,8 +55,8 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
                     {mode === "cricket" && (
                       <>
                         <th className="px-2 py-2 text-right font-medium">NR</th>
-                        <th className="px-2 py-2 text-right font-medium">NRR</th>
-                        <th className="py-2 pl-2 pr-4 text-right font-medium">PTS</th>
+                        <th className="px-2 py-2 text-right font-medium">PTS</th>
+                        <th className="py-2 pl-2 pr-4 text-right font-medium">NRR</th>
                       </>
                     )}
                     {mode === "default" && (
@@ -74,6 +80,11 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
                           {r.name}
                         </Link>
                       </td>
+                      {mode === "cricket" && (
+                        <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
+                          {r.wins + r.losses + (r.no_result ?? 0)}
+                        </td>
+                      )}
                       <td className="px-2 py-2 text-right tabular-nums">{r.wins}</td>
                       {mode === "soccer" && <td className="px-2 py-2 text-right tabular-nums">{r.draws ?? 0}</td>}
                       <td className="px-2 py-2 text-right tabular-nums">{r.losses}</td>
@@ -90,10 +101,10 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
                       {mode === "cricket" && (
                         <>
                           <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{r.no_result ?? 0}</td>
-                          <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
+                          <td className="px-2 py-2 text-right font-bold tabular-nums">{r.points ?? "—"}</td>
+                          <td className="py-2 pl-2 pr-4 text-right tabular-nums text-[var(--text-muted)]">
                             {r.net_run_rate != null ? Number(r.net_run_rate).toFixed(3) : "—"}
                           </td>
-                          <td className="py-2 pl-2 pr-4 text-right font-bold tabular-nums">{r.points ?? "—"}</td>
                         </>
                       )}
                       {mode === "default" && (

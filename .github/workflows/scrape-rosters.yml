@@ -29,3 +29,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run fetch:rosters
+
+      - name: Fetch IPL rosters (via most recent match, since the roster endpoint 404s)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:cricket-rosters

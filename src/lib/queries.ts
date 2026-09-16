@@ -8,6 +8,16 @@ export function isLeague(value: string): value is League {
   return LEAGUES.includes(value as League);
 }
 
+// ESPN labels a season by its *ending* year for NBA ("2023" = the 2022-23 season) but
+// by its *starting* year for NFL/EPL/IPL ("2024" = the 2024 NFL season / 2024-25 EPL
+// season / 2024 IPL season). Render the conventional human label for each.
+export function formatSeasonLabel(league: League, year: number | null): string | null {
+  if (!year) return null;
+  if (league === "nba") return `${year - 1}-${String(year).slice(2)}`;
+  if (league === "epl") return `${year}-${String(year + 1).slice(2)}`;
+  return String(year);
+}
+
 export interface GameRow {
   league: League;
   espn_id: string;
@@ -20,8 +30,10 @@ export interface GameRow {
   away_score_display: string | null;
   home_winner: boolean | null;
   away_winner: boolean | null;
+  season_year: number | null;
   status_state: string | null;
   status_detail: string | null;
+  status_summary: string | null;
   completed: boolean;
   home_team_espn_id: string;
   away_team_espn_id: string;
@@ -40,8 +52,8 @@ export interface GameRow {
 const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
-    g.home_score_display, g.away_score_display, g.home_winner, g.away_winner,
-    g.status_state, g.status_detail, g.completed,
+    g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
+    g.status_state, g.status_detail, g.status_summary, g.completed,
     g.home_team_espn_id, g.away_team_espn_id,
     ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
     at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
@@ -82,6 +94,7 @@ export async function getFeaturedGames(league: League, limit = 3): Promise<GameR
 }
 
 export interface StandingRow {
+  season: number;
   team_espn_id: string;
   name: string;
   slug: string;
@@ -104,7 +117,7 @@ export interface StandingRow {
 
 export async function getStandings(league: League): Promise<StandingRow[]> {
   const { rows } = await pool.query(
-    `select s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
+    `select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
             s.conference, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
             s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate
      from standings s
@@ -142,12 +155,13 @@ export async function getAllTeams(league: League): Promise<TeamRow[]> {
   return rows;
 }
 
-export async function getTeamGames(league: League, teamEspnId: string): Promise<GameRow[]> {
+export async function getTeamGames(league: League, teamEspnId: string, limit = 200): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
      where g.league = $1 and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2)
-     order by g.date desc`,
-    [league, teamEspnId]
+     order by g.date desc
+     limit $3`,
+    [league, teamEspnId, limit]
   );
   return rows;
 }
@@ -368,13 +382,15 @@ export interface RosterPlayer {
   weight: string | null;
   age: number | null;
   headshot_url: string | null;
+  is_captain: boolean | null;
+  is_wicketkeeper: boolean | null;
 }
 
 export async function getTeamRoster(league: League, teamEspnId: string): Promise<RosterPlayer[]> {
   const { rows } = await pool.query(
-    `select espn_id, name, slug, position, jersey, height, weight, age, headshot_url
+    `select espn_id, name, slug, position, jersey, height, weight, age, headshot_url, is_captain, is_wicketkeeper
      from players where league = $1 and team_espn_id = $2
-     order by position, name`,
+     order by is_captain desc nulls last, position, name`,
     [league, teamEspnId]
   );
   return rows;

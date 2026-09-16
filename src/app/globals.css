@@ -1,28 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f5f6fb;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #eef0fa;
-  --border: #e4e7f2;
-  --text: #12142b;
-  --text-muted: #6b7086;
-  --accent: #3651e0;
+  --surface-muted: #f1f2f6;
+  --border: #dfe2ea;
+  --text: #0a0b14;
+  --text-muted: #565a6b;
+  --accent: #1d3fe0;
+  --accent-2: #e8590c;
   --accent-foreground: #ffffff;
 
-  --pill-live-bg: #fde8e8;
-  --pill-live-text: #c81e3a;
+  --header-bg: #10193f;
+  --header-text: #ffffff;
+  --header-text-muted: #b7c0e8;
+
+  --pill-live-bg: #fde3e3;
+  --pill-live-text: #d0111f;
   --pill-final-bg: #eef0f5;
-  --pill-final-text: #565a72;
-  --pill-upcoming-bg: #e3e9ff;
-  --pill-upcoming-text: #3651e0;
-  --pill-feature-bg: #e1f6ea;
-  --pill-feature-text: #127a45;
+  --pill-final-text: #4b4f60;
+  --pill-upcoming-bg: #dde5ff;
+  --pill-upcoming-text: #1d3fe0;
+  --pill-feature-bg: #fef0e0;
+  --pill-feature-text: #b7500f;
 
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
 
-  --shadow-card: 0 1px 2px rgba(18, 20, 43, 0.04), 0 8px 24px -12px rgba(18, 20, 43, 0.12);
+  --shadow-card: 0 1px 2px rgba(10, 11, 20, 0.05), 0 8px 24px -12px rgba(10, 11, 20, 0.16);
 }
 
 @theme inline {
@@ -39,14 +44,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0c0d18;
+    --bg: #0a0b14;
     --surface: #14162a;
-    --surface-muted: #1b1e36;
-    --border: #262a48;
-    --text: #eef0fb;
-    --text-muted: #9498b8;
+    --surface-muted: #1c1f3a;
+    --border: #2a2e52;
+    --text: #f5f6fc;
+    --text-muted: #a3a8c8;
     --accent: #6d85ff;
-    --accent-foreground: #0c0d18;
+    --accent-2: #ff8a3d;
+    --accent-foreground: #0a0b14;
+
+    --header-bg: #05070f;
+    --header-text: #ffffff;
+    --header-text-muted: #8f97c4;
 
     --pill-live-bg: #3a1420;
     --pill-live-text: #ff6b83;
@@ -54,22 +64,27 @@
     --pill-final-text: #a6abcf;
     --pill-upcoming-bg: #1c2452;
     --pill-upcoming-text: #93a5ff;
-    --pill-feature-bg: #103324;
-    --pill-feature-text: #4fd88a;
+    --pill-feature-bg: #3a2410;
+    --pill-feature-text: #ffab5c;
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0c0d18;
+  --bg: #0a0b14;
   --surface: #14162a;
-  --surface-muted: #1b1e36;
-  --border: #262a48;
-  --text: #eef0fb;
-  --text-muted: #9498b8;
+  --surface-muted: #1c1f3a;
+  --border: #2a2e52;
+  --text: #f5f6fc;
+  --text-muted: #a3a8c8;
   --accent: #6d85ff;
-  --accent-foreground: #0c0d18;
+  --accent-2: #ff8a3d;
+  --accent-foreground: #0a0b14;
+
+  --header-bg: #05070f;
+  --header-text: #ffffff;
+  --header-text-muted: #8f97c4;
 
   --pill-live-bg: #3a1420;
   --pill-live-text: #ff6b83;
@@ -77,10 +92,10 @@
   --pill-final-text: #a6abcf;
   --pill-upcoming-bg: #1c2452;
   --pill-upcoming-text: #93a5ff;
-  --pill-feature-bg: #103324;
-  --pill-feature-text: #4fd88a;
+  --pill-feature-bg: #3a2410;
+  --pill-feature-text: #ffab5c;
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 }
 
 body {
@@ -102,7 +117,7 @@ body {
   border-radius: 9999px;
   padding: 0.2rem 0.65rem;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   white-space: nowrap;

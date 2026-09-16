@@ -14,7 +14,9 @@
     "fetch:standings": "tsx scripts/fetch-standings.ts",
     "fetch:player-stats": "tsx scripts/fetch-player-stats.ts",
     "fetch:rosters": "tsx scripts/fetch-rosters.ts",
+    "fetch:cricket-rosters": "tsx scripts/fetch-cricket-rosters.ts",
     "fetch:news": "tsx scripts/fetch-news.ts",
+    "backfill:games": "tsx scripts/backfill-games.ts",
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {

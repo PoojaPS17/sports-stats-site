@@ -54,6 +54,15 @@ export function fetchRoster(league: League, teamEspnId: string) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/teams/${teamEspnId}/roster`);
 }
 
+// Returns a whole season's games for one team in a single call — much cheaper than
+// scanning every day league-wide. `season` is the year ESPN labels that season with:
+// the *ending* year for NBA ("2023" = the 2022-23 season), the *starting* year for
+// NFL/soccer ("2024" = the 2024 NFL season / the 2024-25 EPL season). Not available
+// for this cricket competition (404s, same as /teams and /roster).
+export function fetchTeamSchedule(league: League, teamEspnId: string, season: number) {
+  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/teams/${teamEspnId}/schedule?season=${season}`);
+}
+
 export function fetchNews(league: League, limit = 15) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/news?limit=${limit}`);
 }

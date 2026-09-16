@@ -91,6 +91,9 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         completed={game.completed}
         won={homeWon}
       />
+      {game.completed && game.status_summary && (
+        <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs text-[var(--text-muted)]">{game.status_summary}</p>
+      )}
     </div>
   );
 }
