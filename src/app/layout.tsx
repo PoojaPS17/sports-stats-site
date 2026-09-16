@@ -4,7 +4,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Ticker, type TickerItem } from "@/components/Ticker";
-import { getTickerGames, LEAGUE_LABEL } from "@/lib/queries";
+import { getTickerGames, getLastUpdated, LEAGUE_LABEL } from "@/lib/queries";
+
+export const revalidate = 60;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,7 +44,7 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const tickerGames = await getTickerGames(10);
+  const [tickerGames, lastUpdated] = await Promise.all([getTickerGames(10), getLastUpdated()]);
   const tickerItems = tickerGames.map(tickerLabel);
 
   return (
@@ -59,7 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
       </head>
       <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text)]">
-        <Ticker items={tickerItems} />
+        <Ticker items={tickerItems} updatedAt={lastUpdated} />
         <Nav />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
         <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--text-muted)]">

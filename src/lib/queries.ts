@@ -231,6 +231,11 @@ export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
   return rows;
 }
 
+export async function getLastUpdated(): Promise<string | null> {
+  const { rows } = await pool.query(`select max(updated_at) as updated_at from games`);
+  return rows[0]?.updated_at ? new Date(rows[0].updated_at).toISOString() : null;
+}
+
 export interface SearchResult {
   type: "team" | "player";
   league: League;
