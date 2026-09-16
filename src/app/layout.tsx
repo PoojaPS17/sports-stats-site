@@ -19,18 +19,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ScoreDB — Premier League, NFL & NBA scores, standings and stats",
-  description: "Live scores, standings and player stats for the Premier League, NFL and NBA, updated daily.",
+  title: "ScoreDB — Premier League, NFL, NBA & IPL scores and standings",
+  description: "Live scores, standings and player stats for the Premier League, NFL, NBA and IPL cricket, updated daily.",
 };
 
 function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): TickerItem {
   const league = LEAGUE_LABEL[g.league];
   if (g.completed) {
-    const homeWon = (g.home_score ?? 0) > (g.away_score ?? 0);
+    const homeWon = g.home_winner ?? (g.home_score ?? 0) > (g.away_score ?? 0);
     const winner = homeWon ? g.home_name : g.away_name;
     const loser = homeWon ? g.away_name : g.home_name;
-    const winScore = homeWon ? g.home_score : g.away_score;
-    const loseScore = homeWon ? g.away_score : g.home_score;
+    const winScore = homeWon ? g.home_score_display ?? g.home_score : g.away_score_display ?? g.away_score;
+    const loseScore = homeWon ? g.away_score_display ?? g.away_score : g.home_score_display ?? g.home_score;
     return {
       href: `/${g.league}/teams/${homeWon ? g.home_slug : g.away_slug}`,
       label: `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`,
@@ -65,7 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Nav />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
         <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--text-muted)]">
-          Data via ESPN. Not affiliated with the Premier League, NFL, NBA, or ESPN.
+          Data via ESPN. Not affiliated with the Premier League, NFL, NBA, IPL, or ESPN.
         </footer>
       </body>
     </html>

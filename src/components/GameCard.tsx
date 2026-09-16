@@ -11,6 +11,7 @@ function TeamRow({
   logo,
   color,
   score,
+  scoreDisplay,
   completed,
   won,
 }: {
@@ -21,6 +22,7 @@ function TeamRow({
   logo: string | null;
   color: string | null;
   score: number | null;
+  scoreDisplay: string | null;
   completed: boolean;
   won: boolean;
 }) {
@@ -36,9 +38,9 @@ function TeamRow({
           <span className="hidden sm:inline">{name}</span>
         </span>
       </span>
-      {completed && (
-        <span className={`tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
-          {score}
+      {completed && (score !== null || scoreDisplay) && (
+        <span className={`shrink-0 tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+          {scoreDisplay ?? score}
         </span>
       )}
     </Link>
@@ -46,8 +48,8 @@ function TeamRow({
 }
 
 export function GameCard({ league, game }: { league: League; game: GameRow }) {
-  const homeWon = (game.home_score ?? 0) > (game.away_score ?? 0);
-  const awayWon = (game.away_score ?? 0) > (game.home_score ?? 0);
+  const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
+  const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
 
   return (
     <div className="card group relative overflow-hidden px-4 py-3 transition hover:-translate-y-0.5 hover:shadow-lg">
@@ -73,6 +75,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         logo={game.away_logo}
         color={game.away_color}
         score={game.away_score}
+        scoreDisplay={game.away_score_display}
         completed={game.completed}
         won={awayWon}
       />
@@ -84,6 +87,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         logo={game.home_logo}
         color={game.home_color}
         score={game.home_score}
+        scoreDisplay={game.home_score_display}
         completed={game.completed}
         won={homeWon}
       />

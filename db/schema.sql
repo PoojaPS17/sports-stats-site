@@ -47,6 +47,10 @@ create table if not exists games (
   away_team_espn_id text not null,
   home_score int,
   away_score int,
+  home_score_display text,
+  away_score_display text,
+  home_winner boolean,
+  away_winner boolean,
   status_state text,
   status_detail text,
   period int,
@@ -55,6 +59,11 @@ create table if not exists games (
   updated_at timestamptz not null default now(),
   primary key (league, espn_id)
 );
+
+alter table games add column if not exists home_score_display text;
+alter table games add column if not exists away_score_display text;
+alter table games add column if not exists home_winner boolean;
+alter table games add column if not exists away_winner boolean;
 
 create index if not exists games_league_date_idx on games (league, date);
 
@@ -119,6 +128,8 @@ create table if not exists standings (
   points int,
   goals_for int,
   goals_against int,
+  no_result int,
+  net_run_rate numeric,
   updated_at timestamptz not null default now(),
   primary key (league, season, team_espn_id)
 );
@@ -127,3 +138,5 @@ alter table standings add column if not exists draws int;
 alter table standings add column if not exists points int;
 alter table standings add column if not exists goals_for int;
 alter table standings add column if not exists goals_against int;
+alter table standings add column if not exists no_result int;
+alter table standings add column if not exists net_run_rate numeric;

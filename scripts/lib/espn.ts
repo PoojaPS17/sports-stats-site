@@ -1,9 +1,10 @@
-export type League = "nba" | "nfl" | "epl";
+export type League = "nba" | "nfl" | "epl" | "ipl";
 
 export const SPORT_PATH: Record<League, string> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
   epl: "soccer/eng.1",
+  ipl: "cricket/8048",
 };
 
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";
@@ -27,6 +28,13 @@ async function getJson<T>(url: string): Promise<T> {
 
 export function fetchTeams(league: League) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/teams?limit=100`);
+}
+
+// Cricket has no working /teams endpoint (404s: "League not found"). Its scoreboard
+// response includes a flat `teams` array though, so use that as the team source instead.
+export async function fetchCricketTeams(league: League): Promise<any[]> {
+  const data = await fetchScoreboard(league);
+  return data.teams ?? [];
 }
 
 export function fetchScoreboard(league: League, dateYYYYMMDD?: string) {

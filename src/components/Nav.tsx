@@ -31,6 +31,9 @@ export function Nav() {
           <Link href="/nba" className="transition hover:text-[var(--text)]">
             NBA
           </Link>
+          <Link href="/ipl" className="transition hover:text-[var(--text)]">
+            Cricket
+          </Link>
         </nav>
         <div className="order-last flex w-full items-center gap-3 sm:order-none sm:ml-auto sm:w-auto">
           <div className="w-full sm:w-64">

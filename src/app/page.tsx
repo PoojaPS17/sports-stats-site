@@ -26,7 +26,7 @@ export default async function HomePage() {
     <div className="flex flex-col gap-10">
       <section className="flex flex-col items-start gap-5 py-4">
         <h1 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-          Premier League, NFL &amp; NBA scores, standings and player stats, tracked daily
+          Premier League, NFL, NBA &amp; IPL scores, standings and player stats, tracked daily
         </h1>
         <p className="max-w-lg text-[var(--text-muted)]">
           Live scores, full standings, team schedules and player game logs — pulled straight from the league feeds and refreshed every 15 minutes.

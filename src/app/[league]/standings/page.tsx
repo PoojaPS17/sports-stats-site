@@ -11,7 +11,7 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
   if (!isLeague(league)) notFound();
 
   const standings = await getStandings(league);
-  const isPoints = league === "epl";
+  const mode = league === "epl" ? "soccer" : league === "ipl" ? "cricket" : "default";
   const byConference = new Map<string, typeof standings>();
   for (const row of standings) {
     const key = row.conference ?? "All Teams";
@@ -36,16 +36,24 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
                   <tr className="text-left text-xs text-[var(--text-muted)]">
                     <th className="py-2 pl-4 font-medium">Team</th>
                     <th className="px-2 py-2 text-right font-medium">W</th>
-                    {isPoints && <th className="px-2 py-2 text-right font-medium">D</th>}
+                    {mode === "soccer" && <th className="px-2 py-2 text-right font-medium">D</th>}
                     <th className="px-2 py-2 text-right font-medium">L</th>
-                    {isPoints ? (
+                    {mode === "soccer" && (
                       <>
                         <th className="px-2 py-2 text-right font-medium">GF</th>
                         <th className="px-2 py-2 text-right font-medium">GA</th>
                         <th className="px-2 py-2 text-right font-medium">GD</th>
                         <th className="py-2 pl-2 pr-4 text-right font-medium">PTS</th>
                       </>
-                    ) : (
+                    )}
+                    {mode === "cricket" && (
+                      <>
+                        <th className="px-2 py-2 text-right font-medium">NR</th>
+                        <th className="px-2 py-2 text-right font-medium">NRR</th>
+                        <th className="py-2 pl-2 pr-4 text-right font-medium">PTS</th>
+                      </>
+                    )}
+                    {mode === "default" && (
                       <>
                         <th className="px-2 py-2 text-right font-medium">PCT</th>
                         <th className="py-2 pl-2 pr-4 text-right font-medium">Streak</th>
@@ -67,9 +75,9 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
                         </Link>
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums">{r.wins}</td>
-                      {isPoints && <td className="px-2 py-2 text-right tabular-nums">{r.draws ?? 0}</td>}
+                      {mode === "soccer" && <td className="px-2 py-2 text-right tabular-nums">{r.draws ?? 0}</td>}
                       <td className="px-2 py-2 text-right tabular-nums">{r.losses}</td>
-                      {isPoints ? (
+                      {mode === "soccer" && (
                         <>
                           <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{r.goals_for ?? "—"}</td>
                           <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{r.goals_against ?? "—"}</td>
@@ -78,7 +86,17 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
                           </td>
                           <td className="py-2 pl-2 pr-4 text-right font-bold tabular-nums">{r.points ?? "—"}</td>
                         </>
-                      ) : (
+                      )}
+                      {mode === "cricket" && (
+                        <>
+                          <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{r.no_result ?? 0}</td>
+                          <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
+                            {r.net_run_rate != null ? Number(r.net_run_rate).toFixed(3) : "—"}
+                          </td>
+                          <td className="py-2 pl-2 pr-4 text-right font-bold tabular-nums">{r.points ?? "—"}</td>
+                        </>
+                      )}
+                      {mode === "default" && (
                         <>
                           <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{Number(r.win_percent).toFixed(3)}</td>
                           <td className="py-2 pl-2 pr-4 text-right tabular-nums text-[var(--text-muted)]">{r.streak ?? "—"}</td>

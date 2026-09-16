@@ -1,8 +1,8 @@
 import { pool } from "./db";
 
-export type League = "nba" | "nfl" | "epl";
-export const LEAGUES: League[] = ["epl", "nfl", "nba"];
-export const LEAGUE_LABEL: Record<League, string> = { nba: "NBA", nfl: "NFL", epl: "Premier League" };
+export type League = "nba" | "nfl" | "epl" | "ipl";
+export const LEAGUES: League[] = ["epl", "nfl", "nba", "ipl"];
+export const LEAGUE_LABEL: Record<League, string> = { nba: "NBA", nfl: "NFL", epl: "Premier League", ipl: "IPL" };
 
 export function isLeague(value: string): value is League {
   return LEAGUES.includes(value as League);
@@ -16,6 +16,10 @@ export interface GameRow {
   short_name: string | null;
   home_score: number | null;
   away_score: number | null;
+  home_score_display: string | null;
+  away_score_display: string | null;
+  home_winner: boolean | null;
+  away_winner: boolean | null;
   status_state: string | null;
   status_detail: string | null;
   completed: boolean;
@@ -36,6 +40,7 @@ export interface GameRow {
 const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
+    g.home_score_display, g.away_score_display, g.home_winner, g.away_winner,
     g.status_state, g.status_detail, g.completed,
     g.home_team_espn_id, g.away_team_espn_id,
     ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
@@ -93,17 +98,19 @@ export interface StandingRow {
   points: number | null;
   goals_for: number | null;
   goals_against: number | null;
+  no_result: number | null;
+  net_run_rate: string | null;
 }
 
 export async function getStandings(league: League): Promise<StandingRow[]> {
   const { rows } = await pool.query(
     `select s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
             s.conference, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
-            s.draws, s.points, s.goals_for, s.goals_against
+            s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate
      from standings s
      join teams t on t.league = s.league and t.espn_id = s.team_espn_id
      where s.league = $1
-     order by s.conference, s.points desc nulls last, s.wins desc, s.losses asc`,
+     order by s.conference, s.points desc nulls last, s.net_run_rate desc nulls last, s.wins desc, s.losses asc`,
     [league]
   );
   return rows;
@@ -212,9 +219,13 @@ export interface TickerGame {
   home_name: string;
   home_slug: string;
   home_score: number | null;
+  home_score_display: string | null;
+  home_winner: boolean | null;
   away_name: string;
   away_slug: string;
   away_score: number | null;
+  away_score_display: string | null;
+  away_winner: boolean | null;
   completed: boolean;
   status_state: string | null;
   date: string;
@@ -222,7 +233,9 @@ export interface TickerGame {
 
 export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
   const { rows } = await pool.query(
-    `select g.league, g.date, g.completed, g.status_state, g.home_score, g.away_score,
+    `select g.league, g.date, g.completed, g.status_state,
+            g.home_score, g.home_score_display, g.home_winner,
+            g.away_score, g.away_score_display, g.away_winner,
             ht.name as home_name, ht.slug as home_slug,
             at.name as away_name, at.slug as away_slug
      from games g
@@ -287,6 +300,9 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
     { key: "match", gameLabel: "G", label: "Goals", unit: "GLS" },
     { key: "match", gameLabel: "A", label: "Assists", unit: "AST" },
   ],
+  // No per-player match data for cricket yet (ESPN's roster/boxscore endpoints
+  // 404 for this competition) — scores and standings only for now.
+  ipl: [],
 };
 
 const LEADER_COLUMNS = new Set(
