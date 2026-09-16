@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SearchBar } from "./SearchBar";
+import { ThemeToggle } from "./ThemeToggle";
 
 function Logo() {
   return (
@@ -28,8 +29,11 @@ export function Nav() {
             NFL
           </Link>
         </nav>
-        <div className="order-last w-full sm:order-none sm:ml-auto sm:w-64">
-          <SearchBar />
+        <div className="order-last flex w-full items-center gap-3 sm:order-none sm:ml-auto sm:w-auto">
+          <div className="w-full sm:w-64">
+            <SearchBar />
+          </div>
+          <ThemeToggle />
         </div>
       </div>
     </header>

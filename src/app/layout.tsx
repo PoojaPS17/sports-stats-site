@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
@@ -49,6 +50,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`try {
+            var t = localStorage.getItem('theme');
+            if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+          } catch (e) {}`}
+        </Script>
+      </head>
       <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text)]">
         <Ticker items={tickerItems} />
         <Nav />
