@@ -15,19 +15,11 @@ export function LeagueSubNav({ league }: { league: League }) {
   ];
 
   return (
-    <nav className="-mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-[var(--border)] px-4 sm:mx-0 sm:px-0">
+    <nav className="-mx-4 mb-6 flex gap-1.5 overflow-x-auto border-b border-[var(--border)] px-4 py-2.5 sm:mx-0 sm:px-0">
       {tabs.map((tab) => {
         const active = tab.href === `/${league}` ? pathname === tab.href : pathname?.startsWith(tab.href);
         return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-bold transition ${
-              active
-                ? "border-[var(--accent)] text-[var(--text)]"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
-            }`}
-          >
+          <Link key={tab.href} href={tab.href} className={`nav-pill shrink-0 text-sm ${active ? "nav-pill-active" : "text-[var(--text-muted)]"}`}>
             {tab.label}
           </Link>
         );

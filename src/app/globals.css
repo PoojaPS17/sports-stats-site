@@ -3,31 +3,34 @@
 :root {
   --bg: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #f1f2f6;
-  --border: #dfe2ea;
-  --text: #0a0b14;
-  --text-muted: #565a6b;
-  --accent: #1d3fe0;
-  --accent-2: #e8590c;
+  --surface-muted: #f3f7fb;
+  --border: #e3e7f1;
+  --text: #060640;
+  --text-muted: #4a4a72;
+  --accent: #1470af;
+  --accent-hover: #0f5688;
+  --accent-2: #b7500f;
   --accent-foreground: #ffffff;
 
-  --header-bg: #10193f;
-  --header-text: #ffffff;
-  --header-text-muted: #b7c0e8;
+  --header-bg: #ffffff;
+  --header-text: #060640;
+  --header-text-muted: #4a4a72;
+  --header-border: #e3e7f1;
+  --header-hover-bg: #f3f7fb;
 
-  --pill-live-bg: #fde3e3;
-  --pill-live-text: #d0111f;
+  --pill-live-bg: #fbdada;
+  --pill-live-text: #b91c1c;
   --pill-final-bg: #eef0f5;
-  --pill-final-text: #4b4f60;
-  --pill-upcoming-bg: #dde5ff;
-  --pill-upcoming-text: #1d3fe0;
-  --pill-feature-bg: #fef0e0;
-  --pill-feature-text: #b7500f;
+  --pill-final-text: #4a4a72;
+  --pill-upcoming-bg: #dcebfa;
+  --pill-upcoming-text: #0f5688;
+  --pill-feature-bg: #dcf3e3;
+  --pill-feature-text: #0a6b25;
 
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
 
-  --shadow-card: 0 1px 2px rgba(10, 11, 20, 0.05), 0 8px 24px -12px rgba(10, 11, 20, 0.16);
+  --shadow-card: 0 1px 2px rgba(6, 6, 64, 0.05), 0 8px 20px -12px rgba(6, 6, 64, 0.14);
 }
 
 @theme inline {
@@ -44,19 +47,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0b14;
-    --surface: #14162a;
-    --surface-muted: #1c1f3a;
-    --border: #2a2e52;
-    --text: #f5f6fc;
-    --text-muted: #a3a8c8;
-    --accent: #6d85ff;
-    --accent-2: #ff8a3d;
-    --accent-foreground: #0a0b14;
+    --bg: #0a0b1a;
+    --surface: #12132a;
+    --surface-muted: #1a1c3a;
+    --border: #262a4d;
+    --text: #f2f3ff;
+    --text-muted: #a3a8d0;
+    --accent: #5fa8e0;
+    --accent-hover: #7fbdf0;
+    --accent-2: #ff9d52;
+    --accent-foreground: #05060f;
 
-    --header-bg: #05070f;
-    --header-text: #ffffff;
-    --header-text-muted: #8f97c4;
+    --header-bg: #0a0b1a;
+    --header-text: #f2f3ff;
+    --header-text-muted: #a3a8d0;
+    --header-border: #262a4d;
+    --header-hover-bg: #1a1c3a;
 
     --pill-live-bg: #3a1420;
     --pill-live-text: #ff6b83;
@@ -64,27 +70,30 @@
     --pill-final-text: #a6abcf;
     --pill-upcoming-bg: #1c2452;
     --pill-upcoming-text: #93a5ff;
-    --pill-feature-bg: #3a2410;
-    --pill-feature-text: #ffab5c;
+    --pill-feature-bg: #103324;
+    --pill-feature-text: #4fd88a;
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0a0b14;
-  --surface: #14162a;
-  --surface-muted: #1c1f3a;
-  --border: #2a2e52;
-  --text: #f5f6fc;
-  --text-muted: #a3a8c8;
-  --accent: #6d85ff;
-  --accent-2: #ff8a3d;
-  --accent-foreground: #0a0b14;
+  --bg: #0a0b1a;
+  --surface: #12132a;
+  --surface-muted: #1a1c3a;
+  --border: #262a4d;
+  --text: #f2f3ff;
+  --text-muted: #a3a8d0;
+  --accent: #5fa8e0;
+  --accent-hover: #7fbdf0;
+  --accent-2: #ff9d52;
+  --accent-foreground: #05060f;
 
-  --header-bg: #05070f;
-  --header-text: #ffffff;
-  --header-text-muted: #8f97c4;
+  --header-bg: #0a0b1a;
+  --header-text: #f2f3ff;
+  --header-text-muted: #a3a8d0;
+  --header-border: #262a4d;
+  --header-hover-bg: #1a1c3a;
 
   --pill-live-bg: #3a1420;
   --pill-live-text: #ff6b83;
@@ -92,8 +101,8 @@
   --pill-final-text: #a6abcf;
   --pill-upcoming-bg: #1c2452;
   --pill-upcoming-text: #93a5ff;
-  --pill-feature-bg: #3a2410;
-  --pill-feature-text: #ffab5c;
+  --pill-feature-bg: #103324;
+  --pill-feature-text: #4fd88a;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 }
@@ -106,8 +115,30 @@ body {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: 0.85rem;
   box-shadow: var(--shadow-card);
+}
+
+.nav-pill {
+  border-radius: 10px;
+  padding: 0.4rem 0.7rem;
+  font-weight: 700;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-pill:hover {
+  background: var(--header-hover-bg);
+  color: var(--accent);
+}
+
+.nav-pill-active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.nav-pill-active:hover {
+  background: var(--accent-hover);
+  color: var(--accent-foreground);
 }
 
 .pill {

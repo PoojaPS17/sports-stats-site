@@ -26,21 +26,28 @@ function TeamRow({
   completed: boolean;
   won: boolean;
 }) {
+  // A plain integer score ("119") sits fine on the same line as the team name. A long
+  // compound score (cricket's "161/5 (18/20 ov, target 156)") was forcing the name to
+  // truncate to a couple of letters to make room — give it its own line instead.
+  const isLongScore = Boolean(scoreDisplay);
+
   return (
-    <Link
-      href={`/${league}/teams/${slug}`}
-      className="flex items-center justify-between gap-3 py-1.5 hover:opacity-80"
-    >
-      <span className="flex min-w-0 items-center gap-2.5">
-        <TeamLogo name={name} logoUrl={logo} color={color} size={28} />
-        <span className={`truncate text-sm ${completed && won ? "font-semibold" : "font-medium"}`}>
-          <span className="sm:hidden">{abbr ?? name}</span>
-          <span className="hidden sm:inline">{name}</span>
+    <Link href={`/${league}/teams/${slug}`} className="flex flex-col gap-0.5 py-1.5 hover:opacity-80">
+      <span className="flex items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <TeamLogo name={name} logoUrl={logo} color={color} size={28} />
+          <span className={`truncate text-sm ${completed && won ? "font-semibold" : "font-medium"}`}>
+            <span className="sm:hidden">{abbr ?? name}</span>
+            <span className="hidden sm:inline">{name}</span>
+          </span>
         </span>
+        {completed && !isLongScore && score !== null && (
+          <span className={`shrink-0 tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>{score}</span>
+        )}
       </span>
-      {completed && (score !== null || scoreDisplay) && (
-        <span className={`shrink-0 tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
-          {scoreDisplay ?? score}
+      {completed && isLongScore && (
+        <span className={`pl-[38px] text-xs tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+          {scoreDisplay}
         </span>
       )}
     </Link>
@@ -92,7 +99,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         won={homeWon}
       />
       {game.completed && game.status_summary && (
-        <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs text-[var(--text-muted)]">{game.status_summary}</p>
+        <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--accent)]">{game.status_summary}</p>
       )}
     </div>
   );

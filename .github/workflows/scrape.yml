@@ -2,8 +2,11 @@ name: Scrape ESPN data
 
 on:
   schedule:
-    # every 15 minutes, year-round (cheap enough; ESPN endpoints are free/unauthenticated)
+    # frequent tick — cheap live-game check only; the real fetch runs solely when
+    # something's actually in progress, so this stays free/cheap the rest of the day
     - cron: "*/15 * * * *"
+    # guaranteed full update once a day, even if nothing was ever live
+    - cron: "7 6 * * *"
   workflow_dispatch: {}
 
 jobs:
@@ -20,17 +23,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check whether a full update is needed
+        id: gate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FORCE_SCRAPE: ${{ github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch' }}
+        run: npm run check:live
+
       - name: Apply schema (idempotent)
+        if: steps.gate.outputs.should_scrape == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run migrate
 
       - name: Seed teams (idempotent)
+        if: steps.gate.outputs.should_scrape == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run seed:teams
 
       - name: Fetch scores, standings and player stats
+        if: steps.gate.outputs.should_scrape == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run fetch:all

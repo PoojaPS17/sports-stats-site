@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getRecentAndUpcoming } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
+import { SectionHeader } from "@/components/SectionHeader";
 
 export const revalidate = 60;
 
@@ -36,7 +37,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
       {[...groups.entries()].map(([day, dayGames]) => (
         <section key={day}>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">{day}</h2>
+          <SectionHeader>{day}</SectionHeader>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {dayGames.map((g) => (
               <GameCard key={g.espn_id} league={league} game={g} />

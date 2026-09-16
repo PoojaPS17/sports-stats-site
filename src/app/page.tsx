@@ -4,6 +4,7 @@ import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
+import { SectionHeader } from "@/components/SectionHeader";
 
 export const revalidate = 60;
 
@@ -38,9 +39,7 @@ export default async function HomePage() {
 
       {featured.length > 0 && (
         <section>
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-lg font-bold">Headline games</h2>
-          </div>
+          <SectionHeader>Headline Games</SectionHeader>
           <div className="grid gap-4 sm:grid-cols-3">
             {featured.map((g) => (
               <GameCard key={g.espn_id} league={g.league} game={g} />
@@ -54,9 +53,11 @@ export default async function HomePage() {
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map(({ league, games }) => (
           <section key={league}>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-bold">{LEAGUE_LABEL[league]}</h2>
-              <Link href={`/${league}`} className="text-sm font-semibold text-[var(--accent)] hover:underline">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="border-l-4 border-[var(--accent)] pl-2.5 text-lg font-extrabold tracking-tight text-[var(--text)]">
+                {LEAGUE_LABEL[league]}
+              </h2>
+              <Link href={`/${league}`} className="shrink-0 text-sm font-semibold text-[var(--accent)] hover:underline">
                 Full schedule →
               </Link>
             </div>
@@ -81,7 +82,7 @@ export default async function HomePage() {
 
       {news.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-bold">Latest News</h2>
+          <SectionHeader>Latest News</SectionHeader>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {news.map((a) => (
               <NewsCard key={a.article_id} article={a} />

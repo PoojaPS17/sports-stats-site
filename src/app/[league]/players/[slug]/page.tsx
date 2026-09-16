@@ -3,6 +3,7 @@ import Link from "next/link";
 import { isLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerGameLog, getPlayerSeasonStats } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
+import { SectionHeader } from "@/components/SectionHeader";
 
 export const revalidate = 300;
 
@@ -70,9 +71,7 @@ export default async function PlayerPage({
 
       {seasonStats && (
         <section>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">
-            {seasonStats.season} Season Stats
-          </h2>
+          <SectionHeader>{seasonStats.season} Season Stats</SectionHeader>
           <div className="grid gap-2 sm:grid-cols-2">
             {Object.entries(seasonStats.categories).map(([category, { labels, values }]) => (
               <StatGroup
@@ -86,7 +85,7 @@ export default async function PlayerPage({
       )}
 
       <section>
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Game Log</h2>
+        <SectionHeader>Game Log</SectionHeader>
         {gameLog.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No stats recorded yet.</p>
         ) : (

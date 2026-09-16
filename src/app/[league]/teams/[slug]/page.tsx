@@ -4,6 +4,7 @@ import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGames, getTeamRoster, for
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
+import { SectionHeader } from "@/components/SectionHeader";
 
 export const revalidate = 300;
 
@@ -50,13 +51,13 @@ export default async function TeamPage({
       <section className="flex flex-col gap-5">
         {games.length === 0 ? (
           <>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Results &amp; Schedule</h2>
+            <SectionHeader>Results &amp; Schedule</SectionHeader>
             <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games found.</p>
           </>
         ) : (
           groupBySeason(league, games).map(([season, seasonGames]) => (
             <div key={season}>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">{season} Season</h2>
+              <SectionHeader>{season} Season</SectionHeader>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {seasonGames.map((g) => (
                   <GameCard key={g.espn_id} league={league} game={g} />
@@ -68,7 +69,7 @@ export default async function TeamPage({
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Current Roster</h2>
+        <SectionHeader>Current Roster</SectionHeader>
         {roster.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No roster data yet.</p>
         ) : (

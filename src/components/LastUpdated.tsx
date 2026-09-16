@@ -22,8 +22,8 @@ export function LastUpdated({ iso }: { iso: string }) {
   }, [iso]);
 
   return (
-    <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-[var(--bg)]/20 pl-4 text-xs opacity-90">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+    <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-[var(--border)] pl-4 text-xs text-[var(--text-muted)]">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
       Updated {label}
     </span>
   );
