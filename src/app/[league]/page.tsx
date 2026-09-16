@@ -29,11 +29,19 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Scores</h1>
-        <Link href={`/${league}/standings`} className="text-sm font-semibold text-[var(--accent)] hover:underline">
-          Standings →
-        </Link>
+        <div className="flex gap-4 text-sm font-semibold">
+          <Link href={`/${league}/standings`} className="text-[var(--accent)] hover:underline">
+            Standings
+          </Link>
+          <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">
+            Leaders
+          </Link>
+          <Link href={`/${league}/news`} className="text-[var(--accent)] hover:underline">
+            News
+          </Link>
+        </div>
       </div>
 
       <AdSlot label={`${LEAGUE_LABEL[league]} top`} />

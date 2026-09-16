@@ -7,6 +7,7 @@ export const SPORT_PATH: Record<League, string> = {
 
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE_BASE = "https://site.api.espn.com/apis/v2/sports";
+const COMMON_BASE = "https://site.api.espn.com/apis/common/v3/sports";
 
 export function slugify(name: string): string {
   return name
@@ -38,4 +39,24 @@ export function fetchStandings(league: League) {
 
 export function fetchSummary(league: League, eventId: string) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/summary?event=${eventId}`);
+}
+
+export function fetchRoster(league: League, teamEspnId: string) {
+  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/teams/${teamEspnId}/roster`);
+}
+
+export function fetchNews(league: League, limit = 15) {
+  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/news?limit=${limit}`);
+}
+
+export function fetchAthleteSeasonStats(league: League, athleteEspnId: string) {
+  return getJson<any>(`${COMMON_BASE}/${SPORT_PATH[league]}/athletes/${athleteEspnId}/stats`);
+}
+
+// The athlete season-stats endpoint can lag behind the actual live season (it may not
+// have a row for the in-progress year yet), so we don't trust "the last row" as "current."
+// The scoreboard always reflects the live season, so use it as ground truth instead.
+export async function fetchCurrentSeasonYear(league: League): Promise<number | null> {
+  const data = await fetchScoreboard(league);
+  return data.leagues?.[0]?.season?.year ?? null;
 }

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGames } from "@/lib/queries";
+import Link from "next/link";
+import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGames, getTeamRoster } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -17,7 +18,7 @@ export default async function TeamPage({
   const team = await getTeamBySlug(league, slug);
   if (!team) notFound();
 
-  const games = await getTeamGames(league, team.espn_id);
+  const [games, roster] = await Promise.all([getTeamGames(league, team.espn_id), getTeamRoster(league, team.espn_id)]);
   const color = team.color ?? "var(--accent)";
 
   return (
@@ -44,6 +45,50 @@ export default async function TeamPage({
             {games.map((g) => (
               <GameCard key={g.espn_id} league={league} game={g} />
             ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Roster</h2>
+        {roster.length === 0 ? (
+          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No roster data yet.</p>
+        ) : (
+          <div className="card overflow-hidden">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="text-left text-xs text-[var(--text-muted)]">
+                  <th className="py-2 pl-4 font-medium">Player</th>
+                  <th className="py-2 font-medium">Pos</th>
+                  <th className="py-2 font-medium">No.</th>
+                  <th className="py-2 font-medium">Height</th>
+                  <th className="py-2 font-medium">Weight</th>
+                  <th className="py-2 pr-4 font-medium">Age</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roster.map((p) => (
+                  <tr key={p.espn_id} className="border-t border-[var(--border)] transition hover:bg-[var(--surface-muted)]">
+                    <td className="py-2 pl-4">
+                      <Link href={`/${league}/players/${p.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
+                        {p.headshot_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.headshot_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+                        ) : (
+                          <span className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface-muted)]" />
+                        )}
+                        {p.name}
+                      </Link>
+                    </td>
+                    <td className="py-2 text-[var(--text-muted)]">{p.position ?? "—"}</td>
+                    <td className="py-2 tabular-nums text-[var(--text-muted)]">{p.jersey ?? "—"}</td>
+                    <td className="py-2 text-[var(--text-muted)]">{p.height ?? "—"}</td>
+                    <td className="py-2 text-[var(--text-muted)]">{p.weight ?? "—"}</td>
+                    <td className="py-2 pr-4 tabular-nums text-[var(--text-muted)]">{p.age ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

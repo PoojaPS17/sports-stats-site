@@ -24,9 +24,18 @@ create table if not exists players (
   slug text not null,
   position text,
   headshot_url text,
+  jersey text,
+  height text,
+  weight text,
+  age int,
   primary key (league, espn_id),
   unique (league, slug)
 );
+
+alter table players add column if not exists jersey text;
+alter table players add column if not exists height text;
+alter table players add column if not exists weight text;
+alter table players add column if not exists age int;
 
 create table if not exists games (
   league text not null,
@@ -58,6 +67,42 @@ create table if not exists player_game_stats (
   updated_at timestamptz not null default now(),
   primary key (league, game_espn_id, player_espn_id)
 );
+
+create table if not exists player_season_stats (
+  league text not null,
+  season int not null,
+  player_espn_id text not null,
+  team_espn_id text,
+  categories jsonb not null default '{}'::jsonb,
+  pts_avg numeric,
+  reb_avg numeric,
+  ast_avg numeric,
+  passing_yards int,
+  rushing_yards int,
+  receiving_yards int,
+  updated_at timestamptz not null default now(),
+  primary key (league, season, player_espn_id)
+);
+
+create index if not exists player_season_stats_pts_idx on player_season_stats (league, season, pts_avg desc nulls last);
+create index if not exists player_season_stats_reb_idx on player_season_stats (league, season, reb_avg desc nulls last);
+create index if not exists player_season_stats_ast_idx on player_season_stats (league, season, ast_avg desc nulls last);
+create index if not exists player_season_stats_pass_idx on player_season_stats (league, season, passing_yards desc nulls last);
+create index if not exists player_season_stats_rush_idx on player_season_stats (league, season, rushing_yards desc nulls last);
+create index if not exists player_season_stats_recv_idx on player_season_stats (league, season, receiving_yards desc nulls last);
+
+create table if not exists news_articles (
+  league text not null,
+  article_id text not null,
+  headline text not null,
+  description text,
+  image_url text,
+  link text,
+  published timestamptz,
+  primary key (league, article_id)
+);
+
+create index if not exists news_articles_league_published_idx on news_articles (league, published desc);
 
 create table if not exists standings (
   league text not null,

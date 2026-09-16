@@ -13,7 +13,9 @@
     "fetch:scores": "tsx scripts/fetch-scores.ts",
     "fetch:standings": "tsx scripts/fetch-standings.ts",
     "fetch:player-stats": "tsx scripts/fetch-player-stats.ts",
-    "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats"
+    "fetch:rosters": "tsx scripts/fetch-rosters.ts",
+    "fetch:news": "tsx scripts/fetch-news.ts",
+    "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

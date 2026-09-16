@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { LEAGUES, LEAGUE_LABEL, getRecentAndUpcoming, getFeaturedGames } from "@/lib/queries";
+import { LEAGUES, LEAGUE_LABEL, getRecentAndUpcoming, getFeaturedGames, getNews } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { SearchBar } from "@/components/SearchBar";
+import { NewsCard } from "@/components/NewsCard";
 
 export const revalidate = 60;
 
@@ -15,6 +16,11 @@ export default async function HomePage() {
       games: (await getRecentAndUpcoming(league, 2, 5)).slice(0, 5),
     }))
   );
+
+  const news = (await Promise.all(LEAGUES.map((l) => getNews(l, 4))))
+    .flat()
+    .sort((a, b) => (b.published ? new Date(b.published).getTime() : 0) - (a.published ? new Date(a.published).getTime() : 0))
+    .slice(0, 6);
 
   return (
     <div className="flex flex-col gap-10">
@@ -65,10 +71,24 @@ export default async function HomePage() {
               <Link href={`/${league}/standings`} className="text-[var(--accent)] hover:underline">
                 Standings
               </Link>
+              <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">
+                Leaders
+              </Link>
             </div>
           </section>
         ))}
       </div>
+
+      {news.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-lg font-bold">Latest News</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {news.map((a) => (
+              <NewsCard key={a.article_id} article={a} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

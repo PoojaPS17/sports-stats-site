@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerGameLog } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerGameLog, getPlayerSeasonStats } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 
@@ -33,7 +33,10 @@ export default async function PlayerPage({
   const player = await getPlayerBySlug(league, slug);
   if (!player) notFound();
 
-  const gameLog = await getPlayerGameLog(league, player.espn_id);
+  const [gameLog, seasonStats] = await Promise.all([
+    getPlayerGameLog(league, player.espn_id),
+    getPlayerSeasonStats(league, player.espn_id),
+  ]);
   const color = player.team_color ?? "var(--accent)";
 
   return (
@@ -64,6 +67,23 @@ export default async function PlayerPage({
       </div>
 
       <AdSlot label="Player page top" />
+
+      {seasonStats && (
+        <section>
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">
+            {seasonStats.season} Season Stats
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {Object.entries(seasonStats.categories).map(([category, { labels, values }]) => (
+              <StatGroup
+                key={category}
+                category={category}
+                values={Object.fromEntries(labels.map((l, i) => [l, values[i]]))}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Game Log</h2>

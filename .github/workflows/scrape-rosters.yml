@@ -1,0 +1,31 @@
+name: Scrape rosters
+
+on:
+  schedule:
+    # rosters barely change intra-day — once a day is plenty and keeps ESPN request volume low
+    - cron: "17 8 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scrape-rosters:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply schema (idempotent)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run migrate
+
+      - name: Fetch team rosters
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:rosters

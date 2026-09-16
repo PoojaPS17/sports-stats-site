@@ -231,6 +231,132 @@ export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
   return rows;
 }
 
+export interface NewsArticle {
+  article_id: string;
+  headline: string;
+  description: string | null;
+  image_url: string | null;
+  link: string | null;
+  published: string | null;
+}
+
+export async function getNews(league: League, limit = 8): Promise<NewsArticle[]> {
+  const { rows } = await pool.query(
+    `select article_id, headline, description, image_url, link, published
+     from news_articles where league = $1 order by published desc nulls last limit $2`,
+    [league, limit]
+  );
+  return rows;
+}
+
+export interface LeaderRow {
+  player_espn_id: string;
+  name: string;
+  slug: string;
+  headshot_url: string | null;
+  team_name: string | null;
+  team_slug: string | null;
+  value: number;
+}
+
+export const LEADER_CATEGORIES: Record<League, { key: string; column: string; label: string; unit: string }[]> = {
+  nba: [
+    { key: "points", column: "pts_avg", label: "Points", unit: "PPG" },
+    { key: "rebounds", column: "reb_avg", label: "Rebounds", unit: "RPG" },
+    { key: "assists", column: "ast_avg", label: "Assists", unit: "APG" },
+  ],
+  nfl: [
+    { key: "passing", column: "passing_yards", label: "Passing Yards", unit: "YDS" },
+    { key: "rushing", column: "rushing_yards", label: "Rushing Yards", unit: "YDS" },
+    { key: "receiving", column: "receiving_yards", label: "Receiving Yards", unit: "YDS" },
+  ],
+};
+
+const LEADER_COLUMNS = new Set(
+  Object.values(LEADER_CATEGORIES)
+    .flat()
+    .map((c) => c.column)
+);
+
+export async function getLeaders(league: League, column: string, limit = 10): Promise<LeaderRow[]> {
+  if (!LEADER_COLUMNS.has(column)) throw new Error(`Unknown leader column: ${column}`);
+  const { rows } = await pool.query(
+    `select pss.player_espn_id, p.name, p.slug, p.headshot_url,
+            t.name as team_name, t.slug as team_slug, pss.${column} as value
+     from player_season_stats pss
+     join players p on p.league = pss.league and p.espn_id = pss.player_espn_id
+     left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
+     where pss.league = $1 and pss.${column} is not null
+     order by pss.${column} desc
+     limit $2`,
+    [league, limit]
+  );
+  return rows;
+}
+
+const GAME_STAT_CATEGORY = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) => cats.map((c) => c.key)));
+
+// ESPN's per-player season-stats endpoint lags the live season (it may not have a row
+// for the in-progress year for days/weeks), so NFL leaders are computed directly from
+// our own accumulated game logs instead — always accurate, no external lag.
+export async function getLeadersFromGameLogs(
+  league: League,
+  category: string,
+  label: string,
+  limit = 10
+): Promise<LeaderRow[]> {
+  if (!GAME_STAT_CATEGORY.has(category)) throw new Error(`Unknown leader category: ${category}`);
+  const { rows } = await pool.query(
+    `select p.espn_id as player_espn_id, p.name, p.slug, p.headshot_url,
+            t.name as team_name, t.slug as team_slug,
+            sum(replace(pgs.stats->$2->>$3, ',', '')::numeric) as value
+     from player_game_stats pgs
+     join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
+     left join teams t on t.league = pgs.league and t.espn_id = pgs.team_espn_id
+     where pgs.league = $1
+       and (pgs.stats->$2->>$3) ~ '^[0-9,]+$'
+     group by p.espn_id, p.name, p.slug, p.headshot_url, t.name, t.slug
+     having sum(replace(pgs.stats->$2->>$3, ',', '')::numeric) > 0
+     order by value desc
+     limit $4`,
+    [league, category, label, limit]
+  );
+  return rows;
+}
+
+export interface RosterPlayer {
+  espn_id: string;
+  name: string;
+  slug: string;
+  position: string | null;
+  jersey: string | null;
+  height: string | null;
+  weight: string | null;
+  age: number | null;
+  headshot_url: string | null;
+}
+
+export async function getTeamRoster(league: League, teamEspnId: string): Promise<RosterPlayer[]> {
+  const { rows } = await pool.query(
+    `select espn_id, name, slug, position, jersey, height, weight, age, headshot_url
+     from players where league = $1 and team_espn_id = $2
+     order by position, name`,
+    [league, teamEspnId]
+  );
+  return rows;
+}
+
+export async function getPlayerSeasonStats(
+  league: League,
+  playerEspnId: string
+): Promise<{ season: number; categories: Record<string, { labels: string[]; values: string[] }> } | null> {
+  const { rows } = await pool.query(
+    `select season, categories from player_season_stats where league = $1 and player_espn_id = $2 order by season desc limit 1`,
+    [league, playerEspnId]
+  );
+  return rows[0] ?? null;
+}
+
 export async function getLastUpdated(): Promise<string | null> {
   const { rows } = await pool.query(`select max(updated_at) as updated_at from games`);
   return rows[0]?.updated_at ? new Date(rows[0].updated_at).toISOString() : null;
