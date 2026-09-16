@@ -22,14 +22,13 @@ function collectEntries(node: any, conference: string | null, out: any[]) {
   }
 }
 
-async function main() {
-  for (const league of LEAGUES) {
-    const data = await fetchStandings(league);
-    const season = data.season?.year ?? new Date().getFullYear();
-    const entries: any[] = [];
-    collectEntries(data, null, entries);
+async function processLeague(league: League) {
+  const data = await fetchStandings(league);
+  const season = data.season?.year ?? new Date().getFullYear();
+  const entries: any[] = [];
+  collectEntries(data, null, entries);
 
-    for (const { entry, conference } of entries) {
+  for (const { entry, conference } of entries) {
       const stats = entry.stats ?? [];
       const draws = statValue(stats, "ties");
       const points = statValue(stats, "points", "matchPoints");
@@ -70,8 +69,17 @@ async function main() {
           netRunRate !== undefined ? Number(netRunRate) : null,
         ]
       );
+  }
+  console.log(`[fetch-standings] ${league}: upserted ${entries.length} rows`);
+}
+
+async function main() {
+  for (const league of LEAGUES) {
+    try {
+      await processLeague(league);
+    } catch (err) {
+      console.error(`[fetch-standings] ${league} failed:`, err instanceof Error ? err.message : err);
     }
-    console.log(`[fetch-standings] ${league}: upserted ${entries.length} rows`);
   }
   await pool.end();
 }

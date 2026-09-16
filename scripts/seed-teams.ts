@@ -19,7 +19,13 @@ async function seedLeague(league: League) {
 const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl"];
 
 async function main() {
-  for (const league of LEAGUES) await seedLeague(league);
+  for (const league of LEAGUES) {
+    try {
+      await seedLeague(league);
+    } catch (err) {
+      console.error(`[seed-teams] ${league} failed:`, err instanceof Error ? err.message : err);
+    }
+  }
   await pool.end();
 }
 

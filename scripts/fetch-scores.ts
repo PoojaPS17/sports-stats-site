@@ -26,12 +26,16 @@ async function main() {
     const seen = new Set<string>();
     let count = 0;
     for (const date of datesToScan()) {
-      const data = await fetchScoreboard(league, date);
-      for (const ev of data.events ?? []) {
-        if (seen.has(ev.id)) continue;
-        seen.add(ev.id);
-        await upsertEvent(league, ev);
-        count++;
+      try {
+        const data = await fetchScoreboard(league, date);
+        for (const ev of data.events ?? []) {
+          if (seen.has(ev.id)) continue;
+          seen.add(ev.id);
+          await upsertEvent(league, ev);
+          count++;
+        }
+      } catch (err) {
+        console.error(`[fetch-scores] ${league} ${date} failed:`, err instanceof Error ? err.message : err);
       }
     }
     console.log(`[fetch-scores] ${league}: upserted ${count} games`);

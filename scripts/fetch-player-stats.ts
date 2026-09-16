@@ -85,37 +85,45 @@ async function processGame(league: League, gameEspnId: string, touched: Map<stri
   return perPlayer.size;
 }
 
+async function processLeague(league: League) {
+  const { rows } = await pool.query(
+    `select espn_id from games
+     where league = $1 and completed = true and date > now() - interval '3 days'`,
+    [league]
+  );
+
+  const touched = new Map<string, string>();
+  let total = 0;
+  for (const { espn_id } of rows) {
+    try {
+      total += await processGame(league, espn_id, touched);
+    } catch (err) {
+      console.error(`[fetch-player-stats] ${league} game ${espn_id} failed:`, err);
+    }
+  }
+  console.log(`[fetch-player-stats] ${league}: processed ${rows.length} games, ${total} player-stat rows`);
+
+  const seasonYear = await fetchCurrentSeasonYear(league);
+  let seasonUpdates = 0;
+  if (seasonYear) {
+    for (const [playerId, teamId] of touched) {
+      try {
+        if (await updatePlayerSeasonStats(league, playerId, teamId, seasonYear)) seasonUpdates++;
+      } catch (err) {
+        console.error(`[fetch-player-stats] ${league} season stats for player ${playerId} failed:`, err);
+      }
+    }
+  }
+  console.log(`[fetch-player-stats] ${league}: updated season stats for ${seasonUpdates}/${touched.size} players (season ${seasonYear})`);
+}
+
 async function main() {
   for (const league of LEAGUES) {
-    const { rows } = await pool.query(
-      `select espn_id from games
-       where league = $1 and completed = true and date > now() - interval '3 days'`,
-      [league]
-    );
-
-    const touched = new Map<string, string>();
-    let total = 0;
-    for (const { espn_id } of rows) {
-      try {
-        total += await processGame(league, espn_id, touched);
-      } catch (err) {
-        console.error(`[fetch-player-stats] ${league} game ${espn_id} failed:`, err);
-      }
+    try {
+      await processLeague(league);
+    } catch (err) {
+      console.error(`[fetch-player-stats] ${league} failed:`, err instanceof Error ? err.message : err);
     }
-    console.log(`[fetch-player-stats] ${league}: processed ${rows.length} games, ${total} player-stat rows`);
-
-    const seasonYear = await fetchCurrentSeasonYear(league);
-    let seasonUpdates = 0;
-    if (seasonYear) {
-      for (const [playerId, teamId] of touched) {
-        try {
-          if (await updatePlayerSeasonStats(league, playerId, teamId, seasonYear)) seasonUpdates++;
-        } catch (err) {
-          console.error(`[fetch-player-stats] ${league} season stats for player ${playerId} failed:`, err);
-        }
-      }
-    }
-    console.log(`[fetch-player-stats] ${league}: updated season stats for ${seasonUpdates}/${touched.size} players (season ${seasonYear})`);
   }
   await pool.end();
 }
