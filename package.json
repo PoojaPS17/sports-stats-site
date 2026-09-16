@@ -18,6 +18,9 @@
     "fetch:news": "tsx scripts/fetch-news.ts",
     "check:live": "tsx scripts/check-live.ts",
     "backfill:games": "tsx scripts/backfill-games.ts",
+    "backfill:standings": "tsx scripts/backfill-standings.ts",
+    "backfill:player-stats": "tsx scripts/backfill-player-stats.ts",
+    "fetch:team-info": "tsx scripts/fetch-team-info.ts",
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {

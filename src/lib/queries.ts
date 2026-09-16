@@ -34,6 +34,7 @@ export interface GameRow {
   status_state: string | null;
   status_detail: string | null;
   status_summary: string | null;
+  round: string | null;
   completed: boolean;
   home_team_espn_id: string;
   away_team_espn_id: string;
@@ -53,7 +54,7 @@ const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-    g.status_state, g.status_detail, g.status_summary, g.completed,
+    g.status_state, g.status_detail, g.status_summary, g.round, g.completed,
     g.home_team_espn_id, g.away_team_espn_id,
     ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
     at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
@@ -61,6 +62,11 @@ const GAME_SELECT = `
   join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
   join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
 `;
+
+export async function getGameByEspnId(league: League, espnId: string): Promise<GameRow | null> {
+  const { rows } = await pool.query(`${GAME_SELECT} where g.league = $1 and g.espn_id = $2`, [league, espnId]);
+  return rows[0] ?? null;
+}
 
 export async function getGamesByDate(league: League, dateISO: string): Promise<GameRow[]> {
   const { rows } = await pool.query(
@@ -115,18 +121,41 @@ export interface StandingRow {
   net_run_rate: string | null;
 }
 
+const STANDING_SELECT = `
+  select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
+         s.conference, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
+         s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate
+  from standings s
+  join teams t on t.league = s.league and t.espn_id = s.team_espn_id
+`;
+const STANDING_ORDER = `order by s.conference, s.points desc nulls last, s.net_run_rate desc nulls last, s.wins desc, s.losses asc`;
+
+// The `standings` table now holds every backfilled historical season too, so this
+// must pin to the most recent one rather than returning every season's rows mixed
+// together.
 export async function getStandings(league: League): Promise<StandingRow[]> {
   const { rows } = await pool.query(
-    `select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
-            s.conference, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
-            s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate
-     from standings s
-     join teams t on t.league = s.league and t.espn_id = s.team_espn_id
-     where s.league = $1
-     order by s.conference, s.points desc nulls last, s.net_run_rate desc nulls last, s.wins desc, s.losses asc`,
+    `${STANDING_SELECT}
+     where s.league = $1 and s.season = (select max(season) from standings where league = $1)
+     ${STANDING_ORDER}`,
     [league]
   );
   return rows;
+}
+
+export async function getStandingsBySeason(league: League, season: number): Promise<StandingRow[]> {
+  const { rows } = await pool.query(
+    `${STANDING_SELECT} where s.league = $1 and s.season = $2 ${STANDING_ORDER}`,
+    [league, season]
+  );
+  return rows;
+}
+
+// Every season with a standings table on file, most recent first — powers the
+// year-toggle tabs on the standings page.
+export async function getStandingsSeasons(league: League): Promise<number[]> {
+  const { rows } = await pool.query(`select distinct season from standings where league = $1 order by season desc`, [league]);
+  return rows.map((r) => r.season as number);
 }
 
 export interface TeamRow {
@@ -139,9 +168,19 @@ export interface TeamRow {
   alternate_color: string | null;
 }
 
-export async function getTeamBySlug(league: League, slug: string): Promise<TeamRow | null> {
+export interface TeamDetail extends TeamRow {
+  venue_name: string | null;
+  venue_city: string | null;
+  venue_state: string | null;
+  venue_country: string | null;
+  head_coach: string | null;
+}
+
+export async function getTeamBySlug(league: League, slug: string): Promise<TeamDetail | null> {
   const { rows } = await pool.query(
-    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams where league = $1 and slug = $2`,
+    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color,
+            venue_name, venue_city, venue_state, venue_country, head_coach
+     from teams where league = $1 and slug = $2`,
     [league, slug]
   );
   return rows[0] ?? null;
@@ -155,15 +194,27 @@ export async function getAllTeams(league: League): Promise<TeamRow[]> {
   return rows;
 }
 
-export async function getTeamGames(league: League, teamEspnId: string, limit = 200): Promise<GameRow[]> {
+export async function getTeamGamesBySeason(league: League, teamEspnId: string, season: number): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
-     where g.league = $1 and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2)
-     order by g.date desc
-     limit $3`,
-    [league, teamEspnId, limit]
+     where g.league = $1 and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2) and g.season_year = $3
+     order by g.date desc`,
+    [league, teamEspnId, season]
   );
   return rows;
+}
+
+// Every season a team has at least one game in, most recent first — powers the
+// year-toggle tabs on team pages. Up to 10+ years of backfilled history plus the
+// live season.
+export async function getTeamSeasons(league: League, teamEspnId: string): Promise<number[]> {
+  const { rows } = await pool.query(
+    `select distinct season_year from games
+     where league = $1 and (home_team_espn_id = $2 or away_team_espn_id = $2) and season_year is not null
+     order by season_year desc`,
+    [league, teamEspnId]
+  );
+  return rows.map((r) => r.season_year as number);
 }
 
 export interface PlayerRow {
@@ -187,6 +238,15 @@ export async function getPlayerBySlug(league: League, slug: string): Promise<Pla
     [league, slug]
   );
   return rows[0] ?? null;
+}
+
+// Batch-resolves espn_id -> slug for players who show up in a match's box score, so
+// the box score can link to a player page only when we actually have one (most
+// historical opponents in a decade-old game were never on a "current roster").
+export async function getPlayerSlugsByEspnIds(league: League, espnIds: string[]): Promise<Map<string, string>> {
+  if (espnIds.length === 0) return new Map();
+  const { rows } = await pool.query(`select espn_id, slug from players where league = $1 and espn_id = any($2)`, [league, espnIds]);
+  return new Map(rows.map((r) => [r.espn_id as string, r.slug as string]));
 }
 
 export async function getAllPlayers(league: League): Promise<PlayerRow[]> {
@@ -396,15 +456,39 @@ export async function getTeamRoster(league: League, teamEspnId: string): Promise
   return rows;
 }
 
-export async function getPlayerSeasonStats(
-  league: League,
-  playerEspnId: string
-): Promise<{ season: number; categories: Record<string, { labels: string[]; values: string[] }> } | null> {
+export interface PlayerSeasonStats {
+  season: number;
+  categories: Record<string, { labels: string[]; values: string[] }>;
+}
+
+export async function getPlayerSeasonStats(league: League, playerEspnId: string): Promise<PlayerSeasonStats | null> {
   const { rows } = await pool.query(
     `select season, categories from player_season_stats where league = $1 and player_espn_id = $2 order by season desc limit 1`,
     [league, playerEspnId]
   );
   return rows[0] ?? null;
+}
+
+export async function getPlayerSeasonStatsBySeason(
+  league: League,
+  playerEspnId: string,
+  season: number
+): Promise<PlayerSeasonStats | null> {
+  const { rows } = await pool.query(
+    `select season, categories from player_season_stats where league = $1 and player_espn_id = $2 and season = $3`,
+    [league, playerEspnId, season]
+  );
+  return rows[0] ?? null;
+}
+
+// Every season this player has stats for, most recent first — powers the year-toggle
+// tabs on the player page. Up to 10 years of backfilled history plus the live season.
+export async function getPlayerSeasons(league: League, playerEspnId: string): Promise<number[]> {
+  const { rows } = await pool.query(
+    `select distinct season from player_season_stats where league = $1 and player_espn_id = $2 order by season desc`,
+    [league, playerEspnId]
+  );
+  return rows.map((r) => r.season as number);
 }
 
 export async function getLastUpdated(): Promise<string | null> {

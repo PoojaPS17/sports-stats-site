@@ -10,6 +10,7 @@ export function LeagueSubNav({ league }: { league: League }) {
   const tabs = [
     { label: "Scores", href: `/${league}` },
     { label: "Standings", href: `/${league}/standings` },
+    { label: "Teams", href: `/${league}/teams` },
     { label: "Leaders", href: `/${league}/leaders` },
     { label: "News", href: `/${league}/news` },
   ];

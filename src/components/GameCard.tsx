@@ -4,9 +4,7 @@ import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 
 function TeamRow({
-  league,
   name,
-  slug,
   abbr,
   logo,
   color,
@@ -15,9 +13,7 @@ function TeamRow({
   completed,
   won,
 }: {
-  league: League;
   name: string;
-  slug: string;
   abbr: string | null;
   logo: string | null;
   color: string | null;
@@ -32,7 +28,7 @@ function TeamRow({
   const isLongScore = Boolean(scoreDisplay);
 
   return (
-    <Link href={`/${league}/teams/${slug}`} className="flex flex-col gap-0.5 py-1.5 hover:opacity-80">
+    <div className="flex flex-col gap-0.5 py-1.5">
       <span className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2.5">
           <TeamLogo name={name} logoUrl={logo} color={color} size={28} />
@@ -50,7 +46,7 @@ function TeamRow({
           {scoreDisplay}
         </span>
       )}
-    </Link>
+    </div>
   );
 }
 
@@ -59,7 +55,10 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
 
   return (
-    <div className="card group relative overflow-hidden px-4 py-3 transition hover:-translate-y-0.5 hover:shadow-lg">
+    <Link
+      href={`/${league}/games/${game.espn_id}`}
+      className="card group relative block overflow-hidden px-4 py-3 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
       <div
         className="absolute inset-x-0 top-0 h-1"
         style={{
@@ -72,12 +71,11 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           statusDetail={game.status_detail}
           date={game.date}
           completed={game.completed}
+          round={game.round}
         />
       </div>
       <TeamRow
-        league={league}
         name={game.away_name}
-        slug={game.away_slug}
         abbr={game.away_abbr}
         logo={game.away_logo}
         color={game.away_color}
@@ -87,9 +85,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         won={awayWon}
       />
       <TeamRow
-        league={league}
         name={game.home_name}
-        slug={game.home_slug}
         abbr={game.home_abbr}
         logo={game.home_logo}
         color={game.home_color}
@@ -101,6 +97,6 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
       {game.completed && game.status_summary && (
         <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--accent)]">{game.status_summary}</p>
       )}
-    </div>
+    </Link>
   );
 }

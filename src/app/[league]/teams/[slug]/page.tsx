@@ -1,23 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGames, getTeamRoster, formatSeasonLabel, type GameRow, type League } from "@/lib/queries";
-import { GameCard } from "@/components/GameCard";
+import { isLeague, getTeamBySlug, getTeamGamesBySeason, getTeamSeasons, getTeamRoster } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
-import { TeamLogo } from "@/components/TeamLogo";
 import { SectionHeader } from "@/components/SectionHeader";
+import { TeamSeasonGames } from "@/components/TeamSeasonGames";
+import { TeamHeader } from "@/components/TeamHeader";
+import { TeamPageNav } from "@/components/TeamPageNav";
 
 export const revalidate = 300;
-
-function groupBySeason(league: League, games: GameRow[]): [string, GameRow[]][] {
-  const groups = new Map<string, GameRow[]>();
-  for (const g of games) {
-    const key = formatSeasonLabel(league, g.season_year) ?? "Unknown season";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(g);
-  }
-  // season_year descending — games within a season already arrive most-recent-first
-  return [...groups.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-}
 
 export default async function TeamPage({
   params,
@@ -30,43 +20,28 @@ export default async function TeamPage({
   const team = await getTeamBySlug(league, slug);
   if (!team) notFound();
 
-  const [games, roster] = await Promise.all([getTeamGames(league, team.espn_id), getTeamRoster(league, team.espn_id)]);
-  const color = team.color ?? "var(--accent)";
+  const seasons = await getTeamSeasons(league, team.espn_id);
+  const activeSeason = seasons[0] ?? null;
+  const [games, roster] = await Promise.all([
+    activeSeason ? getTeamGamesBySeason(league, team.espn_id, activeSeason) : Promise.resolve([]),
+    getTeamRoster(league, team.espn_id),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
-      <div
-        className="card flex items-center gap-4 overflow-hidden px-6 py-6"
-        style={{ background: `linear-gradient(135deg, ${color}1a, var(--surface))` }}
-      >
-        <TeamLogo name={team.name} logoUrl={team.logo_url} color={team.color} size={64} />
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">{LEAGUE_LABEL[league]}</p>
-          <h1 className="text-2xl font-extrabold tracking-tight">{team.name}</h1>
-        </div>
-      </div>
+      <TeamHeader league={league} name={team.name} logoUrl={team.logo_url} color={team.color} />
+
+      <TeamPageNav basePath={`/${league}/teams/${slug}`} active="overview" />
 
       <AdSlot label="Team page top" />
 
-      <section className="flex flex-col gap-5">
-        {games.length === 0 ? (
-          <>
-            <SectionHeader>Results &amp; Schedule</SectionHeader>
-            <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games found.</p>
-          </>
-        ) : (
-          groupBySeason(league, games).map(([season, seasonGames]) => (
-            <div key={season}>
-              <SectionHeader>{season} Season</SectionHeader>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {seasonGames.map((g) => (
-                  <GameCard key={g.espn_id} league={league} game={g} />
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </section>
+      <TeamSeasonGames
+        league={league}
+        games={games}
+        seasons={seasons}
+        activeSeason={activeSeason}
+        basePath={`/${league}/teams/${slug}`}
+      />
 
       <section>
         <SectionHeader>Current Roster</SectionHeader>

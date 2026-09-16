@@ -1,11 +1,18 @@
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
 
-function currentSeasonRow(category: any, seasonYear: number): { labels: string[]; values: string[] } | null {
+// Soccer's stats endpoint is sport-wide, not league-scoped — a season row for the
+// right year could still be from a different league/competition entirely (e.g. a
+// player's stint at a French club), so `leagueSlug` narrows it to actual EPL rows.
+function seasonRow(category: any, seasonYear: number, leagueSlug?: string): { labels: string[]; values: string[] } | null {
   const stats: any[] = category.statistics ?? [];
-  const row = stats.find((s) => s.season?.year === seasonYear);
+  const row = stats.find((s) => s.season?.year === seasonYear && (!leagueSlug || s.leagueSlug === leagueSlug));
   if (!row) return null;
   return { labels: category.labels ?? [], values: row.stats ?? [] };
+}
+
+function categoryKey(category: any): string {
+  return category.name ?? category.displayName ?? "stats";
 }
 
 function numberAt(labels: string[], values: string[], label: string): number | null {
@@ -21,15 +28,14 @@ function positiveOrNull(n: number | null): number | null {
   return n !== null && n > 0 ? n : null;
 }
 
-export async function updatePlayerSeasonStats(
+async function upsertOneSeason(
   league: League,
   playerEspnId: string,
   teamEspnId: string | null,
-  seasonYear: number
-) {
-  const data = await fetchAthleteSeasonStats(league, playerEspnId);
-  const categories: any[] = data.categories ?? [];
-
+  seasonYear: number,
+  categories: any[],
+  leagueSlug: string | undefined
+): Promise<boolean> {
   const out: Record<string, { labels: string[]; values: string[] }> = {};
   let ptsAvg: number | null = null;
   let rebAvg: number | null = null;
@@ -40,19 +46,20 @@ export async function updatePlayerSeasonStats(
   let found = false;
 
   for (const category of categories) {
-    const row = currentSeasonRow(category, seasonYear);
+    const row = seasonRow(category, seasonYear, leagueSlug);
     if (!row) continue;
     found = true;
-    out[category.name] = row;
+    const key = categoryKey(category);
+    out[key] = row;
 
-    if (category.name === "averages") {
+    if (key === "averages") {
       ptsAvg = positiveOrNull(numberAt(row.labels, row.values, "PTS"));
       rebAvg = positiveOrNull(numberAt(row.labels, row.values, "REB"));
       astAvg = positiveOrNull(numberAt(row.labels, row.values, "AST"));
     }
-    if (category.name === "passing") passingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
-    if (category.name === "rushing") rushingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
-    if (category.name === "receiving") receivingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
+    if (key === "passing") passingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
+    if (key === "rushing") rushingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
+    if (key === "receiving") receivingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
   }
 
   if (!found) return false;
@@ -70,4 +77,38 @@ export async function updatePlayerSeasonStats(
     [league, seasonYear, playerEspnId, teamEspnId, JSON.stringify(out), ptsAvg, rebAvg, astAvg, passingYards, rushingYards, receivingYards]
   );
   return true;
+}
+
+// The athlete season-stats endpoint returns a player's whole career history in one
+// response (one row per season per category) — so storing the last `yearsBack` seasons
+// costs the exact same single request as storing just the current one used to. Called
+// both by the recurring scraper (keeps the current season fresh) and the one-time
+// historical backfill (populates the other ~10 years for free from the same response).
+export async function upsertPlayerSeasonStats(
+  league: League,
+  playerEspnId: string,
+  teamEspnId: string | null,
+  yearsBack = 10
+): Promise<number> {
+  const data = await fetchAthleteSeasonStats(league, playerEspnId);
+  const categories: any[] = data.categories ?? [];
+  const minYear = new Date().getUTCFullYear() - yearsBack;
+  // Soccer's stats endpoint is sport-wide, so seasons must be filtered to actual EPL
+  // rows (leagueSlug "eng.1") — otherwise a player's time at a club in a different
+  // country's league would be collected and stored as if it were an EPL season.
+  const leagueSlug = league === "epl" ? "eng.1" : undefined;
+
+  const years = new Set<number>();
+  for (const category of categories) {
+    for (const row of category.statistics ?? []) {
+      const y = row.season?.year;
+      if (typeof y === "number" && y >= minYear && (!leagueSlug || row.leagueSlug === leagueSlug)) years.add(y);
+    }
+  }
+
+  let count = 0;
+  for (const year of years) {
+    if (await upsertOneSeason(league, playerEspnId, teamEspnId, year, categories, leagueSlug)) count++;
+  }
+  return count;
 }

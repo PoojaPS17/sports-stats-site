@@ -14,6 +14,16 @@ create table if not exists teams (
 );
 
 alter table teams add column if not exists color text;
+-- Team background info ("About" page) — venue and head coach, sourced from ESPN's
+-- core API (venue is a stable franchise fact; coach can change season to season, so
+-- this is refreshed alongside the daily roster fetch, not backfilled once and left).
+-- Not available for IPL: cricket's team-level endpoints 404 for this competition,
+-- same limitation as /teams and /roster.
+alter table teams add column if not exists venue_name text;
+alter table teams add column if not exists venue_city text;
+alter table teams add column if not exists venue_state text;
+alter table teams add column if not exists venue_country text;
+alter table teams add column if not exists head_coach text;
 alter table teams add column if not exists alternate_color text;
 
 create table if not exists players (
@@ -59,6 +69,7 @@ create table if not exists games (
   status_state text,
   status_detail text,
   status_summary text,
+  round text,
   period int,
   clock text,
   completed boolean not null default false,
@@ -71,6 +82,11 @@ alter table games add column if not exists away_score_display text;
 alter table games add column if not exists season_year int;
 alter table games add column if not exists status_summary text;
 alter table games add column if not exists home_winner boolean;
+-- The stage of the match (e.g. cricket's "Qualifier 1"/"Eliminator"/"Final", parsed
+-- from ESPN's `description` field) — without this, every completed game rendered a
+-- generic "Final" status pill, which is correct broadcast terminology for NBA/NFL/EPL
+-- but misleading for IPL, where "Final" is also a specific, single playoff match.
+alter table games add column if not exists round text;
 alter table games add column if not exists away_winner boolean;
 
 create index if not exists games_league_date_idx on games (league, date);

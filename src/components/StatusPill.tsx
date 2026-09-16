@@ -3,28 +3,32 @@ export function StatusPill({
   statusDetail,
   date,
   completed,
+  round,
 }: {
   statusState: string | null;
   statusDetail: string | null;
   date: string;
   completed: boolean;
+  round?: string | null;
 }) {
   if (statusState === "in") {
     return (
       <span className="pill pill-live">
         <span className="live-dot" />
-        {statusDetail ?? "Live"}
+        {round ?? statusDetail ?? "Live"}
       </span>
     );
   }
 
   if (completed) {
-    return <span className="pill pill-final">Final</span>;
+    // "Final" is standard broadcast shorthand for "game over" everywhere — but for a
+    // playoff stage like IPL's Qualifier 1/Eliminator, showing "Final" on every one of
+    // them is actively misleading (it's also the name of one specific match). Show the
+    // real stage instead when we have one; a numbered regular-season match still just
+    // says "Final".
+    return <span className="pill pill-final">{round ?? "Final"}</span>;
   }
 
-  return (
-    <span className="pill pill-upcoming">
-      {new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-    </span>
-  );
+  const dateLabel = new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return <span className="pill pill-upcoming">{round ? `${round} · ${dateLabel}` : dateLabel}</span>;
 }

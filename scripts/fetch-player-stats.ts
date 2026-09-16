@@ -1,6 +1,6 @@
 import { pool } from "./lib/db";
-import { fetchSummary, fetchCurrentSeasonYear, type League } from "./lib/espn";
-import { updatePlayerSeasonStats } from "./lib/season-stats";
+import { fetchSummary, type League } from "./lib/espn";
+import { upsertPlayerSeasonStats } from "./lib/season-stats";
 import { uniqueSlugFor } from "./lib/players";
 
 const LEAGUES: League[] = ["nba", "nfl", "epl"];
@@ -103,18 +103,15 @@ async function processLeague(league: League) {
   }
   console.log(`[fetch-player-stats] ${league}: processed ${rows.length} games, ${total} player-stat rows`);
 
-  const seasonYear = await fetchCurrentSeasonYear(league);
   let seasonUpdates = 0;
-  if (seasonYear) {
-    for (const [playerId, teamId] of touched) {
-      try {
-        if (await updatePlayerSeasonStats(league, playerId, teamId, seasonYear)) seasonUpdates++;
-      } catch (err) {
-        console.error(`[fetch-player-stats] ${league} season stats for player ${playerId} failed:`, err);
-      }
+  for (const [playerId, teamId] of touched) {
+    try {
+      if (await upsertPlayerSeasonStats(league, playerId, teamId)) seasonUpdates++;
+    } catch (err) {
+      console.error(`[fetch-player-stats] ${league} season stats for player ${playerId} failed:`, err);
     }
   }
-  console.log(`[fetch-player-stats] ${league}: updated season stats for ${seasonUpdates}/${touched.size} players (season ${seasonYear})`);
+  console.log(`[fetch-player-stats] ${league}: updated season stats for ${seasonUpdates}/${touched.size} players`);
 }
 
 async function main() {

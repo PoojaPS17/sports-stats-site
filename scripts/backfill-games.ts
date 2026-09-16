@@ -1,14 +1,17 @@
 // One-time historical backfill of match/score data, run manually (not part of the
-// recurring 15-min cron). Uses the per-team `schedule?season=` endpoint (a whole
-// season in one call) for NBA/NFL/EPL — cricket has no such endpoint for this
-// competition (404s, same as /teams and /roster), so it falls back to day-by-day
-// scoreboard scanning over a much smaller in-season window.
+// recurring 15-min cron) — this data is static (completed seasons never change), so
+// it only needs to be pulled once and then lives in the DB permanently. Uses the
+// per-team `schedule?season=` endpoint (a whole season in one call) for NBA/NFL/EPL.
+// Cricket has no such per-team endpoint for this competition (404s, same as /teams
+// and /roster), but its `scoreboard` endpoint accepts `season=` directly and returns
+// the whole season in one call too — so IPL backfill is just as cheap (one request
+// per season instead of per team x season).
 // Safe to re-run/resume — all writes are upserts.
 import { pool } from "./lib/db";
-import { fetchScoreboard, fetchTeamSchedule, type League } from "./lib/espn";
+import { fetchScoreboardBySeason, fetchTeamSchedule, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
 
-const YEARS_BACK = 2;
+const YEARS_BACK = 10;
 const REQUEST_DELAY_MS = 120;
 
 function sleep(ms: number) {
@@ -50,26 +53,18 @@ async function backfillViaTeamSchedules(league: League) {
   console.log(`[backfill-games] ${league}: scanned ${teams.length} teams x ${seasons.length} seasons, upserted ${gameCount} games`);
 }
 
-// Cricket fallback: day-by-day scoreboard scan, but only across the roughly 3
-// in-season months per year (IPL runs ~March-May), so the total call count stays small.
-async function backfillCricketViaScoreboard(league: League) {
-  const months = [3, 4, 5];
-  const today = new Date();
-  const start = new Date(today);
-  start.setUTCFullYear(start.getUTCFullYear() - YEARS_BACK);
-
-  const dates: string[] = [];
-  for (const d = new Date(start); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
-    if (months.includes(d.getUTCMonth() + 1)) {
-      dates.push(d.toISOString().slice(0, 10).replace(/-/g, ""));
-    }
-  }
-
+// Cricket: the competition id in the URL path (e.g. IPL's 8048) only resolves to the
+// *current* season by default, but `scoreboard?season=YYYY` returns that whole
+// season's matches in one call — so one request per year covers all of IPL history,
+// same order-of-magnitude cost as the per-team-schedule approach used for the others.
+async function backfillCricketViaSeasonScoreboard(league: League) {
+  const currentYear = new Date().getUTCFullYear();
   const seen = new Set<string>();
   let gameCount = 0;
-  for (const date of dates) {
+
+  for (let season = currentYear - YEARS_BACK; season <= currentYear; season++) {
     try {
-      const data = await fetchScoreboard(league, date);
+      const data = await fetchScoreboardBySeason(league, season);
       for (const ev of data.events ?? []) {
         if (seen.has(ev.id)) continue;
         seen.add(ev.id);
@@ -77,11 +72,11 @@ async function backfillCricketViaScoreboard(league: League) {
         gameCount++;
       }
     } catch (err) {
-      console.error(`[backfill-games] ${league} ${date} failed:`, err instanceof Error ? err.message : err);
+      console.error(`[backfill-games] ${league} season ${season} failed:`, err instanceof Error ? err.message : err);
     }
     await sleep(REQUEST_DELAY_MS);
   }
-  console.log(`[backfill-games] ${league}: scanned ${dates.length} dates, upserted ${gameCount} games`);
+  console.log(`[backfill-games] ${league}: scanned ${YEARS_BACK + 1} seasons, upserted ${gameCount} games`);
 }
 
 async function main() {
@@ -91,7 +86,7 @@ async function main() {
   for (const league of leagues) {
     console.log(`[backfill-games] starting ${league} (last ${YEARS_BACK} years)...`);
     if (league === "ipl") {
-      await backfillCricketViaScoreboard(league);
+      await backfillCricketViaSeasonScoreboard(league);
     } else {
       await backfillViaTeamSchedules(league);
     }

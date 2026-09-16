@@ -1,27 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerGameLog, getPlayerSeasonStats } from "@/lib/queries";
+import { isLeague, getPlayerBySlug, getPlayerGameLog, getPlayerSeasonStatsBySeason, getPlayerSeasons } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 import { SectionHeader } from "@/components/SectionHeader";
+import { PlayerHeader } from "@/components/PlayerHeader";
+import { PlayerSeasonStats, StatGroup } from "@/components/PlayerSeasonStats";
 
 export const revalidate = 300;
-
-function StatGroup({ category, values }: { category: string; values: Record<string, string> }) {
-  return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
-      <p className="mb-1 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{category}</p>
-      <div className="flex flex-wrap gap-x-3 gap-y-1">
-        {Object.entries(values).map(([k, v]) => (
-          <span key={k} className="text-sm">
-            <span className="font-semibold tabular-nums">{v}</span>{" "}
-            <span className="text-xs text-[var(--text-muted)]">{k}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default async function PlayerPage({
   params,
@@ -34,55 +20,32 @@ export default async function PlayerPage({
   const player = await getPlayerBySlug(league, slug);
   if (!player) notFound();
 
+  const seasons = await getPlayerSeasons(league, player.espn_id);
+  const activeSeason = seasons[0] ?? null;
   const [gameLog, seasonStats] = await Promise.all([
     getPlayerGameLog(league, player.espn_id),
-    getPlayerSeasonStats(league, player.espn_id),
+    activeSeason ? getPlayerSeasonStatsBySeason(league, player.espn_id, activeSeason) : Promise.resolve(null),
   ]);
-  const color = player.team_color ?? "var(--accent)";
 
   return (
     <div className="flex flex-col gap-6">
-      <div
-        className="card flex items-center gap-4 overflow-hidden px-6 py-6"
-        style={{ background: `linear-gradient(135deg, ${color}1a, var(--surface))` }}
-      >
-        {player.headshot_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={player.headshot_url}
-            alt={player.name}
-            width={72}
-            height={72}
-            className="rounded-full border-2 border-[var(--surface)] bg-[var(--surface-muted)] object-cover"
-          />
-        ) : (
-          <TeamLogo name={player.name} logoUrl={null} color={player.team_color} size={72} />
-        )}
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{player.name}</h1>
-          <p className="text-sm font-medium text-[var(--text-muted)]">
-            {LEAGUE_LABEL[league]}
-            {player.team_name ? ` · ${player.team_name}` : ""}
-          </p>
-        </div>
-      </div>
+      <PlayerHeader
+        league={league}
+        name={player.name}
+        headshotUrl={player.headshot_url}
+        teamName={player.team_name}
+        teamColor={player.team_color}
+      />
 
       <AdSlot label="Player page top" />
 
-      {seasonStats && (
-        <section>
-          <SectionHeader>{seasonStats.season} Season Stats</SectionHeader>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {Object.entries(seasonStats.categories).map(([category, { labels, values }]) => (
-              <StatGroup
-                key={category}
-                category={category}
-                values={Object.fromEntries(labels.map((l, i) => [l, values[i]]))}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      <PlayerSeasonStats
+        league={league}
+        stats={seasonStats}
+        seasons={seasons}
+        activeSeason={activeSeason}
+        basePath={`/${league}/players/${slug}`}
+      />
 
       <section>
         <SectionHeader>Game Log</SectionHeader>

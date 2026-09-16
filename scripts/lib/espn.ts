@@ -47,8 +47,24 @@ export function fetchScoreboard(league: League, dateYYYYMMDD?: string) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/scoreboard${q}`);
 }
 
+// Cricket's `scoreboard` endpoint (unlike `teams/{id}/schedule`, which 404s for this
+// competition) accepts a `season` query param and returns that whole season's matches
+// in one call — even though the competition id in the path (e.g. IPL's 8048) otherwise
+// only resolves to the *current* season by default.
+export function fetchScoreboardBySeason(league: League, season: number) {
+  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/scoreboard?season=${season}`);
+}
+
 export function fetchStandings(league: League) {
   return getJson<any>(`${CORE_BASE}/${SPORT_PATH[league]}/standings`);
+}
+
+// All four leagues' standings endpoints accept a `season` query param and return that
+// year's final table — cricket additionally needs `seasontype=2` or it ignores the
+// season param and falls back to the current one.
+export function fetchStandingsBySeason(league: League, season: number) {
+  const q = league === "ipl" ? `season=${season}&seasontype=2` : `season=${season}`;
+  return getJson<any>(`${CORE_BASE}/${SPORT_PATH[league]}/standings?${q}`);
 }
 
 export function fetchSummary(league: League, eventId: string) {
@@ -72,14 +88,40 @@ export function fetchNews(league: League, limit = 15) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/news?limit=${limit}`);
 }
 
+// Unlike every other endpoint here, soccer's athlete-stats path is NOT league-scoped —
+// `soccer/eng.1/athletes/...` 404s; it has to be the bare sport, `soccer/athletes/...`.
+// The response it returns is also sport-wide (a player's career across every league
+// and competition they've featured in, not just the Premier League) — callers must
+// filter rows by `leagueSlug` themselves.
 export function fetchAthleteSeasonStats(league: League, athleteEspnId: string) {
-  return getJson<any>(`${COMMON_BASE}/${SPORT_PATH[league]}/athletes/${athleteEspnId}/stats`);
+  const sportPath = league === "epl" ? "soccer" : SPORT_PATH[league];
+  return getJson<any>(`${COMMON_BASE}/${sportPath}/athletes/${athleteEspnId}/stats`);
 }
 
 // The athlete season-stats endpoint can lag behind the actual live season (it may not
-// have a row for the in-progress year yet), so we don't trust "the last row" as "current."
-// The scoreboard always reflects the live season, so use it as ground truth instead.
+// have a row for the in-progress year yet), so we don't trust "the last row" as
+// "current." The scoreboard always reflects the live season, so use it as ground truth.
 export async function fetchCurrentSeasonYear(league: League): Promise<number | null> {
   const data = await fetchScoreboard(league);
   return data.leagues?.[0]?.season?.year ?? null;
 }
+
+const CORE_LEAGUE_PATH: Record<League, string> = {
+  nba: "basketball/leagues/nba",
+  nfl: "football/leagues/nfl",
+  epl: "soccer/leagues/eng.1",
+  ipl: "cricket/leagues/8048",
+};
+
+// The core API's season-scoped team resource carries venue + a coaches reference in
+// one request — richer than the site API's team endpoint (no franchise/venue there for
+// soccer) and consistent across NBA/NFL/EPL. Not available for IPL (cricket's
+// team-level endpoints 404 for this competition, same as site API's /teams/{id}).
+export function fetchCoreTeam(league: League, teamEspnId: string, season: number) {
+  return getJson<any>(`https://sports.core.api.espn.com/v2/sports/${CORE_LEAGUE_PATH[league]}/seasons/${season}/teams/${teamEspnId}`);
+}
+
+export function fetchByRef<T = any>(ref: string): Promise<T> {
+  return getJson<T>(ref);
+}
+
