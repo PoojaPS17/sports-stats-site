@@ -1,7 +1,7 @@
 import { pool } from "./lib/db";
 import { fetchNews, type League } from "./lib/espn";
 
-const LEAGUES: League[] = ["nba", "nfl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl"];
 
 async function main() {
   for (const league of LEAGUES) {

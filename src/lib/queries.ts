@@ -1,8 +1,8 @@
 import { pool } from "./db";
 
-export type League = "nba" | "nfl";
-export const LEAGUES: League[] = ["nba", "nfl"];
-export const LEAGUE_LABEL: Record<League, string> = { nba: "NBA", nfl: "NFL" };
+export type League = "nba" | "nfl" | "epl";
+export const LEAGUES: League[] = ["nba", "nfl", "epl"];
+export const LEAGUE_LABEL: Record<League, string> = { nba: "NBA", nfl: "NFL", epl: "Premier League" };
 
 export function isLeague(value: string): value is League {
   return LEAGUES.includes(value as League);
@@ -89,16 +89,21 @@ export interface StandingRow {
   win_percent: string;
   streak: string | null;
   playoff_seed: number | null;
+  draws: number | null;
+  points: number | null;
+  goals_for: number | null;
+  goals_against: number | null;
 }
 
 export async function getStandings(league: League): Promise<StandingRow[]> {
   const { rows } = await pool.query(
     `select s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
-            s.conference, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed
+            s.conference, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
+            s.draws, s.points, s.goals_for, s.goals_against
      from standings s
      join teams t on t.league = s.league and t.espn_id = s.team_espn_id
      where s.league = $1
-     order by s.conference, s.wins desc, s.losses asc`,
+     order by s.conference, s.points desc nulls last, s.wins desc, s.losses asc`,
     [league]
   );
   return rows;
@@ -259,16 +264,28 @@ export interface LeaderRow {
   value: number;
 }
 
-export const LEADER_CATEGORIES: Record<League, { key: string; column: string; label: string; unit: string }[]> = {
+export interface LeaderCategory {
+  key: string;
+  column?: string; // player_season_stats column, for the ESPN-season-endpoint path (nba only)
+  gameLabel?: string; // stat label inside player_game_stats.stats[key], for the self-computed path
+  label: string;
+  unit: string;
+}
+
+export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
   nba: [
     { key: "points", column: "pts_avg", label: "Points", unit: "PPG" },
     { key: "rebounds", column: "reb_avg", label: "Rebounds", unit: "RPG" },
     { key: "assists", column: "ast_avg", label: "Assists", unit: "APG" },
   ],
   nfl: [
-    { key: "passing", column: "passing_yards", label: "Passing Yards", unit: "YDS" },
-    { key: "rushing", column: "rushing_yards", label: "Rushing Yards", unit: "YDS" },
-    { key: "receiving", column: "receiving_yards", label: "Receiving Yards", unit: "YDS" },
+    { key: "passing", gameLabel: "YDS", label: "Passing Yards", unit: "YDS" },
+    { key: "rushing", gameLabel: "YDS", label: "Rushing Yards", unit: "YDS" },
+    { key: "receiving", gameLabel: "YDS", label: "Receiving Yards", unit: "YDS" },
+  ],
+  epl: [
+    { key: "match", gameLabel: "G", label: "Goals", unit: "GLS" },
+    { key: "match", gameLabel: "A", label: "Assists", unit: "AST" },
   ],
 };
 
@@ -276,6 +293,7 @@ const LEADER_COLUMNS = new Set(
   Object.values(LEADER_CATEGORIES)
     .flat()
     .map((c) => c.column)
+    .filter((c): c is string => Boolean(c))
 );
 
 export async function getLeaders(league: League, column: string, limit = 10): Promise<LeaderRow[]> {

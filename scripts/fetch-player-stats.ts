@@ -3,24 +3,20 @@ import { fetchSummary, fetchCurrentSeasonYear, type League } from "./lib/espn";
 import { updatePlayerSeasonStats } from "./lib/season-stats";
 import { uniqueSlugFor } from "./lib/players";
 
-const LEAGUES: League[] = ["nba", "nfl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl"];
 
-async function processGame(league: League, gameEspnId: string, touched: Map<string, string>) {
-  const data = await fetchSummary(league, gameEspnId);
-  const teamGroups = data.boxscore?.players ?? [];
-  if (teamGroups.length === 0) return 0;
+type PlayerStats = Map<string, { athlete: any; teamId: string; stats: Record<string, Record<string, string>> }>;
 
-  const perPlayer = new Map<string, { athlete: any; teamId: string; stats: Record<string, Record<string, string>> }>();
-
-  for (const group of teamGroups) {
+// NBA/NFL: boxscore.players[team].statistics[category].athletes[].stats[] (parallel to category.labels[])
+function extractAmericanSports(data: any): PlayerStats {
+  const perPlayer: PlayerStats = new Map();
+  for (const group of data.boxscore?.players ?? []) {
     const teamId: string = group.team.id;
     for (const category of group.statistics ?? []) {
       const labels: string[] = category.labels ?? [];
       for (const row of category.athletes ?? []) {
         const key = row.athlete.id;
-        if (!perPlayer.has(key)) {
-          perPlayer.set(key, { athlete: row.athlete, teamId, stats: {} });
-        }
+        if (!perPlayer.has(key)) perPlayer.set(key, { athlete: row.athlete, teamId, stats: {} });
         const values: Record<string, string> = {};
         labels.forEach((label, i) => {
           if (row.stats?.[i] !== undefined) values[label] = row.stats[i];
@@ -29,6 +25,36 @@ async function processGame(league: League, gameEspnId: string, touched: Map<stri
       }
     }
   }
+  return perPlayer;
+}
+
+// Soccer: rosters[team].roster[].stats[] is a flat named list, not category/label pairs.
+// Bundle it all under one "match" category so the display components (which expect
+// { category: { label: value } }) work unchanged.
+function extractSoccer(data: any): PlayerStats {
+  const perPlayer: PlayerStats = new Map();
+  for (const teamRoster of data.rosters ?? []) {
+    const teamId: string = teamRoster.team.id;
+    for (const item of teamRoster.roster ?? []) {
+      if (!item.active) continue;
+      const values: Record<string, string> = {};
+      for (const stat of item.stats ?? []) {
+        values[stat.shortDisplayName ?? stat.name] = stat.displayValue;
+      }
+      perPlayer.set(item.athlete.id, {
+        athlete: item.athlete,
+        teamId,
+        stats: { match: values },
+      });
+    }
+  }
+  return perPlayer;
+}
+
+async function processGame(league: League, gameEspnId: string, touched: Map<string, string>) {
+  const data = await fetchSummary(league, gameEspnId);
+  const perPlayer = league === "epl" ? extractSoccer(data) : extractAmericanSports(data);
+  if (perPlayer.size === 0) return 0;
 
   for (const { athlete, teamId, stats } of perPlayer.values()) {
     try {

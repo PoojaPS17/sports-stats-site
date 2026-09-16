@@ -1,12 +1,13 @@
-# ScoreDB — NBA & NFL scores, standings and player stats
+# ScoreDB — NBA, NFL & Premier League scores, standings and player stats
 
 Programmatic-SEO sports tracker. Pattern: free ESPN data → scraper cron → Postgres → templated pages → ads. See `/Users/ps/.claude/plans/validated-singing-crane.md` for the original build plan.
 
 ## How it works
 
 - `scripts/fetch-scores.ts`, `fetch-standings.ts`, `fetch-player-stats.ts` pull from ESPN's free, unauthenticated "hidden" JSON API and upsert into Postgres.
-- The Next.js app (`src/app`) reads from the same database and renders pages per league: scores, standings, teams, players — with 60s–300s ISR revalidation.
-- In production, `.github/workflows/scrape.yml` runs the scrapers every 15 minutes via GitHub Actions.
+- The Next.js app (`src/app`) reads from the same database and renders pages per league: scores, standings, teams, players, leaders, news — with 60s–300s ISR revalidation.
+- In production, `.github/workflows/scrape.yml` runs the scrapers every 15 minutes via GitHub Actions; `.github/workflows/scrape-rosters.yml` runs once a day (rosters barely change intra-day).
+- Adding a league means adding it to each script's `LEAGUES` array plus its ESPN path in `scripts/lib/espn.ts` — but the response *shapes* differ meaningfully between American team sports and soccer (per-player match stats, standings with draws/points/goals), so it's not purely config. See the soccer branches in `fetch-player-stats.ts` and `fetch-standings.ts` for the pattern to follow.
 
 ## Local development
 
@@ -20,7 +21,7 @@ npm run dev:db   # leave this running in its own terminal
 
 # in another terminal:
 npm run migrate        # apply schema.sql
-npm run seed:teams     # load NBA + NFL teams
+npm run seed:teams     # load NBA + NFL + Premier League teams
 npm run fetch:all      # pull current scores, standings, player stats
 
 npm run dev             # http://localhost:3000

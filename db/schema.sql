@@ -115,6 +115,15 @@ create table if not exists standings (
   streak text,
   playoff_seed int,
   games_behind text,
+  draws int,
+  points int,
+  goals_for int,
+  goals_against int,
   updated_at timestamptz not null default now(),
   primary key (league, season, team_espn_id)
 );
+
+alter table standings add column if not exists draws int;
+alter table standings add column if not exists points int;
+alter table standings add column if not exists goals_for int;
+alter table standings add column if not exists goals_against int;

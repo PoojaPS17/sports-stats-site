@@ -1,8 +1,9 @@
-export type League = "nba" | "nfl";
+export type League = "nba" | "nfl" | "epl";
 
 export const SPORT_PATH: Record<League, string> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
+  epl: "soccer/eng.1",
 };
 
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";

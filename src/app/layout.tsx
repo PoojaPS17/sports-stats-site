@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ScoreDB — NBA & NFL scores, standings and stats",
-  description: "Live scores, standings and player stats for NBA and NFL, updated daily.",
+  title: "ScoreDB — NBA, NFL & Premier League scores, standings and stats",
+  description: "Live scores, standings and player stats for NBA, NFL and the Premier League, updated daily.",
 };
 
 function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): TickerItem {
@@ -65,7 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Nav />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
         <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--text-muted)]">
-          Data via ESPN. Not affiliated with the NBA, NFL, or ESPN.
+          Data via ESPN. Not affiliated with the NBA, NFL, Premier League, or ESPN.
         </footer>
       </body>
     </html>

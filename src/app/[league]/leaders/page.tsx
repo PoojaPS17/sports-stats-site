@@ -11,10 +11,12 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
   if (!isLeague(league)) notFound();
 
   const categories = LEADER_CATEGORIES[league];
-  // NFL: computed live from our own game logs (always accurate). NBA: from ESPN's season
-  // endpoint, which is the only source until the season is underway.
+  // NFL/EPL: computed live from our own game logs (always accurate). NBA: from ESPN's
+  // season endpoint, which is the only source until the season is underway.
   const boards = await Promise.all(
-    categories.map((c) => (league === "nfl" ? getLeadersFromGameLogs(league, c.key, "YDS", 10) : getLeaders(league, c.column, 10)))
+    categories.map((c) =>
+      c.gameLabel ? getLeadersFromGameLogs(league, c.key, c.gameLabel, 10) : getLeaders(league, c.column!, 10)
+    )
   );
 
   return (

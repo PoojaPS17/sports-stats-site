@@ -1,7 +1,7 @@
 import { pool } from "./lib/db";
 import { fetchStandings, type League } from "./lib/espn";
 
-const LEAGUES: League[] = ["nba", "nfl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl"];
 
 function statValue(stats: any[], name: string): string | undefined {
   return stats.find((s) => s.name === name)?.displayValue;
@@ -27,15 +27,22 @@ async function main() {
 
     for (const { entry, conference } of entries) {
       const stats = entry.stats ?? [];
+      const draws = statValue(stats, "ties");
+      const points = statValue(stats, "points");
+      const goalsFor = statValue(stats, "pointsFor");
+      const goalsAgainst = statValue(stats, "pointsAgainst");
       await pool.query(
         `insert into standings (
            league, season, team_espn_id, conference, wins, losses,
-           win_percent, streak, playoff_seed, games_behind, updated_at
-         ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())
+           win_percent, streak, playoff_seed, games_behind,
+           draws, points, goals_for, goals_against, updated_at
+         ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
          on conflict (league, season, team_espn_id) do update set
            conference = excluded.conference, wins = excluded.wins, losses = excluded.losses,
            win_percent = excluded.win_percent, streak = excluded.streak,
            playoff_seed = excluded.playoff_seed, games_behind = excluded.games_behind,
+           draws = excluded.draws, points = excluded.points,
+           goals_for = excluded.goals_for, goals_against = excluded.goals_against,
            updated_at = now()`,
         [
           league,
@@ -48,6 +55,10 @@ async function main() {
           statValue(stats, "streak") ?? null,
           statValue(stats, "playoffSeed") ? Number(statValue(stats, "playoffSeed")) : null,
           statValue(stats, "gamesBehind") ?? null,
+          draws !== undefined ? Number(draws) : null,
+          points !== undefined ? Number(points) : null,
+          goalsFor !== undefined ? Number(goalsFor) : null,
+          goalsAgainst !== undefined ? Number(goalsAgainst) : null,
         ]
       );
     }

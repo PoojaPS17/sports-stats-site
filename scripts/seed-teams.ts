@@ -22,9 +22,10 @@ async function seedLeague(league: League) {
   console.log(`[seed-teams] ${league}: upserted ${teams.length} teams`);
 }
 
+const LEAGUES: League[] = ["nba", "nfl", "epl"];
+
 async function main() {
-  await seedLeague("nba");
-  await seedLeague("nfl");
+  for (const league of LEAGUES) await seedLeague(league);
   await pool.end();
 }
 

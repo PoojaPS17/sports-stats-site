@@ -26,7 +26,7 @@ export default async function HomePage() {
     <div className="flex flex-col gap-10">
       <section className="flex flex-col items-start gap-5 py-4">
         <h1 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-          NBA &amp; NFL scores, standings and player stats, tracked daily
+          NBA, NFL &amp; Premier League scores, standings and player stats, tracked daily
         </h1>
         <p className="max-w-lg text-[var(--text-muted)]">
           Live scores, full standings, team schedules and player game logs — pulled straight from the league feeds and refreshed every 15 minutes.
@@ -51,7 +51,7 @@ export default async function HomePage() {
 
       <AdSlot label="Homepage" />
 
-      <div className="grid gap-8 sm:grid-cols-2">
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {sections.map(({ league, games }) => (
           <section key={league}>
             <div className="mb-3 flex items-center justify-between">

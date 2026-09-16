@@ -1,7 +1,7 @@
 import { pool } from "./lib/db";
 import { fetchScoreboard, type League } from "./lib/espn";
 
-const LEAGUES: League[] = ["nba", "nfl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl"];
 const DAYS_BACK = 2;
 const DAYS_FORWARD = 5;
 
