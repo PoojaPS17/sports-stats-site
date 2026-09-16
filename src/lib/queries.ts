@@ -1,7 +1,7 @@
 import { pool } from "./db";
 
 export type League = "nba" | "nfl" | "epl";
-export const LEAGUES: League[] = ["nba", "nfl", "epl"];
+export const LEAGUES: League[] = ["epl", "nfl", "nba"];
 export const LEAGUE_LABEL: Record<League, string> = { nba: "NBA", nfl: "NFL", epl: "Premier League" };
 
 export function isLeague(value: string): value is League {

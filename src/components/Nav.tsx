@@ -22,14 +22,14 @@ export function Nav() {
           <span className="text-lg font-extrabold tracking-tight">ScoreDB</span>
         </Link>
         <nav className="flex gap-4 text-sm font-semibold text-[var(--text-muted)]">
-          <Link href="/nba" className="transition hover:text-[var(--text)]">
-            NBA
+          <Link href="/epl" className="transition hover:text-[var(--text)]">
+            Soccer
           </Link>
           <Link href="/nfl" className="transition hover:text-[var(--text)]">
             NFL
           </Link>
-          <Link href="/epl" className="transition hover:text-[var(--text)]">
-            Soccer
+          <Link href="/nba" className="transition hover:text-[var(--text)]">
+            NBA
           </Link>
         </nav>
         <div className="order-last flex w-full items-center gap-3 sm:order-none sm:ml-auto sm:w-auto">
