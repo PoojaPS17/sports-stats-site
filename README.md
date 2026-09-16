@@ -10,7 +10,7 @@ Programmatic-SEO sports tracker. Pattern: free ESPN data → scraper cron → Po
 
 ## Local development
 
-This repo bundles its own Node runtime reference isn't required if you already have Node 20+ on PATH. If not, see `../tools/env.sh` (adds a standalone Node 20 to PATH for this session).
+Requires Node 20+.
 
 ```bash
 npm install
@@ -33,7 +33,7 @@ npm run dev             # http://localhost:3000
 1. **Database**: create a free [Supabase](https://supabase.com) Postgres project. Copy its connection string.
 2. **Schema**: run `DATABASE_URL=<supabase-url> npm run migrate && DATABASE_URL=<supabase-url> npm run seed:teams` once, locally, against the Supabase database.
 3. **Scraper**: push this repo to a public GitHub repo. Add a repo secret `DATABASE_URL` (the Supabase connection string). The `scrape.yml` workflow will then run every 15 minutes for free.
-4. **Frontend**: import the repo into [Vercel](https://vercel.com), set the `app` folder as the project root, add the `DATABASE_URL` env var, deploy.
+4. **Frontend**: import the repo into [Vercel](https://vercel.com) (repo root is already the Next.js app, no subfolder to configure), add the `DATABASE_URL` env var, deploy.
 5. **Domain**: point your domain at the Vercel project once you own one.
 6. **Ads**: swap the `AdSlot` component (`src/components/AdSlot.tsx`) placeholders for real AdSense/Ezoic embed code once approved.
 
