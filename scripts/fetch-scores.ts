@@ -1,0 +1,80 @@
+import { pool } from "./lib/db";
+import { fetchScoreboard, type League } from "./lib/espn";
+
+const LEAGUES: League[] = ["nba", "nfl"];
+const DAYS_BACK = 2;
+const DAYS_FORWARD = 5;
+
+function toYYYYMMDD(d: Date): string {
+  return d.toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+function datesToScan(): string[] {
+  const dates: string[] = [];
+  const today = new Date();
+  for (let offset = -DAYS_BACK; offset <= DAYS_FORWARD; offset++) {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() + offset);
+    dates.push(toYYYYMMDD(d));
+  }
+  return dates;
+}
+
+async function upsertEvent(league: League, ev: any) {
+  const comp = ev.competitions[0];
+  const home = comp.competitors.find((c: any) => c.homeAway === "home");
+  const away = comp.competitors.find((c: any) => c.homeAway === "away");
+  const status = comp.status;
+
+  await pool.query(
+    `insert into games (
+       league, espn_id, date, name, short_name,
+       home_team_espn_id, away_team_espn_id, home_score, away_score,
+       status_state, status_detail, period, clock, completed, updated_at
+     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
+     on conflict (league, espn_id) do update set
+       date = excluded.date, home_score = excluded.home_score, away_score = excluded.away_score,
+       status_state = excluded.status_state, status_detail = excluded.status_detail,
+       period = excluded.period, clock = excluded.clock, completed = excluded.completed,
+       updated_at = now()`,
+    [
+      league,
+      ev.id,
+      ev.date,
+      ev.name,
+      ev.shortName ?? null,
+      home?.team?.id,
+      away?.team?.id,
+      home?.score ? Number(home.score) : null,
+      away?.score ? Number(away.score) : null,
+      status?.type?.state ?? null,
+      status?.type?.detail ?? null,
+      status?.period ?? null,
+      status?.displayClock ?? null,
+      Boolean(status?.type?.completed),
+    ]
+  );
+}
+
+async function main() {
+  for (const league of LEAGUES) {
+    const seen = new Set<string>();
+    let count = 0;
+    for (const date of datesToScan()) {
+      const data = await fetchScoreboard(league, date);
+      for (const ev of data.events ?? []) {
+        if (seen.has(ev.id)) continue;
+        seen.add(ev.id);
+        await upsertEvent(league, ev);
+        count++;
+      }
+    }
+    console.log(`[fetch-scores] ${league}: upserted ${count} games`);
+  }
+  await pool.end();
+}
+
+main().catch((err) => {
+  console.error("[fetch-scores] failed:", err);
+  process.exit(1);
+});

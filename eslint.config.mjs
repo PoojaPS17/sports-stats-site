@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Scraper scripts work with ESPN's undocumented, untyped JSON API —
+    // typing every response shape isn't worth it for build-time tooling.
+    "scripts/**",
   ]),
 ]);
 

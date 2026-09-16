@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ScoreDB — NBA & NFL scores, standings and player stats
 
-## Getting Started
+Programmatic-SEO sports tracker. Pattern: free ESPN data → scraper cron → Postgres → templated pages → ads. See `/Users/ps/.claude/plans/validated-singing-crane.md` for the original build plan.
 
-First, run the development server:
+## How it works
+
+- `scripts/fetch-scores.ts`, `fetch-standings.ts`, `fetch-player-stats.ts` pull from ESPN's free, unauthenticated "hidden" JSON API and upsert into Postgres.
+- The Next.js app (`src/app`) reads from the same database and renders pages per league: scores, standings, teams, players — with 60s–300s ISR revalidation.
+- In production, `.github/workflows/scrape.yml` runs the scrapers every 15 minutes via GitHub Actions.
+
+## Local development
+
+This repo bundles its own Node runtime reference isn't required if you already have Node 20+ on PATH. If not, see `../tools/env.sh` (adds a standalone Node 20 to PATH for this session).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+
+# start a local Postgres (auto-downloads a real Postgres binary, no Docker needed)
+npm run dev:db   # leave this running in its own terminal
+
+# in another terminal:
+npm run migrate        # apply schema.sql
+npm run seed:teams     # load NBA + NFL teams
+npm run fetch:all      # pull current scores, standings, player stats
+
+npm run dev             # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` already points `DATABASE_URL` at the local embedded Postgres (`postgres://postgres:password@localhost:5433/sports`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploying
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Database**: create a free [Supabase](https://supabase.com) Postgres project. Copy its connection string.
+2. **Schema**: run `DATABASE_URL=<supabase-url> npm run migrate && DATABASE_URL=<supabase-url> npm run seed:teams` once, locally, against the Supabase database.
+3. **Scraper**: push this repo to a public GitHub repo. Add a repo secret `DATABASE_URL` (the Supabase connection string). The `scrape.yml` workflow will then run every 15 minutes for free.
+4. **Frontend**: import the repo into [Vercel](https://vercel.com), set the `app` folder as the project root, add the `DATABASE_URL` env var, deploy.
+5. **Domain**: point your domain at the Vercel project once you own one.
+6. **Ads**: swap the `AdSlot` component (`src/components/AdSlot.tsx`) placeholders for real AdSense/Ezoic embed code once approved.
 
-## Learn More
+## Adding a betting-odds phase (later)
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deliberately not built yet — see the plan file for why (compliance/disclosure overhead). When ready: add a `fetch-odds.ts` script against [The Odds API](https://the-odds-api.com) (free tier: 500 credits/month), an `odds` table, and `/[league]/odds` pages, plus a responsible-gambling disclaimer in the footer.

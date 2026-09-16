@@ -1,0 +1,41 @@
+name: Scrape ESPN data
+
+on:
+  schedule:
+    # every 15 minutes, year-round (cheap enough; ESPN endpoints are free/unauthenticated)
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Apply schema (idempotent)
+        working-directory: app
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run migrate
+
+      - name: Seed teams (idempotent)
+        working-directory: app
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run seed:teams
+
+      - name: Fetch scores, standings and player stats
+        working-directory: app
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:all
