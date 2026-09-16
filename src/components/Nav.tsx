@@ -1,20 +1,36 @@
 import Link from "next/link";
+import { SearchBar } from "./SearchBar";
+
+function Logo() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="9" fill="var(--accent)" />
+      <rect x="7" y="17" width="4" height="8" rx="1.5" fill="var(--accent-foreground)" />
+      <rect x="14" y="11" width="4" height="14" rx="1.5" fill="var(--accent-foreground)" />
+      <rect x="21" y="7" width="4" height="18" rx="1.5" fill="var(--accent-foreground)" />
+    </svg>
+  );
+}
 
 export function Nav() {
   return (
-    <header className="border-b border-neutral-200 dark:border-neutral-800">
-      <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-4">
-        <Link href="/" className="text-lg font-bold tracking-tight">
-          ScoreDB
+    <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5">
+        <Link href="/" className="flex items-center gap-2">
+          <Logo />
+          <span className="text-lg font-extrabold tracking-tight">ScoreDB</span>
         </Link>
-        <nav className="flex gap-4 text-sm font-medium text-neutral-600 dark:text-neutral-300">
-          <Link href="/nba" className="hover:text-neutral-950 dark:hover:text-white">
+        <nav className="flex gap-4 text-sm font-semibold text-[var(--text-muted)]">
+          <Link href="/nba" className="transition hover:text-[var(--text)]">
             NBA
           </Link>
-          <Link href="/nfl" className="hover:text-neutral-950 dark:hover:text-white">
+          <Link href="/nfl" className="transition hover:text-[var(--text)]">
             NFL
           </Link>
         </nav>
+        <div className="order-last w-full sm:order-none sm:ml-auto sm:w-64">
+          <SearchBar />
+        </div>
       </div>
     </header>
   );

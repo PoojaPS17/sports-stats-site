@@ -1,45 +1,68 @@
 import Link from "next/link";
-import { LEAGUES, LEAGUE_LABEL, getRecentAndUpcoming } from "@/lib/queries";
-import { GameRow } from "@/components/GameRow";
+import { LEAGUES, LEAGUE_LABEL, getRecentAndUpcoming, getFeaturedGames } from "@/lib/queries";
+import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
+import { SearchBar } from "@/components/SearchBar";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
+  const featured = (await Promise.all(LEAGUES.map((l) => getFeaturedGames(l, 3)))).flat();
+
   const sections = await Promise.all(
     LEAGUES.map(async (league) => ({
       league,
-      games: (await getRecentAndUpcoming(league, 1, 1)).slice(0, 6),
+      games: (await getRecentAndUpcoming(league, 2, 5)).slice(0, 5),
     }))
   );
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-bold">NBA &amp; NFL scores, standings and stats</h1>
-        <p className="mt-1 text-sm text-neutral-500">Updated daily. Pick a league to see full schedules, standings and player stats.</p>
-      </div>
+    <div className="flex flex-col gap-10">
+      <section className="flex flex-col items-start gap-5 py-4">
+        <h1 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+          NBA &amp; NFL scores, standings and player stats, tracked daily
+        </h1>
+        <p className="max-w-lg text-[var(--text-muted)]">
+          Live scores, full standings, team schedules and player game logs — pulled straight from the league feeds and refreshed every 15 minutes.
+        </p>
+        <div className="w-full max-w-md">
+          <SearchBar large />
+        </div>
+      </section>
 
-      <AdSlot label="Homepage top" />
+      {featured.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-lg font-bold">Headline games</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {featured.map((g) => (
+              <GameCard key={g.espn_id} league={g.league} game={g} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <AdSlot label="Homepage" />
 
       <div className="grid gap-8 sm:grid-cols-2">
         {sections.map(({ league, games }) => (
           <section key={league}>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{LEAGUE_LABEL[league]}</h2>
-              <Link href={`/${league}`} className="text-sm text-blue-600 hover:underline">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-bold">{LEAGUE_LABEL[league]}</h2>
+              <Link href={`/${league}`} className="text-sm font-semibold text-[var(--accent)] hover:underline">
                 Full schedule →
               </Link>
             </div>
-            <div className="rounded border border-neutral-200 px-4 dark:border-neutral-800">
+            <div className="flex flex-col gap-3">
               {games.length === 0 ? (
-                <p className="py-6 text-sm text-neutral-500">No games scheduled right now.</p>
+                <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games scheduled right now.</p>
               ) : (
-                games.map((g) => <GameRow key={g.espn_id} league={league} game={g} />)
+                games.map((g) => <GameCard key={g.espn_id} league={league} game={g} />)
               )}
             </div>
-            <div className="mt-2 flex gap-3 text-sm">
-              <Link href={`/${league}/standings`} className="text-blue-600 hover:underline">
+            <div className="mt-3 flex gap-3 text-sm font-semibold">
+              <Link href={`/${league}/standings`} className="text-[var(--accent)] hover:underline">
                 Standings
               </Link>
             </div>

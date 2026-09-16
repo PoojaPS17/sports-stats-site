@@ -7,9 +7,14 @@ create table if not exists teams (
   slug text not null,
   abbreviation text,
   logo_url text,
+  color text,
+  alternate_color text,
   primary key (league, espn_id),
   unique (league, slug)
 );
+
+alter table teams add column if not exists color text;
+alter table teams add column if not exists alternate_color text;
 
 create table if not exists players (
   league text not null,

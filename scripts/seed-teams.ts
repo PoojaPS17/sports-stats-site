@@ -7,13 +7,16 @@ async function seedLeague(league: League) {
 
   for (const { team } of teams) {
     const logo = team.logos?.find((l: any) => l.rel.includes("default"))?.href ?? team.logos?.[0]?.href ?? null;
+    const color = team.color ? `#${team.color}` : null;
+    const alternateColor = team.alternateColor ? `#${team.alternateColor}` : null;
     await pool.query(
-      `insert into teams (league, espn_id, name, slug, abbreviation, logo_url)
-       values ($1, $2, $3, $4, $5, $6)
+      `insert into teams (league, espn_id, name, slug, abbreviation, logo_url, color, alternate_color)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        on conflict (league, espn_id) do update set
          name = excluded.name, slug = excluded.slug,
-         abbreviation = excluded.abbreviation, logo_url = excluded.logo_url`,
-      [league, team.id, team.displayName, slugify(team.displayName), team.abbreviation, logo]
+         abbreviation = excluded.abbreviation, logo_url = excluded.logo_url,
+         color = excluded.color, alternate_color = excluded.alternate_color`,
+      [league, team.id, team.displayName, slugify(team.displayName), team.abbreviation, logo, color, alternateColor]
     );
   }
   console.log(`[seed-teams] ${league}: upserted ${teams.length} teams`);

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getGamesByDate } from "@/lib/queries";
-import { GameRow } from "@/components/GameRow";
+import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 
 export const revalidate = 60;
@@ -23,17 +23,19 @@ export default async function ScoresByDatePage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">
+      <h1 className="text-2xl font-extrabold tracking-tight">
         {LEAGUE_LABEL[league]} Scores — {label}
       </h1>
       <AdSlot label="Scores-by-date top" />
-      <div className="rounded border border-neutral-200 px-4 dark:border-neutral-800">
-        {games.length === 0 ? (
-          <p className="py-6 text-sm text-neutral-500">No games on this date.</p>
-        ) : (
-          games.map((g) => <GameRow key={g.espn_id} league={league} game={g} />)
-        )}
-      </div>
+      {games.length === 0 ? (
+        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games on this date.</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {games.map((g) => (
+            <GameCard key={g.espn_id} league={league} game={g} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

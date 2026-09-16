@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f5f6fb;
+  --surface: #ffffff;
+  --surface-muted: #eef0fa;
+  --border: #e4e7f2;
+  --text: #12142b;
+  --text-muted: #6b7086;
+  --accent: #3651e0;
+  --accent-foreground: #ffffff;
+
+  --pill-live-bg: #fde8e8;
+  --pill-live-text: #c81e3a;
+  --pill-final-bg: #eef0f5;
+  --pill-final-text: #565a72;
+  --pill-upcoming-bg: #e3e9ff;
+  --pill-upcoming-text: #3651e0;
+  --pill-feature-bg: #e1f6ea;
+  --pill-feature-text: #127a45;
+
+  --nba-accent: #ea580c;
+  --nfl-accent: #1d5c3a;
+
+  --shadow-card: 0 1px 2px rgba(18, 20, 43, 0.04), 0 8px 24px -12px rgba(18, 20, 43, 0.12);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0c0d18;
+    --surface: #14162a;
+    --surface-muted: #1b1e36;
+    --border: #262a48;
+    --text: #eef0fb;
+    --text-muted: #9498b8;
+    --accent: #6d85ff;
+    --accent-foreground: #0c0d18;
+
+    --pill-live-bg: #3a1420;
+    --pill-live-text: #ff6b83;
+    --pill-final-bg: #1e2140;
+    --pill-final-text: #a6abcf;
+    --pill-upcoming-bg: #1c2452;
+    --pill-upcoming-text: #93a5ff;
+    --pill-feature-bg: #103324;
+    --pill-feature-text: #4fd88a;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pill-live {
+  background: var(--pill-live-bg);
+  color: var(--pill-live-text);
+}
+
+.pill-final {
+  background: var(--pill-final-bg);
+  color: var(--pill-final-text);
+}
+
+.pill-upcoming {
+  background: var(--pill-upcoming-bg);
+  color: var(--pill-upcoming-text);
+}
+
+.pill-feature {
+  background: var(--pill-feature-bg);
+  color: var(--pill-feature-text);
+}
+
+.live-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: var(--pill-live-text);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
 }

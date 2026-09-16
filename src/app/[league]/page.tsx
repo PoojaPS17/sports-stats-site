@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { isLeague, LEAGUE_LABEL, getRecentAndUpcoming } from "@/lib/queries";
-import { GameRow } from "@/components/GameRow";
+import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 
 export const revalidate = 60;
@@ -30,22 +30,22 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{LEAGUE_LABEL[league]} Scores</h1>
-        <Link href={`/${league}/standings`} className="text-sm text-blue-600 hover:underline">
+        <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Scores</h1>
+        <Link href={`/${league}/standings`} className="text-sm font-semibold text-[var(--accent)] hover:underline">
           Standings →
         </Link>
       </div>
 
       <AdSlot label={`${LEAGUE_LABEL[league]} top`} />
 
-      {groups.size === 0 && <p className="text-sm text-neutral-500">No games in range.</p>}
+      {groups.size === 0 && <p className="text-sm text-[var(--text-muted)]">No games in range.</p>}
 
       {[...groups.entries()].map(([day, dayGames]) => (
         <section key={day}>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">{day}</h2>
-          <div className="rounded border border-neutral-200 px-4 dark:border-neutral-800">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">{day}</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {dayGames.map((g) => (
-              <GameRow key={g.espn_id} league={league} game={g} />
+              <GameCard key={g.espn_id} league={league} game={g} />
             ))}
           </div>
         </section>

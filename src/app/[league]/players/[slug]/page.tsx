@@ -1,20 +1,25 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { isLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerGameLog } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
+import { TeamLogo } from "@/components/TeamLogo";
 
 export const revalidate = 300;
 
-function formatStats(stats: Record<string, Record<string, string>>) {
-  return Object.entries(stats).map(([category, values]) => (
-    <div key={category} className="text-sm">
-      <span className="font-medium capitalize">{category}: </span>
-      <span className="text-neutral-600 dark:text-neutral-400">
-        {Object.entries(values)
-          .map(([k, v]) => `${k} ${v}`)
-          .join(", ")}
-      </span>
+function StatGroup({ category, values }: { category: string; values: Record<string, string> }) {
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
+      <p className="mb-1 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{category}</p>
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {Object.entries(values).map(([k, v]) => (
+          <span key={k} className="text-sm">
+            <span className="font-semibold tabular-nums">{v}</span>{" "}
+            <span className="text-xs text-[var(--text-muted)]">{k}</span>
+          </span>
+        ))}
+      </div>
     </div>
-  ));
+  );
 }
 
 export default async function PlayerPage({
@@ -29,17 +34,29 @@ export default async function PlayerPage({
   if (!player) notFound();
 
   const gameLog = await getPlayerGameLog(league, player.espn_id);
+  const color = player.team_color ?? "var(--accent)";
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        {player.headshot_url && (
+      <div
+        className="card flex items-center gap-4 overflow-hidden px-6 py-6"
+        style={{ background: `linear-gradient(135deg, ${color}1a, var(--surface))` }}
+      >
+        {player.headshot_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={player.headshot_url} alt={player.name} width={56} height={56} className="rounded-full" />
+          <img
+            src={player.headshot_url}
+            alt={player.name}
+            width={72}
+            height={72}
+            className="rounded-full border-2 border-[var(--surface)] bg-[var(--surface-muted)] object-cover"
+          />
+        ) : (
+          <TeamLogo name={player.name} logoUrl={null} color={player.team_color} size={72} />
         )}
         <div>
-          <h1 className="text-2xl font-bold">{player.name}</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-2xl font-extrabold tracking-tight">{player.name}</h1>
+          <p className="text-sm font-medium text-[var(--text-muted)]">
             {LEAGUE_LABEL[league]}
             {player.team_name ? ` · ${player.team_name}` : ""}
           </p>
@@ -49,18 +66,30 @@ export default async function PlayerPage({
       <AdSlot label="Player page top" />
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Game Log</h2>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">Game Log</h2>
         {gameLog.length === 0 ? (
-          <p className="text-sm text-neutral-500">No stats recorded yet.</p>
+          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No stats recorded yet.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {gameLog.map((row) => (
-              <div key={row.game_espn_id} className="rounded border border-neutral-200 p-3 dark:border-neutral-800">
-                <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
-                  <span>vs {row.opponent_name}</span>
-                  <span>{new Date(row.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+              <div key={row.game_espn_id} className="card px-4 py-3">
+                <Link
+                  href={`/${league}/teams/${row.opponent_slug}`}
+                  className="mb-2 flex items-center justify-between gap-2 text-sm hover:underline"
+                >
+                  <span className="flex items-center gap-2 font-medium">
+                    <TeamLogo name={row.opponent_name} logoUrl={row.opponent_logo} size={20} />
+                    vs {row.opponent_name}
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {new Date(row.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                </Link>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {Object.entries(row.stats).map(([category, values]) => (
+                    <StatGroup key={category} category={category} values={values} />
+                  ))}
                 </div>
-                {formatStats(row.stats)}
               </div>
             ))}
           </div>

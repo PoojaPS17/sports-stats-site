@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
+import { Ticker, type TickerItem } from "@/components/Ticker";
+import { getTickerGames, LEAGUE_LABEL } from "@/lib/queries";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,16 +20,40 @@ export const metadata: Metadata = {
   description: "Live scores, standings and player stats for NBA and NFL, updated daily.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): TickerItem {
+  const league = LEAGUE_LABEL[g.league];
+  if (g.completed) {
+    const homeWon = (g.home_score ?? 0) > (g.away_score ?? 0);
+    const winner = homeWon ? g.home_name : g.away_name;
+    const loser = homeWon ? g.away_name : g.home_name;
+    const winScore = homeWon ? g.home_score : g.away_score;
+    const loseScore = homeWon ? g.away_score : g.home_score;
+    return {
+      href: `/${g.league}/teams/${homeWon ? g.home_slug : g.away_slug}`,
+      label: `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`,
+    };
+  }
+  const date = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return {
+    href: `/${g.league}/teams/${g.home_slug}`,
+    label: `${league} · ${g.away_name} at ${g.home_name} — ${date}`,
+  };
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const tickerGames = await getTickerGames(10);
+  const tickerItems = tickerGames.map(tickerLabel);
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text)]">
+        <Ticker items={tickerItems} />
         <Nav />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
-        <footer className="border-t border-neutral-200 py-6 text-center text-xs text-neutral-400 dark:border-neutral-800">
+        <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--text-muted)]">
           Data via ESPN. Not affiliated with the NBA, NFL, or ESPN.
         </footer>
       </body>
