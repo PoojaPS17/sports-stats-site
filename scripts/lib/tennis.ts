@@ -38,6 +38,18 @@ export function fetchTennisAthlete(athleteId: string) {
   return getJson<any>(`${CORE_BASE}/athletes/${athleteId}`);
 }
 
+// Historical matches for a specific tournament instance (e.g. the 2019 US Open),
+// unlike fetchTennisScoreboard which only ever returns whatever's currently on and
+// rejects any date filter. `tournamentId-year` is the event id ESPN uses throughout
+// this API (e.g. "189-2019" for the 2019 US Open); a real Slam draw (singles +
+// doubles + mixed, both genders) is comfortably under 300 entries and returns on one
+// page, so no pagination handling is needed here.
+export function fetchTournamentEventCompetitions(tour: Tour, tournamentId: string, year: number) {
+  return getJson<{ items?: any[] }>(
+    `${CORE_BASE}/leagues/${tour}/events/${tournamentId}-${year}/competitions?lang=en&region=us&limit=300`
+  );
+}
+
 export function fetchByRef<T = any>(ref: string): Promise<T> {
   return getJson<T>(ref);
 }
