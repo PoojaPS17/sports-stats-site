@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { SearchBar } from "./SearchBar";
 import { ThemeToggle } from "./ThemeToggle";
+import { CricketDropdown } from "./CricketDropdown";
+import { TennisDropdown } from "./TennisDropdown";
 
 function Logo() {
   return (
@@ -23,7 +25,7 @@ export function Nav() {
         </Link>
         <nav className="flex gap-1 text-sm text-[var(--header-text-muted)]">
           <Link href="/epl" className="nav-pill">
-            Soccer
+            Football
           </Link>
           <Link href="/nfl" className="nav-pill">
             NFL
@@ -31,12 +33,14 @@ export function Nav() {
           <Link href="/nba" className="nav-pill">
             NBA
           </Link>
-          <Link href="/ipl" className="nav-pill">
-            Cricket
+          <CricketDropdown />
+          <TennisDropdown />
+          <Link href="/top-games" className="nav-pill">
+            Top Sports Games
           </Link>
         </nav>
         <div className="order-last flex w-full items-center gap-3 sm:order-none sm:ml-auto sm:w-auto">
-          <div className="w-full sm:w-64">
+          <div className="w-full sm:w-72">
             <SearchBar />
           </div>
           <ThemeToggle />
