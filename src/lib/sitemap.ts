@@ -27,7 +27,14 @@ const entry = (path: string, changeFrequency: Entry["changeFrequency"], priority
 });
 
 async function core(): Promise<Entry[]> {
-  const out: Entry[] = [entry("/", "hourly", 1), entry("/top-games", "daily", 0.5), entry("/f1", "daily", 0.7), entry("/f1/standings", "daily", 0.6)];
+  const out: Entry[] = [
+    entry("/", "hourly", 1),
+    entry("/top-games", "daily", 0.5),
+    entry("/f1", "daily", 0.7),
+    entry("/f1/standings", "daily", 0.6),
+    entry("/privacy", "yearly", 0.2),
+    entry("/terms", "yearly", 0.2),
+  ];
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
   for (const league of ALL_LEAGUES) {
     out.push(entry(`/${league}`, "hourly", 0.9), entry(`/${league}/standings`, "daily", 0.9), entry(`/${league}/teams`, "weekly", 0.7), entry(`/${league}/leaders`, "daily", 0.7), entry(`/${league}/news`, "hourly", 0.5));

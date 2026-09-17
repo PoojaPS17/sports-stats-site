@@ -58,13 +58,22 @@ export function Footer() {
             { label: "F1 Standings", href: "/f1/standings" },
             { label: "Top Games", href: "/top-games" },
             { label: "Search", href: "/search" },
+            { label: "Privacy Policy", href: "/privacy" },
+            { label: "Terms of Use", href: "/terms" },
           ]}
         />
       </div>
       <div className="border-t border-[var(--border)]">
-        <div className="container-x flex flex-col items-start justify-between gap-2 py-4 text-xs text-[var(--text-faint)] sm:flex-row sm:items-center">
-          <span>© {new Date().getFullYear()} ScoreDB. Scores and stats via ESPN, refreshed automatically.</span>
-          <span>Not affiliated with the Premier League, La Liga, NFL, NBA, IPL, ATP, WTA, F1, or ESPN.</span>
+        <div className="container-x flex flex-col gap-2 py-4 text-xs text-[var(--text-faint)]">
+          <p>
+            © {new Date().getFullYear()} ScoreDB. An independent site, not affiliated with or endorsed by any league, club, player, broadcaster, betting
+            operator or data provider. Team names, crests and logos are the property of their respective owners and appear for identification only.
+          </p>
+          <p>
+            Data is compiled from public sources and refreshed automatically; it may contain errors and is not an official record. Projections are
+            statistical estimates, not forecasts, and nothing here is betting advice. <Link href="/privacy" className="hover:text-[var(--accent)]">Privacy</Link> ·{" "}
+            <Link href="/terms" className="hover:text-[var(--accent)]">Terms</Link>
+          </p>
         </div>
       </div>
     </footer>
