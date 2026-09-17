@@ -2,9 +2,9 @@ name: Scrape trending signals
 
 on:
   schedule:
-    # Google Trends moves within the day; Wikipedia's pageview data is only complete
-    # once a day, but re-fetching it hourly is cheap and harmless (each run just
-    # wipes and re-inserts its own slice).
+    # Google Trends and the App Store charts move within the day; Wikipedia's
+    # pageview data is only complete once a day, but re-fetching it hourly is cheap
+    # and harmless (each run just wipes and re-inserts its own slice).
     - cron: "0 * * * *"
   workflow_dispatch: {}
 
@@ -36,3 +36,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run fetch:trending-google
+
+      - name: Fetch trending App Store apps
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:trending-appstore

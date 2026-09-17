@@ -551,16 +551,18 @@ export async function getTrackedCountries(): Promise<{ country: string; views: n
 }
 
 // External trending signals — real ones (Wikipedia pageview spikes, Google's daily
-// trending searches), unlike game_views above which only reflects traffic to ScoreDB
-// itself. See scripts/fetch-trending-*.ts for how each is fetched and matched against
-// our own players/teams.
-export type TrendingSource = "wikipedia" | "google_trends";
+// trending searches, Apple's App Store Sports top charts), unlike game_views above
+// which only reflects traffic to ScoreDB itself. See scripts/fetch-trending-*.ts for
+// how each is fetched; wikipedia/google_trends are also matched against our own
+// players/teams (app_store_ios isn't — an app isn't a player or team).
+export type TrendingSource = "wikipedia" | "google_trends" | "app_store_ios";
 
 export interface TrendingTopic {
   rank: number;
   label: string;
   detail: string | null;
   url: string;
+  image_url: string | null;
   matched_league: League | null;
   matched_type: "player" | "team" | null;
   matched_slug: string | null;
@@ -581,13 +583,13 @@ export const TRENDING_COUNTRIES: { code: string; label: string }[] = [
   { code: "BR", label: "Brazil" },
 ];
 
-// Google Trends is inherently per-country (no "worldwide" chart to fetch), so
-// "Global" falls back to US data for it; Wikipedia's "global" is a real fetch (the
-// English edition), so it's left as-is.
+// Google Trends and the App Store are inherently per-country (no "worldwide" chart
+// to fetch), so "Global" falls back to US data for those two; Wikipedia's "global" is
+// a real fetch (the English edition), so it's left as-is.
 export async function getTrendingTopics(source: TrendingSource, country: string): Promise<TrendingTopic[]> {
   const effectiveCountry = country === "global" && source !== "wikipedia" ? "US" : country;
   const { rows } = await pool.query(
-    `select t.rank, t.label, t.detail, t.url, t.matched_league, t.matched_type, t.matched_slug,
+    `select t.rank, t.label, t.detail, t.url, t.image_url, t.matched_league, t.matched_type, t.matched_slug,
             coalesce(p.headshot_url, tm.logo_url) as avatar_url,
             tm.color as avatar_color
      from trending_topics t
