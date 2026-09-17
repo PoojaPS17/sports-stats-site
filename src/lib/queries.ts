@@ -863,7 +863,11 @@ export async function getLastUpdated(): Promise<string | null> {
 
 export interface SearchResult {
   type: "team" | "player";
-  league: League;
+  // Not actually always a `League` — the underlying query has no league filter, so
+  // this also returns tennis tours ('atp'/'wta') and F1 ('f1'), neither of which are
+  // `League` values. Widened to string so callers don't get a false sense of safety
+  // from a type assertion the query never actually enforced.
+  league: string;
   name: string;
   slug: string;
   subtitle: string | null;
