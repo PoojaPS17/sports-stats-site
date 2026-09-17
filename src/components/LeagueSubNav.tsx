@@ -2,6 +2,7 @@ import { isCricketLeague, LEAGUE_LABEL } from "@/lib/leagues";
 import type { League } from "@/lib/leagues";
 import { SubNav } from "./SubNav";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
+import { supportsProjections } from "@/lib/simulator";
 
 export function LeagueSubNav({ league }: { league: League }) {
   const cricket = isCricketLeague(league);
@@ -10,6 +11,7 @@ export function LeagueSubNav({ league }: { league: League }) {
     { label: "Scores", href: `/${league}`, exact: true },
     ...(supportsMatchweeks(league) ? [{ label: `${weekNoun(league)}s`, href: weekIndexPath(league), match: `/${league}/matchweek` }] : []),
     { label: "Standings", href: `/${league}/standings` },
+    ...(supportsProjections(league) ? [{ label: "Projections", href: `/${league}/projections` }] : []),
     { label: "Teams", href: `/${league}/teams` },
     { label: "Leaders", href: `/${league}/leaders` },
     // Score-based analytics need plain integer scores, which cricket's innings totals

@@ -187,7 +187,7 @@ const ELO_BASE = 1500;
 // Per-sport tuning. K controls how fast ratings react; homeAdvantage is the rating
 // bonus a home side gets when predicting; seasonCarry is how much of a team's
 // deviation from average survives the off-season (rosters churn, so ratings regress).
-const ELO_PARAMS: Record<string, { k: number; homeAdvantage: number; seasonCarry: number; marginScale: number }> = {
+export const ELO_PARAMS: Record<string, { k: number; homeAdvantage: number; seasonCarry: number; marginScale: number }> = {
   nba: { k: 20, homeAdvantage: 90, seasonCarry: 0.75, marginScale: 10 },
   nfl: { k: 24, homeAdvantage: 55, seasonCarry: 0.67, marginScale: 7 },
   epl: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
@@ -197,6 +197,19 @@ const ELO_PARAMS: Record<string, { k: number; homeAdvantage: number; seasonCarry
 
 export function expectedScore(ratingA: number, ratingB: number): number {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+}
+
+/** Current Elo rating per team id, computed from every result on record. */
+export async function getEloRatings(league: League): Promise<{ ratings: Map<string, number>; teams: Map<string, TeamRef>; lastResult: string | null }> {
+  const [results, teams] = await Promise.all([getAllResults(league), getTeamMap(league)]);
+  const { ratings } = computeElo(league, results, teams);
+  return { ratings, teams, lastResult: results.length ? results[results.length - 1].date : null };
+}
+
+/** Probability the home side wins (draws excluded), given both ratings. */
+export function homeWinProbability(league: League, homeRating: number, awayRating: number): number {
+  const p = ELO_PARAMS[league] ?? ELO_PARAMS.default;
+  return expectedScore(homeRating + p.homeAdvantage, awayRating);
 }
 
 export function computeElo(league: League, results: ResultRow[], teams: Map<string, TeamRef>): { rows: EloRow[]; ratings: Map<string, number> } {

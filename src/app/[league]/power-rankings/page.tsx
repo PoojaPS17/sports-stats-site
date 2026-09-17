@@ -66,7 +66,11 @@ export default async function PowerRankingsPage({ params }: { params: Promise<{ 
       <PageHeader
         title={`${label} Power Rankings`}
         subtitle={pr.season ? `${formatSeasonLabel(league, pr.season)} season. Ratings update after every result.` : undefined}
-      />
+      >
+        <Link href={`/${league}/projections`} className="nav-pill nav-pill-active">
+          Season projections →
+        </Link>
+      </PageHeader>
       <AdSlot label={`${label} power rankings top`} />
 
       <div className="grid gap-8 lg:grid-cols-3">

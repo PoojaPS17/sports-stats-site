@@ -8,6 +8,7 @@ import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
 import { supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
 import { h2hPath } from "./h2h";
+import { supportsProjections } from "./simulator";
 
 type Entry = MetadataRoute.Sitemap[number];
 
@@ -37,6 +38,7 @@ async function core(): Promise<Entry[]> {
     if (isCricketLeague(league)) out.push(entry(`/${league}/centuries`, "weekly", 0.6));
     if (supportsInjuryTracker(league)) out.push(entry(`/${league}/injuries`, "daily", 0.6));
     if (supportsMatchweeks(league)) out.push(entry(weekIndexPath(league), "daily", 0.7));
+    if (supportsProjections(league)) out.push(entry(`/${league}/projections`, "daily", 0.8));
     const { rows: seasons } = await pool.query(`select distinct season from standings where league = $1 order by season desc`, [league]);
     for (const { season } of seasons) out.push(entry(`/${league}/standings/${season}`, "yearly", 0.4));
   }
