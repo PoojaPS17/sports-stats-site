@@ -1,39 +1,82 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   isLeague,
   isCricketLeague,
   LEAGUE_LABEL,
+  formatSeasonLabel,
   getPlayerBySlug,
-  getPlayerGameLog,
+  getPlayerLog,
+  getPlayerGoalClocks,
   getPlayerSeasonStatsBySeason,
   getPlayerSeasons,
   getPlayerCricketCareer,
   getPlayerCricketSplits,
   CRICKET_SPLIT_DIMENSIONS,
   type CricketSplitDimension,
+  type League,
+  type PlayerRow,
 } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
+import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
-import { TeamLogo } from "@/components/TeamLogo";
 import { SectionHeader } from "@/components/SectionHeader";
 import { PlayerHeader } from "@/components/PlayerHeader";
-import { PlayerSeasonStats, StatGroup } from "@/components/PlayerSeasonStats";
+import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
+import { buildProfile, goalBands, formatStat, playerMeta, playerSport, positionLabel, type PlayerProfile } from "@/lib/playerProfile";
+import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
+import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
+import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
+import { PlayerBestGames } from "@/components/PlayerBestGames";
+import { PlayerMilestones } from "@/components/PlayerMilestones";
+import { PlayerFormChart } from "@/components/PlayerFormChart";
+import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
+import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 
 export const revalidate = 300;
+
+// "Cody Gakpo Premier League stats: 89 apps, 21 goals, 12 assists for Liverpool since
+// 2022-23." — the figures are the description, so the snippet answers the search.
+function profileSummary(league: League, player: PlayerRow, profile: PlayerProfile | null): string {
+  if (!profile || profile.games === 0) return `${player.name} ${LEAGUE_LABEL[league]} stats, season by season, with a game-by-game log.`;
+  const headline = profile.profile.specs.filter((s) => s.headline).slice(0, 3);
+  const figures = headline.map((s) => `${formatStat(s, profile.career[s.key])} ${s.title.toLowerCase()}${profile.sport === "nba" && s.agg === "avg" ? " per game" : ""}`);
+  const teams = profile.teams.map((t) => t.name);
+  const since = profile.seasons[profile.seasons.length - 1]?.season;
+  const games = `${profile.games} ${profile.profile.gamesLabel === "Apps" ? "appearances" : "games"}`;
+  return `${player.name} ${LEAGUE_LABEL[league]} stats: ${games}, ${figures.join(", ")} for ${teams.join(" and ")}${since ? ` since ${formatSeasonLabel(league, since)}` : ""}. Season-by-season totals, full game log, home and away and opponent splits, best games and milestones.`;
+}
+
+// generateMetadata and the page both need the player and the log; React's request
+// cache means each is fetched once per request.
+const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(league, slug));
+const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
+
+async function loadProfile(league: League, player: PlayerRow): Promise<PlayerProfile | null> {
+  const sport = playerSport(league);
+  if (!sport) return null;
+  return buildProfile(sport, await cachedLog(league, player.espn_id));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; slug: string }> }): Promise<Metadata> {
   const { league, slug } = await params;
   if (!isLeague(league)) return {};
-  const player = await getPlayerBySlug(league, slug);
+  const player = await cachedPlayer(league, slug);
   if (!player) return {};
-  const team = player.team_name ? ` (${player.team_name})` : "";
-  return pageMeta(`${player.name} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} season stats and game-by-game log.`, `/${league}/players/${slug}`);
+  if (isCricketLeague(league)) {
+    const team = player.team_name ? ` (${player.team_name})` : "";
+    return pageMeta(`${player.name} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`, `/${league}/players/${slug}`);
+  }
+  const profile = await loadProfile(league, player);
+  const seasons = profile?.games ? [] : await getPlayerSeasons(league, player.espn_id);
+  const empty = !profile?.games && seasons.length === 0;
+  return pageMeta(`${player.name} Stats, Game Log & Career`, profileSummary(league, player, profile), `/${league}/players/${slug}`, { noindex: empty });
 }
 
 function isSplitDimension(value: string | undefined): value is CricketSplitDimension {
@@ -50,36 +93,13 @@ export default async function PlayerPage({
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
 
-  const player = await getPlayerBySlug(league, slug);
-  if (!player) notFound();
+  const player = (await cachedPlayer(league, slug)) ?? (await playerNotFound(league, slug, (s) => `/${league}/players/${s}`));
 
   const basePath = `/${league}/players/${slug}`;
-  const gameLog = await getPlayerGameLog(league, player.espn_id);
+  const sport = playerSport(league);
 
-  let cricketSection = null;
-  let seasonSection = null;
-
-  if (isCricketLeague(league)) {
-    const { split: splitParam } = await searchParams;
-    const activeSplit: CricketSplitDimension = isSplitDimension(splitParam) ? splitParam : "team";
-    const [career, splits] = await Promise.all([
-      getPlayerCricketCareer(league, player.espn_id),
-      getPlayerCricketSplits(league, player.espn_id, activeSplit),
-    ]);
-    cricketSection = career && (
-      <CricketCareer league={league} career={career} splits={splits} activeSplit={activeSplit} basePath={basePath} />
-    );
-  } else {
-    const seasons = await getPlayerSeasons(league, player.espn_id);
-    const activeSeason = seasons[0] ?? null;
-    const seasonStats = activeSeason ? await getPlayerSeasonStatsBySeason(league, player.espn_id, activeSeason) : null;
-    seasonSection = (
-      <PlayerSeasonStats league={league} stats={seasonStats} seasons={seasons} activeSeason={activeSeason} basePath={basePath} />
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
+  const header = (meta: string[], description?: string) => (
+    <>
       <Breadcrumbs
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
@@ -87,56 +107,124 @@ export default async function PlayerPage({
           { label: player.name },
         ]}
       />
-
-      <JsonLd data={athleteSchema(league, player)} />
-      <PlayerHeader
-        league={league}
-        name={player.name}
-        headshotUrl={player.headshot_url}
-        teamName={player.team_name}
-        teamSlug={player.team_slug}
-        teamColor={player.team_color}
-      />
-
+      <JsonLd data={athleteSchema(league, player, { position: positionLabel(sport, player.position), description })} />
+      <PlayerHeader league={league} name={player.name} headshotUrl={player.headshot_url} teamName={player.team_name} teamSlug={player.team_slug} teamColor={player.team_color} meta={meta} />
       <Link href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
         Compare {player.name} with another player →
       </Link>
-
       <AdSlot label="Player page top" />
+    </>
+  );
 
-      {cricketSection}
-      {seasonSection}
-
-      <section>
-        <SectionHeader>Game log</SectionHeader>
-        {gameLog.length === 0 ? (
-          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No stats recorded yet.</p>
+  if (isCricketLeague(league) || !sport) {
+    const { split: splitParam } = await searchParams;
+    const activeSplit: CricketSplitDimension = isSplitDimension(splitParam) ? splitParam : "team";
+    const [career, splits] = await Promise.all([getPlayerCricketCareer(league, player.espn_id), getPlayerCricketSplits(league, player.espn_id, activeSplit)]);
+    return (
+      <div className="flex flex-col gap-6">
+        {header(playerMeta(null, player))}
+        {career ? (
+          <CricketCareer league={league} career={career} splits={splits} activeSplit={activeSplit} basePath={basePath} />
         ) : (
-          <div className="flex flex-col gap-3">
-            {gameLog.map((row) => (
-              <div key={row.game_espn_id} className="card px-4 py-3">
-                <Link
-                  href={`/${league}/games/${row.game_espn_id}`}
-                  className="mb-2 flex items-center justify-between gap-2 text-sm hover:text-[var(--accent)]"
-                >
-                  <span className="flex items-center gap-2 font-semibold">
-                    <TeamLogo name={row.opponent_name} logoUrl={row.opponent_logo} size={20} />
-                    vs {row.opponent_name}
-                  </span>
-                  <span className="text-xs text-[var(--text-muted)]">
-                    {new Date(row.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </span>
-                </Link>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {Object.entries(row.stats).map(([category, values]) => (
-                    <StatGroup key={category} category={category} values={values} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No matches on record yet.</p>
         )}
-      </section>
+      </div>
+    );
+  }
+
+  const [profile, feedSeasons] = await Promise.all([loadProfile(league, player), getPlayerSeasons(league, player.espn_id)]);
+  if (!profile) notFound();
+  const seasons = [...new Set([...profile.seasons.map((s) => s.season), ...feedSeasons])].sort((a, b) => b - a);
+  const latest = seasons[0] ?? null;
+  const [feedStats, goals] = await Promise.all([
+    latest ? getPlayerSeasonStatsBySeason(league, player.espn_id, latest) : null,
+    sport === "soccer" && profile.games > 0 && !profile.profile.specs.some((s) => s.key === "cs")
+      ? getPlayerGoalClocks(league, player.espn_id, profile.rows.map((r) => r.game_espn_id))
+      : null,
+  ]);
+  const summary = profileSummary(league, player, profile);
+  const soccer = sport === "soccer";
+  const bands = goals ? goalBands(goals.clocks) : [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      {header(playerMeta(sport, player), summary)}
+
+      {profile.games === 0 ? (
+        <>
+          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games on record for {player.name} in {LEAGUE_LABEL[league]} yet.</p>
+          <PlayerSeasonStats league={league} stats={feedStats} seasons={seasons} activeSeason={latest} basePath={basePath} />
+        </>
+      ) : (
+        <>
+          <PlayerCareerStrip league={league} profile={profile} />
+
+          <section>
+            <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : "Totals from the box score of every game on record."}>Season by season</SectionHeader>
+            <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
+          </section>
+
+          {profile.form.length > 1 && (
+            <section>
+              <SectionHeader>Recent form</SectionHeader>
+              <PlayerFormChart league={league} profile={profile} />
+            </section>
+          )}
+
+          {profile.best.length > 0 && (
+            <section>
+              <SectionHeader description={profile.profile.rankNote}>Best games</SectionHeader>
+              <PlayerBestGames league={league} profile={profile} />
+            </section>
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <section>
+              <SectionHeader>Home and away</SectionHeader>
+              <PlayerSplitsTable league={league} profile={profile} rows={profile.homeAway} firstColumn="Venue" />
+            </section>
+            {profile.byResult.length > 0 && (
+              <section>
+                <SectionHeader>By result</SectionHeader>
+                <PlayerSplitsTable league={league} profile={profile} rows={profile.byResult} firstColumn="Team result" />
+              </section>
+            )}
+          </div>
+
+          {goals && goals.clocks.length > 0 && (
+            <section>
+              <SectionHeader>Goals by minute</SectionHeader>
+              <GoalMinutesChart bands={bands} reports={goals.reports} games={profile.games} />
+            </section>
+          )}
+
+          <section>
+            <SectionHeader description="Every opponent faced, most often first.">Against each opponent</SectionHeader>
+            <PlayerSplitsTable league={league} profile={profile} rows={profile.opponents} firstColumn="Opponent" linkTeams />
+          </section>
+
+          {profile.milestones.length > 0 && (
+            <section>
+              <SectionHeader description="Landmarks within the games on record, pinned to the game they came in.">Milestones</SectionHeader>
+              <PlayerMilestones league={league} profile={profile} />
+            </section>
+          )}
+
+          <AdSlot label="Player page middle" />
+
+          <section>
+            <SectionHeader description={`Every ${LEAGUE_LABEL[league]} game on record, latest season open.`}>Game log</SectionHeader>
+            <PlayerGameLogTable league={league} profile={profile} />
+          </section>
+
+          {feedStats && <PlayerSeasonStats league={league} stats={feedStats} seasons={seasons} activeSeason={latest} basePath={basePath} />}
+
+          <p className="text-[11px] text-[var(--text-faint)]">
+            Career figures are summed from the {profile.games} {LEAGUE_LABEL[league]} {soccer ? "appearances" : "games"} on record here
+            {profile.firstDate ? ` since ${new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : ""}; earlier games and other competitions are not included.
+          </p>
+        </>
+      )}
     </div>
   );
 }

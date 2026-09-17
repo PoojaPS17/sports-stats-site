@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
+import { teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamHeader } from "@/components/TeamHeader";
 import { TeamPageNav } from "@/components/TeamPageNav";
@@ -38,8 +39,7 @@ export default async function TeamAboutPage({
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
 
-  const team = await getTeamBySlug(league, slug);
-  if (!team) notFound();
+  const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug, "/about"));
 
   const venueLocation = [team.venue_city, team.venue_state, team.venue_country].filter(Boolean).join(", ");
   const hasInfo = Boolean(team.venue_name || team.head_coach || team.abbreviation);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGamesBySeason, getTeamSeasons, formatSeasonLabel } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
+import { teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamSeasonGames } from "@/components/TeamSeasonGames";
 import { TeamHeader } from "@/components/TeamHeader";
@@ -32,8 +33,7 @@ export default async function TeamSeasonPage({
   const season = Number(seasonParam);
   if (!Number.isInteger(season)) notFound();
 
-  const team = await getTeamBySlug(league, slug);
-  if (!team) notFound();
+  const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug, `/${season}`));
 
   const seasons = await getTeamSeasons(league, team.espn_id);
   if (!seasons.includes(season)) notFound();

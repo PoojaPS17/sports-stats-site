@@ -53,12 +53,20 @@ export function teamSchema(league: League, team: { name: string; slug: string; l
   };
 }
 
-export function athleteSchema(league: League, player: { name: string; slug: string; headshot_url: string | null; team_name: string | null; team_slug: string | null }) {
+export function athleteSchema(
+  league: League,
+  player: { name: string; slug: string; headshot_url: string | null; team_name: string | null; team_slug: string | null; height?: string | null; weight?: string | null },
+  options: { position?: string | null; description?: string } = {}
+) {
   return {
     "@context": "https://schema.org",
     "@type": "Person",
     name: player.name,
     url: absoluteUrl(`/${league}/players/${player.slug}`),
+    ...(options.description ? { description: options.description } : {}),
+    ...(options.position ? { jobTitle: options.position } : {}),
+    ...(player.height ? { height: player.height } : {}),
+    ...(player.weight ? { weight: player.weight } : {}),
     ...(player.headshot_url ? { image: player.headshot_url } : {}),
     ...(player.team_name
       ? { memberOf: { "@type": "SportsTeam", name: player.team_name, ...(player.team_slug ? { url: absoluteUrl(`/${league}/teams/${player.team_slug}`) } : {}) } }

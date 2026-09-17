@@ -38,9 +38,19 @@ const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE_BASE = "https://site.api.espn.com/apis/v2/sports";
 const COMMON_BASE = "https://site.api.espn.com/apis/common/v3/sports";
 
+// Letters that don't decompose to a base letter plus an accent mark.
+const SLUG_SPECIAL: Record<string, string> = { "ø": "o", "æ": "ae", "œ": "oe", "ß": "ss", "đ": "d", "ł": "l", "ı": "i", "þ": "th", "ð": "d" };
+
+// "Kylian Mbappé" → "kylian-mbappe", "Atlético Madrid" → "atletico-madrid": accents
+// are stripped rather than dropped with their letter, so the slug still reads as the
+// name. Rows created before this (with "mbapp" / "atl-tico") keep the old slug in
+// legacy_slug and redirect (see scripts/reslug-accents.ts).
 export function slugify(name: string): string {
   return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/[øæœßđłıþð]/g, (ch) => SLUG_SPECIAL[ch] ?? ch)
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }

@@ -13,14 +13,20 @@ function extractAmericanSports(data: any): PlayerStats {
     const teamId: string = group.team.id;
     for (const category of group.statistics ?? []) {
       const labels: string[] = category.labels ?? [];
+      // The NFL feed names each category (passing, rushing, ...); the NBA feed has a
+      // single unnamed box score per team, stored under "box".
+      const name: string = category.name ?? "box";
       for (const row of category.athletes ?? []) {
+        // NBA: players who did not play still appear (with empty stats and a reason).
+        if (row.didNotPlay || !row.stats?.length) continue;
         const key = row.athlete.id;
         if (!perPlayer.has(key)) perPlayer.set(key, { athlete: row.athlete, teamId, stats: {} });
         const values: Record<string, string> = {};
         labels.forEach((label, i) => {
           if (row.stats?.[i] !== undefined) values[label] = row.stats[i];
         });
-        perPlayer.get(key)!.stats[category.name] = values;
+        if (typeof row.starter === "boolean") values.GS = row.starter ? "1" : "0";
+        perPlayer.get(key)!.stats[name] = values;
       }
     }
   }
@@ -79,23 +85,31 @@ export async function storeGameStats(league: League, gameEspnId: string, perPlay
     : { rows: [] as { slug: string }[] };
   const takenSlugs = new Set(taken.map((r) => r.slug as string));
   const usedNow = new Set<string>();
-  const inserts: { id: string; teamId: string; name: string; slug: string; headshot: string | null }[] = [];
+  const inserts: { id: string; teamId: string; name: string; slug: string; headshot: string | null; position: string | null; jersey: string | null }[] = [];
   for (const [id, { athlete, teamId }] of fresh) {
     const name = athlete.displayName ?? athlete.fullName ?? `Player ${id}`;
     const base = bases.get(id)!;
     const slug = takenSlugs.has(base) || usedNow.has(base) ? `${base}-${id}` : base;
     usedNow.add(slug);
-    inserts.push({ id, teamId, name, slug, headshot: athlete.headshot?.href ?? null });
+    inserts.push({
+      id,
+      teamId,
+      name,
+      slug,
+      headshot: athlete.headshot?.href ?? null,
+      position: athlete.position?.abbreviation ?? null,
+      jersey: athlete.jersey ?? null,
+    });
   }
   if (inserts.length > 0) {
     const values: unknown[] = [];
     const tuples = inserts.map((p, i) => {
-      values.push(league, p.id, p.teamId, p.name, p.slug, p.headshot);
-      const b = i * 6;
-      return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6})`;
+      values.push(league, p.id, p.teamId, p.name, p.slug, p.headshot, p.position, p.jersey);
+      const b = i * 8;
+      return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},$${b + 7},$${b + 8})`;
     });
     await pool.query(
-      `insert into players (league, espn_id, team_espn_id, name, slug, headshot_url)
+      `insert into players (league, espn_id, team_espn_id, name, slug, headshot_url, position, jersey)
        values ${tuples.join(",")}
        on conflict (league, espn_id) do nothing`,
       values

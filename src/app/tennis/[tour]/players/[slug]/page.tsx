@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { playerNotFound } from "@/lib/legacySlug";
 import Link from "next/link";
 import { isTour, getTennisPlayerBySlug, getTennisPlayerMatches, getTennisPlayerRanking, TOUR_LABEL } from "@/lib/tennis";
 import { AdSlot } from "@/components/AdSlot";
@@ -15,8 +16,7 @@ export default async function TennisPlayerPage({
   const { tour, slug } = await params;
   if (!isTour(tour)) notFound();
 
-  const player = await getTennisPlayerBySlug(tour, slug);
-  if (!player) notFound();
+  const player = (await getTennisPlayerBySlug(tour, slug)) ?? (await playerNotFound(tour, slug, (s) => `/tennis/${tour}/players/${s}`));
 
   const [matches, ranking] = await Promise.all([
     getTennisPlayerMatches(tour, player.espn_id),

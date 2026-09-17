@@ -50,6 +50,12 @@ alter table players add column if not exists weight text;
 alter table players add column if not exists age int;
 alter table players add column if not exists is_captain boolean;
 alter table players add column if not exists is_wicketkeeper boolean;
+-- The slug a row had before accents were handled properly (see slugify); the page
+-- redirects it permanently to the current slug so old links keep working.
+alter table players add column if not exists legacy_slug text;
+create index if not exists players_legacy_slug_idx on players (league, legacy_slug) where legacy_slug is not null;
+alter table teams add column if not exists legacy_slug text;
+create index if not exists teams_legacy_slug_idx on teams (league, legacy_slug) where legacy_slug is not null;
 
 create table if not exists games (
   league text not null,

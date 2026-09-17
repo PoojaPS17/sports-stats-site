@@ -2,6 +2,7 @@ import { pool } from "./db";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 import type { GameDetails } from "./matchDetail";
+import type { PlayerLogRow } from "./playerProfile";
 
 export type { League } from "./leagues";
 export { LEAGUES, CRICKET_LEAGUES, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
@@ -246,6 +247,18 @@ export async function getTeamBySlug(league: League, slug: string): Promise<TeamD
   return rows[0] ?? null;
 }
 
+// A slug from before accents were handled ("atl-tico-madrid"): the current slug of
+// that row, so the page can redirect permanently instead of 404ing an old link.
+export async function findTeamSlugByLegacy(league: League, slug: string): Promise<string | null> {
+  const { rows } = await pool.query(`select slug from teams where league = $1 and legacy_slug = $2`, [league, slug]);
+  return rows[0]?.slug ?? null;
+}
+
+export async function findPlayerSlugByLegacy(league: string, slug: string): Promise<string | null> {
+  const { rows } = await pool.query(`select slug from players where league = $1 and legacy_slug = $2`, [league, slug]);
+  return rows[0]?.slug ?? null;
+}
+
 export async function getAllTeams(league: League): Promise<TeamRow[]> {
   const { rows } = await pool.query(
     `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams where league = $1 order by name`,
@@ -286,11 +299,16 @@ export interface PlayerRow {
   team_name: string | null;
   team_slug: string | null;
   team_color: string | null;
+  position?: string | null;
+  jersey?: string | null;
+  age?: number | null;
+  height?: string | null;
+  weight?: string | null;
 }
 
 export async function getPlayerBySlug(league: League, slug: string): Promise<PlayerRow | null> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, p.headshot_url, p.team_espn_id,
+    `select p.espn_id, p.name, p.slug, p.headshot_url, p.team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
             t.name as team_name, t.slug as team_slug, t.color as team_color
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
@@ -579,6 +597,51 @@ export async function getTeamInjuries(league: League, teamEspnId: string): Promi
     [league, teamEspnId]
   );
   return rows;
+}
+
+// The full game log behind a player profile: every box-score row with the game's
+// context from the player's side (their team that day, the opponent, home or away,
+// the result). One query; everything on the profile is derived from it in memory.
+export async function getPlayerLog(league: League, playerEspnId: string): Promise<PlayerLogRow[]> {
+  const { rows } = await pool.query(
+    `select pgs.game_espn_id, g.date, g.season_year, g.round, g.week, pgs.stats,
+            (g.home_team_espn_id = pgs.team_espn_id) as is_home,
+            pgs.team_espn_id, tm.name as team_name, tm.slug as team_slug, tm.abbreviation as team_abbr, tm.logo_url as team_logo,
+            op.espn_id as opponent_espn_id, op.name as opponent_name, op.slug as opponent_slug, op.abbreviation as opponent_abbr, op.logo_url as opponent_logo,
+            case when g.home_team_espn_id = pgs.team_espn_id then g.home_score else g.away_score end as team_score,
+            case when g.home_team_espn_id = pgs.team_espn_id then g.away_score else g.home_score end as opponent_score,
+            case
+              when not g.completed or g.home_score is null or g.away_score is null then null
+              when g.home_score = g.away_score then 'D'
+              when (g.home_team_espn_id = pgs.team_espn_id) = (g.home_score > g.away_score) then 'W'
+              else 'L'
+            end as result
+     from player_game_stats pgs
+     join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+     join teams tm on tm.league = g.league and tm.espn_id = pgs.team_espn_id
+     join teams op on op.league = g.league and op.espn_id = case when g.home_team_espn_id = pgs.team_espn_id then g.away_team_espn_id else g.home_team_espn_id end
+     where pgs.league = $1 and pgs.player_espn_id = $2 and g.completed
+     order by g.date desc`,
+    [league, playerEspnId]
+  );
+  return rows;
+}
+
+// Clock of every goal this player scored in the stored match reports for the given
+// games (own goals excluded). Only games with a stored report count, so callers
+// should say how many of the player's games that covers.
+export async function getPlayerGoalClocks(league: League, playerEspnId: string, gameIds: string[]): Promise<{ clocks: string[]; reports: number }> {
+  if (gameIds.length === 0) return { clocks: [], reports: 0 };
+  const { rows } = await pool.query(
+    `select gd.game_espn_id, e->>'clock' as clock
+     from game_details gd
+     left join lateral jsonb_array_elements(gd.details->'events') e
+       on e->>'type' in ('goal', 'penalty') and e->'players'->0->>'id' = $3
+     where gd.league = $1 and gd.game_espn_id = any($2)`,
+    [league, gameIds, playerEspnId]
+  );
+  const reports = new Set(rows.map((r) => r.game_espn_id as string)).size;
+  return { clocks: rows.map((r) => r.clock as string | null).filter((c): c is string => Boolean(c)), reports };
 }
 
 export interface PlayerSeasonStats {

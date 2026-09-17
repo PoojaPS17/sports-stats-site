@@ -14,6 +14,7 @@ import {
   formatSeasonLabel,
 } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
+import { teamNotFound } from "@/lib/legacySlug";
 import { summarizeTeamSeason } from "@/lib/teamSummary";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -48,8 +49,7 @@ export default async function TeamPage({
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
 
-  const team = await getTeamBySlug(league, slug);
-  if (!team) notFound();
+  const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug));
 
   const seasons = await getTeamSeasons(league, team.espn_id);
   const activeSeason = seasons[0] ?? null;

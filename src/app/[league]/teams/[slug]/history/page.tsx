@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { isLeague, isCupCompetition, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
 import { getTeamHistory, isSoccer } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
+import { teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamHeader } from "@/components/TeamHeader";
 import { TeamPageNav } from "@/components/TeamPageNav";
@@ -30,8 +31,7 @@ function ordinal(n: number): string {
 export default async function TeamHistoryPage({ params }: { params: Promise<{ league: string; slug: string }> }) {
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
-  const team = await getTeamBySlug(league, slug);
-  if (!team) notFound();
+  const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug, "/history"));
 
   const history = await getTeamHistory(league, team.espn_id);
   const played = history.filter((h) => h.played);

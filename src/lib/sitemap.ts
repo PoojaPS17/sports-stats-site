@@ -62,8 +62,17 @@ async function teams(league: League): Promise<Entry[]> {
   return out;
 }
 
+// Only players with something on the page: a game on record or a season stat line.
+// Roster-only players (no figures yet) render with noindex, so they stay out here too.
 async function players(league: League): Promise<Entry[]> {
-  const { rows } = await pool.query(`select slug from players where league = $1 order by slug`, [league]);
+  const { rows } = await pool.query(
+    `select p.slug from players p
+     where p.league = $1
+       and (exists (select 1 from player_game_stats s where s.league = p.league and s.player_espn_id = p.espn_id)
+            or exists (select 1 from player_season_stats s where s.league = p.league and s.player_espn_id = p.espn_id))
+     order by p.slug`,
+    [league]
+  );
   return rows.map(({ slug }) => entry(`/${league}/players/${slug}`, "weekly", 0.5));
 }
 

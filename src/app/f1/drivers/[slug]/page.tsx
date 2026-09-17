@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { playerNotFound } from "@/lib/legacySlug";
 import Link from "next/link";
 import { getF1DriverBySlug, getF1DriverResults } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
@@ -9,8 +9,7 @@ export const revalidate = 300;
 
 export default async function F1DriverPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const driver = await getF1DriverBySlug(slug);
-  if (!driver) notFound();
+  const driver = (await getF1DriverBySlug(slug)) ?? (await playerNotFound("f1", slug, (s) => `/f1/drivers/${s}`));
 
   const results = await getF1DriverResults(driver.espn_id);
   const currentTeam = results.find((r) => r.constructor_name)?.constructor_name ?? null;
