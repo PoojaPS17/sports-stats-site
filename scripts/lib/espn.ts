@@ -98,9 +98,19 @@ export function fetchScoreboard(league: League, dateYYYYMMDD?: string) {
 // competition) accepts a `season` query param and returns that whole season's matches
 // in one call — even though the competition id in the path (e.g. IPL's 8048) otherwise
 // only resolves to the *current* season by default.
-export function fetchScoreboardBySeason(league: League, season: number) {
-  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/scoreboard?season=${season}`);
+//
+// ESPN's edge cache can hold a half-hydrated copy of an older season for a long time:
+// the response lists the right number of matches but many of them are bare `{}`
+// objects (observed: BBL 2021 stuck at 25 of 61 across eight identical requests). A
+// unique cache-busting query param forces a fresh render, which comes back complete.
+export function fetchScoreboardBySeason(league: League, season: number, options: { bypassCache?: boolean } = {}) {
+  const bust = options.bypassCache ? `&_=${Date.now()}` : "";
+  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/scoreboard?season=${season}${bust}`);
 }
+
+// The earliest season ESPN serves for competitions we load further back than the
+// default window (IPL began in 2008, the Big Bash in 2011-12).
+export const HISTORY_START: Partial<Record<League, number>> = { ipl: 2008, bbl: 2011 };
 
 // `level=3` asks for the division-level groups (conference → division → teams) that
 // the NFL table is conventionally shown in; the default response stops at conferences.

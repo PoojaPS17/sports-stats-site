@@ -112,7 +112,7 @@ export default async function PlayerPage({
       <Breadcrumbs
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
-          ...(player.team_name && player.team_slug ? [{ label: player.team_name, href: `/${league}/teams/${player.team_slug}` }] : []),
+          ...(headerTeam && headerTeamSlug ? [{ label: headerTeam, href: `/${league}/teams/${headerTeamSlug}` }] : []),
           { label: player.name },
         ]}
       />

@@ -312,7 +312,7 @@ export async function getPlayerBySlug(league: League, slug: string): Promise<Pla
   const { rows } = await pool.query(
     `select p.espn_id, p.name, p.slug, p.headshot_url, p.team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
             t.name as team_name, t.slug as team_slug, t.color as team_color,
-            (p.team_espn_id is not null and (${ON_ROSTER_SQL})) as on_roster
+            coalesce(p.team_espn_id is not null and (${ON_ROSTER_SQL}), false) as on_roster
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      where p.league = $1 and p.slug = $2`,

@@ -8,7 +8,7 @@
 // per season instead of per team x season).
 // Safe to re-run/resume — all writes are upserts.
 import { pool } from "./lib/db";
-import { fetchScoreboardBySeason, fetchTeamSchedule, isCupCompetition, type League } from "./lib/espn";
+import { HISTORY_START, fetchScoreboardBySeason, fetchTeamSchedule, isCupCompetition, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
 
 const YEARS_BACK = 10;
@@ -83,26 +83,52 @@ async function backfillViaTeamSchedules(league: League) {
 // season's matches in one call — so one request per year covers all of that
 // competition's history, same order-of-magnitude cost as the per-team-schedule
 // approach used for the others.
+// ESPN's cached copy of an old season is often only partly hydrated (bare `{}` entries
+// in place of matches), so each season is re-requested with a cache-busting param
+// until every listed match has content. A season that never completes is still
+// upserted (more facts than before) but reported, so it can be re-run rather than
+// silently shown as a full season.
+const MAX_SEASON_ATTEMPTS = 6;
+
+async function fetchCompleteSeason(league: League, season: number): Promise<{ events: any[]; listed: number; complete: boolean }> {
+  let best: { events: any[]; listed: number } = { events: [], listed: 0 };
+  for (let attempt = 1; attempt <= MAX_SEASON_ATTEMPTS; attempt++) {
+    try {
+      const data = await fetchScoreboardBySeason(league, season, { bypassCache: attempt > 1 });
+      const listed: any[] = data.events ?? [];
+      const populated = listed.filter((ev) => ev?.id && ev.competitions?.[0]);
+      if (populated.length > best.events.length) best = { events: populated, listed: listed.length };
+      if (listed.length > 0 && populated.length === listed.length) return { ...best, complete: true };
+      console.warn(`[backfill-games] ${league} ${season}: ${populated.length}/${listed.length} matches populated (attempt ${attempt})`);
+    } catch (err) {
+      console.error(`[backfill-games] ${league} season ${season} attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
+    }
+    await sleep(REQUEST_DELAY_MS * 10);
+  }
+  return { ...best, complete: false };
+}
+
 async function backfillCricketViaSeasonScoreboard(league: League) {
   const currentYear = new Date().getUTCFullYear();
+  const firstSeason = HISTORY_START[league] ?? currentYear - YEARS_BACK;
   const seen = new Set<string>();
+  const incomplete: string[] = [];
   let gameCount = 0;
 
-  for (let season = currentYear - YEARS_BACK; season <= currentYear; season++) {
-    try {
-      const data = await fetchScoreboardBySeason(league, season);
-      for (const ev of data.events ?? []) {
-        if (seen.has(ev.id)) continue;
-        seen.add(ev.id);
-        await upsertEvent(league, ev);
-        gameCount++;
-      }
-    } catch (err) {
-      console.error(`[backfill-games] ${league} season ${season} failed:`, err instanceof Error ? err.message : err);
+  for (let season = firstSeason; season <= currentYear; season++) {
+    const { events, listed, complete } = await fetchCompleteSeason(league, season);
+    if (!complete) incomplete.push(`${season} (${events.length}/${listed})`);
+    for (const ev of events) {
+      if (seen.has(ev.id)) continue;
+      seen.add(ev.id);
+      await upsertEvent(league, ev);
+      gameCount++;
     }
+    console.log(`[backfill-games] ${league} ${season}: ${events.length}/${listed} matches${complete ? "" : " (INCOMPLETE)"}`);
     await sleep(REQUEST_DELAY_MS);
   }
-  console.log(`[backfill-games] ${league}: scanned ${YEARS_BACK + 1} seasons, upserted ${gameCount} games`);
+  console.log(`[backfill-games] ${league}: scanned ${currentYear - firstSeason + 1} seasons, upserted ${gameCount} games`);
+  if (incomplete.length > 0) console.error(`[backfill-games] ${league}: INCOMPLETE seasons, re-run later: ${incomplete.join(", ")}`);
 }
 
 async function main() {
@@ -110,7 +136,7 @@ async function main() {
   const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
 
   for (const league of leagues) {
-    console.log(`[backfill-games] starting ${league} (last ${YEARS_BACK} years)...`);
+    console.log(`[backfill-games] starting ${league} (${HISTORY_START[league] ? `since ${HISTORY_START[league]}` : `last ${YEARS_BACK} years`})...`);
     if (CRICKET_LEAGUES.includes(league)) {
       await backfillCricketViaSeasonScoreboard(league);
     } else {
