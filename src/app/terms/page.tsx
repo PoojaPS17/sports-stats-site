@@ -40,7 +40,9 @@ export default function TermsPage() {
         projections. The site does not claim ownership of the underlying facts, which belong to no one, nor of any
         third-party material. Where a data source&apos;s name appears on the site, it is stated as a matter of
         attribution and not as an endorsement. Results and scorecards for men&apos;s ODI and T20 internationals are derived
-        from ball-by-ball data published by Cricsheet (cricsheet.org) under its attribution licence.
+        from ball-by-ball data published by Cricsheet (cricsheet.org) under its attribution licence. Some player photographs
+        are reproduced from Wikimedia Commons under the Creative Commons or public-domain terms stated for each file; the
+        photographer and licence are credited on the page where the photograph appears.
       </p>
 
       <h2>4. Trademarks, logos and images</h2>

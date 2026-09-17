@@ -443,7 +443,7 @@ export async function getWeekPerformers(league: League, week: Matchweek, limit =
   const ids = week.games.filter((g) => g.completed).map((g) => g.espn_id);
   if (ids.length === 0) return [];
   const { rows } = await pool.query(
-    `select pgs.game_espn_id, pgs.stats, p.name, p.slug, p.headshot_url, t.name as team_name, t.abbreviation as team_abbr
+    `select pgs.game_espn_id, pgs.stats, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, t.name as team_name, t.abbreviation as team_abbr
      from player_game_stats pgs
      join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
      left join teams t on t.league = pgs.league and t.espn_id = pgs.team_espn_id

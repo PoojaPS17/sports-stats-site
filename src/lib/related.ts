@@ -54,7 +54,7 @@ function metricText(league: League, r: SeasonMetricRow): string | null {
 
 const SEASON_JOIN = `left join player_season_stats ps on ps.league = p.league and ps.player_espn_id = p.espn_id
                        and ps.season = (select max(season) from player_season_stats where league = p.league)`;
-const SELECT = `select p.slug, p.name, p.position, p.headshot_url, t.name as team_name, t.slug as team_slug,
+const SELECT = `select p.slug, p.name, p.position, coalesce(p.headshot_url, p.photo_url) as headshot_url, t.name as team_name, t.slug as team_slug,
                        ps.goals, ps.assists, ps.pts_avg, ps.passing_yards, ps.rushing_yards, ps.receiving_yards`;
 
 function toLink(league: League, r: SeasonMetricRow, withTeam: boolean): RelatedLink {

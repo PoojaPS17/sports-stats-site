@@ -15,6 +15,7 @@
     "fetch:standings": "tsx scripts/fetch-standings.ts",
     "fetch:player-stats": "tsx scripts/fetch-player-stats.ts",
     "fetch:rosters": "tsx scripts/fetch-rosters.ts",
+    "fetch:player-photos": "tsx scripts/fetch-player-photos.ts",
     "fetch:cricket-rosters": "tsx scripts/fetch-cricket-rosters.ts",
     "fetch:news": "tsx scripts/fetch-news.ts",
     "fetch:injuries": "tsx scripts/fetch-injuries.ts",

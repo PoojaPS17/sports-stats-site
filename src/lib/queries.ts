@@ -127,6 +127,16 @@ export async function getRecentAndUpcoming(league: League, daysBack = 2, daysFor
   return rows;
 }
 
+// The last results of one season, newest first — the closing games of a season that
+// has ended (a final, the last matchday) for the between-seasons recap.
+export async function getSeasonLastResults(league: League, season: number, limit = 6): Promise<GameRow[]> {
+  const { rows } = await pool.query(
+    `${GAME_SELECT} where g.league = $1 and g.season_year = $2 and g.completed = true order by g.date desc, g.espn_id desc limit $3`,
+    [league, season, limit]
+  );
+  return rows;
+}
+
 // Newest completed matches, for competitions that have results but no fixture feed.
 export async function getLatestResults(league: League, limit = 12): Promise<GameRow[]> {
   const { rows } = await pool.query(`${GAME_SELECT} where g.league = $1 and g.completed = true order by g.date desc, g.espn_id desc limit $2`, [league, limit]);
@@ -312,12 +322,19 @@ export interface PlayerRow {
   weight?: string | null;
   /** Listed in the team's latest roster fetch; false for players who have moved on. */
   on_roster?: boolean;
+  /** Set only when headshot_url is a Wikimedia Commons photo (ESPN had none): its attribution. */
+  photo_credit?: string | null;
+  photo_license?: string | null;
+  photo_source_url?: string | null;
 }
 
 export async function getPlayerBySlug(league: League, slug: string): Promise<PlayerRow | null> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, p.headshot_url, p.team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
+    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
             t.name as team_name, t.slug as team_slug, t.color as team_color,
+            case when p.headshot_url is null then p.photo_credit end as photo_credit,
+            case when p.headshot_url is null then p.photo_license end as photo_license,
+            case when p.headshot_url is null then p.photo_source_url end as photo_source_url,
             coalesce(p.team_espn_id is not null and (${ON_ROSTER_SQL}), false) as on_roster
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
@@ -338,7 +355,7 @@ export async function getPlayerSlugsByEspnIds(league: League, espnIds: string[])
 
 export async function getAllPlayers(league: League): Promise<PlayerRow[]> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, p.headshot_url, p.team_espn_id,
+    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.team_espn_id,
             t.name as team_name, t.slug as team_slug, t.color as team_color
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
@@ -491,19 +508,21 @@ const LEADER_COLUMNS = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) =
 // player_season_stats, which now holds up to 10 years of history per player — so this
 // must pin to the most recent season, or it'd silently pick whichever of a player's
 // last 10 years happened to be their best, mixed arbitrarily across different players.
-export async function getLeaders(league: League, column: string, limit = 10): Promise<LeaderRow[]> {
+// `season` pins a specific year (the off-season recap wants the season just played,
+// not the new one whose zero rows may already exist); default is the latest on file.
+export async function getLeaders(league: League, column: string, limit = 10, season?: number): Promise<LeaderRow[]> {
   if (!LEADER_COLUMNS.has(column)) throw new Error(`Unknown leader column: ${column}`);
   const { rows } = await pool.query(
-    `select pss.player_espn_id, p.name, p.slug, p.headshot_url,
+    `select pss.player_espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
             t.name as team_name, t.slug as team_slug, pss.${column} as value
      from player_season_stats pss
      join players p on p.league = pss.league and p.espn_id = pss.player_espn_id
      left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
      where pss.league = $1 and pss.${column} is not null
-       and pss.season = (select max(season) from player_season_stats where league = $1)
+       and pss.season = coalesce($3, (select max(season) from player_season_stats where league = $1))
      order by pss.${column} desc
      limit $2`,
-    [league, limit]
+    [league, limit, season ?? null]
   );
   return rows;
 }
@@ -554,7 +573,7 @@ export async function getCricketLeaders(league: League, key: "runs" | "wickets" 
        group by s.player_espn_id
        having ${expr} > 0
      )
-     select x.player_espn_id, p.name, p.slug, p.headshot_url, t.name as team_name, t.slug as team_slug, x.value
+     select x.player_espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, t.name as team_name, t.slug as team_slug, x.value
      from totals x
      join players p on p.league = $1 and p.espn_id = x.player_espn_id
      left join teams t on t.league = $1 and t.espn_id = x.team_espn_id
@@ -587,7 +606,7 @@ export const ON_ROSTER_SQL = `(select max(roster_seen_at) from players r where r
 
 export async function getTeamRoster(league: League, teamEspnId: string): Promise<RosterPlayer[]> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, p.position, p.jersey, p.height, p.weight, p.age, p.headshot_url, p.is_captain, p.is_wicketkeeper
+    `select p.espn_id, p.name, p.slug, p.position, p.jersey, p.height, p.weight, p.age, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.is_captain, p.is_wicketkeeper
      from players p where p.league = $1 and p.team_espn_id = $2 and (${ON_ROSTER_SQL})
      order by p.is_captain desc nulls last, p.position, p.name`,
     [league, teamEspnId]
@@ -808,7 +827,7 @@ export async function getTrendingTopics(source: TrendingSource, country: string)
   const effectiveCountry = country === "global" && source !== "wikipedia" ? "US" : country;
   const { rows } = await pool.query(
     `select t.rank, t.label, t.detail, t.url, t.image_url, t.matched_league, t.matched_type, t.matched_slug,
-            coalesce(p.headshot_url, tm.logo_url) as avatar_url,
+            coalesce(p.headshot_url, p.photo_url, tm.logo_url) as avatar_url,
             tm.color as avatar_color
      from trending_topics t
      left join players p on t.matched_type = 'player' and p.league = t.matched_league and p.slug = t.matched_slug
@@ -986,7 +1005,7 @@ export interface CenturyRow {
 // list, so it's always consistent with whatever games are actually in the database.
 export async function getCricketCenturies(league: League): Promise<CenturyRow[]> {
   const { rows } = await pool.query(
-    `select p.espn_id as player_espn_id, p.name as player_name, p.slug as player_slug, p.headshot_url,
+    `select p.espn_id as player_espn_id, p.name as player_name, p.slug as player_slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
             t.name as team_name, t.slug as team_slug, t.logo_url as team_logo, t.color as team_color,
             ot.name as opponent_name, ot.slug as opponent_slug,
             (pgs.stats->'batting'->>'runs')::int as runs,
@@ -1032,7 +1051,7 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
     `select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image
      from teams where name ilike $1
      union all
-     select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, p.headshot_url as image
+     select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image
      from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      where p.name ilike $1
      limit $2`,

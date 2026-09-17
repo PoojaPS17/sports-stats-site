@@ -35,6 +35,11 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run fetch:cricket-rosters
 
+      - name: Fetch player photos from Wikimedia Commons (players ESPN has no headshot for)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:player-photos
+
       - name: Fetch team info (venue, head coach)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

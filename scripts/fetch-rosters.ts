@@ -29,7 +29,7 @@ async function processTeam(league: League, teamEspnId: string) {
          values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
          on conflict (league, espn_id) do update set
            team_espn_id = excluded.team_espn_id, name = excluded.name,
-           position = excluded.position, headshot_url = excluded.headshot_url,
+           position = excluded.position, headshot_url = coalesce(excluded.headshot_url, players.headshot_url),
            jersey = excluded.jersey, height = excluded.height, weight = excluded.weight, age = excluded.age,
            roster_seen_at = now()`,
         [

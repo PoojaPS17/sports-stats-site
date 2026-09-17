@@ -117,7 +117,7 @@ export default async function PlayerPage({
         ]}
       />
       <JsonLd data={athleteSchema(league, player, { position: positionLabel(sport, player.position), description })} />
-      <PlayerHeader league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamSlug={headerTeamSlug} teamColor={player.team_color} meta={[...meta, ...lastClub]} />
+      <PlayerHeader league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamSlug={headerTeamSlug} teamColor={player.team_color} meta={[...meta, ...lastClub]} photoCredit={player.photo_credit ? { credit: player.photo_credit, license: player.photo_license ?? "see source", sourceUrl: player.photo_source_url ?? "https://commons.wikimedia.org" } : null} />
       <Link href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
         Compare {player.name} with another player →
       </Link>

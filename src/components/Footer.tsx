@@ -76,7 +76,8 @@ export function Footer() {
           </p>
           <p>
             ODI and T20 international results and scorecards are derived from ball-by-ball data published by{" "}
-            <a href="https://cricsheet.org" className="hover:text-[var(--accent)]" rel="noopener">Cricsheet</a>, used under its attribution licence.
+            <a href="https://cricsheet.org" className="hover:text-[var(--accent)]" rel="noopener">Cricsheet</a>, used under its attribution licence. Some player photographs come from{" "}
+            <a href="https://commons.wikimedia.org" className="hover:text-[var(--accent)]" rel="noopener">Wikimedia Commons</a> under Creative Commons licences; each player page credits the photographer.
           </p>
         </div>
       </div>

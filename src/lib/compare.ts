@@ -238,7 +238,7 @@ function parseNumber(text: string): number | null {
 
 async function getPlayerProfile(league: League, slug: string): Promise<PlayerProfile | null> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, p.headshot_url, p.position, p.jersey, p.age, p.height,
+    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.position, p.jersey, p.age, p.height,
             t.name as team_name, t.slug as team_slug, t.color as team_color, t.logo_url as team_logo
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id

@@ -392,3 +392,13 @@ create table if not exists game_details (
   fetched_at timestamptz not null default now(),
   primary key (league, game_espn_id)
 );
+
+-- Photograph from Wikimedia Commons for players ESPN has no headshot for (most
+-- footballers), matched by the ESPN player id Wikidata stores — never by name.
+-- Commons images are Creative Commons / public domain, so the photographer and
+-- licence are kept and credited wherever the photo is shown at size.
+-- Written by scripts/fetch-player-photos.ts; queries fall back to it when headshot_url is null.
+alter table players add column if not exists photo_url text;
+alter table players add column if not exists photo_credit text;
+alter table players add column if not exists photo_license text;
+alter table players add column if not exists photo_source_url text;

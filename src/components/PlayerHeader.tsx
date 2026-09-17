@@ -10,6 +10,7 @@ export function PlayerHeader({
   teamSlug,
   teamColor,
   meta,
+  photoCredit,
 }: {
   league: League;
   name: string;
@@ -19,6 +20,8 @@ export function PlayerHeader({
   teamColor: string | null;
   /** Optional short facts shown under the name (position, number, age, ...). */
   meta?: string[];
+  /** Attribution for a Wikimedia Commons photo (ESPN had no headshot); shown under the facts. */
+  photoCredit?: { credit: string; license: string; sourceUrl: string } | null;
 }) {
   return (
     <div className="card flex items-center gap-4 overflow-hidden px-5 py-5" style={{ borderLeft: `4px solid ${teamColor ?? "var(--accent)"}` }}>
@@ -29,7 +32,8 @@ export function PlayerHeader({
           alt=""
           width={72}
           height={72}
-          className="h-[72px] w-[72px] shrink-0 rounded-full bg-[var(--surface-muted)] object-cover"
+          // Commons photos are portraits, not face crops: keep the head in the circle.
+          className={`h-[72px] w-[72px] shrink-0 rounded-full bg-[var(--surface-muted)] object-cover ${photoCredit ? "object-[50%_18%]" : ""}`}
         />
       ) : (
         <TeamLogo name={name} logoUrl={null} color={teamColor} size={72} />
@@ -58,6 +62,14 @@ export function PlayerHeader({
             {meta.map((m) => (
               <span key={m}>{m}</span>
             ))}
+          </p>
+        )}
+        {headshotUrl && photoCredit && (
+          <p className="mt-1 text-[11px] text-[var(--text-faint)]">
+            Photo:{" "}
+            <a href={photoCredit.sourceUrl} rel="noopener nofollow" className="hover:text-[var(--accent)]">
+              {photoCredit.credit}, {photoCredit.license}, via Wikimedia Commons
+            </a>
           </p>
         )}
       </div>
