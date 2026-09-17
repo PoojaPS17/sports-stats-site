@@ -61,7 +61,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
             Browse by {weekNoun(league).toLowerCase()} →
           </Link>
         )}
-        <CalendarButton path={`/calendar/${league}`} />
+        {!international && <CalendarButton path={`/calendar/${league}`} />}
       </PageHeader>
 
       <AdSlot label={`${LEAGUE_LABEL[league]} top`} />
