@@ -7,6 +7,7 @@ import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { PageHeader } from "@/components/PageHeader";
+import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 
 export const revalidate = 60;
 
@@ -45,7 +46,13 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={`${LEAGUE_LABEL[league]} Scores`} subtitle="Results from the last two days and fixtures for the week ahead" />
+      <PageHeader title={`${LEAGUE_LABEL[league]} Scores`} subtitle="Results from the last two days and fixtures for the week ahead">
+        {supportsMatchweeks(league) && (
+          <Link href={weekIndexPath(league)} className="nav-pill nav-pill-active">
+            Browse by {weekNoun(league).toLowerCase()} →
+          </Link>
+        )}
+      </PageHeader>
 
       <AdSlot label={`${LEAGUE_LABEL[league]} top`} />
 

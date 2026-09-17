@@ -46,7 +46,7 @@ export interface GameRow {
   weather_temperature?: number | null;
 }
 
-const GAME_SELECT = `
+export const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,

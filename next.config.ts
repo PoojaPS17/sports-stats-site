@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      // Football uses "matchweek"; the NFL and NBA say "week". Both serve the same
+      // route; links are generated with the sport-appropriate word (see weekPath()).
+      { source: "/:league/week", destination: "/:league/matchweek" },
+      { source: "/:league/week/:path*", destination: "/:league/matchweek/:path*" },
+    ];
+  },
 };
 
 export default nextConfig;

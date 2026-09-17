@@ -1,12 +1,14 @@
 import { isCricketLeague, LEAGUE_LABEL } from "@/lib/leagues";
 import type { League } from "@/lib/leagues";
 import { SubNav } from "./SubNav";
+import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 
 export function LeagueSubNav({ league }: { league: League }) {
   const cricket = isCricketLeague(league);
   const injuries = league === "nfl" || league === "nba";
   const tabs = [
     { label: "Scores", href: `/${league}`, exact: true },
+    ...(supportsMatchweeks(league) ? [{ label: `${weekNoun(league)}s`, href: weekIndexPath(league), match: `/${league}/matchweek` }] : []),
     { label: "Standings", href: `/${league}/standings` },
     { label: "Teams", href: `/${league}/teams` },
     { label: "Leaders", href: `/${league}/leaders` },
