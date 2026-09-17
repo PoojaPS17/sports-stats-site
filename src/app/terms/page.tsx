@@ -39,7 +39,8 @@ export default function TermsPage() {
         own presentation, calculations and analysis, such as head-to-head records, power ratings, records lists and season
         projections. The site does not claim ownership of the underlying facts, which belong to no one, nor of any
         third-party material. Where a data source&apos;s name appears on the site, it is stated as a matter of
-        attribution and not as an endorsement.
+        attribution and not as an endorsement. Results and scorecards for men&apos;s ODI and T20 internationals are derived
+        from ball-by-ball data published by Cricsheet (cricsheet.org) under its attribution licence.
       </p>
 
       <h2>4. Trademarks, logos and images</h2>

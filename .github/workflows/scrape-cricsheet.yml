@@ -1,0 +1,46 @@
+name: Import international cricket (Cricsheet)
+
+on:
+  schedule:
+    # Cricsheet publishes a match within a day or two of it ending; a weekly top-up
+    # of matches not yet stored keeps the ODI/T20I archive current at one download.
+    - cron: "41 5 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  import-cricsheet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply schema (idempotent)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run migrate
+
+      - name: Download Cricsheet archives and people register
+        run: |
+          mkdir -p cricsheet
+          curl -sSL -o cricsheet/odis_male_json.zip https://cricsheet.org/downloads/odis_male_json.zip
+          curl -sSL -o cricsheet/t20s_male_json.zip https://cricsheet.org/downloads/t20s_male_json.zip
+          curl -sSL -o cricsheet/people.csv https://cricsheet.org/register/people.csv
+          unzip -q -o cricsheet/odis_male_json.zip -d cricsheet/odis
+          unzip -q -o cricsheet/t20s_male_json.zip -d cricsheet/t20s
+
+      - name: Import new ODIs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run import:cricsheet -- odi cricsheet/odis --people cricsheet/people.csv --missing
+
+      - name: Import new T20Is
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run import:cricsheet -- t20i cricsheet/t20s --people cricsheet/people.csv --missing
