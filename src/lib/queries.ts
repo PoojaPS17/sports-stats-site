@@ -550,12 +550,15 @@ export async function getTrackedCountries(): Promise<{ country: string; views: n
   return rows;
 }
 
-// External trending signals — real ones (Wikipedia pageview spikes, Google's daily
-// trending searches, Apple's App Store Sports top charts), unlike game_views above
-// which only reflects traffic to ScoreDB itself. See scripts/fetch-trending-*.ts for
-// how each is fetched; wikipedia/google_trends are also matched against our own
-// players/teams (app_store_ios isn't — an app isn't a player or team).
-export type TrendingSource = "wikipedia" | "google_trends" | "app_store_ios";
+// External trending signals — real ones (Wikipedia pageview spikes, Apple's App Store
+// Sports top charts), unlike game_views above which only reflects traffic to ScoreDB
+// itself. See scripts/fetch-trending-*.ts for how each is fetched; wikipedia is also
+// matched against our own players/teams (app_store_ios isn't — an app isn't a player
+// or team). Google Trends' daily list was tried and dropped: only 10 general-topic
+// items/day/country meant most countries were sports-empty most days, and a
+// category=sports param that looked like a filter turned out to be silently ignored
+// (verified: identical results with and without it).
+export type TrendingSource = "wikipedia" | "app_store_ios";
 
 export interface TrendingTopic {
   rank: number;
@@ -583,9 +586,9 @@ export const TRENDING_COUNTRIES: { code: string; label: string }[] = [
   { code: "BR", label: "Brazil" },
 ];
 
-// Google Trends and the App Store are inherently per-country (no "worldwide" chart
-// to fetch), so "Global" falls back to US data for those two; Wikipedia's "global" is
-// a real fetch (the English edition), so it's left as-is.
+// The App Store is inherently per-country (no "worldwide" chart to fetch), so
+// "Global" falls back to US data for it; Wikipedia's "global" is a real fetch (the
+// English edition), so it's left as-is.
 export async function getTrendingTopics(source: TrendingSource, country: string): Promise<TrendingTopic[]> {
   const effectiveCountry = country === "global" && source !== "wikipedia" ? "US" : country;
   const { rows } = await pool.query(

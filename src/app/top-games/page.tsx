@@ -12,7 +12,6 @@ import { GameCard } from "@/components/GameCard";
 import { CountrySelect } from "@/components/CountrySelect";
 import { TrendingCountrySelect } from "@/components/TrendingCountrySelect";
 import { TrendingFigures } from "@/components/TrendingFigures";
-import { TrendingSearches } from "@/components/TrendingSearches";
 import { TrendingApps } from "@/components/TrendingApps";
 
 export const revalidate = 300;
@@ -57,11 +56,10 @@ export default async function TopGamesPage({
   const activePlatform: PlatformKey = isPlatformKey(platformParam) ? platformParam : "all";
   const activeTrendingCountry = isTrendingCountry(trendingParam) ? trendingParam! : "global";
 
-  const [games, countries, trendingFigures, trendingSearches, trendingApps] = await Promise.all([
+  const [games, countries, trendingFigures, trendingApps] = await Promise.all([
     getTopGames(activeWindow, { country: country || undefined, platform: activePlatform === "all" ? undefined : activePlatform }, 10),
     getTrackedCountries(),
     getTrendingTopics("wikipedia", activeTrendingCountry),
-    getTrendingTopics("google_trends", activeTrendingCountry),
     getTrendingTopics("app_store_ios", activeTrendingCountry),
   ]);
 
@@ -131,8 +129,8 @@ export default async function TopGamesPage({
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">Trending Beyond ScoreDB</h2>
             <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-              Real external signals — Apple App Store Sports app rankings, Wikipedia pageview spikes, and
-              Google&apos;s daily trending searches — cross-checked against the players and teams we track.
+              Real external signals — Apple App Store Sports app rankings and Wikipedia pageview spikes —
+              cross-checked against the players and teams we track.
             </p>
           </div>
           <TrendingCountrySelect countries={TRENDING_COUNTRIES} />
@@ -143,21 +141,12 @@ export default async function TopGamesPage({
 
       <div className="flex flex-col gap-3">
         <h3 className="text-lg font-bold tracking-tight">📱 Trending Sports Apps</h3>
-        <p className="text-xs text-[var(--text-muted)]">
-          From Apple&apos;s own App Store charts — iOS only. Google Play has no equivalent free, official API, so
-          Android app rankings aren&apos;t shown here.
-        </p>
         <TrendingApps topics={trendingApps} />
       </div>
 
       <div className="flex flex-col gap-3">
         <h3 className="text-lg font-bold tracking-tight">📚 Trending Sports Figures</h3>
         <TrendingFigures topics={trendingFigures} />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <h3 className="text-lg font-bold tracking-tight">🔎 Trending Searches</h3>
-        <TrendingSearches topics={trendingSearches} />
       </div>
     </div>
   );

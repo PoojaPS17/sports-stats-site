@@ -85,14 +85,7 @@ function isTrustworthyMatch(entity: EntityMatch): boolean {
   return entity.name.includes(" ") || entity.name.length >= 6;
 }
 
-// `allowNicknames` defaults on since a Wikipedia title *is* the canonical name of its
-// subject. Google Trends phrases are 2-4 words with no context at all, so a bare
-// mascot nickname there is likelier to be an unrelated team we don't track (MLB's
-// Kansas City Royals vs. our IPL Rajasthan Royals) than a real hit — the Google
-// Trends fetch script passes `allowNicknames: false` to require a full name match
-// instead.
-export function matchEntity(text: string, index: EntityIndex, options: { allowNicknames?: boolean } = {}): EntityMatch | null {
-  const allowNicknames = options.allowNicknames ?? true;
+export function matchEntity(text: string, index: EntityIndex): EntityMatch | null {
   const norm = normalize(stripDisambiguation(text));
 
   const exact = index.byFullName.get(norm);
@@ -101,40 +94,8 @@ export function matchEntity(text: string, index: EntityIndex, options: { allowNi
   for (const [key, entity] of index.byFullName) {
     if (key.length > 3 && norm.includes(key) && isTrustworthyMatch(entity)) return entity;
   }
-  if (allowNicknames) {
-    for (const [nick, entity] of index.teamNicknames) {
-      if (new RegExp(`\\b${escapeRegExp(nick)}\\b`).test(norm)) return entity;
-    }
-  }
-  return null;
-}
-
-// Generic sport/league keywords, for text that's clearly sports-related even when it
-// doesn't name a specific tracked team or player (e.g. a trending search for "IPL
-// auction" isn't about one player, but it's still worth surfacing as sports interest).
-const LEAGUE_KEYWORDS: [string, string][] = [
-  ["premier league", "Premier League"],
-  ["la liga", "La Liga"],
-  ["laliga", "La Liga"],
-  ["champions league", "Football"],
-  ["big bash", "Big Bash League"],
-  ["t20 world cup", "T20 World Cup"],
-  ["cricket world cup", "Cricket World Cup"],
-  ["ipl", "IPL"],
-  ["nba", "NBA"],
-  ["nfl", "NFL"],
-  ["super bowl", "NFL"],
-  ["atp", "Tennis"],
-  ["wta", "Tennis"],
-  ["wimbledon", "Tennis"],
-  ["us open tennis", "Tennis"],
-  ["cricket", "Cricket"],
-];
-
-export function detectLeagueKeyword(text: string): string | null {
-  const norm = normalize(text);
-  for (const [kw, label] of LEAGUE_KEYWORDS) {
-    if (norm.includes(kw)) return label;
+  for (const [nick, entity] of index.teamNicknames) {
+    if (new RegExp(`\\b${escapeRegExp(nick)}\\b`).test(norm)) return entity;
   }
   return null;
 }

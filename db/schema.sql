@@ -241,14 +241,17 @@ create table if not exists tennis_rankings (
 
 create index if not exists tennis_rankings_rank_idx on tennis_rankings (tour, rank);
 
--- Real external trending signals (Wikipedia pageview spikes, Google Trends daily
--- searches, Apple App Store Sports app charts) to complement game_views, which only
--- tells us what's popular on ScoreDB itself. Each fetch script wipes and re-inserts
--- its own (source, country) slice, so a row's mere presence means "still trending as
--- of the last fetch" — no separate expiry logic needed.
+-- Real external trending signals (Wikipedia pageview spikes, Apple App Store Sports
+-- app charts) to complement game_views, which only tells us what's popular on ScoreDB
+-- itself. Each fetch script wipes and re-inserts its own (source, country) slice, so
+-- a row's mere presence means "still trending as of the last fetch" — no separate
+-- expiry logic needed. A Google Trends daily-searches source was tried and dropped:
+-- only 10 general-topic items/day/country meant most countries were sports-empty
+-- most days, with no working category filter to narrow the pool (a category=sports
+-- param looked promising but was confirmed to be silently ignored).
 create table if not exists trending_topics (
   id bigserial primary key,
-  source text not null, -- 'wikipedia' | 'google_trends' | 'app_store_ios'
+  source text not null, -- 'wikipedia' | 'app_store_ios'
   country text not null, -- 'global' or an ISO-3166-1 alpha-2 code
   rank int not null,
   label text not null,
