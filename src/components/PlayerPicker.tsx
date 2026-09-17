@@ -28,6 +28,12 @@ export function PlayerPicker({
   const [options, setOptions] = useState<Option[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  // Chrome ignores autocomplete="off" once it decides (from the paired A/B fields
+  // and their label wording) that this looks like a personal-name field, and shows
+  // saved-name suggestions instead of our own results. Starting the field readOnly
+  // and lifting that on the first real focus keeps Chrome from ever attaching its
+  // autofill UI to it in the first place.
+  const [locked, setLocked] = useState(true);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
@@ -83,7 +89,10 @@ export function PlayerPicker({
             setOpen(false);
           }
         }}
-        onFocus={() => options.length > 0 && setOpen(true)}
+        onFocus={() => {
+          setLocked(false);
+          if (options.length > 0) setOpen(true);
+        }}
         onKeyDown={(e) => {
           if (!open || options.length === 0) return;
           if (e.key === "ArrowDown") {
@@ -99,8 +108,12 @@ export function PlayerPicker({
             setOpen(false);
           }
         }}
-        placeholder="Type a player name"
+        placeholder="Search players"
         autoComplete="off"
+        readOnly={locked}
+        data-1p-ignore
+        data-lpignore="true"
+        data-bwignore
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
