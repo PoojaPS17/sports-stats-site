@@ -87,6 +87,14 @@ function parseRound(ev: any): string | null {
   return typeof headline === "string" ? headline : null;
 }
 
+// NFL events carry `week: { number, text }` on both the scoreboard and the team
+// schedule endpoints (playoff weeks continue the numbering: 19 = Wild Card). No
+// soccer or basketball endpoint exposes a round number, so this is null there.
+function parseWeek(ev: any): number | null {
+  const n = ev.week?.number;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
 // Upserts the game itself, plus the home/away teams it references (from the event's
 // own embedded team data) — needed so a several-years-old game whose team has since
 // been relegated/renamed/dissolved still resolves in every page's join against `teams`.
@@ -117,8 +125,8 @@ export async function upsertEvent(league: League, ev: any) {
        home_score_display, away_score_display, home_winner, away_winner, season_year,
        status_state, status_detail, status_summary, round, period, clock, completed,
        odds_details, odds_spread, odds_over_under, odds_provider, broadcast_network,
-       weather_display, weather_temperature, updated_at
-     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28, now())
+       weather_display, weather_temperature, week, first_seen_date, updated_at
+     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$3, now())
      on conflict (league, espn_id) do update set
        date = excluded.date, home_score = excluded.home_score, away_score = excluded.away_score,
        home_score_display = excluded.home_score_display, away_score_display = excluded.away_score_display,
@@ -134,6 +142,8 @@ export async function upsertEvent(league: League, ev: any) {
        broadcast_network = coalesce(excluded.broadcast_network, games.broadcast_network),
        weather_display = coalesce(excluded.weather_display, games.weather_display),
        weather_temperature = coalesce(excluded.weather_temperature, games.weather_temperature),
+       week = coalesce(excluded.week, games.week),
+       first_seen_date = coalesce(games.first_seen_date, excluded.first_seen_date),
        updated_at = now()`,
     [
       league,
@@ -166,6 +176,7 @@ export async function upsertEvent(league: League, ev: any) {
       broadcast,
       weather.display,
       weather.temperature,
+      parseWeek(ev),
     ]
   );
 }

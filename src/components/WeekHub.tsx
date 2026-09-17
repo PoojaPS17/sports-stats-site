@@ -50,7 +50,7 @@ function WeekStrip({ league, weeks, active, season, isCurrentSeason }: { league:
                       : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)]"
                 }`}
               >
-                <span>{w.playoff ? w.shortLabel : w.index}</span>
+                <span>{w.playoff || !w.numbered ? w.shortLabel : w.index}</span>
                 <span className="text-[10px] font-medium text-[var(--text-faint)]">{w.completed === w.games.length ? "done" : w.completed > 0 ? `${w.completed}/${w.games.length}` : new Date(w.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
               </Link>
             </li>
@@ -117,6 +117,17 @@ export async function WeekHub({
       </PageHeader>
 
       <WeekStrip league={league} weeks={weeks} active={week.index} season={season} isCurrentSeason={isCurrentSeason} />
+
+      {!week.numbered && (
+        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
+          Official matchweek numbers are not published for this season, so games are grouped by the dates they were played rather than numbered.
+        </p>
+      )}
+      {league === "nba" && !week.playoff && (
+        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
+          The NBA does not number its weeks. Weeks here are seven-day periods counted from opening night.
+        </p>
+      )}
 
       <AdSlot label={`${LEAGUE_LABEL[league]} week hub top`} />
 
@@ -188,7 +199,7 @@ export async function WeekHub({
         <aside className="flex flex-col gap-6">
           {table.length > 0 && (
             <section>
-              <SectionHeader description={`Regular-season table after ${week.label.toLowerCase()}, with movement from the round before`}>Table after {week.shortLabel}</SectionHeader>
+              <SectionHeader description="Regular-season table after this round, with movement from the round before">Table after {week.numbered ? week.shortLabel : "this round"}</SectionHeader>
               <div className="card overflow-hidden">
                 <table className="w-full border-collapse text-sm">
                   <thead>
@@ -246,6 +257,7 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
   const noun = weekNoun(league);
   const now = isCurrentSeason ? currentWeekIndex(weeks) : -1;
   const seasonArg = isCurrentSeason ? null : season;
+  const numbered = weeks.every((w) => w.numbered);
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: `${noun}s` }]} />
@@ -260,6 +272,16 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
           </div>
         )}
       </PageHeader>
+      {!numbered && (
+        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
+          Official matchweek numbers are not published for this season, so rounds are listed by the dates they were played.
+        </p>
+      )}
+      {league === "nba" && (
+        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
+          The NBA does not number its weeks. Weeks here are seven-day periods counted from opening night.
+        </p>
+      )}
       {weeks.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No fixtures on record for this season yet.</p>
       ) : (

@@ -3,8 +3,8 @@
 //   - soccer: rounds are found by walking matchdays and starting a new round when
 //     teams repeat; stray rescheduled games go back to the earliest round neither
 //     team has played in
-//   - NFL: seven-day buckets from the opening Thursday, then the playoff rounds
-//   - other leagues: seven-day buckets from the first game of the season
+//   - NFL: the official week number stored from the feed, then the playoff rounds
+//   - NBA: seven-day periods from opening night, then the playoff rounds
 import { pool } from "./db";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
@@ -20,6 +20,8 @@ export interface Matchweek {
   games: GameRow[];
   completed: number;
   playoff: boolean;
+  /** False when the round could not be numbered reliably and is labelled by its dates instead. */
+  numbered: boolean;
 }
 
 export function supportsMatchweeks(league: League): boolean {
@@ -80,7 +82,7 @@ function playoffRoundLabel(round: string): string {
   return r;
 }
 
-function finish(groups: { label: string; shortLabel: string; games: GameRow[]; playoff: boolean }[]): Matchweek[] {
+function finish(groups: { label: string; shortLabel: string; games: GameRow[]; playoff: boolean; numbered?: boolean }[]): Matchweek[] {
   return groups
     .filter((g) => g.games.length > 0)
     .map((g, i) => {
@@ -94,6 +96,7 @@ function finish(groups: { label: string; shortLabel: string; games: GameRow[]; p
         games: g.games,
         completed: g.games.filter((x) => x.completed).length,
         playoff: g.playoff,
+        numbered: g.numbered ?? true,
       };
     });
 }
@@ -107,9 +110,12 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
     //    current round starts a new round, provided it is a real matchday (3+ games).
     //    A day with only one or two such games is a stray: a Friday opener before
     //    the weekend proper, or a rescheduled fixture squeezed into a midweek.
+    // Use the kickoff as first scheduled (before any postponement) where we have it,
+    // so a rescheduled game is grouped with the round it was originally part of.
+    const scheduled = (g: GameRow) => new Date(g.first_seen_date ?? g.date).getTime();
     const byDay = new Map<string, GameRow[]>();
-    for (const g of sorted) {
-      const key = g.date.toString().slice(0, 10);
+    for (const g of [...sorted].sort((a, b) => scheduled(a) - scheduled(b))) {
+      const key = new Date(scheduled(g)).toISOString().slice(0, 10);
       if (!byDay.has(key)) byDay.set(key, []);
       byDay.get(key)!.push(g);
     }
@@ -122,16 +128,30 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
     const loose: { g: GameRow }[] = [];
     let mainIndex = 0;
     let roundTeams = new Set<string>();
+    let roundStart = 0;
     const MIN_MATCHDAY = 3;
-    for (const games of byDay.values()) {
+    // A round never spans more than a few days (Friday to Monday, or Tuesday to
+    // Thursday). A real matchday starting five or more days after the round began is
+    // the next round even when none of its teams collide, which happens after a cup
+    // weekend leaves several teams without a league game.
+    const MAX_ROUND_SPAN = 5 * DAY;
+    for (const [day, games] of byDay) {
+      const dayTime = new Date(day).getTime();
       const collides = (g: GameRow) => roundTeams.has(g.home_team_espn_id) || roundTeams.has(g.away_team_espn_id);
       const anyCollision = games.some(collides);
-      if (mainIndex === 0 || (anyCollision && games.length >= MIN_MATCHDAY)) {
+      const isMatchday = games.length >= MIN_MATCHDAY;
+      let stale = mainIndex > 0 && dayTime - roundStart >= MAX_ROUND_SPAN;
+      if (mainIndex === 0 || (isMatchday && (anyCollision || stale))) {
         mainIndex++;
         roundTeams = new Set();
+        roundStart = dayTime;
+        stale = false;
       }
       for (const g of games) {
-        if (mainIndex > 0 && anyCollision && games.length < MIN_MATCHDAY && collides(g)) {
+        // A one- or two-game day is a stray when its teams already played this round,
+        // or when it falls well after the round began (a Friday opener of the next
+        // round whose teams happen to be free because their game was postponed).
+        if (mainIndex > 0 && !isMatchday && (stale || (anyCollision && collides(g)))) {
           loose.push({ g });
           continue;
         }
@@ -143,20 +163,76 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
         mark(g.away_team_espn_id, mainIndex);
       }
     }
-    // 3. Stray games (postponed fixtures played midweek, a Friday opener, or a run
-    //    of two-game days) go to the earliest round neither team has played in.
+    // 3. Stray games go to the round, among those neither team has played in, whose
+    //    dates sit closest to the game's own scheduled date. A Friday opener lands in
+    //    the weekend that follows it; a fixture postponed from October to March still
+    //    returns to its October round, because that is the only free slot both teams
+    //    share. Rounds are given a date range from their games (estimated at seven-day
+    //    spacing for rounds that have none yet).
+    const roundRange = (r: number): [number, number] | null => {
+      const gs = rounds.get(r);
+      if (!gs || gs.length === 0) return null;
+      const ts = gs.map(scheduled);
+      return [Math.min(...ts), Math.max(...ts)];
+    };
+    const estimateStart = (r: number): number => {
+      const known = [...rounds.keys()].filter((k) => rounds.get(k)!.length > 0).sort((a, b) => a - b);
+      if (known.length === 0) return 0;
+      const before = [...known].reverse().find((k) => k < r);
+      const after = known.find((k) => k > r);
+      if (before !== undefined) return roundRange(before)![0] + (r - before) * 7 * DAY;
+      return roundRange(after!)![0] - (after! - r) * 7 * DAY;
+    };
+    const distance = (r: number, t: number): number => {
+      const range = roundRange(r);
+      if (range) return t < range[0] ? range[0] - t : t > range[1] ? t - range[1] : 0;
+      return Math.abs(t - estimateStart(r));
+    };
     for (const { g } of loose) {
       const a = used.get(g.home_team_espn_id) ?? new Set<number>();
       const b = used.get(g.away_team_espn_id) ?? new Set<number>();
-      let r = 1;
-      while (a.has(r) || b.has(r)) r++;
+      const t = scheduled(g);
+      const maxRound = Math.max(mainIndex, ...rounds.keys());
+      let best = -1;
+      let bestDistance = Infinity;
+      // Only rounds the season already has are candidates; a brand-new round is a last
+      // resort (a postponed fixture always has its original round free for both sides).
+      for (let r = 1; r <= maxRound; r++) {
+        if (a.has(r) || b.has(r)) continue;
+        const d = distance(r, t);
+        if (d < bestDistance) {
+          bestDistance = d;
+          best = r;
+        }
+      }
+      const r = best === -1 ? maxRound + 1 : best;
       if (!rounds.has(r)) rounds.set(r, []);
       rounds.get(r)!.push(g);
       mark(g.home_team_espn_id, r);
       mark(g.away_team_espn_id, r);
     }
     const keys = [...rounds.keys()].sort((a, b) => a - b);
-    return finish(keys.map((k) => ({ label: `Matchweek ${k}`, shortLabel: `MW ${k}`, games: rounds.get(k)!.sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime()), playoff: false })));
+    const byDate = (x: GameRow, y: GameRow) => new Date(x.date).getTime() - new Date(y.date).getTime();
+    // Only publish "Matchweek N" when the reconstruction is airtight: no more rounds
+    // than the season has, no round with more games than half the league, and no
+    // team twice in a round. Otherwise label rounds by their dates so nothing false
+    // is shown.
+    const teamCount = new Set(sorted.flatMap((g) => [g.home_team_espn_id, g.away_team_espn_id])).size;
+    const exact =
+      keys.length <= Math.max(1, teamCount * 2 - 2) &&
+      keys.every((k) => {
+        const gs = rounds.get(k)!;
+        const ids = gs.flatMap((g) => [g.home_team_espn_id, g.away_team_espn_id]);
+        return gs.length <= Math.floor(teamCount / 2) && new Set(ids).size === ids.length;
+      });
+    return finish(
+      keys.map((k) => {
+        const games = rounds.get(k)!.sort(byDate);
+        if (exact) return { label: `Matchweek ${k}`, shortLabel: `MW ${k}`, games, playoff: false, numbered: true };
+        const range = fmtRange(games[0].date, games[games.length - 1].date);
+        return { label: `Games of ${range}`, shortLabel: range.split(/[–-]/)[0].trim(), games, playoff: false, numbered: false };
+      })
+    );
   }
 
   // Week buckets for the regular season, then playoff rounds in date order.
@@ -164,7 +240,17 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
   const playoffs = sorted.filter((g) => g.round);
   const groups: { label: string; shortLabel: string; games: GameRow[]; playoff: boolean }[] = [];
 
-  if (regular.length) {
+  if (regular.length && regular.every((g) => g.week != null)) {
+    // Official week numbers from the feed (NFL).
+    const byWeek = new Map<number, GameRow[]>();
+    for (const g of regular) {
+      if (!byWeek.has(g.week!)) byWeek.set(g.week!, []);
+      byWeek.get(g.week!)!.push(g);
+    }
+    for (const w of [...byWeek.keys()].sort((a, b) => a - b)) {
+      groups.push({ label: `Week ${w}`, shortLabel: `Wk ${w}`, games: byWeek.get(w)!, playoff: false });
+    }
+  } else if (regular.length) {
     const first = new Date(regular[0].date);
     // Anchor on the Wednesday before the opener (UTC) so Thursday-to-Tuesday NFL
     // weeks, or Monday-to-Sunday NBA weeks, never straddle a boundary.

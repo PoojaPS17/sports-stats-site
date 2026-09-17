@@ -11,6 +11,7 @@
     "migrate": "tsx scripts/migrate.ts",
     "seed:teams": "tsx scripts/seed-teams.ts",
     "fetch:scores": "tsx scripts/fetch-scores.ts",
+    "fetch:fixtures": "tsx scripts/fetch-fixtures.ts",
     "fetch:standings": "tsx scripts/fetch-standings.ts",
     "fetch:player-stats": "tsx scripts/fetch-player-stats.ts",
     "fetch:rosters": "tsx scripts/fetch-rosters.ts",

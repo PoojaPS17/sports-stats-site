@@ -47,3 +47,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run fetch:all
+
+      # Whole-season schedules (every remaining fixture, plus NFL week numbers) —
+      # once a day is plenty; the 15-minute tick only needs the scoreboard window.
+      - name: Fetch full-season fixtures
+        if: steps.gate.outputs.should_scrape == 'true' && (github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch')
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:fixtures

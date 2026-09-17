@@ -9,6 +9,8 @@ export interface WeekContext {
   seasons: number[];
   weeks: Matchweek[];
   isCurrentSeason: boolean;
+  /** False when football rounds are labelled by date because numbering could not be verified. */
+  numbered: boolean;
 }
 
 export function isSeasonSegment(value: string): boolean {
@@ -23,5 +25,6 @@ export async function loadWeeks(league: League, seasonParam?: string): Promise<W
   const season = seasonParam ? Number(seasonParam) : seasons[0];
   if (!seasons.includes(season)) return null;
   const games = await getSeasonGames(league, season);
-  return { season, seasons, weeks: buildMatchweeks(league, games), isCurrentSeason: season === seasons[0] };
+  const weeks = buildMatchweeks(league, games);
+  return { season, seasons, weeks, isCurrentSeason: season === seasons[0], numbered: weeks.every((w) => w.numbered) };
 }

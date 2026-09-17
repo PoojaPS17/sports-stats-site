@@ -103,9 +103,13 @@ export function fetchRoster(league: League, teamEspnId: string) {
 // the *ending* year for NBA ("2023" = the 2022-23 season), the *starting* year for
 // NFL/soccer ("2024" = the 2024 NFL season / the 2024-25 EPL season). Not available
 // for this cricket competition (404s, same as /teams and /roster).
-export function fetchTeamSchedule(league: League, teamEspnId: string, season: number, seasontype?: number) {
-  const q = seasontype ? `?season=${season}&seasontype=${seasontype}` : `?season=${season}`;
-  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/teams/${teamEspnId}/schedule${q}`);
+// For soccer the default call returns only games already played; the remaining
+// fixtures of the season need `fixture=true` (a separate request).
+export function fetchTeamSchedule(league: League, teamEspnId: string, season: number, seasontype?: number, fixtures = false) {
+  const params = [`season=${season}`];
+  if (seasontype) params.push(`seasontype=${seasontype}`);
+  if (fixtures) params.push("fixture=true");
+  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/teams/${teamEspnId}/schedule?${params.join("&")}`);
 }
 
 export function fetchNews(league: League, limit = 15) {

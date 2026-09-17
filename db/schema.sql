@@ -104,6 +104,16 @@ alter table games add column if not exists broadcast_network text;
 alter table games add column if not exists weather_display text;
 alter table games add column if not exists weather_temperature int;
 
+-- Official week number where the feed provides one (NFL regular season and playoffs).
+-- Soccer has no matchweek in any ESPN endpoint, so rounds there are reconstructed
+-- from dates instead (see src/lib/matchweeks.ts).
+alter table games add column if not exists week int;
+-- The kickoff date the first time we saw the fixture. Postponed games move `date`
+-- on every upsert, but this keeps the originally scheduled slot, which is what the
+-- matchweek reconstruction needs to place a rescheduled game in its original round.
+alter table games add column if not exists first_seen_date timestamptz;
+update games set first_seen_date = date where first_seen_date is null;
+
 create index if not exists games_league_date_idx on games (league, date);
 create index if not exists games_league_season_idx on games (league, season_year);
 
