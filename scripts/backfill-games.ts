@@ -88,10 +88,15 @@ async function backfillViaTeamSchedules(league: League) {
 // until every listed match has content. A season that never completes is still
 // upserted (more facts than before) but reported, so it can be re-run rather than
 // silently shown as a full season.
-const MAX_SEASON_ATTEMPTS = 6;
+const MAX_SEASON_ATTEMPTS = 8;
+// A World Cup year with no edition (or a season before the feed's coverage) lists no
+// matches at all; a stale cache can do the same, so an empty answer is trusted only
+// once it has been seen a few times.
+const EMPTY_ATTEMPTS_TO_TRUST = 3;
 
 async function fetchCompleteSeason(league: League, season: number): Promise<{ events: any[]; listed: number; complete: boolean }> {
   let best: { events: any[]; listed: number } = { events: [], listed: 0 };
+  let empties = 0;
   for (let attempt = 1; attempt <= MAX_SEASON_ATTEMPTS; attempt++) {
     try {
       const data = await fetchScoreboardBySeason(league, season, { bypassCache: attempt > 1 });
@@ -99,6 +104,7 @@ async function fetchCompleteSeason(league: League, season: number): Promise<{ ev
       const populated = listed.filter((ev) => ev?.id && ev.competitions?.[0]);
       if (populated.length > best.events.length) best = { events: populated, listed: listed.length };
       if (listed.length > 0 && populated.length === listed.length) return { ...best, complete: true };
+      if (listed.length === 0 && best.listed === 0 && ++empties >= EMPTY_ATTEMPTS_TO_TRUST) return { events: [], listed: 0, complete: true };
       console.warn(`[backfill-games] ${league} ${season}: ${populated.length}/${listed.length} matches populated (attempt ${attempt})`);
     } catch (err) {
       console.error(`[backfill-games] ${league} season ${season} attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
@@ -124,7 +130,7 @@ async function backfillCricketViaSeasonScoreboard(league: League) {
       await upsertEvent(league, ev);
       gameCount++;
     }
-    console.log(`[backfill-games] ${league} ${season}: ${events.length}/${listed} matches${complete ? "" : " (INCOMPLETE)"}`);
+    if (listed > 0 || !complete) console.log(`[backfill-games] ${league} ${season}: ${events.length}/${listed} matches${complete ? "" : " (INCOMPLETE)"}`);
     await sleep(REQUEST_DELAY_MS);
   }
   console.log(`[backfill-games] ${league}: scanned ${currentYear - firstSeason + 1} seasons, upserted ${gameCount} games`);

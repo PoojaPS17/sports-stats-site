@@ -109,8 +109,10 @@ export function fetchScoreboardBySeason(league: League, season: number, options:
 }
 
 // The earliest season ESPN serves for competitions we load further back than the
-// default window (IPL began in 2008, the Big Bash in 2011-12).
-export const HISTORY_START: Partial<Record<League, number>> = { ipl: 2008, bbl: 2011 };
+// default window: IPL from 2008, the Big Bash from 2011-12, the ODI World Cup from
+// the first edition in 1975 and the T20 World Cup from 2007. Years without an
+// edition simply return no matches.
+export const HISTORY_START: Partial<Record<League, number>> = { ipl: 2008, bbl: 2011, cwc: 1975, t20wc: 2007 };
 
 // `level=3` asks for the division-level groups (conference → division → teams) that
 // the NFL table is conventionally shown in; the default response stops at conferences.
