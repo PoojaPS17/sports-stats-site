@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SectionHeader } from "./SectionHeader";
 import type { League, StandingRow } from "@/lib/queries";
+import { SOCCER_LEAGUES } from "@/lib/leagues";
 import type { PlayoffResult } from "@/lib/seasonSummary";
 
 // IPL/NBA/NFL: a chronological list of every playoff-stage result found for the
@@ -31,10 +32,20 @@ function PlayoffSummary({ league, results }: { league: League; results: PlayoffR
   );
 }
 
-// EPL has no postseason of its own — the meaningful "what happened" facts for a
-// season are the table itself: who won the title, and who went down.
+// League soccer (EPL, La Liga) has no postseason of its own — the meaningful "what
+// happened" facts for a season are the table itself: who won the title, and who went
+// down. But that's only
+// true once the season has actually finished — a single round robin among N teams
+// means everyone plays (N-1)*2 games total, so a team below that count means matches
+// remain and "Champion"/"Relegated" would just be describing whoever's leading and
+// trailing right now, not what actually happened.
 function TableHighlights({ league, standings }: { league: League; standings: StandingRow[] }) {
   if (standings.length === 0) return null;
+  const expectedGames = (standings.length - 1) * 2;
+  const gamesPlayed = (r: StandingRow) => r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0);
+  const seasonComplete = standings.every((r) => gamesPlayed(r) >= expectedGames);
+  if (!seasonComplete) return null;
+
   const champion = standings[0];
   const relegated = standings.slice(-3);
   return (
@@ -72,6 +83,6 @@ export function SeasonSummary({
   playoffResults: PlayoffResult[];
   standings: StandingRow[];
 }) {
-  if (league === "epl") return <TableHighlights league={league} standings={standings} />;
+  if ((SOCCER_LEAGUES as League[]).includes(league)) return <TableHighlights league={league} standings={standings} />;
   return <PlayoffSummary league={league} results={playoffResults} />;
 }

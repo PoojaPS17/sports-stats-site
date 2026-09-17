@@ -2,7 +2,7 @@ import { pool } from "./lib/db";
 import { fetchRoster, type League } from "./lib/espn";
 import { uniqueSlugFor } from "./lib/players";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga"];
 
 // NFL's roster endpoint groups athletes by position (`{ position, items: [...] }`);
 // NBA's returns a flat list of player objects directly. Normalize both to a flat list.

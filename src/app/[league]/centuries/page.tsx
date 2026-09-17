@@ -3,7 +3,6 @@ import Link from "next/link";
 import { isLeague, isCricketLeague, getCricketCenturies, LEAGUE_LABEL } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
-import { LeagueSubNav } from "@/components/LeagueSubNav";
 
 export const revalidate = 3600;
 
@@ -15,8 +14,6 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
 
   return (
     <div className="flex flex-col gap-6">
-      <LeagueSubNav league={league} />
-
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Centuries</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">

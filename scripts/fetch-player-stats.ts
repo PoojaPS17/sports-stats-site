@@ -3,7 +3,7 @@ import { fetchSummary, type League } from "./lib/espn";
 import { upsertPlayerSeasonStats } from "./lib/season-stats";
 import { uniqueSlugFor } from "./lib/players";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga"];
 
 type PlayerStats = Map<string, { athlete: any; teamId: string; stats: Record<string, Record<string, string>> }>;
 

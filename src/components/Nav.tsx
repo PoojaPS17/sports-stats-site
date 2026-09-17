@@ -3,6 +3,7 @@ import { SearchBar } from "./SearchBar";
 import { ThemeToggle } from "./ThemeToggle";
 import { CricketDropdown } from "./CricketDropdown";
 import { TennisDropdown } from "./TennisDropdown";
+import { FootballDropdown } from "./FootballDropdown";
 
 function Logo() {
   return (
@@ -24,9 +25,7 @@ export function Nav() {
           <span className="text-lg font-extrabold tracking-tight text-[var(--header-text)]">ScoreDB</span>
         </Link>
         <nav className="flex gap-1 text-sm text-[var(--header-text-muted)]">
-          <Link href="/epl" className="nav-pill">
-            Football
-          </Link>
+          <FootballDropdown />
           <Link href="/nfl" className="nav-pill">
             NFL
           </Link>

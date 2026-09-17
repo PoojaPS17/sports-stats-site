@@ -2,7 +2,7 @@ import { pool } from "./lib/db";
 import { fetchScoreboard, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ipl", "bbl", "cwc", "t20wc"];
 const DAYS_BACK = 2;
 const DAYS_FORWARD = 5;
 
