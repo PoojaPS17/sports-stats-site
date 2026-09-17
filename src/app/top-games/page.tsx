@@ -11,7 +11,6 @@ import { AdSlot } from "@/components/AdSlot";
 import { GameCard } from "@/components/GameCard";
 import { CountrySelect } from "@/components/CountrySelect";
 import { TrendingCountrySelect } from "@/components/TrendingCountrySelect";
-import { TrendingVideos } from "@/components/TrendingVideos";
 import { TrendingFigures } from "@/components/TrendingFigures";
 import { TrendingSearches } from "@/components/TrendingSearches";
 
@@ -57,10 +56,9 @@ export default async function TopGamesPage({
   const activePlatform: PlatformKey = isPlatformKey(platformParam) ? platformParam : "all";
   const activeTrendingCountry = isTrendingCountry(trendingParam) ? trendingParam! : "global";
 
-  const [games, countries, trendingVideos, trendingFigures, trendingSearches] = await Promise.all([
+  const [games, countries, trendingFigures, trendingSearches] = await Promise.all([
     getTopGames(activeWindow, { country: country || undefined, platform: activePlatform === "all" ? undefined : activePlatform }, 10),
     getTrackedCountries(),
-    getTrendingTopics("youtube", activeTrendingCountry),
     getTrendingTopics("wikipedia", activeTrendingCountry),
     getTrendingTopics("google_trends", activeTrendingCountry),
   ]);
@@ -131,8 +129,8 @@ export default async function TopGamesPage({
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">Trending Beyond ScoreDB</h2>
             <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-              Real external signals — YouTube&apos;s own trending Sports chart, Wikipedia pageview spikes, and
-              Google&apos;s daily trending searches — cross-checked against the players and teams we track.
+              Real external signals — Wikipedia pageview spikes and Google&apos;s daily trending searches —
+              cross-checked against the players and teams we track.
             </p>
           </div>
           <TrendingCountrySelect countries={TRENDING_COUNTRIES} />
@@ -140,11 +138,6 @@ export default async function TopGamesPage({
       </div>
 
       <AdSlot label="Trending mid" />
-
-      <div className="flex flex-col gap-3">
-        <h3 className="text-lg font-bold tracking-tight">🎥 Trending Sports Videos</h3>
-        <TrendingVideos topics={trendingVideos} />
-      </div>
 
       <div className="flex flex-col gap-3">
         <h3 className="text-lg font-bold tracking-tight">📚 Trending Sports Figures</h3>

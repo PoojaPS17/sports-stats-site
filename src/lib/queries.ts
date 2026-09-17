@@ -550,19 +550,17 @@ export async function getTrackedCountries(): Promise<{ country: string; views: n
   return rows;
 }
 
-// External trending signals — real ones (YouTube's own trending chart, Wikipedia
-// pageview spikes, Google's daily trending searches), unlike game_views above which
-// only reflects traffic to ScoreDB itself. See scripts/fetch-trending-*.ts for how
-// each is fetched and, for wikipedia/google_trends, matched against our own
-// players/teams.
-export type TrendingSource = "youtube" | "wikipedia" | "google_trends";
+// External trending signals — real ones (Wikipedia pageview spikes, Google's daily
+// trending searches), unlike game_views above which only reflects traffic to ScoreDB
+// itself. See scripts/fetch-trending-*.ts for how each is fetched and matched against
+// our own players/teams.
+export type TrendingSource = "wikipedia" | "google_trends";
 
 export interface TrendingTopic {
   rank: number;
   label: string;
   detail: string | null;
   url: string;
-  image_url: string | null;
   matched_league: League | null;
   matched_type: "player" | "team" | null;
   matched_slug: string | null;
@@ -570,8 +568,8 @@ export interface TrendingTopic {
   avatar_color: string | null;
 }
 
-// A fixed list rather than "every country we've fetched" — these three sources cover
-// a specific set of countries by design (see the fetch scripts), and offering only
+// A fixed list rather than "every country we've fetched" — these sources cover a
+// specific set of countries by design (see the fetch scripts), and offering only
 // what's actually fetched avoids a picker full of dead-end selections.
 export const TRENDING_COUNTRIES: { code: string; label: string }[] = [
   { code: "global", label: "Global" },
@@ -583,13 +581,13 @@ export const TRENDING_COUNTRIES: { code: string; label: string }[] = [
   { code: "BR", label: "Brazil" },
 ];
 
-// YouTube and Google Trends are inherently per-country (no "worldwide" chart to fetch),
-// so "Global" falls back to US data for those two; Wikipedia's "global" is a real fetch
-// (the English edition), so it's left as-is.
+// Google Trends is inherently per-country (no "worldwide" chart to fetch), so
+// "Global" falls back to US data for it; Wikipedia's "global" is a real fetch (the
+// English edition), so it's left as-is.
 export async function getTrendingTopics(source: TrendingSource, country: string): Promise<TrendingTopic[]> {
   const effectiveCountry = country === "global" && source !== "wikipedia" ? "US" : country;
   const { rows } = await pool.query(
-    `select t.rank, t.label, t.detail, t.url, t.image_url, t.matched_league, t.matched_type, t.matched_slug,
+    `select t.rank, t.label, t.detail, t.url, t.matched_league, t.matched_type, t.matched_slug,
             coalesce(p.headshot_url, tm.logo_url) as avatar_url,
             tm.color as avatar_color
      from trending_topics t

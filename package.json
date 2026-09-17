@@ -26,7 +26,6 @@
     "fetch:tennis-scores": "tsx scripts/fetch-tennis-scores.ts",
     "fetch:trending-wikipedia": "tsx scripts/fetch-trending-wikipedia.ts",
     "fetch:trending-google": "tsx scripts/fetch-trending-google.ts",
-    "fetch:trending-youtube": "tsx scripts/fetch-trending-youtube.ts",
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {

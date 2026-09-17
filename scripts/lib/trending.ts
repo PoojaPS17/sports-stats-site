@@ -85,12 +85,12 @@ function isTrustworthyMatch(entity: EntityMatch): boolean {
   return entity.name.includes(" ") || entity.name.length >= 6;
 }
 
-// `allowNicknames` defaults on for longer-context text (a Wikipedia title *is* the
-// canonical name of its subject; a YouTube title has surrounding words). Google
-// Trends phrases are 2-4 words with no context at all, so a bare mascot nickname
-// there is likelier to be an unrelated team we don't track (MLB's Kansas City Royals
-// vs. our IPL Rajasthan Royals) than a real hit — callers for that source pass
-// `allowNicknames: false` to require a full name match instead.
+// `allowNicknames` defaults on since a Wikipedia title *is* the canonical name of its
+// subject. Google Trends phrases are 2-4 words with no context at all, so a bare
+// mascot nickname there is likelier to be an unrelated team we don't track (MLB's
+// Kansas City Royals vs. our IPL Rajasthan Royals) than a real hit — the Google
+// Trends fetch script passes `allowNicknames: false` to require a full name match
+// instead.
 export function matchEntity(text: string, index: EntityIndex, options: { allowNicknames?: boolean } = {}): EntityMatch | null {
   const allowNicknames = options.allowNicknames ?? true;
   const norm = normalize(stripDisambiguation(text));
