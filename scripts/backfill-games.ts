@@ -114,7 +114,8 @@ async function fetchCompleteSeason(league: League, season: number): Promise<{ ev
   return { ...best, complete: false };
 }
 
-async function backfillCricketViaSeasonScoreboard(league: League) {
+// `onlySeasons` re-runs just the seasons an earlier pass reported INCOMPLETE.
+async function backfillCricketViaSeasonScoreboard(league: League, onlySeasons: number[] | null = null) {
   const currentYear = new Date().getUTCFullYear();
   const firstSeason = HISTORY_START[league] ?? currentYear - YEARS_BACK;
   const seen = new Set<string>();
@@ -122,6 +123,7 @@ async function backfillCricketViaSeasonScoreboard(league: League) {
   let gameCount = 0;
 
   for (let season = firstSeason; season <= currentYear; season++) {
+    if (onlySeasons && !onlySeasons.includes(season)) continue;
     const { events, listed, complete } = await fetchCompleteSeason(league, season);
     if (!complete) incomplete.push(`${season} (${events.length}/${listed})`);
     for (const ev of events) {
@@ -140,11 +142,13 @@ async function backfillCricketViaSeasonScoreboard(league: League) {
 async function main() {
   const target = process.argv[2] as League | undefined;
   const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
+  // Optional comma-separated seasons (cricket only): `backfill-games cwc 1987,1992`.
+  const onlySeasons = process.argv[3] ? process.argv[3].split(",").map(Number).filter(Number.isInteger) : null;
 
   for (const league of leagues) {
     console.log(`[backfill-games] starting ${league} (${HISTORY_START[league] ? `since ${HISTORY_START[league]}` : `last ${YEARS_BACK} years`})...`);
     if (CRICKET_LEAGUES.includes(league)) {
-      await backfillCricketViaSeasonScoreboard(league);
+      await backfillCricketViaSeasonScoreboard(league, onlySeasons);
     } else {
       await backfillViaTeamSchedules(league);
     }
