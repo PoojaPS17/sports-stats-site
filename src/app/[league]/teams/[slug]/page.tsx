@@ -22,6 +22,8 @@ import { TeamHeader } from "@/components/TeamHeader";
 import { TeamPageNav } from "@/components/TeamPageNav";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { TeamLogo } from "@/components/TeamLogo";
+import { h2hPath } from "@/lib/h2h";
+import { supportsScoreAnalytics } from "@/lib/analytics";
 
 export const revalidate = 300;
 
@@ -106,6 +108,14 @@ export default async function TeamPage({
                   {new Date(next.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </span>
               </span>
+            </Link>
+          )}
+          {next && supportsScoreAnalytics(league) && (
+            <Link
+              href={h2hPath(league, slug, nextIsHome ? next.away_slug : next.home_slug)}
+              className="text-sm font-semibold text-[var(--accent)] hover:underline sm:col-span-2"
+            >
+              Head-to-head record vs {nextIsHome ? next.away_name : next.home_name} →
             </Link>
           )}
         </div>

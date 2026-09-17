@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getPlayerSlugsByEspnIds } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
 import {
   fetchMatchSummary,
   parseTeamStats,
@@ -94,6 +95,8 @@ export default async function GameDetailPage({
       <MatchHeader game={game} />
 
       <AdSlot label="Match detail top" />
+
+      {!isCricket && <HeadToHeadStrip league={league} homeSlug={game.home_slug} awaySlug={game.away_slug} excludeGameId={game.completed ? game.espn_id : null} />}
 
       {!summary && <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Match details aren&apos;t available right now.</p>}
 

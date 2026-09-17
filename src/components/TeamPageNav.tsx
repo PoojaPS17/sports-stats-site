@@ -1,10 +1,13 @@
 import Link from "next/link";
 
-export function TeamPageNav({ basePath, active }: { basePath: string; active: "overview" | "about" }) {
-  const tabs = [
+export type TeamPageTab = "overview" | "history" | "about";
+
+export function TeamPageNav({ basePath, active }: { basePath: string; active: TeamPageTab }) {
+  const tabs: { key: TeamPageTab; label: string; href: string }[] = [
     { key: "overview", label: "Overview", href: basePath },
+    { key: "history", label: "History", href: `${basePath}/history` },
     { key: "about", label: "About", href: `${basePath}/about` },
-  ] as const;
+  ];
   return (
     <div className="inline-flex gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1" role="tablist">
       {tabs.map((t) => (
