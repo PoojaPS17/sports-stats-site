@@ -52,6 +52,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // The theme-init script below intentionally sets data-theme on this element
+      // before React hydrates (reading localStorage to avoid a flash of the wrong
+      // theme), so the server-rendered markup and the pre-hydration DOM legitimately
+      // differ here — the standard next-themes-style fix is to suppress just this.
+      suppressHydrationWarning
     >
       <head>
         <Script id="theme-init" strategy="beforeInteractive">
