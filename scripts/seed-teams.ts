@@ -1,6 +1,7 @@
 import { pool } from "./lib/db";
 import { fetchTeams, fetchCricketTeams, type League } from "./lib/espn";
 import { upsertTeam } from "./lib/teams";
+import { scopedLeagues } from "./lib/scope";
 
 const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
 
@@ -23,10 +24,11 @@ async function seedLeague(league: League) {
   console.log(`[seed-teams] ${league}: upserted ${teams.length} teams`);
 }
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl", "ipl", "bbl", "cwc", "t20wc"];
 
 async function main() {
-  for (const league of LEAGUES) {
+  const target = process.argv[2] as League | undefined;
+  for (const league of target ? [target] : scopedLeagues(LEAGUES)) {
     try {
       await seedLeague(league);
     } catch (err) {

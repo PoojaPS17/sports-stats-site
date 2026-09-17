@@ -3,7 +3,8 @@ name: Scrape ESPN data
 on:
   schedule:
     # frequent tick — cheap live-game check only; the real fetch runs solely when
-    # something's actually in progress, so this stays free/cheap the rest of the day
+    # something's in progress (or just finished), and then only for those leagues,
+    # so this stays free/cheap the rest of the day
     - cron: "*/15 * * * *"
     # guaranteed full update once a day, even if nothing was ever live
     - cron: "7 6 * * *"
@@ -40,12 +41,17 @@ jobs:
         if: steps.gate.outputs.should_scrape == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SCRAPE_LEAGUES: ${{ steps.gate.outputs.leagues }}
         run: npm run seed:teams
 
+      # A live tick touches only the leagues the gate flagged and fetches only new box
+      # scores; season totals (one request per player) refresh on the daily full run.
       - name: Fetch scores, standings and player stats
         if: steps.gate.outputs.should_scrape == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SCRAPE_MODE: ${{ steps.gate.outputs.mode }}
+          SCRAPE_LEAGUES: ${{ steps.gate.outputs.leagues }}
         run: npm run fetch:all
 
       # Whole-season schedules (every remaining fixture, plus NFL week numbers) —

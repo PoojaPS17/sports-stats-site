@@ -1,7 +1,8 @@
 import { pool } from "./lib/db";
 import { fetchNews, type League } from "./lib/espn";
+import { scopedLeagues } from "./lib/scope";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl", "ipl", "bbl", "cwc", "t20wc"];
 
 async function processLeague(league: League) {
   const data = await fetchNews(league, 15);
@@ -30,7 +31,7 @@ async function processLeague(league: League) {
 }
 
 async function main() {
-  for (const league of LEAGUES) {
+  for (const league of scopedLeagues(LEAGUES)) {
     try {
       await processLeague(league);
     } catch (err) {

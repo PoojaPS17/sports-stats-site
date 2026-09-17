@@ -1,8 +1,9 @@
 import { pool } from "./lib/db";
 import { fetchScoreboard, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
+import { scopedLeagues } from "./lib/scope";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl", "ipl", "bbl", "cwc", "t20wc"];
 const DAYS_BACK = 2;
 const DAYS_FORWARD = 5;
 
@@ -22,7 +23,7 @@ function datesToScan(): string[] {
 }
 
 async function main() {
-  for (const league of LEAGUES) {
+  for (const league of scopedLeagues(LEAGUES)) {
     const seen = new Set<string>();
     let count = 0;
     for (const date of datesToScan()) {
