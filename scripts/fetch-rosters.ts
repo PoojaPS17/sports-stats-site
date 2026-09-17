@@ -54,7 +54,8 @@ async function processTeam(league: League, teamEspnId: string) {
 }
 
 async function main() {
-  for (const league of LEAGUES) {
+  const target = process.argv[2] as League | undefined;
+  for (const league of target ? [target] : LEAGUES) {
     const { rows: teams } = await pool.query(`select espn_id from teams where league = $1`, [league]);
     let total = 0;
     for (const { espn_id } of teams) {

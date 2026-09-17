@@ -102,10 +102,10 @@ export async function upsertPlayerSeasonStats(
   const data = await fetchAthleteSeasonStats(league, playerEspnId);
   const categories: any[] = data.categories ?? [];
   const minYear = new Date().getUTCFullYear() - yearsBack;
-  // Soccer's stats endpoint is sport-wide, so seasons must be filtered to actual EPL
-  // rows (leagueSlug "eng.1") — otherwise a player's time at a club in a different
+  // Soccer's stats endpoint is sport-wide, so seasons must be filtered to the actual
+  // league's rows (leagueSlug "eng.1" / "esp.1") — otherwise a player's time at a club in a different
   // country's league would be collected and stored as if it were an EPL season.
-  const leagueSlug = league === "epl" ? "eng.1" : undefined;
+  const leagueSlug = league === "epl" ? "eng.1" : league === "laliga" ? "esp.1" : undefined;
 
   const years = new Set<number>();
   for (const category of categories) {

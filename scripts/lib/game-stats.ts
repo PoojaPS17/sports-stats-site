@@ -1,0 +1,117 @@
+// Per-game player box scores from ESPN's match summary, shared by the recurring
+// scraper (recent games) and the historical backfill (every completed game).
+import { pool } from "./db";
+import type { League } from "./espn";
+import { uniqueSlugFor } from "./players";
+
+export type PlayerStats = Map<string, { athlete: any; teamId: string; stats: Record<string, Record<string, string>> }>;
+
+// NBA/NFL: boxscore.players[team].statistics[category].athletes[].stats[] (parallel to category.labels[])
+function extractAmericanSports(data: any): PlayerStats {
+  const perPlayer: PlayerStats = new Map();
+  for (const group of data.boxscore?.players ?? []) {
+    const teamId: string = group.team.id;
+    for (const category of group.statistics ?? []) {
+      const labels: string[] = category.labels ?? [];
+      for (const row of category.athletes ?? []) {
+        const key = row.athlete.id;
+        if (!perPlayer.has(key)) perPlayer.set(key, { athlete: row.athlete, teamId, stats: {} });
+        const values: Record<string, string> = {};
+        labels.forEach((label, i) => {
+          if (row.stats?.[i] !== undefined) values[label] = row.stats[i];
+        });
+        perPlayer.get(key)!.stats[category.name] = values;
+      }
+    }
+  }
+  return perPlayer;
+}
+
+// Soccer: rosters[team].roster[].stats[] is a flat named list, not category/label pairs.
+// Bundle it all under one "match" category so the display components (which expect
+// { category: { label: value } }) work unchanged.
+function extractSoccer(data: any): PlayerStats {
+  const perPlayer: PlayerStats = new Map();
+  for (const teamRoster of data.rosters ?? []) {
+    const teamId: string = teamRoster.team.id;
+    for (const item of teamRoster.roster ?? []) {
+      if (!item.active) continue;
+      const values: Record<string, string> = {};
+      for (const stat of item.stats ?? []) {
+        values[stat.shortDisplayName ?? stat.name] = stat.displayValue;
+      }
+      perPlayer.set(item.athlete.id, {
+        athlete: item.athlete,
+        teamId,
+        stats: { match: values },
+      });
+    }
+  }
+  return perPlayer;
+}
+
+export function extractPlayerStats(league: League, summary: any): PlayerStats {
+  return league === "epl" || league === "laliga" ? extractSoccer(summary) : extractAmericanSports(summary);
+}
+
+// Writes the players (creating any we have never seen) and their stat rows for one
+// game, in two batched statements rather than one round trip per player — the
+// historical backfill touches tens of thousands of rows, and the database is remote.
+// `updateTeam` should be true for live/recent games (a transfer shows up in the box
+// score before the next roster fetch) and false for the backfill, where a game from
+// 2017 must not overwrite a player's current club.
+export async function storeGameStats(league: League, gameEspnId: string, perPlayer: PlayerStats, updateTeam: boolean): Promise<number> {
+  if (perPlayer.size === 0) return 0;
+
+  const { rows: existing } = await pool.query(`select espn_id from players where league = $1 and espn_id = any($2)`, [
+    league,
+    [...perPlayer.keys()],
+  ]);
+  const known = new Set(existing.map((r) => r.espn_id as string));
+
+  // New players need a unique slug each; existing ones keep theirs.
+  const inserts: { id: string; teamId: string; name: string; slug: string; headshot: string | null }[] = [];
+  for (const [id, { athlete, teamId }] of perPlayer) {
+    if (known.has(id)) continue;
+    const name = athlete.displayName ?? athlete.fullName ?? `Player ${id}`;
+    inserts.push({ id, teamId, name, slug: await uniqueSlugFor(league, id, name), headshot: athlete.headshot?.href ?? null });
+  }
+  if (inserts.length > 0) {
+    const values: unknown[] = [];
+    const tuples = inserts.map((p, i) => {
+      values.push(league, p.id, p.teamId, p.name, p.slug, p.headshot);
+      const b = i * 6;
+      return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6})`;
+    });
+    await pool.query(
+      `insert into players (league, espn_id, team_espn_id, name, slug, headshot_url)
+       values ${tuples.join(",")}
+       on conflict (league, espn_id) do nothing`,
+      values
+    );
+  }
+  if (updateTeam) {
+    for (const [id, { athlete, teamId }] of perPlayer) {
+      if (!known.has(id)) continue;
+      await pool.query(
+        `update players set team_espn_id = $3, name = $4, headshot_url = coalesce($5, headshot_url) where league = $1 and espn_id = $2`,
+        [league, id, teamId, athlete.displayName ?? athlete.fullName, athlete.headshot?.href ?? null]
+      );
+    }
+  }
+
+  const values: unknown[] = [];
+  const tuples = [...perPlayer].map(([id, { teamId, stats }], i) => {
+    values.push(league, gameEspnId, id, teamId, JSON.stringify(stats));
+    const b = i * 5;
+    return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5}, now())`;
+  });
+  await pool.query(
+    `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
+     values ${tuples.join(",")}
+     on conflict (league, game_espn_id, player_espn_id) do update set
+       team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()`,
+    values
+  );
+  return perPlayer.size;
+}

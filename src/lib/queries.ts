@@ -423,18 +423,15 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },
   ],
-  // Not wired to a season-totals leaderboard yet — cricket's per-player numbers come
-  // from player_game_stats (see getPlayerCricketCareer), a different shape than the
-  // player_season_stats columns this leaderboard reads from. The batting/bowling
-  // data itself exists (see the Centuries page), a league-wide leaders board just
-  // hasn't been built on top of it yet.
+  // Cricket boards are computed from per-match figures instead — see getCricketLeaders.
   ipl: [],
   bbl: [],
   cwc: [],
   t20wc: [],
-  // Same soccer shape as EPL, but not yet wired: would need the same leagueSlug
-  // filter added for La Liga's rows the way EPL's already is.
-  laliga: [],
+  laliga: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
 };
 
 const LEADER_COLUMNS = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) => cats.map((c) => c.column)));
@@ -466,6 +463,55 @@ export async function getLeaders(league: League, column: string, limit = 10): Pr
 export async function getLeadersSeason(league: League): Promise<number | null> {
   const { rows } = await pool.query(`select max(season) as season from player_season_stats where league = $1`, [league]);
   return rows[0]?.season ?? null;
+}
+
+// Cricket has no season-totals feed; its boards are summed from the per-match
+// batting and bowling figures for the most recent season on record.
+export const CRICKET_LEADER_CATEGORIES: { key: "runs" | "wickets" | "sixes"; label: string; unit: string }[] = [
+  { key: "runs", label: "Runs", unit: "RUNS" },
+  { key: "wickets", label: "Wickets", unit: "WKTS" },
+  { key: "sixes", label: "Sixes", unit: "6s" },
+];
+
+export async function getCricketLeadersSeason(league: League): Promise<number | null> {
+  const { rows } = await pool.query(
+    `select max(g.season_year) as season from player_game_stats s
+     join games g on g.league = s.league and g.espn_id = s.game_espn_id
+     where s.league = $1`,
+    [league]
+  );
+  return rows[0]?.season ?? null;
+}
+
+export async function getCricketLeaders(league: League, key: "runs" | "wickets" | "sixes", season: number, limit = 10): Promise<LeaderRow[]> {
+  const expr =
+    key === "runs"
+      ? "coalesce(sum((s.stats->'batting'->>'runs')::int), 0)"
+      : key === "wickets"
+        ? "coalesce(sum((s.stats->'bowling'->>'wickets')::int), 0)"
+        : "coalesce(sum((s.stats->'batting'->>'sixes')::int), 0)";
+  // The team is the one the player represented in that season's matches (the most
+  // frequent team on their scorecards), not whatever the players table currently
+  // holds, so a player who has since moved is credited to the right side.
+  const { rows } = await pool.query(
+    `with totals as (
+       select s.player_espn_id, ${expr} as value,
+              mode() within group (order by s.team_espn_id) as team_espn_id
+       from player_game_stats s
+       join games g on g.league = s.league and g.espn_id = s.game_espn_id
+       where s.league = $1 and g.season_year = $2
+       group by s.player_espn_id
+       having ${expr} > 0
+     )
+     select x.player_espn_id, p.name, p.slug, p.headshot_url, t.name as team_name, t.slug as team_slug, x.value
+     from totals x
+     join players p on p.league = $1 and p.espn_id = x.player_espn_id
+     left join teams t on t.league = $1 and t.espn_id = x.team_espn_id
+     order by x.value desc, p.name asc
+     limit $3`,
+    [league, season, limit]
+  );
+  return rows.map((r) => ({ ...r, value: Number(r.value) }));
 }
 
 export interface RosterPlayer {
