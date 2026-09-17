@@ -41,6 +41,10 @@ export default async function GameDetailPage({
         : parseAmericanPlayerBox(summary)
       : [];
   const cricketScorecard = summary && isCricket ? parseCricketScorecard(summary) : [];
+  // Soccer's box score source (rosters[]) always has one entry per team, even before
+  // kickoff — it's just the squad list, so categories comes back empty rather than the
+  // array itself. playerBox.length alone can't tell "no stats yet" from "has stats".
+  const hasPlayerStats = playerBox.some((team) => team.categories.length > 0);
 
   const athleteIds = new Set<string>();
   for (const team of playerBox) for (const cat of team.categories) for (const row of cat.rows) athleteIds.add(row.athleteId);
@@ -88,7 +92,7 @@ export default async function GameDetailPage({
         </section>
       )}
 
-      {!isCricket && playerBox.length > 0 && (
+      {!isCricket && hasPlayerStats && (
         <section className="flex flex-col gap-4">
           <SectionHeader>Player Stats</SectionHeader>
           {playerBox.map((team) => (
