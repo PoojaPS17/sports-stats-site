@@ -1,5 +1,5 @@
 import { pool } from "./db";
-import type { League } from "./espn";
+import { isCupCompetition, slugify, type League } from "./espn";
 import { upsertTeam } from "./teams";
 
 // The scoreboard endpoint reports a plain string/number score. The per-team schedule
@@ -62,7 +62,8 @@ function parseWeather(ev: any): { display: string | null; temperature: number | 
 // once real stages exist (IPL playoffs, NBA/NFL postseason rounds), and uninformative
 // even for an ordinary cricket match (every one of a team's 14 league games looked
 // identical). Pull whatever real stage/round info each sport actually exposes instead.
-function parseRound(ev: any): string | null {
+function parseRound(league: League, ev: any): string | null {
+  if (isCupCompetition(league)) return parseCupRound(ev);
   // Cricket: `description` reads like "Qualifier 1 (N), Indian Premier League at
   // Chennai, May 23 2023" for a playoff match, or "69th Match (D/N), Indian Premier
   // League at Mumbai, May 21 2023" for an ordinary league one — shorten the latter to
@@ -85,6 +86,46 @@ function parseRound(ev: any): string | null {
   if (ev.seasonType?.type !== 3) return null;
   const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
   return typeof headline === "string" ? headline : null;
+}
+
+// Cup competitions (Champions League): every event carries its stage — as
+// `season.slug` on the scoreboard ("round-of-16", "league-phase") and as
+// `seasonType.name` on the team-schedule endpoint ("Round of 16") — plus the leg of a
+// two-legged tie. The league phase (or the old group stage) is the competition's
+// "regular season", so its games keep a null round and feed the tables, matchday
+// numbering and projections; knockout games are tagged with their stage instead.
+const CUP_LEAGUE_STAGES = new Set(["league-phase", "group-stage", "regular-season"]);
+const CUP_STAGE_LABELS: Record<string, string> = {
+  "knockout-round-playoffs": "Knockout Playoffs",
+  "round-of-16": "Round of 16",
+  quarterfinals: "Quarterfinals",
+  semifinals: "Semifinals",
+  final: "Final",
+};
+
+function parseCupRound(ev: any): string | null {
+  const fromName = typeof ev.seasonType?.name === "string" ? slugify(ev.seasonType.name) : null;
+  const fromSlug = typeof ev.season?.slug === "string" ? ev.season.slug : null;
+  const slug = fromSlug && (CUP_LEAGUE_STAGES.has(fromSlug) || CUP_STAGE_LABELS[fromSlug]) ? fromSlug : (fromName ?? fromSlug);
+  if (!slug || CUP_LEAGUE_STAGES.has(slug)) return null;
+  // An unrecognised stage is still a stage (shown as given), unless it is plainly a
+  // season name ("2026-27-uefa-champions-league"), which means the feed gave no stage.
+  if (!CUP_STAGE_LABELS[slug] && /\d{4}/.test(slug)) return null;
+  const stage = CUP_STAGE_LABELS[slug] ?? (typeof ev.seasonType?.name === "string" ? ev.seasonType.name : slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()));
+  const leg = ev.competitions?.[0]?.leg?.displayValue;
+  return leg ? `${stage} - ${leg}` : stage;
+}
+
+// The second leg of a knockout tie carries a note like "2nd Leg - Arsenal advance 5-1
+// on aggregate" or "2nd Leg - Tied on aggregate - RMA advance 4-2 on penalties" —
+// the only place the feed states who went through, which a single leg's score
+// cannot show. Kept as the game's summary line (the same slot cricket's "won by 5
+// wkts" uses).
+function parseCupSummary(ev: any): string | null {
+  const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
+  if (typeof headline !== "string") return null;
+  const text = headline.replace(/^(1st|2nd)\s+Leg\s*-\s*/i, "").trim();
+  return /advance|aggregate|penalt/i.test(text) ? text : null;
 }
 
 // NFL events carry `week: { number, text }` on both the scoreboard and the team
@@ -162,8 +203,8 @@ export async function upsertEvent(league: League, ev: any) {
       ev.season?.year ?? null,
       status?.type?.state ?? null,
       status?.type?.detail ?? null,
-      status?.summary ?? null,
-      parseRound(ev),
+      status?.summary ?? (isCupCompetition(league) ? parseCupSummary(ev) : null),
+      parseRound(league, ev),
       status?.period ?? null,
       status?.displayClock ?? null,
       // Cricket's status.type has no `completed` boolean at all (unlike NBA/NFL/soccer,

@@ -1,3 +1,4 @@
+import { isSoccerLeague } from "./leagues";
 // schema.org builders for the structured data blocks on key pages.
 import { LEAGUE_LABEL, type GameRow, type League } from "./queries";
 import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
@@ -96,6 +97,6 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null)
 function sportName(league: League): string {
   if (league === "nfl") return "American football";
   if (league === "nba") return "Basketball";
-  if (league === "epl" || league === "laliga") return "Soccer";
+  if (isSoccerLeague(league)) return "Soccer";
   return "Cricket";
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LEAGUE_LABEL, formatSeasonLabel, type League } from "@/lib/queries";
+import { isCupCompetition, UCL_LEAGUE_PHASE_FROM } from "@/lib/leagues";
 import { isSoccer } from "@/lib/analytics";
 import {
   currentWeekIndex,
@@ -79,7 +80,11 @@ export async function WeekHub({
   const noun = weekNoun(league);
   const soccer = isSoccer(league);
   const summary = summarizeWeek(week);
-  const table = week.playoff ? [] : tableAfterWeek(league, weeks, week.index);
+  // The old Champions League group stage was eight separate tables, which one
+  // combined table would misrepresent, so the running table is only shown for
+  // league-phase seasons.
+  const groupStageSeason = isCupCompetition(league) && season < UCL_LEAGUE_PHASE_FROM;
+  const table = week.playoff || groupStageSeason ? [] : tableAfterWeek(league, weeks, week.index);
   const performers = await getWeekPerformers(league, week);
   const prev = weeks.find((w) => w.index === week.index - 1) ?? null;
   const next = weeks.find((w) => w.index === week.index + 1) ?? null;
@@ -120,7 +125,7 @@ export async function WeekHub({
 
       {!week.numbered && (
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
-          Official matchweek numbers are not published for this season, so games are grouped by the dates they were played rather than numbered.
+          Official {noun.toLowerCase()} numbers are not published for this season, so games are grouped by the dates they were played rather than numbered.
         </p>
       )}
       {league === "nba" && !week.playoff && (
@@ -199,7 +204,7 @@ export async function WeekHub({
         <aside className="flex flex-col gap-6">
           {table.length > 0 && (
             <section>
-              <SectionHeader description="Regular-season table after this round, with movement from the round before">Table after {week.numbered ? week.shortLabel : "this round"}</SectionHeader>
+              <SectionHeader description={`${isCupCompetition(league) ? "League-phase" : "Regular-season"} table after this round, with movement from the round before`}>Table after {week.numbered ? week.shortLabel : "this round"}</SectionHeader>
               <div className="card overflow-hidden">
                 <table className="w-full border-collapse text-sm">
                   <thead>
@@ -274,7 +279,7 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
       </PageHeader>
       {!numbered && (
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
-          Official matchweek numbers are not published for this season, so rounds are listed by the dates they were played.
+          Official {noun.toLowerCase()} numbers are not published for this season, so rounds are listed by the dates they were played.
         </p>
       )}
       {league === "nba" && (

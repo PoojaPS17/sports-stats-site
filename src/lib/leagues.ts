@@ -3,7 +3,7 @@
 // that runs in the browser (e.g. LeagueSubNav) must import from here directly instead
 // of from queries.ts, since importing any value from that module pulls in `pg` (via
 // ./db) and breaks the client bundle (`tls`/`util/types` aren't available there).
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga";
+export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "ucl";
 
 // The 4 major, always-active leagues — these get homepage sections and top-level nav
 // links. The other competitions (only in season occasionally, or every 2-4 years for
@@ -11,8 +11,8 @@ export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "
 // don't clutter the homepage with empty "no games scheduled" sections most of the year.
 export const LEAGUES: League[] = ["epl", "nfl", "nba", "ipl"];
 export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
-export const SOCCER_LEAGUES: League[] = ["epl", "laliga"];
-export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "laliga"];
+export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "ucl"];
+export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "laliga", "ucl"];
 export const LEAGUE_LABEL: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
@@ -22,6 +22,7 @@ export const LEAGUE_LABEL: Record<League, string> = {
   cwc: "Cricket World Cup",
   t20wc: "T20 World Cup",
   laliga: "La Liga",
+  ucl: "Champions League",
 };
 
 export function isLeague(value: string): value is League {
@@ -32,12 +33,35 @@ export function isCricketLeague(league: League): boolean {
   return (CRICKET_LEAGUES as string[]).includes(league);
 }
 
+export function isSoccerLeague(league: League): boolean {
+  return (SOCCER_LEAGUES as string[]).includes(league);
+}
+
+// A cup competition has a league phase (or group stage) followed by knockout rounds,
+// which the feed tags per game; those rounds are stored in `games.round` and kept
+// out of tables, projections and matchday numbering. Domestic leagues have none.
+export function isCupCompetition(league: League): boolean {
+  return league === "ucl";
+}
+
+// Summer qualifying rounds ("Qualifying Third Round", the August "Playoff Round")
+// precede the competition proper. They are real results, so they count for ratings,
+// records and team pages, but they are not part of the matchday sequence or the
+// knockout bracket, and the feed only carries them for clubs on a stored schedule.
+export function isQualifyingRound(round: string | null | undefined): boolean {
+  return Boolean(round && /qualifying|playoff round/i.test(round));
+}
+
+// The Champions League switched from eight groups of four to a single 36-team
+// league phase in 2024-25. Tables, zones and projections differ between the formats.
+export const UCL_LEAGUE_PHASE_FROM = 2024;
+
 // ESPN labels a season by its *ending* year for NBA ("2023" = the 2022-23 season) but
 // by its *starting* year for NFL/EPL/La Liga/IPL ("2024" = the 2024 NFL season /
 // 2024-25 EPL season / 2024 IPL season). Render the conventional human label for each.
 export function formatSeasonLabel(league: League, year: number | null): string | null {
   if (!year) return null;
   if (league === "nba") return `${year - 1}-${String(year).slice(2)}`;
-  if (league === "epl" || league === "laliga") return `${year}-${String(year + 1).slice(2)}`;
+  if (isSoccerLeague(league)) return `${year}-${String(year + 1).slice(2)}`;
   return String(year);
 }

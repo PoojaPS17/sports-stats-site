@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   isLeague,
   isCricketLeague,
+  isCupCompetition,
   LEAGUE_LABEL,
   LEADER_CATEGORIES,
   CRICKET_LEADER_CATEGORIES,
@@ -52,6 +53,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
     const [lists, s] = await Promise.all([Promise.all(categories.map((c) => getLeaders(league, c.column, 10))), getLeadersSeason(league)]);
     season = s;
     boards = categories.map((c, i) => ({ label: c.label, unit: c.unit, rows: lists[i] }));
+    if (isCupCompetition(league)) note = "Summed from the box score of every match on record for the season, knockout rounds included.";
   }
 
   return (

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getPlayerSlugsByEspnIds } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
@@ -59,7 +59,7 @@ export default async function GameDetailPage({
   const teamStats = summary ? parseTeamStats(summary) : [];
   const playerBox =
     summary && !isCricket
-      ? league === "epl" || league === "laliga"
+      ? isSoccerLeague(league)
         ? parseSoccerPlayerBox(summary)
         : parseAmericanPlayerBox(summary)
       : [];

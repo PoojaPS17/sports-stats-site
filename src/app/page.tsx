@@ -28,7 +28,9 @@ const QUICK_LINKS: { label: string; href: string }[] = [
 ];
 
 export default async function HomePage() {
-  const featured = (await Promise.all(LEAGUES.map((l) => getFeaturedGames(l, 3)))).flat();
+  // The Champions League has no homepage section of its own but its games belong
+  // among the headline fixtures whenever a matchday falls in the window.
+  const featured = (await Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3)))).flat();
 
   const sections = await Promise.all(
     LEAGUES.map(async (league) => {

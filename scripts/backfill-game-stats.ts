@@ -9,8 +9,9 @@
 import { pool } from "./lib/db";
 import { fetchSummary, type League } from "./lib/espn";
 import { extractPlayerStats, storeGameStats } from "./lib/game-stats";
+import { rebuildSeasonStatsFromBoxScores, seasonStatsFromBoxScores } from "./lib/boxscore-season-stats";
 
-const LEAGUES: League[] = ["nfl", "epl", "laliga", "nba"];
+const LEAGUES: League[] = ["nfl", "epl", "laliga", "ucl", "nba"];
 const REQUEST_DELAY_MS = 80;
 
 function sleep(ms: number) {
@@ -49,6 +50,10 @@ async function backfillLeague(league: League, fromSeason: number | null) {
     await sleep(REQUEST_DELAY_MS);
   }
   console.log(`[backfill-game-stats] ${league}: finished ${done}/${games.length} games, ${rows} player rows, ${empty} games had no box score`);
+  if (seasonStatsFromBoxScores(league)) {
+    const n = await rebuildSeasonStatsFromBoxScores(league, null);
+    console.log(`[backfill-game-stats] ${league}: rebuilt ${n} season-total rows from box scores`);
+  }
 }
 
 async function main() {

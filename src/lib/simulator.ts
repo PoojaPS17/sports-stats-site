@@ -3,11 +3,11 @@
 // from the fixtures and results already in the database.
 import { pool } from "./db";
 import { isSoccer, getEloRatings, homeWinProbability, type TeamRef } from "./analytics";
-import { GAME_SELECT, type GameRow, type League } from "./queries";
+import { GAME_SELECT, isCupCompetition, type GameRow, type League } from "./queries";
 import { getSeasonsWithGames } from "./matchweeks";
 
 export function supportsProjections(league: League): boolean {
-  return league === "epl" || league === "laliga" || league === "nfl" || league === "nba";
+  return league === "epl" || league === "laliga" || league === "ucl" || league === "nfl" || league === "nba";
 }
 
 export interface OutcomeColumn {
@@ -100,6 +100,14 @@ function mulberry32(seed: number) {
 }
 
 function columnsFor(league: League): OutcomeColumn[] {
+  if (league === "ucl") {
+    return [
+      { key: "first", label: "1st", title: "Finish first in the league phase" },
+      { key: "top8", label: "Top 8", title: "Finish in the top eight (straight into the round of 16)" },
+      { key: "playoff", label: "Playoffs", title: "Finish ninth to 24th (knockout-round playoffs)" },
+      { key: "out", label: "Eliminated", title: "Finish 25th or lower" },
+    ];
+  }
   if (isSoccer(league)) {
     return [
       { key: "title", label: "Title", title: "Finish first" },
@@ -249,7 +257,14 @@ export async function getSeasonProjection(league: League): Promise<SeasonProject
       positionSum[i] += leaguePos[i];
     }
 
-    if (soccer) {
+    if (isCupCompetition(league)) {
+      order.forEach((i, pos) => {
+        if (pos === 0) counts[i].first++;
+        if (pos < 8) counts[i].top8++;
+        else if (pos < 24) counts[i].playoff++;
+        else counts[i].out++;
+      });
+    } else if (soccer) {
       order.forEach((i, pos) => {
         if (pos === 0) counts[i].title++;
         if (pos < 4) counts[i].top4++;

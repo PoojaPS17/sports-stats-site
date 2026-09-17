@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, isCupCompetition, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
 import { getTeamHistory, isSoccer } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
@@ -65,7 +65,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: soccer ? "Titles" : "1st-place finishes", value: titles.length, sub: titles.map((t) => formatSeasonLabel(league, t.season)).join(", ") || "None on record" },
+              { label: soccer && !isCupCompetition(league) ? "Titles" : "1st-place finishes", value: titles.length, sub: titles.map((t) => formatSeasonLabel(league, t.season)).join(", ") || "None on record" },
               { label: "Best finish", value: best ? ordinal(best.position) : "—", sub: best ? formatSeasonLabel(league, best.season) ?? "" : "" },
               { label: "Lowest finish", value: worst ? ordinal(worst.position) : "—", sub: worst ? formatSeasonLabel(league, worst.season) ?? "" : "" },
               { label: "Average finish", value: avgPos ? avgPos.toFixed(1) : "—", sub: `across ${played.length} seasons` },
@@ -81,7 +81,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
           </div>
 
           <section>
-            <SectionHeader description="League position at the end of each season (1st at the top)">Finish by season</SectionHeader>
+            <SectionHeader description={isCupCompetition(league) ? "League-phase position at the end of each season (group position before 2024-25), 1st at the top" : "League position at the end of each season (1st at the top)"}>Finish by season</SectionHeader>
             <PositionChart league={league} rows={history} color={team.color} />
           </section>
 
@@ -94,7 +94,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
                     <tr className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                       <th className="py-2 pl-4 text-left font-semibold">Season</th>
                       <th className="px-2 py-2 text-right font-semibold">Finish</th>
-                      {history.some((h) => h.conference) && <th className="px-2 py-2 text-left font-semibold">Conference</th>}
+                      {history.some((h) => h.conference) && <th className="px-2 py-2 text-left font-semibold">{isCupCompetition(league) ? "Stage" : "Conference"}</th>}
                       <th className="px-2 py-2 text-right font-semibold">W</th>
                       {soccer && <th className="px-2 py-2 text-right font-semibold">D</th>}
                       <th className="px-2 py-2 text-right font-semibold">L</th>

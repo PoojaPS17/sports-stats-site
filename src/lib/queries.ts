@@ -3,7 +3,7 @@ import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 
 export type { League } from "./leagues";
-export { LEAGUES, CRICKET_LEAGUES, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, formatSeasonLabel } from "./leagues";
+export { LEAGUES, CRICKET_LEAGUES, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM } from "./leagues";
 
 export interface GameRow {
   league: League;
@@ -430,6 +430,11 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
   cwc: [],
   t20wc: [],
   laliga: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
+  // Summed from box scores (see scripts/lib/boxscore-season-stats.ts).
+  ucl: [
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },
   ],

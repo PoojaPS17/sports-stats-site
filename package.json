@@ -23,6 +23,7 @@
     "backfill:standings": "tsx scripts/backfill-standings.ts",
     "backfill:player-stats": "tsx scripts/backfill-player-stats.ts",
     "backfill:game-stats": "tsx scripts/backfill-game-stats.ts",
+    "rebuild:season-stats": "tsx scripts/rebuild-season-stats.ts",
     "fetch:team-info": "tsx scripts/fetch-team-info.ts",
     "backfill:cricket-player-stats": "tsx scripts/backfill-cricket-player-stats.ts",
     "fetch:tennis-rankings": "tsx scripts/fetch-tennis-rankings.ts",

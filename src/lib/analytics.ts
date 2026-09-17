@@ -192,6 +192,8 @@ export const ELO_PARAMS: Record<string, { k: number; homeAdvantage: number; seas
   nfl: { k: 24, homeAdvantage: 55, seasonCarry: 0.67, marginScale: 7 },
   epl: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   laliga: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
+  // Few games per club per season, so ratings lean a little more on the previous season.
+  ucl: { k: 24, homeAdvantage: 60, seasonCarry: 0.85, marginScale: 1 },
   default: { k: 20, homeAdvantage: 50, seasonCarry: 0.75, marginScale: 1 },
 };
 
@@ -474,13 +476,17 @@ export async function getTeamHistory(league: League, teamEspnId: string): Promis
     `with ranked as (
        select season, team_espn_id, conference, wins, losses, draws, points, goals_for, goals_against, win_percent,
               rank() over (
-                partition by season
+                partition by season, grp
                 order by points desc nulls last, (goals_for - goals_against) desc nulls last, goals_for desc nulls last,
                          net_run_rate desc nulls last, win_percent desc nulls last, wins desc, losses asc
               ) as position,
-              count(*) over (partition by season) as teams_in_season,
+              count(*) over (partition by season, grp) as teams_in_season,
               sum(wins + losses + coalesce(draws, 0)) over (partition by season) as season_games
-       from standings where league = $1
+       from (
+         -- A cup's group-stage seasons rank within the group (finishing 2nd in Group C),
+         -- not across the whole competition; league seasons rank league-wide.
+         select *, case when $1 = 'ucl' then coalesce(conference, '') else '' end as grp from standings
+       ) s where league = $1
      )
      select season, position::int, teams_in_season::int as "teamsInSeason", wins, losses, draws, points, goals_for, goals_against, win_percent, conference,
             (season_games > 0) as played

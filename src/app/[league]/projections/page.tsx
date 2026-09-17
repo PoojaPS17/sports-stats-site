@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  const what = isSoccer(league) ? "title, top-four and relegation" : league === "nfl" ? "division, playoff and top-seed" : "playoff, play-in and top-seed";
+  const what = league === "ucl" ? "round-of-16, knockout-playoff and elimination" : isSoccer(league) ? "title, top-four and relegation" : league === "nfl" ? "division, playoff and top-seed" : "playoff, play-in and top-seed";
   return pageMeta(`${label} Season Projections`, `${label} ${what} probabilities for every team, from thousands of simulated seasons updated after each result.`, `/${league}/projections`);
 }
 
@@ -154,7 +154,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{t.expectedPosition.toFixed(1)}</td>
                         {proj.columns.map((c) => (
-                          <Prob key={c.key} p={t.outcomes[c.key]} negative={c.key === "relegation"} />
+                          <Prob key={c.key} p={t.outcomes[c.key]} negative={c.key === "relegation" || c.key === "out"} />
                         ))}
                       </tr>
                     ))}

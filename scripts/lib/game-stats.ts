@@ -2,7 +2,7 @@
 // scraper (recent games) and the historical backfill (every completed game).
 import { pool } from "./db";
 import type { League } from "./espn";
-import { slugify } from "./espn";
+import { isSoccerLeague, slugify } from "./espn";
 
 export type PlayerStats = Map<string, { athlete: any; teamId: string; stats: Record<string, Record<string, string>> }>;
 
@@ -51,7 +51,7 @@ function extractSoccer(data: any): PlayerStats {
 }
 
 export function extractPlayerStats(league: League, summary: any): PlayerStats {
-  return league === "epl" || league === "laliga" ? extractSoccer(summary) : extractAmericanSports(summary);
+  return isSoccerLeague(league) ? extractSoccer(summary) : extractAmericanSports(summary);
 }
 
 // Writes the players (creating any we have never seen) and their stat rows for one

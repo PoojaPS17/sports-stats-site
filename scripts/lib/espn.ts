@@ -1,4 +1,4 @@
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga";
+export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "ucl";
 
 // Cricket competition ids: IPL 8048, Big Bash League 8044, ICC Cricket World Cup
 // (ODI) 8039, ICC Men's T20 World Cup 8604 — each resolves to the *current* edition
@@ -13,11 +13,23 @@ export const SPORT_PATH: Record<League, string> = {
   cwc: "cricket/8039",
   t20wc: "cricket/8604",
   laliga: "soccer/esp.1",
+  ucl: "soccer/uefa.champions",
 };
 
 const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
 function isCricketLeague(league: League): boolean {
   return CRICKET_LEAGUES.includes(league);
+}
+
+export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "ucl"];
+export function isSoccerLeague(league: League): boolean {
+  return SOCCER_LEAGUES.includes(league);
+}
+
+// Cup competitions: the feed tags every game with its stage (league phase, then the
+// knockout rounds), which the games writer keeps for the knockout games.
+export function isCupCompetition(league: League): boolean {
+  return league === "ucl";
 }
 
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";
@@ -137,7 +149,7 @@ export function fetchInjuries(league: League) {
 // and competition they've featured in, not just one of them) — callers must filter
 // rows by `leagueSlug` themselves.
 export function fetchAthleteSeasonStats(league: League, athleteEspnId: string) {
-  const sportPath = league === "epl" || league === "laliga" ? "soccer" : SPORT_PATH[league];
+  const sportPath = isSoccerLeague(league) ? "soccer" : SPORT_PATH[league];
   return getJson<any>(`${COMMON_BASE}/${sportPath}/athletes/${athleteEspnId}/stats`);
 }
 
@@ -154,6 +166,7 @@ const CORE_LEAGUE_PATH: Record<League, string> = {
   nfl: "football/leagues/nfl",
   epl: "soccer/leagues/eng.1",
   laliga: "soccer/leagues/esp.1",
+  ucl: "soccer/leagues/uefa.champions",
   // Unused — team-info.ts never calls fetchCoreTeam for a cricket league (its
   // team-level core-API endpoints 404, same as the site API's /teams/{id}). Present
   // only so this Record stays total over League.

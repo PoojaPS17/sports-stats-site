@@ -8,7 +8,7 @@
 import { pool } from "./db";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
-import type { League } from "./leagues";
+import { isCupCompetition, isQualifyingRound, type League } from "./leagues";
 
 export interface Matchweek {
   /** 1-based position in the season; doubles as the URL segment. */
@@ -25,21 +25,26 @@ export interface Matchweek {
 }
 
 export function supportsMatchweeks(league: League): boolean {
-  return league === "epl" || league === "laliga" || league === "nfl" || league === "nba";
+  return league === "epl" || league === "laliga" || league === "ucl" || league === "nfl" || league === "nba";
 }
 
 export function weekNoun(league: League): string {
-  return isSoccer(league) ? "Matchweek" : "Week";
+  return isCupCompetition(league) ? "Matchday" : isSoccer(league) ? "Matchweek" : "Week";
+}
+
+/** URL segment: /epl/matchweek, /ucl/matchday, /nfl/week (all served by the matchweek route via rewrites). */
+function weekSegment(league: League): string {
+  return isCupCompetition(league) ? "matchday" : isSoccer(league) ? "matchweek" : "week";
 }
 
 /** Public path for a week hub: /epl/matchweek/5, /nfl/week/3, /nfl/week/2025/3. */
 export function weekPath(league: League, index: number, season?: number | null): string {
-  const seg = isSoccer(league) ? "matchweek" : "week";
+  const seg = weekSegment(league);
   return season ? `/${league}/${seg}/${season}/${index}` : `/${league}/${seg}/${index}`;
 }
 
 export function weekIndexPath(league: League, season?: number | null): string {
-  const seg = isSoccer(league) ? "matchweek" : "week";
+  const seg = weekSegment(league);
   return season ? `/${league}/${seg}/${season}` : `/${league}/${seg}`;
 }
 
@@ -67,16 +72,18 @@ function fmtRange(start: string, end: string): string {
 // Normalise the feed's per-conference, per-game playoff labels into one round:
 // "AFC Wild Card Playoffs" / "NFC Wild Card Playoffs" → "Wild Card";
 // "East 1st Round - Game 3" → "First Round"; "West Finals - Game 5" → "Conference Finals".
+// A cup's stages have no conference: "Semifinals - 2nd Leg" → "Semifinals", and the
+// Champions League's "Knockout Playoffs" keeps its name.
 function playoffRoundLabel(round: string): string {
   const conference = /^(AFC|NFC|East|West)\b/i.test(round);
   const r = round
-    .replace(/\s*-\s*Game\s*\d+$/i, "")
+    .replace(/\s*-\s*(Game\s*\d+|(1st|2nd)\s+Leg)$/i, "")
     .replace(/^(AFC|NFC|East|West)\s+/i, "")
-    .replace(/\s+Playoffs$/i, "")
+    .replace(/(?<!knockout)\s+Playoffs$/i, "")
     .trim();
   if (/championship/i.test(r)) return "Conference Championships";
   if (/^1st round$/i.test(r)) return "First Round";
-  if (/^semifinals$/i.test(r)) return "Conference Semifinals";
+  if (/^semifinals$/i.test(r)) return conference ? "Conference Semifinals" : "Semifinals";
   if (/^finals$/i.test(r)) return conference ? "Conference Finals" : "Finals";
   if (/^nba finals$/i.test(r)) return "Finals";
   return r;
@@ -101,11 +108,28 @@ function finish(groups: { label: string; shortLabel: string; games: GameRow[]; p
     });
 }
 
+// Knockout rounds, grouped by stage in date order (both legs of a tie together).
+function playoffGroups(playoffs: GameRow[]): { label: string; shortLabel: string; games: GameRow[]; playoff: boolean }[] {
+  const byRound = new Map<string, GameRow[]>();
+  for (const g of playoffs) {
+    const label = playoffRoundLabel(g.round!);
+    if (!byRound.has(label)) byRound.set(label, []);
+    byRound.get(label)!.push(g);
+  }
+  const ordered = [...byRound.entries()].sort((a, b) => new Date(a[1][0].date).getTime() - new Date(b[1][0].date).getTime());
+  return ordered.map(([label, gs]) => ({ label, shortLabel: label.replace("Conference Championships", "Conf. Champ."), games: gs, playoff: true }));
+}
+
 export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
   if (games.length === 0) return [];
-  const sorted = [...games].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const all = [...games].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // A cup's knockout games carry their stage; only the league phase is numbered.
+  const cup = isCupCompetition(league);
+  const sorted = cup ? all.filter((g) => !g.round) : all;
+  const knockouts = cup ? all.filter((g) => g.round && !isQualifyingRound(g.round)) : [];
 
   if (isSoccer(league)) {
+    if (sorted.length === 0) return finish(playoffGroups(knockouts));
     // 1. Walk the season day by day. A day whose teams have already appeared in the
     //    current round starts a new round, provided it is a real matchday (3+ games).
     //    A day with only one or two such games is a stray: a Friday opener before
@@ -225,14 +249,17 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
         const ids = gs.flatMap((g) => [g.home_team_espn_id, g.away_team_espn_id]);
         return gs.length <= Math.floor(teamCount / 2) && new Set(ids).size === ids.length;
       });
-    return finish(
-      keys.map((k) => {
+    const noun = weekNoun(league);
+    const short = cup ? "MD" : "MW";
+    return finish([
+      ...keys.map((k) => {
         const games = rounds.get(k)!.sort(byDate);
-        if (exact) return { label: `Matchweek ${k}`, shortLabel: `MW ${k}`, games, playoff: false, numbered: true };
+        if (exact) return { label: `${noun} ${k}`, shortLabel: `${short} ${k}`, games, playoff: false, numbered: true };
         const range = fmtRange(games[0].date, games[games.length - 1].date);
         return { label: `Games of ${range}`, shortLabel: range.split(/[–-]/)[0].trim(), games, playoff: false, numbered: false };
-      })
-    );
+      }),
+      ...playoffGroups(knockouts),
+    ]);
   }
 
   // Week buckets for the regular season, then playoff rounds in date order.
@@ -268,16 +295,7 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
     }
   }
 
-  if (playoffs.length) {
-    const byRound = new Map<string, GameRow[]>();
-    for (const g of playoffs) {
-      const label = playoffRoundLabel(g.round!);
-      if (!byRound.has(label)) byRound.set(label, []);
-      byRound.get(label)!.push(g);
-    }
-    const ordered = [...byRound.entries()].sort((a, b) => new Date(a[1][0].date).getTime() - new Date(b[1][0].date).getTime());
-    for (const [label, gs] of ordered) groups.push({ label, shortLabel: label.replace("Conference Championships", "Conf. Champ."), games: gs, playoff: true });
-  }
+  groups.push(...playoffGroups(playoffs));
 
   return finish(groups);
 }
@@ -393,6 +411,11 @@ const PERFORMER_CONFIG: Partial<Record<League, { category: string; label: string
     { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
   ],
   laliga: [
+    { category: "match", label: "G", title: "Goals", unit: "G" },
+    { category: "match", label: "A", title: "Assists", unit: "A" },
+    { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
+  ],
+  ucl: [
     { category: "match", label: "G", title: "Goals", unit: "G" },
     { category: "match", label: "A", title: "Assists", unit: "A" },
     { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },

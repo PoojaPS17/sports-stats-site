@@ -5,7 +5,7 @@ import { pool } from "./lib/db";
 import { fetchCurrentSeasonYear, type League } from "./lib/espn";
 import { upsertTeamInfo } from "./lib/team-info";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl"];
 
 async function processLeague(league: League) {
   const season = await fetchCurrentSeasonYear(league);

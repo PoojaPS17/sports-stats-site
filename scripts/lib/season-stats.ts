@@ -105,7 +105,7 @@ export async function upsertPlayerSeasonStats(
   // Soccer's stats endpoint is sport-wide, so seasons must be filtered to the actual
   // league's rows (leagueSlug "eng.1" / "esp.1") — otherwise a player's time at a club in a different
   // country's league would be collected and stored as if it were an EPL season.
-  const leagueSlug = league === "epl" ? "eng.1" : league === "laliga" ? "esp.1" : undefined;
+  const leagueSlug = league === "epl" ? "eng.1" : league === "laliga" ? "esp.1" : league === "ucl" ? "uefa.champions" : undefined;
 
   const years = new Set<number>();
   for (const category of categories) {

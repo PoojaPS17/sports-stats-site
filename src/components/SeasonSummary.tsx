@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SectionHeader } from "./SectionHeader";
 import type { League, StandingRow } from "@/lib/queries";
-import { SOCCER_LEAGUES } from "@/lib/leagues";
+import { SOCCER_LEAGUES, isCupCompetition } from "@/lib/leagues";
 import type { PlayoffResult } from "@/lib/seasonSummary";
 
 // IPL/NBA/NFL: a chronological list of every playoff-stage result found for the
@@ -10,7 +10,7 @@ function PlayoffSummary({ league, results }: { league: League; results: PlayoffR
   if (results.length === 0) return null;
   return (
     <section>
-      <SectionHeader>Playoffs</SectionHeader>
+      <SectionHeader>{isCupCompetition(league) ? "Knockout rounds" : "Playoffs"}</SectionHeader>
       <div className="card divide-y divide-[var(--border)]">
         {results.map((r, i) => (
           <div key={`${r.round}-${i}`} className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-3">
@@ -83,6 +83,8 @@ export function SeasonSummary({
   playoffResults: PlayoffResult[];
   standings: StandingRow[];
 }) {
+  // A cup's table decides who progresses, not who wins; the knockout results tell that story.
+  if (isCupCompetition(league)) return <PlayoffSummary league={league} results={playoffResults} />;
   if ((SOCCER_LEAGUES as League[]).includes(league)) return <TableHighlights league={league} standings={standings} />;
   return <PlayoffSummary league={league} results={playoffResults} />;
 }

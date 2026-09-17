@@ -9,13 +9,21 @@ function statValue(stats: any[], ...names: string[]): string | undefined {
   return undefined;
 }
 
+// The feed's cup group names vary by season ("GROUP A", "UEFA Champions League -
+// Group A", "Group A"); keep just the group.
+function tidyConference(name: string | null): string | null {
+  if (!name) return null;
+  const m = /(?:^|[\s-])group\s+([a-z])$/i.exec(name);
+  return m ? `Group ${m[1].toUpperCase()}` : name;
+}
+
 function collectEntries(node: any, conference: string | null, out: any[]) {
   if (node.standings?.entries) {
     // A group nested under a conference that is not itself a conference is a
     // division (NFL "AFC East"); entries directly on the conference have none.
     const division = conference && !node.isConference && node.name ? node.name : null;
     for (const entry of node.standings.entries) {
-      out.push({ entry, conference: conference ?? node.name ?? null, division });
+      out.push({ entry, conference: tidyConference(conference ?? node.name ?? null), division });
     }
   }
   for (const child of node.children ?? []) {

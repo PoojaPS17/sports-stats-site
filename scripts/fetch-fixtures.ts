@@ -4,10 +4,10 @@
 // default schedule returns games already played, `fixture=true` the ones to come.
 // NFL events carry the official week number, which upsertEvent stores.
 import { pool } from "./lib/db";
-import { fetchCurrentSeasonYear, fetchTeamSchedule, type League } from "./lib/espn";
+import { fetchCurrentSeasonYear, fetchTeamSchedule, isSoccerLeague, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
 
-const LEAGUES: League[] = ["epl", "laliga", "nfl", "nba"];
+const LEAGUES: League[] = ["epl", "laliga", "ucl", "nfl", "nba"];
 const REQUEST_DELAY_MS = 120;
 
 function sleep(ms: number) {
@@ -17,7 +17,7 @@ function sleep(ms: number) {
 // Which schedule variants to request per league. `seasontype` 2 = regular season,
 // 3 = postseason (returns nothing until the bracket is set, which is harmless).
 function variants(league: League): { seasontype?: number; fixtures?: boolean }[] {
-  if (league === "epl" || league === "laliga") return [{}, { fixtures: true }];
+  if (isSoccerLeague(league)) return [{}, { fixtures: true }];
   if (league === "nba") return [{ seasontype: 2 }, { seasontype: 3 }];
   return [{}, { seasontype: 3 }];
 }

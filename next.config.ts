@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
       // route; links are generated with the sport-appropriate word (see weekPath()).
       { source: "/:league/week", destination: "/:league/matchweek" },
       { source: "/:league/week/:path*", destination: "/:league/matchweek/:path*" },
+      // The Champions League counts matchdays.
+      { source: "/:league/matchday", destination: "/:league/matchweek" },
+      { source: "/:league/matchday/:path*", destination: "/:league/matchweek/:path*" },
     ];
   },
 };

@@ -11,6 +11,7 @@ const SPORT_PATH: Record<League, string> = {
   cwc: "cricket/8039",
   t20wc: "cricket/8604",
   laliga: "soccer/esp.1",
+  ucl: "soccer/uefa.champions",
 };
 
 // Match detail is fetched live from ESPN at request time rather than stored in our DB

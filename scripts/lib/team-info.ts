@@ -1,5 +1,5 @@
 import { pool } from "./db";
-import { fetchCoreTeam, fetchByRef, type League } from "./espn";
+import { fetchCoreTeam, fetchByRef, type League, isSoccerLeague } from "./espn";
 
 const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
 
@@ -22,7 +22,7 @@ export async function upsertTeamInfo(league: League, teamEspnId: string, season:
   // current coaches).
   let coachName: string | null = null;
   try {
-    const coachesRef = league !== "epl" && league !== "laliga" ? team.coaches?.["$ref"] : undefined;
+    const coachesRef = !isSoccerLeague(league) ? team.coaches?.["$ref"] : undefined;
     if (coachesRef) {
       const coachesList = await fetchByRef<{ items?: { $ref: string }[] }>(coachesRef);
       const firstCoachRef = coachesList.items?.[0]?.["$ref"];
