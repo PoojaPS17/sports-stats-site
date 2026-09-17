@@ -18,6 +18,8 @@ import { teamNotFound } from "@/lib/legacySlug";
 import { summarizeTeamSeason } from "@/lib/teamSummary";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { RelatedLinks } from "@/components/RelatedLinks";
+import { getMostFacedOpponents, getTeamTopPlayers } from "@/lib/related";
 import { TeamSeasonGames } from "@/components/TeamSeasonGames";
 import { TeamHeader } from "@/components/TeamHeader";
 import { TeamPageNav } from "@/components/TeamPageNav";
@@ -54,10 +56,12 @@ export default async function TeamPage({
   const seasons = await getTeamSeasons(league, team.espn_id);
   const activeSeason = seasons[0] ?? null;
   const hasInjuryFeed = !isCricketLeague(league);
-  const [games, roster, injuries] = await Promise.all([
+  const [games, roster, injuries, rivals, topPlayers] = await Promise.all([
     activeSeason ? getTeamGamesBySeason(league, team.espn_id, activeSeason) : Promise.resolve([]),
     getTeamRoster(league, team.espn_id),
     hasInjuryFeed ? getTeamInjuries(league, team.espn_id) : Promise.resolve([]),
+    supportsScoreAnalytics(league) ? getMostFacedOpponents(league, team.espn_id) : Promise.resolve([]),
+    getTeamTopPlayers(league, team.espn_id),
   ]);
 
   const summary = summarizeTeamSeason(games, team.espn_id);
@@ -209,6 +213,28 @@ export default async function TeamPage({
           </div>
         )}
       </section>
+      <RelatedLinks
+        groups={[
+          { title: "Head-to-head", links: rivals.map((r) => ({ href: h2hPath(league, slug, r.slug), label: `${team.name} vs ${r.name}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name })) },
+          { title: "Top players this season", links: topPlayers },
+          {
+            title: "Seasons",
+            links: [
+              ...seasons.slice(1, 7).map((s) => ({ href: `/${league}/teams/${slug}/${s}`, label: `${team.name} ${formatSeasonLabel(league, s)}`, sub: "Every result that season" })),
+              ...(supportsScoreAnalytics(league) ? [{ href: `/${league}/teams/${slug}/history`, label: "Season-by-season history", sub: "Finishes, points and records" }] : []),
+            ],
+          },
+          {
+            title: LEAGUE_LABEL[league],
+            links: [
+              { href: `/${league}/standings`, label: "Standings" },
+              ...(supportsScoreAnalytics(league) ? [{ href: `/${league}/power-rankings`, label: "Power rankings" }, { href: `/${league}/records`, label: "Records" }] : []),
+              { href: `/${league}/leaders`, label: "Leaders" },
+            ],
+          },
+        ]}
+      />
+
     </div>
   );
 }

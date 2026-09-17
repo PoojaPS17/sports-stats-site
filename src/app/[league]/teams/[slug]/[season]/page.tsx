@@ -8,6 +8,9 @@ import { TeamSeasonGames } from "@/components/TeamSeasonGames";
 import { TeamHeader } from "@/components/TeamHeader";
 import { TeamPageNav } from "@/components/TeamPageNav";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { RelatedLinks } from "@/components/RelatedLinks";
+import { getTeamTopPlayers } from "@/lib/related";
+import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 
 // Historical seasons are static (a completed season's results never change), so these
 // pages can be cached far longer than the live current-season team page.
@@ -38,7 +41,8 @@ export default async function TeamSeasonPage({
   const seasons = await getTeamSeasons(league, team.espn_id);
   if (!seasons.includes(season)) notFound();
 
-  const games = await getTeamGamesBySeason(league, team.espn_id, season);
+  const [games, topPlayers] = await Promise.all([getTeamGamesBySeason(league, team.espn_id, season), getTeamTopPlayers(league, team.espn_id, season)]);
+  const label = formatSeasonLabel(league, season) ?? String(season);
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +67,20 @@ export default async function TeamSeasonPage({
         seasons={seasons}
         activeSeason={season}
         basePath={`/${league}/teams/${slug}`}
+      />
+
+      <RelatedLinks
+        groups={[
+          { title: `${team.name} ${label} players`, links: topPlayers },
+          {
+            title: `${label} season`,
+            links: [
+              { href: `/${league}/standings/${season}`, label: `${label} standings` },
+              ...(supportsMatchweeks(league) ? [{ href: weekIndexPath(league, season), label: `Every ${weekNoun(league).toLowerCase()} of ${label}` }] : []),
+              { href: `/${league}/teams/${slug}`, label: `${team.name} now`, sub: "Current season, roster and injuries", image: team.logo_url, imageName: team.name },
+            ],
+          },
+        ]}
       />
     </div>
   );

@@ -21,6 +21,12 @@ import { MatchLineups } from "@/components/MatchLineups";
 import { MatchContextCard } from "@/components/MatchContextCard";
 import { WinProbabilityChart } from "@/components/WinProbabilityChart";
 import { MatchLeaders } from "@/components/MatchLeaders";
+import { GameCard } from "@/components/GameCard";
+import { RelatedLinks } from "@/components/RelatedLinks";
+import { h2hPath } from "@/lib/h2h";
+import { supportsScoreAnalytics } from "@/lib/analytics";
+import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
+import { formatSeasonLabel } from "@/lib/queries";
 import type { League } from "@/lib/queries";
 
 // Completed games read their stored report from the database. Games in progress (or
@@ -127,7 +133,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           { label: `${game.away_name} vs ${game.home_name}` },
         ]}
       />
-      <MatchHeader game={game} />
+      <MatchHeader league={league} game={game} />
       {details && <MatchFacts league={league} game={game} details={details} />}
 
       <AdSlot label="Match detail top" />
@@ -218,6 +224,52 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           ))}
         </section>
       )}
+
+      {context && context.week && context.weekGames.length > 0 && (
+        <section>
+          <SectionHeader action={{ label: `All of ${context.week.label}`, href: context.week.href }}>More from {context.week.label}</SectionHeader>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {context.weekGames.slice(0, 9).map((g) => (
+              <GameCard key={g.espn_id} league={league} game={g} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <RelatedLinks
+        groups={[
+          {
+            title: "Teams",
+            links: [
+              { href: `/${league}/teams/${game.home_slug}`, label: game.home_name, sub: "Schedule, results and roster", image: game.home_logo, imageName: game.home_name },
+              { href: `/${league}/teams/${game.away_slug}`, label: game.away_name, sub: "Schedule, results and roster", image: game.away_logo, imageName: game.away_name },
+              ...(game.season_year
+                ? [
+                    { href: `/${league}/teams/${game.home_slug}/${game.season_year}`, label: `${game.home_name} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
+                    { href: `/${league}/teams/${game.away_slug}/${game.season_year}`, label: `${game.away_name} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
+                  ]
+                : []),
+            ],
+          },
+          {
+            title: "Head-to-head",
+            links: supportsScoreAnalytics(league)
+              ? [
+                  { href: h2hPath(league, game.home_slug, game.away_slug), label: `${game.away_name} vs ${game.home_name}`, sub: "All-time record and every meeting" },
+                  { href: `/${league}/compare?a=${game.home_slug}&b=${game.away_slug}`, label: "Compare the two teams", sub: "Season stats side by side" },
+                ]
+              : [],
+          },
+          {
+            title: game.season_year ? `${formatSeasonLabel(league, game.season_year)} season` : "This season",
+            links: [
+              ...(game.season_year ? [{ href: `/${league}/standings/${game.season_year}`, label: `${formatSeasonLabel(league, game.season_year)} standings` }] : []),
+              ...(supportsMatchweeks(league) && game.season_year ? [{ href: weekIndexPath(league, game.season_year), label: `Every ${weekNoun(league).toLowerCase()} of ${formatSeasonLabel(league, game.season_year)}` }] : []),
+              { href: `/${league}/leaders`, label: `${LEAGUE_LABEL[league]} leaders` },
+            ],
+          },
+        ]}
+      />
 
       {stored && <p className="text-[11px] text-[var(--text-faint)]">Match report stored from the official feed after the final whistle.</p>}
     </div>

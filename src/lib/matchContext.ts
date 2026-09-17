@@ -25,6 +25,8 @@ export interface MatchContext {
   /** Teams in the table the positions refer to. */
   tableSize: number | null;
   week: { label: string; href: string } | null;
+  /** The other games of that round, for "more from this matchweek". */
+  weekGames: GameRow[];
 }
 
 function sideForm(results: ResultRow[], teamId: string, n = 5): FormResult[] {
@@ -106,11 +108,15 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
   });
 
   let week: MatchContext["week"] = null;
+  let weekGames: GameRow[] = [];
   if (supportsMatchweeks(league) && game.season_year != null) {
     const weeks = buildMatchweeks(league, await getSeasonGames(league, game.season_year));
     const w = weeks.find((x) => x.games.some((g) => g.espn_id === game.espn_id));
-    if (w) week = { label: w.label, href: weekPath(league, w.index, game.season_year) };
+    if (w) {
+      week = { label: w.label, href: weekPath(league, w.index, game.season_year) };
+      weekGames = w.games.filter((g) => g.espn_id !== game.espn_id);
+    }
   }
 
-  return { home: side(h), away: side(a), probabilities, tableSize, week };
+  return { home: side(h), away: side(a), probabilities, tableSize, week, weekGames };
 }

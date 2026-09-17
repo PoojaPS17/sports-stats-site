@@ -53,6 +53,10 @@ alter table players add column if not exists is_wicketkeeper boolean;
 -- The slug a row had before accents were handled properly (see slugify); the page
 -- redirects it permanently to the current slug so old links keep working.
 alter table players add column if not exists legacy_slug text;
+-- When the roster fetch last listed this player on team_espn_id. Players who left
+-- keep their last team (box scores from 2017 created many of them) — the current
+-- squad is whoever was seen in the team's latest roster fetch.
+alter table players add column if not exists roster_seen_at timestamptz;
 create index if not exists players_legacy_slug_idx on players (league, legacy_slug) where legacy_slug is not null;
 alter table teams add column if not exists legacy_slug text;
 create index if not exists teams_legacy_slug_idx on teams (league, legacy_slug) where legacy_slug is not null;

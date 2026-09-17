@@ -33,12 +33,12 @@ async function processTeam(league: League, teamEspnId: string) {
     const isWicketkeeper = item.position?.abbreviation === "WK";
 
     await pool.query(
-      `insert into players (league, espn_id, team_espn_id, name, slug, position, headshot_url, is_captain, is_wicketkeeper)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `insert into players (league, espn_id, team_espn_id, name, slug, position, headshot_url, is_captain, is_wicketkeeper, roster_seen_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
        on conflict (league, espn_id) do update set
          team_espn_id = excluded.team_espn_id, name = excluded.name,
          position = excluded.position, headshot_url = excluded.headshot_url,
-         is_captain = excluded.is_captain, is_wicketkeeper = excluded.is_wicketkeeper`,
+         is_captain = excluded.is_captain, is_wicketkeeper = excluded.is_wicketkeeper, roster_seen_at = now()`,
       [
         league,
         athlete.id,

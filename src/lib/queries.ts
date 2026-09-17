@@ -304,12 +304,15 @@ export interface PlayerRow {
   age?: number | null;
   height?: string | null;
   weight?: string | null;
+  /** Listed in the team's latest roster fetch; false for players who have moved on. */
+  on_roster?: boolean;
 }
 
 export async function getPlayerBySlug(league: League, slug: string): Promise<PlayerRow | null> {
   const { rows } = await pool.query(
     `select p.espn_id, p.name, p.slug, p.headshot_url, p.team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
-            t.name as team_name, t.slug as team_slug, t.color as team_color
+            t.name as team_name, t.slug as team_slug, t.color as team_color,
+            (p.team_espn_id is not null and (${ON_ROSTER_SQL})) as on_roster
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      where p.league = $1 and p.slug = $2`,
@@ -568,11 +571,17 @@ export interface RosterPlayer {
   is_wicketkeeper: boolean | null;
 }
 
+// "On the roster" means listed in the team's latest roster fetch. A team with no
+// roster fetch at all (a club that dropped out of the league years ago) keeps every
+// player last seen with it, which is the best record there is.
+export const ON_ROSTER_SQL = `(select max(roster_seen_at) from players r where r.league = p.league and r.team_espn_id = p.team_espn_id) is null
+       or p.roster_seen_at >= (select max(roster_seen_at) from players r where r.league = p.league and r.team_espn_id = p.team_espn_id) - interval '3 days'`;
+
 export async function getTeamRoster(league: League, teamEspnId: string): Promise<RosterPlayer[]> {
   const { rows } = await pool.query(
-    `select espn_id, name, slug, position, jersey, height, weight, age, headshot_url, is_captain, is_wicketkeeper
-     from players where league = $1 and team_espn_id = $2
-     order by is_captain desc nulls last, position, name`,
+    `select p.espn_id, p.name, p.slug, p.position, p.jersey, p.height, p.weight, p.age, p.headshot_url, p.is_captain, p.is_wicketkeeper
+     from players p where p.league = $1 and p.team_espn_id = $2 and (${ON_ROSTER_SQL})
+     order by p.is_captain desc nulls last, p.position, p.name`,
     [league, teamEspnId]
   );
   return rows;

@@ -10,6 +10,8 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GameCard } from "@/components/GameCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
+import { RelatedLinks } from "@/components/RelatedLinks";
+import { getMostFacedOpponents } from "@/lib/related";
 
 export const revalidate = 600;
 
@@ -66,6 +68,9 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
   const pctA = (h2h.winsA / total) * 100;
   const pctD = (h2h.draws / total) * 100;
   const { teamA, teamB } = h2h;
+  const [rivalsA, rivalsB] = await Promise.all([getMostFacedOpponents(league, teamA.espn_id, 7), getMostFacedOpponents(league, teamB.espn_id, 7)]);
+  const rivalLinks = (team: typeof teamA, other: typeof teamA, rivals: typeof rivalsA) =>
+    rivals.filter((r) => r.espn_id !== other.espn_id).slice(0, 6).map((r) => ({ href: h2hPath(league, team.slug, r.slug), label: `${team.name} vs ${r.name}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name }));
 
   const streakText =
     h2h.streak && h2h.streak.length > 1
@@ -160,6 +165,21 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
           </div>
         )}
       </section>
+
+      <RelatedLinks
+        groups={[
+          { title: `More ${teamA.name} head-to-heads`, links: rivalLinks(teamA, teamB, rivalsA) },
+          { title: `More ${teamB.name} head-to-heads`, links: rivalLinks(teamB, teamA, rivalsB) },
+          {
+            title: "Teams",
+            links: [
+              { href: `/${league}/teams/${teamA.slug}`, label: teamA.name, sub: "Schedule, results and roster", image: teamA.logo_url, imageName: teamA.name },
+              { href: `/${league}/teams/${teamB.slug}`, label: teamB.name, sub: "Schedule, results and roster", image: teamB.logo_url, imageName: teamB.name },
+              { href: `/${league}/compare?a=${teamA.slug}&b=${teamB.slug}`, label: "Compare the two teams", sub: "Season stats side by side" },
+            ],
+          },
+        ]}
+      />
     </div>
   );
 }

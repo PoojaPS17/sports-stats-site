@@ -25,12 +25,13 @@ async function processTeam(league: League, teamEspnId: string) {
     try {
       const slug = await uniqueSlugFor(league, item.id, name);
       await pool.query(
-        `insert into players (league, espn_id, team_espn_id, name, slug, position, headshot_url, jersey, height, weight, age)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        `insert into players (league, espn_id, team_espn_id, name, slug, position, headshot_url, jersey, height, weight, age, roster_seen_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
          on conflict (league, espn_id) do update set
            team_espn_id = excluded.team_espn_id, name = excluded.name,
            position = excluded.position, headshot_url = excluded.headshot_url,
-           jersey = excluded.jersey, height = excluded.height, weight = excluded.weight, age = excluded.age`,
+           jersey = excluded.jersey, height = excluded.height, weight = excluded.weight, age = excluded.age,
+           roster_seen_at = now()`,
         [
           league,
           item.id,

@@ -15,6 +15,8 @@ import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
 import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
+import { RelatedLinks } from "@/components/RelatedLinks";
+import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 
 // A past season's stat line is static (it never changes once the season is over), so
 // this can be cached far longer than the live current-season player page.
@@ -111,6 +113,20 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           </section>
         </>
       )}
+
+      <RelatedLinks
+        groups={[
+          {
+            title: `${label} season`,
+            links: [
+              ...(profile?.teams ?? []).map((t) => ({ href: `/${league}/teams/${t.slug}/${season}`, label: `${t.name} ${label}`, sub: "Every result that season", image: t.logo, imageName: t.name })),
+              { href: `/${league}/standings/${season}`, label: `${label} standings` },
+              ...(supportsMatchweeks(league) ? [{ href: weekIndexPath(league, season), label: `Every ${weekNoun(league).toLowerCase()} of ${label}` }] : []),
+            ],
+          },
+          { title: player.name, links: [{ href: basePath, label: `${player.name} career`, sub: "Every season on record, splits, best games and milestones", image: player.headshot_url, imageName: player.name }] },
+        ]}
+      />
 
       {(seasonStats || !profile || profile.games === 0) && <PlayerSeasonStats league={league} stats={seasonStats} seasons={[]} activeSeason={season} basePath={basePath} />}
     </div>

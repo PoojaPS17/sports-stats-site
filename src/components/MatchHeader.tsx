@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
-import type { GameRow } from "@/lib/queries";
+import type { GameRow, League } from "@/lib/queries";
 
 function TeamLine({
+  href,
   name,
   logo,
   color,
@@ -11,6 +13,7 @@ function TeamLine({
   completed,
   won,
 }: {
+  href: string;
   name: string;
   logo: string | null;
   color: string | null;
@@ -21,10 +24,10 @@ function TeamLine({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-3">
+      <Link href={href} className="flex min-w-0 items-center gap-3 hover:text-[var(--accent)]">
         <TeamLogo name={name} logoUrl={logo} color={color} size={40} />
         <span className={`truncate text-lg ${completed && won ? "font-extrabold" : "font-semibold"}`}>{name}</span>
-      </div>
+      </Link>
       {completed && (score !== null || scoreDisplay) && (
         <span className={`shrink-0 tabular-nums ${won ? "text-xl font-extrabold text-[var(--text)]" : "text-lg text-[var(--text-muted)]"}`}>
           {scoreDisplay ?? score}
@@ -34,7 +37,7 @@ function TeamLine({
   );
 }
 
-export function MatchHeader({ game }: { game: GameRow }) {
+export function MatchHeader({ league, game }: { league: League; game: GameRow }) {
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
 
@@ -48,6 +51,7 @@ export function MatchHeader({ game }: { game: GameRow }) {
       </div>
       <div className="flex flex-col gap-3">
         <TeamLine
+          href={`/${league}/teams/${game.away_slug}`}
           name={game.away_name}
           logo={game.away_logo}
           color={game.away_color}
@@ -57,6 +61,7 @@ export function MatchHeader({ game }: { game: GameRow }) {
           won={awayWon}
         />
         <TeamLine
+          href={`/${league}/teams/${game.home_slug}`}
           name={game.home_name}
           logo={game.home_logo}
           color={game.home_color}

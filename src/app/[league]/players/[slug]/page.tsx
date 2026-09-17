@@ -38,6 +38,9 @@ import { PlayerMilestones } from "@/components/PlayerMilestones";
 import { PlayerFormChart } from "@/components/PlayerFormChart";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { GoalMinutesChart } from "@/components/GoalMinutesChart";
+import { RelatedLinks } from "@/components/RelatedLinks";
+import { getTeammates, getPositionPeers } from "@/lib/related";
+import { h2hPath } from "@/lib/h2h";
 
 export const revalidate = 300;
 
@@ -98,6 +101,12 @@ export default async function PlayerPage({
   const basePath = `/${league}/players/${slug}`;
   const sport = playerSport(league);
 
+  // A player who has moved on keeps their last club on record, but not as "their team".
+  const onRoster = player.on_roster !== false;
+  const headerTeam = onRoster ? player.team_name : null;
+  const headerTeamSlug = onRoster ? player.team_slug : null;
+  const lastClub = !onRoster && player.team_name ? [`Last on record with ${player.team_name}`] : [];
+
   const header = (meta: string[], description?: string) => (
     <>
       <Breadcrumbs
@@ -108,7 +117,7 @@ export default async function PlayerPage({
         ]}
       />
       <JsonLd data={athleteSchema(league, player, { position: positionLabel(sport, player.position), description })} />
-      <PlayerHeader league={league} name={player.name} headshotUrl={player.headshot_url} teamName={player.team_name} teamSlug={player.team_slug} teamColor={player.team_color} meta={meta} />
+      <PlayerHeader league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamSlug={headerTeamSlug} teamColor={player.team_color} meta={[...meta, ...lastClub]} />
       <Link href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
         Compare {player.name} with another player →
       </Link>
@@ -145,6 +154,23 @@ export default async function PlayerPage({
   const summary = profileSummary(league, player, profile);
   const soccer = sport === "soccer";
   const bands = goals ? goalBands(goals.clocks) : [];
+
+  // The link mesh: squad-mates, the league's best at this position, and the
+  // head-to-head pages behind the opponents this player has faced most.
+  const [teammates, peers] = await Promise.all([
+    player.team_espn_id && onRoster ? getTeammates(league, player.team_espn_id, player.espn_id) : [],
+    getPositionPeers(league, player.position, player.espn_id),
+  ]);
+  const teamSlug = player.team_slug ?? profile.teams[0]?.slug ?? null;
+  const teamName = player.team_name ?? profile.teams[0]?.name ?? null;
+  const rivals =
+    teamSlug && teamName
+      ? profile.opponents
+          .filter((o) => o.slug !== teamSlug)
+          .slice(0, 6)
+          .map((o) => ({ href: h2hPath(league, teamSlug, o.slug), label: `${teamName} vs ${o.label}`, sub: `${o.games} ${o.games === 1 ? "game" : "games"} played in`, image: o.logo, imageName: o.label }))
+      : [];
+  const compareLinks = peers.slice(0, 3).map((p) => ({ href: `/${league}/compare/players?a=${slug}&b=${p.href.split("/").pop()}`, label: `${player.name} vs ${p.label}`, sub: "Season stats side by side" }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -218,6 +244,15 @@ export default async function PlayerPage({
           </section>
 
           {feedStats && <PlayerSeasonStats league={league} stats={feedStats} seasons={seasons} activeSeason={latest} basePath={basePath} />}
+
+          <RelatedLinks
+            groups={[
+              { title: headerTeam ? `${headerTeam} squad` : "Teammates", links: teammates },
+              { title: `${LEAGUE_LABEL[league]} ${positionLabel(sport, player.position)?.toLowerCase() ?? "position"} leaders`, links: peers },
+              { title: "Head-to-head", links: rivals },
+              { title: "Compare", links: compareLinks },
+            ]}
+          />
 
           <p className="text-[11px] text-[var(--text-faint)]">
             Career figures are summed from the {profile.games} {LEAGUE_LABEL[league]} {soccer ? "appearances" : "games"} on record here

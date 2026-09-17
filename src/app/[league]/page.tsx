@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { isLeague, LEAGUE_LABEL, leagueNameWithArticle, getRecentAndUpcoming, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
+import { getCurrentSeasonTeams } from "@/lib/related";
+import { TeamLogo } from "@/components/TeamLogo";
 import { pageMeta } from "@/lib/metadata";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
@@ -37,7 +39,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
   const { league } = await params;
   if (!isLeague(league)) notFound();
 
-  const games = await getRecentAndUpcoming(league, 2, 7);
+  const [games, teams] = await Promise.all([getRecentAndUpcoming(league, 2, 7), getCurrentSeasonTeams(league)]);
   const groups = groupByDay(games);
   // This page is a rolling recent-and-upcoming window, not a live-only view — for a
   // seasonal competition (NBA preseason, IPL/BBL between tournaments) that window can
@@ -88,6 +90,20 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
           </div>
         </section>
       ))}
+
+      {teams.length > 0 && (
+        <section>
+          <SectionHeader action={{ label: "All teams", href: `/${league}/teams` }}>Teams</SectionHeader>
+          <div className="flex flex-wrap gap-2">
+            {teams.map((t) => (
+              <Link key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="card flex items-center gap-2 px-3 py-1.5 text-sm font-medium hover:text-[var(--accent)]">
+                <TeamLogo name={t.name} logoUrl={t.logo_url} color={t.color} size={18} />
+                {t.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
