@@ -1,22 +1,9 @@
 import { pool } from "./db";
+import { isCricketLeague } from "./leagues";
+import type { League } from "./leagues";
 
-export type League = "nba" | "nfl" | "epl" | "ipl";
-export const LEAGUES: League[] = ["epl", "nfl", "nba", "ipl"];
-export const LEAGUE_LABEL: Record<League, string> = { nba: "NBA", nfl: "NFL", epl: "Premier League", ipl: "IPL" };
-
-export function isLeague(value: string): value is League {
-  return LEAGUES.includes(value as League);
-}
-
-// ESPN labels a season by its *ending* year for NBA ("2023" = the 2022-23 season) but
-// by its *starting* year for NFL/EPL/IPL ("2024" = the 2024 NFL season / 2024-25 EPL
-// season / 2024 IPL season). Render the conventional human label for each.
-export function formatSeasonLabel(league: League, year: number | null): string | null {
-  if (!year) return null;
-  if (league === "nba") return `${year - 1}-${String(year).slice(2)}`;
-  if (league === "epl") return `${year}-${String(year + 1).slice(2)}`;
-  return String(year);
-}
+export type { League } from "./leagues";
+export { LEAGUES, CRICKET_LEAGUES, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, formatSeasonLabel } from "./leagues";
 
 export interface GameRow {
   league: League;
@@ -66,6 +53,18 @@ const GAME_SELECT = `
 export async function getGameByEspnId(league: League, espnId: string): Promise<GameRow | null> {
   const { rows } = await pool.query(`${GAME_SELECT} where g.league = $1 and g.espn_id = $2`, [league, espnId]);
   return rows[0] ?? null;
+}
+
+// Every game tagged with a playoff-stage round for a season, in chronological order —
+// powers the standings-page season summary (Qualifier 1/Eliminator/Final for IPL,
+// each playoff round/series for NBA/NFL). Not meaningful for EPL, which has no
+// postseason of its own (round is always null there).
+export async function getSeasonPlayoffGames(league: League, season: number): Promise<GameRow[]> {
+  const { rows } = await pool.query(
+    `${GAME_SELECT} where g.league = $1 and g.season_year = $2 and g.round is not null and g.completed = true order by g.date asc`,
+    [league, season]
+  );
+  return rows;
 }
 
 export async function getGamesByDate(league: League, dateISO: string): Promise<GameRow[]> {
@@ -128,7 +127,13 @@ const STANDING_SELECT = `
   from standings s
   join teams t on t.league = s.league and t.espn_id = s.team_espn_id
 `;
-const STANDING_ORDER = `order by s.conference, s.points desc nulls last, s.net_run_rate desc nulls last, s.wins desc, s.losses asc`;
+// Soccer's real tiebreaker after points is goal difference — without it, the sort can
+// misorder two teams on equal points (which matters for showing the right champion
+// and relegated teams in the season summary), so it's added ahead of net_run_rate
+// (which only ever applies to cricket, where goals_for/against are always null).
+const STANDING_ORDER = `order by s.conference, s.points desc nulls last,
+  (s.goals_for - s.goals_against) desc nulls last, s.goals_for desc nulls last,
+  s.net_run_rate desc nulls last, s.wins desc, s.losses asc`;
 
 // The `standings` table now holds every backfilled historical season too, so this
 // must pin to the most recent one rather than returning every season's rows mixed
@@ -352,40 +357,46 @@ export interface LeaderRow {
 }
 
 export interface LeaderCategory {
-  key: string;
-  column?: string; // player_season_stats column, for the ESPN-season-endpoint path (nba only)
-  gameLabel?: string; // stat label inside player_game_stats.stats[key], for the self-computed path
+  column: string; // player_season_stats column
   label: string;
   unit: string;
 }
 
 export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
   nba: [
-    { key: "points", column: "pts_avg", label: "Points", unit: "PPG" },
-    { key: "rebounds", column: "reb_avg", label: "Rebounds", unit: "RPG" },
-    { key: "assists", column: "ast_avg", label: "Assists", unit: "APG" },
+    { column: "pts_avg", label: "Points", unit: "PPG" },
+    { column: "reb_avg", label: "Rebounds", unit: "RPG" },
+    { column: "ast_avg", label: "Assists", unit: "APG" },
   ],
   nfl: [
-    { key: "passing", gameLabel: "YDS", label: "Passing Yards", unit: "YDS" },
-    { key: "rushing", gameLabel: "YDS", label: "Rushing Yards", unit: "YDS" },
-    { key: "receiving", gameLabel: "YDS", label: "Receiving Yards", unit: "YDS" },
+    { column: "passing_yards", label: "Passing Yards", unit: "YDS" },
+    { column: "rushing_yards", label: "Rushing Yards", unit: "YDS" },
+    { column: "receiving_yards", label: "Receiving Yards", unit: "YDS" },
   ],
   epl: [
-    { key: "match", gameLabel: "G", label: "Goals", unit: "GLS" },
-    { key: "match", gameLabel: "A", label: "Assists", unit: "AST" },
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
   ],
-  // No per-player match data for cricket yet (ESPN's roster/boxscore endpoints
-  // 404 for this competition) — scores and standings only for now.
+  // Not wired to a season-totals leaderboard yet — cricket's per-player numbers come
+  // from player_game_stats (see getPlayerCricketCareer), a different shape than the
+  // player_season_stats columns this leaderboard reads from. The batting/bowling
+  // data itself exists (see the Centuries page), a league-wide leaders board just
+  // hasn't been built on top of it yet.
   ipl: [],
+  bbl: [],
+  cwc: [],
+  t20wc: [],
+  // Same soccer shape as EPL, but not yet wired: would need the same leagueSlug
+  // filter added for La Liga's rows the way EPL's already is.
+  laliga: [],
 };
 
-const LEADER_COLUMNS = new Set(
-  Object.values(LEADER_CATEGORIES)
-    .flat()
-    .map((c) => c.column)
-    .filter((c): c is string => Boolean(c))
-);
+const LEADER_COLUMNS = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) => cats.map((c) => c.column)));
 
+// Every column here is a season total (or season average, for NBA) sourced from
+// player_season_stats, which now holds up to 10 years of history per player — so this
+// must pin to the most recent season, or it'd silently pick whichever of a player's
+// last 10 years happened to be their best, mixed arbitrarily across different players.
 export async function getLeaders(league: League, column: string, limit = 10): Promise<LeaderRow[]> {
   if (!LEADER_COLUMNS.has(column)) throw new Error(`Unknown leader column: ${column}`);
   const { rows } = await pool.query(
@@ -395,6 +406,7 @@ export async function getLeaders(league: League, column: string, limit = 10): Pr
      join players p on p.league = pss.league and p.espn_id = pss.player_espn_id
      left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
      where pss.league = $1 and pss.${column} is not null
+       and pss.season = (select max(season) from player_season_stats where league = $1)
      order by pss.${column} desc
      limit $2`,
     [league, limit]
@@ -402,34 +414,12 @@ export async function getLeaders(league: League, column: string, limit = 10): Pr
   return rows;
 }
 
-const GAME_STAT_CATEGORY = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) => cats.map((c) => c.key)));
-
-// ESPN's per-player season-stats endpoint lags the live season (it may not have a row
-// for the in-progress year for days/weeks), so NFL leaders are computed directly from
-// our own accumulated game logs instead — always accurate, no external lag.
-export async function getLeadersFromGameLogs(
-  league: League,
-  category: string,
-  label: string,
-  limit = 10
-): Promise<LeaderRow[]> {
-  if (!GAME_STAT_CATEGORY.has(category)) throw new Error(`Unknown leader category: ${category}`);
-  const { rows } = await pool.query(
-    `select p.espn_id as player_espn_id, p.name, p.slug, p.headshot_url,
-            t.name as team_name, t.slug as team_slug,
-            sum(replace(pgs.stats->$2->>$3, ',', '')::numeric) as value
-     from player_game_stats pgs
-     join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
-     left join teams t on t.league = pgs.league and t.espn_id = pgs.team_espn_id
-     where pgs.league = $1
-       and (pgs.stats->$2->>$3) ~ '^[0-9,]+$'
-     group by p.espn_id, p.name, p.slug, p.headshot_url, t.name, t.slug
-     having sum(replace(pgs.stats->$2->>$3, ',', '')::numeric) > 0
-     order by value desc
-     limit $4`,
-    [league, category, label, limit]
-  );
-  return rows;
+// The season the Leaders page's boards are for — same "most recent season on file"
+// pin `getLeaders` uses, surfaced so the page can label itself unambiguously instead
+// of leaving the reader to guess what time window these totals cover.
+export async function getLeadersSeason(league: League): Promise<number | null> {
+  const { rows } = await pool.query(`select max(season) as season from player_season_stats where league = $1`, [league]);
+  return rows[0]?.season ?? null;
 }
 
 export interface RosterPlayer {
@@ -489,6 +479,258 @@ export async function getPlayerSeasons(league: League, playerEspnId: string): Pr
     [league, playerEspnId]
   );
   return rows.map((r) => r.season as number);
+}
+
+export type TopGamesWindow = "today" | "30d" | "quarter" | "alltime";
+
+export const TOP_GAMES_WINDOWS: { key: TopGamesWindow; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "30d", label: "Last 30 Days" },
+  { key: "quarter", label: "This Quarter" },
+  { key: "alltime", label: "All-Time" },
+];
+
+const WINDOW_INTERVAL: Record<TopGamesWindow, string | null> = {
+  today: "1 day",
+  "30d": "30 days",
+  quarter: "90 days",
+  alltime: null,
+};
+
+export interface TopGameRow extends GameRow {
+  views: number;
+}
+
+export interface TopGamesFilter {
+  country?: string; // ISO country code from real visitor geolocation, e.g. "US", "GB", "IN"
+  platform?: "ios" | "android" | "desktop";
+}
+
+// Ranked by real page views on our own match-detail pages (see the ViewTracker
+// component and /api/track-view) — the same way an App Store chart is built from
+// actual usage, not an editorial guess. Empty until the site has real traffic.
+// Country/platform come from the visitor's own request (IP geolocation, User-Agent),
+// not from any app store's own trending data — there's no free API for that.
+export async function getTopGames(window: TopGamesWindow, filter: TopGamesFilter = {}, limit = 10): Promise<TopGameRow[]> {
+  const interval = WINDOW_INTERVAL[window];
+  const { rows } = await pool.query(
+    `select g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
+            g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
+            g.status_state, g.status_detail, g.status_summary, g.round, g.completed,
+            g.home_team_espn_id, g.away_team_espn_id,
+            ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
+            at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color,
+            v.views
+     from (
+       select league, game_espn_id, count(*) as views
+       from game_views
+       where ($2::interval is null or viewed_at > now() - $2::interval)
+         and ($3::text is null or country = $3)
+         and ($4::text is null or platform = $4)
+       group by league, game_espn_id
+       order by count(*) desc
+       limit $1
+     ) v
+     join games g on g.league = v.league and g.espn_id = v.game_espn_id
+     join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
+     join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
+     order by v.views desc`,
+    [limit, interval, filter.country ?? null, filter.platform ?? null]
+  );
+  return rows;
+}
+
+// Every country we've actually seen real traffic from, most-viewed first — powers the
+// country picker with only options that mean something, instead of a static list of
+// countries we may have zero data for.
+export async function getTrackedCountries(): Promise<{ country: string; views: number }[]> {
+  const { rows } = await pool.query(
+    `select country, count(*) as views from game_views where country is not null group by country order by views desc`
+  );
+  return rows;
+}
+
+export interface CricketCareerStats {
+  matches: number;
+  inningsBatted: number;
+  runs: number;
+  ballsFaced: number;
+  notOuts: number;
+  hundreds: number;
+  fifties: number;
+  highestScore: number | null;
+  average: number | null;
+  strikeRate: number | null;
+  inningsBowled: number;
+  overs: number;
+  runsConceded: number;
+  wickets: number;
+  economy: number | null;
+  catches: number;
+}
+
+// Computed fresh from every backfilled match's per-player figures (see
+// backfill-cricket-player-stats.ts) rather than a maintained running total — always
+// correct, and re-running the backfill can never double-count. Only covers whichever
+// cricket competitions we've backfilled (IPL, Big Bash, World Cups) — we have no
+// bilateral Test/ODI/T20I data source, so this is real but partial for any player who
+// also plays international cricket outside those tournaments.
+export async function getPlayerCricketCareer(league: League, playerEspnId: string): Promise<CricketCareerStats | null> {
+  if (!isCricketLeague(league)) return null;
+  const { rows } = await pool.query(
+    `select
+       count(distinct game_espn_id) as matches,
+       count(*) filter (where stats->'batting' is not null) as innings_batted,
+       coalesce(sum((stats->'batting'->>'runs')::int), 0) as runs,
+       coalesce(sum((stats->'batting'->>'ballsFaced')::int), 0) as balls_faced,
+       count(*) filter (where (stats->'batting'->>'notOut')::boolean is true) as not_outs,
+       count(*) filter (where (stats->'batting'->>'runs')::int >= 100) as hundreds,
+       count(*) filter (where (stats->'batting'->>'runs')::int >= 50 and (stats->'batting'->>'runs')::int < 100) as fifties,
+       max((stats->'batting'->>'runs')::int) as highest_score,
+       count(*) filter (where stats->'bowling' is not null) as innings_bowled,
+       coalesce(sum((stats->'bowling'->>'overs')::numeric), 0) as overs,
+       coalesce(sum((stats->'bowling'->>'conceded')::int), 0) as runs_conceded,
+       coalesce(sum((stats->'bowling'->>'wickets')::int), 0) as wickets,
+       coalesce(sum((stats->>'catches')::int), 0) as catches
+     from player_game_stats
+     where league = $1 and player_espn_id = $2`,
+    [league, playerEspnId]
+  );
+  const r = rows[0];
+  if (!r || Number(r.matches) === 0) return null;
+
+  const inningsBatted = Number(r.innings_batted);
+  const notOuts = Number(r.not_outs);
+  const runs = Number(r.runs);
+  const ballsFaced = Number(r.balls_faced);
+  const overs = Number(r.overs);
+  const runsConceded = Number(r.runs_conceded);
+  const dismissals = inningsBatted - notOuts;
+
+  return {
+    matches: Number(r.matches),
+    inningsBatted,
+    runs,
+    ballsFaced,
+    notOuts,
+    hundreds: Number(r.hundreds),
+    fifties: Number(r.fifties),
+    highestScore: r.highest_score === null ? null : Number(r.highest_score),
+    average: dismissals > 0 ? runs / dismissals : null,
+    strikeRate: ballsFaced > 0 ? (runs / ballsFaced) * 100 : null,
+    inningsBowled: Number(r.innings_bowled),
+    overs,
+    runsConceded,
+    wickets: Number(r.wickets),
+    economy: overs > 0 ? runsConceded / overs : null,
+    catches: Number(r.catches),
+  };
+}
+
+export type CricketSplitDimension = "team" | "opponent" | "venue";
+
+export const CRICKET_SPLIT_DIMENSIONS: { key: CricketSplitDimension; label: string }[] = [
+  { key: "team", label: "By Team" },
+  { key: "opponent", label: "By Opponent" },
+  { key: "venue", label: "By Venue" },
+];
+
+export interface CricketSplitRow {
+  key: string;
+  label: string;
+  slug: string | null;
+  matches: number;
+  runs: number;
+  wickets: number;
+}
+
+export async function getPlayerCricketSplits(
+  league: League,
+  playerEspnId: string,
+  dimension: CricketSplitDimension
+): Promise<CricketSplitRow[]> {
+  if (dimension === "venue") {
+    const { rows } = await pool.query(
+      `select g.venue as key, g.venue as label, count(distinct pgs.game_espn_id) as matches,
+              coalesce(sum((pgs.stats->'batting'->>'runs')::int), 0) as runs,
+              coalesce(sum((pgs.stats->'bowling'->>'wickets')::int), 0) as wickets
+       from player_game_stats pgs
+       join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+       where pgs.league = $1 and pgs.player_espn_id = $2 and g.venue is not null
+       group by g.venue
+       order by runs desc`,
+      [league, playerEspnId]
+    );
+    return rows.map((r) => ({ ...r, slug: null }));
+  }
+
+  const teamIdExpr =
+    dimension === "opponent"
+      ? `case when pgs.team_espn_id = g.home_team_espn_id then g.away_team_espn_id else g.home_team_espn_id end`
+      : `pgs.team_espn_id`;
+
+  const { rows } = await pool.query(
+    `select t.espn_id as key, t.name as label, t.slug as slug, count(distinct pgs.game_espn_id) as matches,
+            coalesce(sum((pgs.stats->'batting'->>'runs')::int), 0) as runs,
+            coalesce(sum((pgs.stats->'bowling'->>'wickets')::int), 0) as wickets
+     from player_game_stats pgs
+     join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+     join teams t on t.league = $1 and t.espn_id = (${teamIdExpr})
+     where pgs.league = $1 and pgs.player_espn_id = $2
+     group by t.espn_id, t.name, t.slug
+     order by runs desc`,
+    [league, playerEspnId]
+  );
+  return rows;
+}
+
+export interface CenturyRow {
+  player_espn_id: string;
+  player_name: string;
+  player_slug: string;
+  headshot_url: string | null;
+  team_name: string;
+  team_slug: string;
+  team_logo: string | null;
+  team_color: string | null;
+  opponent_name: string;
+  opponent_slug: string;
+  runs: number;
+  balls_faced: number;
+  fours: number;
+  sixes: number;
+  not_out: boolean;
+  date: string;
+  venue: string | null;
+  round: string | null;
+  status_summary: string | null;
+}
+
+// Every century (100+ runs in an innings) on record for one cricket competition,
+// computed fresh from the backfilled per-match batting figures — not a maintained
+// list, so it's always consistent with whatever games are actually in the database.
+export async function getCricketCenturies(league: League): Promise<CenturyRow[]> {
+  const { rows } = await pool.query(
+    `select p.espn_id as player_espn_id, p.name as player_name, p.slug as player_slug, p.headshot_url,
+            t.name as team_name, t.slug as team_slug, t.logo_url as team_logo, t.color as team_color,
+            ot.name as opponent_name, ot.slug as opponent_slug,
+            (pgs.stats->'batting'->>'runs')::int as runs,
+            (pgs.stats->'batting'->>'ballsFaced')::int as balls_faced,
+            (pgs.stats->'batting'->>'fours')::int as fours,
+            (pgs.stats->'batting'->>'sixes')::int as sixes,
+            coalesce((pgs.stats->'batting'->>'notOut')::boolean, false) as not_out,
+            g.date, g.venue, g.round, g.status_summary
+     from player_game_stats pgs
+     join players p on p.league = $1 and p.espn_id = pgs.player_espn_id
+     join teams t on t.league = $1 and t.espn_id = pgs.team_espn_id
+     join games g on g.league = $1 and g.espn_id = pgs.game_espn_id
+     join teams ot on ot.league = $1
+       and ot.espn_id = (case when pgs.team_espn_id = g.home_team_espn_id then g.away_team_espn_id else g.home_team_espn_id end)
+     where pgs.league = $1 and (pgs.stats->'batting'->>'runs')::int >= 100
+     order by g.date desc`,
+    [league]
+  );
+  return rows;
 }
 
 export async function getLastUpdated(): Promise<string | null> {

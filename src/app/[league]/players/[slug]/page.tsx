@@ -1,18 +1,36 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, getPlayerBySlug, getPlayerGameLog, getPlayerSeasonStatsBySeason, getPlayerSeasons } from "@/lib/queries";
+import {
+  isLeague,
+  isCricketLeague,
+  getPlayerBySlug,
+  getPlayerGameLog,
+  getPlayerSeasonStatsBySeason,
+  getPlayerSeasons,
+  getPlayerCricketCareer,
+  getPlayerCricketSplits,
+  CRICKET_SPLIT_DIMENSIONS,
+  type CricketSplitDimension,
+} from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 import { SectionHeader } from "@/components/SectionHeader";
 import { PlayerHeader } from "@/components/PlayerHeader";
 import { PlayerSeasonStats, StatGroup } from "@/components/PlayerSeasonStats";
+import { CricketCareer } from "@/components/CricketCareer";
 
 export const revalidate = 300;
 
+function isSplitDimension(value: string | undefined): value is CricketSplitDimension {
+  return CRICKET_SPLIT_DIMENSIONS.some((d) => d.key === value);
+}
+
 export default async function PlayerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ league: string; slug: string }>;
+  searchParams: Promise<{ split?: string }>;
 }) {
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
@@ -20,12 +38,30 @@ export default async function PlayerPage({
   const player = await getPlayerBySlug(league, slug);
   if (!player) notFound();
 
-  const seasons = await getPlayerSeasons(league, player.espn_id);
-  const activeSeason = seasons[0] ?? null;
-  const [gameLog, seasonStats] = await Promise.all([
-    getPlayerGameLog(league, player.espn_id),
-    activeSeason ? getPlayerSeasonStatsBySeason(league, player.espn_id, activeSeason) : Promise.resolve(null),
-  ]);
+  const basePath = `/${league}/players/${slug}`;
+  const gameLog = await getPlayerGameLog(league, player.espn_id);
+
+  let cricketSection = null;
+  let seasonSection = null;
+
+  if (isCricketLeague(league)) {
+    const { split: splitParam } = await searchParams;
+    const activeSplit: CricketSplitDimension = isSplitDimension(splitParam) ? splitParam : "team";
+    const [career, splits] = await Promise.all([
+      getPlayerCricketCareer(league, player.espn_id),
+      getPlayerCricketSplits(league, player.espn_id, activeSplit),
+    ]);
+    cricketSection = career && (
+      <CricketCareer league={league} career={career} splits={splits} activeSplit={activeSplit} basePath={basePath} />
+    );
+  } else {
+    const seasons = await getPlayerSeasons(league, player.espn_id);
+    const activeSeason = seasons[0] ?? null;
+    const seasonStats = activeSeason ? await getPlayerSeasonStatsBySeason(league, player.espn_id, activeSeason) : null;
+    seasonSection = (
+      <PlayerSeasonStats league={league} stats={seasonStats} seasons={seasons} activeSeason={activeSeason} basePath={basePath} />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,13 +75,8 @@ export default async function PlayerPage({
 
       <AdSlot label="Player page top" />
 
-      <PlayerSeasonStats
-        league={league}
-        stats={seasonStats}
-        seasons={seasons}
-        activeSeason={activeSeason}
-        basePath={`/${league}/players/${slug}`}
-      />
+      {cricketSection}
+      {seasonSection}
 
       <section>
         <SectionHeader>Game Log</SectionHeader>

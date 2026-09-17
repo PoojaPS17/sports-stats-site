@@ -25,19 +25,34 @@ function parseWinner(raw: unknown): boolean | null {
   return null;
 }
 
-// ESPN's cricket `description` reads like "Qualifier 1 (N), Indian Premier League at
-// Chennai, May 23 2023" or, for an ordinary league match, "69th Match (D/N), Indian
-// Premier League at Mumbai, May 21 2023". Every completed match previously showed a
-// generic "Final" status pill regardless of stage — misleading for IPL specifically,
-// since playoff matches (Qualifier 1/2, Eliminator) got buried under that label and
-// the real Final was indistinguishable from any other completed match. Pull the real
-// stage name out for playoff matches; an ordinary numbered match returns null so the
-// UI falls back to the normal "Final" (= game over) badge.
-function parseRound(description: unknown): string | null {
-  if (typeof description !== "string") return null;
-  const stage = description.match(/^(.+?)\s*\([DN/]+\)/)?.[1]?.trim();
-  if (!stage || /^\d+(st|nd|rd|th)\s+Match$/i.test(stage)) return null;
-  return stage;
+// Every completed match previously showed a generic "Final" status pill regardless of
+// stage — correct broadcast shorthand for an ordinary NBA/NFL/EPL game, but misleading
+// once real stages exist (IPL playoffs, NBA/NFL postseason rounds), and uninformative
+// even for an ordinary cricket match (every one of a team's 14 league games looked
+// identical). Pull whatever real stage/round info each sport actually exposes instead.
+function parseRound(ev: any): string | null {
+  // Cricket: `description` reads like "Qualifier 1 (N), Indian Premier League at
+  // Chennai, May 23 2023" for a playoff match, or "69th Match (D/N), Indian Premier
+  // League at Mumbai, May 21 2023" for an ordinary league one — shorten the latter to
+  // "Match 69" instead of discarding it, so every card shows something specific.
+  if (typeof ev.description === "string") {
+    const stage = ev.description.match(/^(.+?)\s*\([DN/]+\)/)?.[1]?.trim();
+    if (!stage) return null;
+    const numbered = stage.match(/^(\d+)(?:st|nd|rd|th)\s+Match$/i);
+    return numbered ? `Match ${numbered[1]}` : stage;
+  }
+  // NBA/NFL: a `notes` entry like {"type":"event","headline":"AFC Wild Card Playoffs"}
+  // or "NBA Finals - Game 6" exists on real postseason games, but the *same* notes
+  // shape also appears on plenty of regular-season games with special billing (NBA
+  // Cup group-stage games say "NBA Cup - Group Play"; league also brands one-off
+  // international games like "NBA Mexico City Game 2025") — those still count toward
+  // the regular-season standings and aren't a playoff round, so a notes headline alone
+  // isn't a safe signal. `seasonType.type === 3` is: it's ESPN's own authoritative
+  // regular-season/postseason classification for the event, independent of how or why
+  // it carries a notes tag.
+  if (ev.seasonType?.type !== 3) return null;
+  const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
+  return typeof headline === "string" ? headline : null;
 }
 
 // Upserts the game itself, plus the home/away teams it references (from the event's
@@ -94,7 +109,7 @@ export async function upsertEvent(league: League, ev: any) {
       status?.type?.state ?? null,
       status?.type?.detail ?? null,
       status?.summary ?? null,
-      parseRound(ev.description),
+      parseRound(ev),
       status?.period ?? null,
       status?.displayClock ?? null,
       // Cricket's status.type has no `completed` boolean at all (unlike NBA/NFL/soccer,

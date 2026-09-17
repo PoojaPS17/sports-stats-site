@@ -2,8 +2,15 @@ import { pool } from "./lib/db";
 import { fetchTeams, fetchCricketTeams, type League } from "./lib/espn";
 import { upsertTeam } from "./lib/teams";
 
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+
+// Cricket's team source is the current scoreboard's own embedded `teams` array (its
+// /teams endpoint 404s) — that's 0 teams for a tournament that isn't currently in
+// season (e.g. the World Cups, active only every 2-4 years), which is fine: the
+// games backfill upserts every team it encounters as a side effect of each event, so
+// this is a nice-to-have head start for cricket, not the only source.
 async function seedLeague(league: League) {
-  if (league === "ipl") {
+  if (CRICKET_LEAGUES.includes(league)) {
     const teams = await fetchCricketTeams(league);
     for (const team of teams) await upsertTeam(league, team);
     console.log(`[seed-teams] ${league}: upserted ${teams.length} teams`);
@@ -16,7 +23,7 @@ async function seedLeague(league: League) {
   console.log(`[seed-teams] ${league}: upserted ${teams.length} teams`);
 }
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl", "bbl", "cwc", "t20wc"];
 
 async function main() {
   for (const league of LEAGUES) {

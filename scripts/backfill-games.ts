@@ -13,6 +13,7 @@ import { upsertEvent } from "./lib/games";
 
 const YEARS_BACK = 10;
 const REQUEST_DELAY_MS = 120;
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,21 +34,32 @@ async function backfillViaTeamSchedules(league: League) {
   const seasons = seasonsToTry();
   const seen = new Set<string>();
   let gameCount = 0;
+  // The default (unparameterized) team-schedule call only returns the regular season
+  // — postseason games (and their round names, e.g. "NBA Finals - Game 6", "Super Bowl
+  // LVIII") need an explicit seasontype=3 request. Not meaningful for EPL (no playoffs
+  // in the league itself) or IPL (handled separately, and its scoreboard-by-season
+  // already includes its own playoff stage within the one request).
+  const seasonTypes = league === "nba" || league === "nfl" ? [undefined, 3] : [undefined];
 
   for (const { espn_id: teamId } of teams) {
     for (const season of seasons) {
-      try {
-        const data = await fetchTeamSchedule(league, teamId, season);
-        for (const ev of data.events ?? []) {
-          if (seen.has(ev.id)) continue;
-          seen.add(ev.id);
-          await upsertEvent(league, ev);
-          gameCount++;
+      for (const seasontype of seasonTypes) {
+        try {
+          const data = await fetchTeamSchedule(league, teamId, season, seasontype);
+          for (const ev of data.events ?? []) {
+            if (seen.has(ev.id)) continue;
+            seen.add(ev.id);
+            await upsertEvent(league, ev);
+            gameCount++;
+          }
+        } catch (err) {
+          console.error(
+            `[backfill-games] ${league} team ${teamId} season ${season}${seasontype ? ` (postseason)` : ""} failed:`,
+            err instanceof Error ? err.message : err
+          );
         }
-      } catch (err) {
-        console.error(`[backfill-games] ${league} team ${teamId} season ${season} failed:`, err instanceof Error ? err.message : err);
+        await sleep(REQUEST_DELAY_MS);
       }
-      await sleep(REQUEST_DELAY_MS);
     }
   }
   console.log(`[backfill-games] ${league}: scanned ${teams.length} teams x ${seasons.length} seasons, upserted ${gameCount} games`);
@@ -55,8 +67,9 @@ async function backfillViaTeamSchedules(league: League) {
 
 // Cricket: the competition id in the URL path (e.g. IPL's 8048) only resolves to the
 // *current* season by default, but `scoreboard?season=YYYY` returns that whole
-// season's matches in one call — so one request per year covers all of IPL history,
-// same order-of-magnitude cost as the per-team-schedule approach used for the others.
+// season's matches in one call — so one request per year covers all of that
+// competition's history, same order-of-magnitude cost as the per-team-schedule
+// approach used for the others.
 async function backfillCricketViaSeasonScoreboard(league: League) {
   const currentYear = new Date().getUTCFullYear();
   const seen = new Set<string>();
@@ -81,11 +94,11 @@ async function backfillCricketViaSeasonScoreboard(league: League) {
 
 async function main() {
   const target = process.argv[2] as League | undefined;
-  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "ipl"];
+  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "ipl", "bbl", "cwc", "t20wc"];
 
   for (const league of leagues) {
     console.log(`[backfill-games] starting ${league} (last ${YEARS_BACK} years)...`);
-    if (league === "ipl") {
+    if (CRICKET_LEAGUES.includes(league)) {
       await backfillCricketViaSeasonScoreboard(league);
     } else {
       await backfillViaTeamSchedules(league);

@@ -1,11 +1,31 @@
 import { pool } from "./db";
 import { slugify, type League } from "./espn";
 
+// A hex color comes back bare ("552583") from the site API's /teams and scoreboard
+// `teams[]` shapes, but already `#`-prefixed ("#14c9e1") from an event's own embedded
+// home/away team object (cricket backfill's only team source for most competitions,
+// since there's no working /teams endpoint) — strip any existing "#" before adding
+// one so it's never doubled into an invalid "##...".
+function normalizeColor(raw: unknown): string | null {
+  if (!raw) return null;
+  return `#${String(raw).replace(/^#/, "")}`;
+}
+
+// ESPN occasionally has a not-yet-determined playoff/qualifier slot show up as a
+// placeholder "team" (e.g. "TBA") in an event's competitor data — not a real team,
+// so it shouldn't get its own team page or clutter a teams index.
+function isPlaceholderTeam(name: string): boolean {
+  return /^(tba|tbd|to be (announced|determined))$/i.test(name.trim());
+}
+
 export async function upsertTeam(league: League, team: any) {
-  if (!team?.id) return;
-  const logo = team.logos?.find((l: any) => l.rel?.includes("default"))?.href ?? team.logos?.[0]?.href ?? null;
-  const color = team.color ? `#${team.color}` : null;
-  const alternateColor = team.alternateColor ? `#${team.alternateColor}` : null;
+  const name = team?.displayName ?? team?.name;
+  if (!team?.id || !name || isPlaceholderTeam(name)) return;
+  // The event-embedded team object (cricket's usual source) has a singular `logo`
+  // string field instead of the site API's `logos` array.
+  const logo = team.logos?.find((l: any) => l.rel?.includes("default"))?.href ?? team.logos?.[0]?.href ?? team.logo ?? null;
+  const color = normalizeColor(team.color);
+  const alternateColor = normalizeColor(team.alternateColor);
   await pool.query(
     `insert into teams (league, espn_id, name, slug, abbreviation, logo_url, color, alternate_color)
      values ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -18,6 +38,6 @@ export async function upsertTeam(league: League, team: any) {
        logo_url = coalesce(excluded.logo_url, teams.logo_url),
        color = coalesce(excluded.color, teams.color),
        alternate_color = coalesce(excluded.alternate_color, teams.alternate_color)`,
-    [league, team.id, team.displayName ?? team.name, slugify(team.displayName ?? team.name), team.abbreviation ?? null, logo, color, alternateColor]
+    [league, team.id, name, slugify(name), team.abbreviation ?? null, logo, color, alternateColor]
   );
 }

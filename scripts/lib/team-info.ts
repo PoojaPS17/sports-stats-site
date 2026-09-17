@@ -1,11 +1,13 @@
 import { pool } from "./db";
 import { fetchCoreTeam, fetchByRef, type League } from "./espn";
 
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+
 // Fetches venue + current head coach for one team and stores it on the `teams` row.
-// Not available for IPL (cricket's team-level core-API endpoints 404 for this
-// competition, same limitation as the site API's /teams/{id} and /roster).
+// Not available for any cricket competition (their team-level core-API endpoints
+// 404, same limitation as the site API's /teams/{id} and /roster).
 export async function upsertTeamInfo(league: League, teamEspnId: string, season: number): Promise<boolean> {
-  if (league === "ipl") return false;
+  if (CRICKET_LEAGUES.includes(league)) return false;
 
   const team = await fetchCoreTeam(league, teamEspnId, season);
   const venue = team.venue;
@@ -13,12 +15,14 @@ export async function upsertTeamInfo(league: League, teamEspnId: string, season:
   // Soccer's season-scoped coach lookup 500s, and the team's own (non-season-scoped)
   // `coaches` ref returns a single stale historical entry instead of the current
   // manager (verified: Arsenal's returns Arsène Wenger, who left in 2018) — showing
-  // that would be actively wrong, so skip coach entirely for this league rather than
-  // publish an unverified name. NBA/NFL's season-scoped coach lookup is confirmed
-  // accurate (spot-checked against known current coaches).
+  // that would be actively wrong, so skip coach entirely for soccer leagues rather
+  // than publish an unverified name (not independently re-checked for La Liga, but
+  // it's the same underlying soccer API shape that failed for EPL). NBA/NFL's
+  // season-scoped coach lookup is confirmed accurate (spot-checked against known
+  // current coaches).
   let coachName: string | null = null;
   try {
-    const coachesRef = league !== "epl" ? team.coaches?.["$ref"] : undefined;
+    const coachesRef = league !== "epl" && league !== "laliga" ? team.coaches?.["$ref"] : undefined;
     if (coachesRef) {
       const coachesList = await fetchByRef<{ items?: { $ref: string }[] }>(coachesRef);
       const firstCoachRef = coachesList.items?.[0]?.["$ref"];

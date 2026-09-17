@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getStandingsBySeason, getStandingsSeasons, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, getStandingsBySeason, getStandingsSeasons, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
+import { summarizePlayoffs } from "@/lib/seasonSummary";
 import { AdSlot } from "@/components/AdSlot";
 import { StandingsTable } from "@/components/StandingsTable";
 import { SeasonTabs } from "@/components/SeasonTabs";
+import { SeasonSummary } from "@/components/SeasonSummary";
 
 // A past season's final table never changes, so this can be cached far longer than
 // the live current-season standings page.
@@ -22,7 +24,10 @@ export default async function StandingsSeasonPage({
   const seasons = await getStandingsSeasons(league);
   if (!seasons.includes(season)) notFound();
 
-  const standings = await getStandingsBySeason(league, season);
+  const [standings, playoffGames] = await Promise.all([
+    getStandingsBySeason(league, season),
+    getSeasonPlayoffGames(league, season),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,6 +38,8 @@ export default async function StandingsSeasonPage({
       <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />
 
       <SeasonTabs league={league} basePath={`/${league}/standings`} seasons={seasons} activeSeason={season} />
+
+      <SeasonSummary league={league} playoffResults={summarizePlayoffs(playoffGames)} standings={standings} />
 
       <StandingsTable league={league} standings={standings} />
     </div>

@@ -21,6 +21,9 @@
     "backfill:standings": "tsx scripts/backfill-standings.ts",
     "backfill:player-stats": "tsx scripts/backfill-player-stats.ts",
     "fetch:team-info": "tsx scripts/fetch-team-info.ts",
+    "backfill:cricket-player-stats": "tsx scripts/backfill-cricket-player-stats.ts",
+    "fetch:tennis-rankings": "tsx scripts/fetch-tennis-rankings.ts",
+    "fetch:tennis-scores": "tsx scripts/fetch-tennis-scores.ts",
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {

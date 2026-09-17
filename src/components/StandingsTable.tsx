@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { TeamLogo } from "./TeamLogo";
+import { isCricketLeague } from "@/lib/queries";
 import type { StandingRow, League } from "@/lib/queries";
 
 export function StandingsTable({ league, standings }: { league: League; standings: StandingRow[] }) {
-  const mode = league === "epl" ? "soccer" : league === "ipl" ? "cricket" : "default";
+  const mode = league === "epl" || league === "laliga" ? "soccer" : isCricketLeague(league) ? "cricket" : "default";
   const byConference = new Map<string, StandingRow[]>();
   for (const row of standings) {
     const key = row.conference ?? "All Teams";

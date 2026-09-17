@@ -2,7 +2,7 @@ import { pool } from "./lib/db";
 import { fetchStandings, type League } from "./lib/espn";
 import { upsertStandingsResponse } from "./lib/standings";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl", "bbl", "cwc", "t20wc"];
 
 async function processLeague(league: League) {
   const data = await fetchStandings(league);

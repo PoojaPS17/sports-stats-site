@@ -88,6 +88,10 @@ alter table games add column if not exists home_winner boolean;
 -- but misleading for IPL, where "Final" is also a specific, single playoff match.
 alter table games add column if not exists round text;
 alter table games add column if not exists away_winner boolean;
+-- Match venue, currently only populated for IPL (powers cricket career "by venue"
+-- splits) — sourced from the summary endpoint's gameInfo.venue during the cricket
+-- player-stats backfill, not from the regular scores scrape.
+alter table games add column if not exists venue text;
 
 create index if not exists games_league_date_idx on games (league, date);
 create index if not exists games_league_season_idx on games (league, season_year);
@@ -118,12 +122,19 @@ create table if not exists player_season_stats (
   primary key (league, season, player_espn_id)
 );
 
+-- Season-total goals/assists for soccer, extracted from categories the same way
+-- pts_avg/passing_yards/etc already are — powers the Leaders page.
+alter table player_season_stats add column if not exists goals int;
+alter table player_season_stats add column if not exists assists int;
+
 create index if not exists player_season_stats_pts_idx on player_season_stats (league, season, pts_avg desc nulls last);
 create index if not exists player_season_stats_reb_idx on player_season_stats (league, season, reb_avg desc nulls last);
 create index if not exists player_season_stats_ast_idx on player_season_stats (league, season, ast_avg desc nulls last);
 create index if not exists player_season_stats_pass_idx on player_season_stats (league, season, passing_yards desc nulls last);
 create index if not exists player_season_stats_rush_idx on player_season_stats (league, season, rushing_yards desc nulls last);
 create index if not exists player_season_stats_recv_idx on player_season_stats (league, season, receiving_yards desc nulls last);
+create index if not exists player_season_stats_goals_idx on player_season_stats (league, season, goals desc nulls last);
+create index if not exists player_season_stats_assists_idx on player_season_stats (league, season, assists desc nulls last);
 
 create table if not exists news_articles (
   league text not null,
@@ -165,3 +176,67 @@ alter table standings add column if not exists goals_for int;
 alter table standings add column if not exists goals_against int;
 alter table standings add column if not exists no_result int;
 alter table standings add column if not exists net_run_rate numeric;
+
+-- One row per real page view of a match-detail page, recorded client-side (see
+-- src/app/api/track-view) so it reflects actual visits rather than server-render
+-- count (which ISR caching would undercount). Powers "Top Games" — genuinely
+-- popularity-ranked, the same way an App Store chart is built from real usage, not a
+-- fabricated or editorial score. Starts empty for a new site; becomes meaningful once
+-- there's real traffic.
+create table if not exists game_views (
+  id bigserial primary key,
+  league text not null,
+  game_espn_id text not null,
+  viewed_at timestamptz not null default now()
+);
+
+create index if not exists game_views_lookup_idx on game_views (league, game_espn_id, viewed_at desc);
+create index if not exists game_views_time_idx on game_views (viewed_at desc);
+
+-- Country: from Vercel's edge-injected geolocation header (real visitor IP geolocation
+-- — null locally/off-Vercel, which is an honest gap, not a bug). Platform: parsed from
+-- the request's own User-Agent (iOS/Android/Desktop), not fetched from any app store.
+alter table game_views add column if not exists country text;
+alter table game_views add column if not exists platform text;
+create index if not exists game_views_country_idx on game_views (country, viewed_at desc);
+create index if not exists game_views_platform_idx on game_views (platform, viewed_at desc);
+
+-- Tennis doesn't fit the team-vs-team schema everything else uses — matches are
+-- player-vs-player (not two teams), scored in sets, and there's no season-long
+-- standings table, just a weekly ranking ladder. Kept as its own small, parallel
+-- schema rather than forced into `games`/`teams`. Player identity itself does reuse
+-- the existing `players` table (tour: 'atp'/'wta' as the league value, no team_espn_id).
+create table if not exists tennis_matches (
+  tour text not null,
+  espn_id text not null,
+  tournament_name text not null,
+  round text,
+  date timestamptz not null,
+  player1_espn_id text not null,
+  player2_espn_id text not null,
+  score_display text,
+  winner_espn_id text,
+  completed boolean not null default false,
+  status_state text,
+  status_detail text,
+  updated_at timestamptz not null default now(),
+  primary key (tour, espn_id)
+);
+
+create index if not exists tennis_matches_date_idx on tennis_matches (tour, date desc);
+create index if not exists tennis_matches_player1_idx on tennis_matches (tour, player1_espn_id, date desc);
+create index if not exists tennis_matches_player2_idx on tennis_matches (tour, player2_espn_id, date desc);
+
+-- Current ranking only (not a weekly history) — keyed by player, so each fetch just
+-- overwrites a player's rank with this week's.
+create table if not exists tennis_rankings (
+  tour text not null,
+  player_espn_id text not null,
+  rank int not null,
+  previous_rank int,
+  points numeric,
+  updated_at timestamptz not null default now(),
+  primary key (tour, player_espn_id)
+);
+
+create index if not exists tennis_rankings_rank_idx on tennis_rankings (tour, rank);

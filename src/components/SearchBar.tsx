@@ -17,7 +17,7 @@ export function SearchBar({ large = false, initialQuery = "" }: { large?: boolea
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search a team or player, like Lakers"
+        placeholder={large ? "Search a team or player, like Lakers" : "Search team or player"}
         className={`w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] ${
           large ? "py-3 text-base" : "py-2 text-sm"
         }`}

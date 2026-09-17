@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
+import { Footer } from "@/components/Footer";
 import { Ticker, type TickerItem } from "@/components/Ticker";
 import { getTickerGames, getLastUpdated, LEAGUE_LABEL } from "@/lib/queries";
 
@@ -64,9 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Ticker items={tickerItems} updatedAt={lastUpdated} />
         <Nav />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
-        <footer className="border-t border-[var(--border)] py-6 text-center text-xs text-[var(--text-muted)]">
-          Data via ESPN. Not affiliated with the Premier League, NFL, NBA, IPL, or ESPN.
-        </footer>
+        <Footer />
       </body>
     </html>
   );

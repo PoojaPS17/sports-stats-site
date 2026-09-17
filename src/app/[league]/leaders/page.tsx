@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, LEADER_CATEGORIES, getLeaders, getLeadersFromGameLogs } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, LEADER_CATEGORIES, getLeaders, getLeadersSeason, formatSeasonLabel } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 
@@ -11,17 +11,19 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
   if (!isLeague(league)) notFound();
 
   const categories = LEADER_CATEGORIES[league];
-  // NFL/EPL: computed live from our own game logs (always accurate). NBA: from ESPN's
-  // season endpoint, which is the only source until the season is underway.
-  const boards = await Promise.all(
-    categories.map((c) =>
-      c.gameLabel ? getLeadersFromGameLogs(league, c.key, c.gameLabel, 10) : getLeaders(league, c.column!, 10)
-    )
-  );
+  const [boards, season] = await Promise.all([
+    Promise.all(categories.map((c) => getLeaders(league, c.column, 10))),
+    getLeadersSeason(league),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} League Leaders</h1>
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} League Leaders</h1>
+        <p className="mt-0.5 text-sm text-[var(--text-muted)]">
+          {season ? `${formatSeasonLabel(league, season)} season totals` : "No season stats yet"}
+        </p>
+      </div>
       <AdSlot label={`${LEAGUE_LABEL[league]} leaders top`} />
 
       {boards.every((b) => b.length === 0) ? (
@@ -31,7 +33,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           {categories.map((cat, i) => (
-            <section key={cat.key} className="card overflow-hidden">
+            <section key={cat.column} className="card overflow-hidden">
               <h2 className="border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
                 {cat.label}
               </h2>

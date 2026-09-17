@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { League } from "@/lib/queries";
+import { isCricketLeague } from "@/lib/leagues";
+import type { League } from "@/lib/leagues";
 
 export function LeagueSubNav({ league }: { league: League }) {
   const pathname = usePathname();
@@ -13,6 +14,9 @@ export function LeagueSubNav({ league }: { league: League }) {
     { label: "Teams", href: `/${league}/teams` },
     { label: "Leaders", href: `/${league}/leaders` },
     { label: "News", href: `/${league}/news` },
+    // Only a meaningful concept for cricket — other sports don't have a
+    // single-innings scoring feat that warrants its own record list.
+    ...(isCricketLeague(league) ? [{ label: "Centuries", href: `/${league}/centuries` }] : []),
   ];
 
   return (

@@ -5,7 +5,7 @@ import { fetchScoreboard, type League } from "./lib/espn";
 // day there's nothing live, so the scheduled 15-min tick should do a cheap check here
 // and skip the real fetch pipeline unless something's live (or this is the once-daily
 // / manually-triggered run, which always does a full update regardless).
-const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "ipl", "bbl", "cwc", "t20wc"];
 
 function toYYYYMMDD(d: Date): string {
   return d.toISOString().slice(0, 10).replace(/-/g, "");

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { isLeague, getGameByEspnId, getPlayerSlugsByEspnIds } from "@/lib/queries";
+import { isLeague, isCricketLeague, getGameByEspnId, getPlayerSlugsByEspnIds } from "@/lib/queries";
 import {
   fetchMatchSummary,
   parseTeamStats,
@@ -13,6 +13,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { TeamStatsComparison } from "@/components/TeamStatsComparison";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
 import { CricketScorecard } from "@/components/CricketScorecard";
+import { ViewTracker } from "@/components/ViewTracker";
 
 // A live fetch to ESPN backs this page (see lib/matchDetail.ts) — revalidate keeps it
 // fresh during a live game without hitting ESPN on every single request.
@@ -31,10 +32,15 @@ export default async function GameDetailPage({
 
   const summary = await fetchMatchSummary(league, id);
 
+  const isCricket = isCricketLeague(league);
   const teamStats = summary ? parseTeamStats(summary) : [];
   const playerBox =
-    summary && league !== "ipl" ? (league === "epl" ? parseSoccerPlayerBox(summary) : parseAmericanPlayerBox(summary)) : [];
-  const cricketScorecard = summary && league === "ipl" ? parseCricketScorecard(summary) : [];
+    summary && !isCricket
+      ? league === "epl" || league === "laliga"
+        ? parseSoccerPlayerBox(summary)
+        : parseAmericanPlayerBox(summary)
+      : [];
+  const cricketScorecard = summary && isCricket ? parseCricketScorecard(summary) : [];
 
   const athleteIds = new Set<string>();
   for (const team of playerBox) for (const cat of team.categories) for (const row of cat.rows) athleteIds.add(row.athleteId);
@@ -45,9 +51,16 @@ export default async function GameDetailPage({
   const playerSlugs = await getPlayerSlugsByEspnIds(league, [...athleteIds]);
 
   const [awayStats, homeStats] = teamStats;
+  // Before a game starts, ESPN's "boxscore" is actually each team's season-to-date
+  // per-game averages (entering the matchup) — there's no real box score yet since
+  // nothing's been played. Labeling that "Team Stats" the same way a completed game's
+  // real box score is labeled reads as if these numbers are from this game, which
+  // they aren't — so call it out explicitly instead of leaving it ambiguous.
+  const notYetStarted = game.status_state === "pre";
 
   return (
     <div className="flex flex-col gap-6">
+      <ViewTracker league={league} gameId={id} />
       <MatchHeader game={game} />
 
       <AdSlot label="Match detail top" />
@@ -56,12 +69,17 @@ export default async function GameDetailPage({
 
       {awayStats && homeStats && (
         <section>
-          <SectionHeader>Team Stats</SectionHeader>
+          <SectionHeader>{notYetStarted ? "Season Comparison" : "Team Stats"}</SectionHeader>
+          {notYetStarted && (
+            <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
+              Season averages entering this matchup — the game hasn&apos;t been played yet.
+            </p>
+          )}
           <TeamStatsComparison away={awayStats} home={homeStats} />
         </section>
       )}
 
-      {league === "ipl" && cricketScorecard.length > 0 && (
+      {isCricket && cricketScorecard.length > 0 && (
         <section className="flex flex-col gap-4">
           <SectionHeader>Scorecard</SectionHeader>
           {cricketScorecard.map((team) => (
@@ -70,7 +88,7 @@ export default async function GameDetailPage({
         </section>
       )}
 
-      {league !== "ipl" && playerBox.length > 0 && (
+      {!isCricket && playerBox.length > 0 && (
         <section className="flex flex-col gap-4">
           <SectionHeader>Player Stats</SectionHeader>
           {playerBox.map((team) => (
