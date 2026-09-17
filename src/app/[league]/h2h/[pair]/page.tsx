@@ -32,7 +32,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const record = `${h2h.winsA}-${h2h.draws}-${h2h.winsB}`;
   return pageMeta(
     `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head`,
-    `${h2h.teamA.name} vs ${h2h.teamB.name} all-time ${LEAGUE_LABEL[league]} record (${record} in ${h2h.meetings} meetings), recent results and biggest wins.`
+    `${h2h.teamA.name} vs ${h2h.teamB.name} all-time ${LEAGUE_LABEL[league]} record (${record} in ${h2h.meetings} meetings), recent results and biggest wins.`,
+    h2hPath(league, slugs[0], slugs[1])
   );
 }
 

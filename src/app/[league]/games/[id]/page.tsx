@@ -4,6 +4,8 @@ import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getPlayerSlug
 import { pageMeta } from "@/lib/metadata";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
+import { JsonLd } from "@/components/JsonLd";
+import { gameSchema } from "@/lib/structuredData";
 import {
   fetchMatchSummary,
   parseTeamStats,
@@ -35,7 +37,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
       : "";
   return pageMeta(
     `${game.away_name} vs ${game.home_name}${score}`,
-    `${LEAGUE_LABEL[league]} match ${game.away_name} at ${game.home_name}, ${date}. Score, team stats and player box score.`
+    `${LEAGUE_LABEL[league]} match ${game.away_name} at ${game.home_name}, ${date}. Score, team stats and player box score.`,
+    `/${league}/games/${id}`
   );
 }
 
@@ -88,6 +91,7 @@ export default async function GameDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <ViewTracker league={league} gameId={id} />
+      <JsonLd data={gameSchema(league, game, summary?.gameInfo?.venue?.fullName ?? null)} />
       <Breadcrumbs
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },

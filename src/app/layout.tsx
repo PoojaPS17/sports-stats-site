@@ -6,6 +6,9 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Ticker, type TickerItem } from "@/components/Ticker";
 import { getTickerGames, getLastUpdated, LEAGUE_LABEL } from "@/lib/queries";
+import { SITE_URL } from "@/lib/site";
+import { JsonLd } from "@/components/JsonLd";
+import { organizationSchema, websiteSchema } from "@/lib/structuredData";
 
 export const revalidate = 60;
 
@@ -22,6 +25,11 @@ const geistMono = Geist_Mono({
 export const SITE_NAME = "ScoreDB";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: "/" },
+  openGraph: { siteName: "ScoreDB", type: "website", locale: "en_US" },
+  twitter: { card: "summary_large_image" },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   title: {
     default: "ScoreDB — Live scores, standings and stats for football, NFL, NBA, cricket, tennis and F1",
     template: "%s | ScoreDB",
@@ -79,6 +87,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
+        <JsonLd data={websiteSchema()} />
+        <JsonLd data={organizationSchema()} />
         <Nav />
         <Ticker items={tickerItems} updatedAt={lastUpdated} />
         <main id="main" className="container-x flex-1 pb-12 pt-6">

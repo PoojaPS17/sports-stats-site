@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} News`, `The latest ${label} headlines, updated throughout the day.`);
+  return pageMeta(`${label} News`, `The latest ${label} headlines, updated throughout the day.`, `/${league}/news`);
 }
 
 export default async function NewsPage({ params }: { params: Promise<{ league: string }> }) {

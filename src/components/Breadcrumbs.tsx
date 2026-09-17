@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { JsonLd } from "./JsonLd";
+import { breadcrumbSchema } from "@/lib/structuredData";
 
 export interface Crumb {
   label: string;
@@ -8,6 +10,7 @@ export interface Crumb {
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
     <nav aria-label="Breadcrumb" className="text-xs text-[var(--text-muted)]">
+      <JsonLd data={breadcrumbSchema(items)} />
       <ol className="flex flex-wrap items-center gap-1.5">
         <li>
           <Link href="/" className="hover:text-[var(--accent)]">

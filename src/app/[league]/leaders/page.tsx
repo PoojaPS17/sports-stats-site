@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
   const cats = categoriesFor(league).map((c) => c.label.toLowerCase()).join(", ");
-  return pageMeta(`${label} Leaders`, `${label} statistical leaders this season: ${cats}.`);
+  return pageMeta(`${label} Leaders`, `${label} statistical leaders this season: ${cats}.`, `/${league}/leaders`);
 }
 
 export default async function LeadersPage({ params }: { params: Promise<{ league: string }> }) {

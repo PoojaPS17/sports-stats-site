@@ -27,10 +27,10 @@ export async function generateMetadata({
   if (a && b) {
     const cmp = await getPlayerComparison(league, a, b);
     if (cmp) {
-      return pageMeta(`${cmp.a.player.name} vs ${cmp.b.player.name}`, `${cmp.a.player.name} and ${cmp.b.player.name} ${label} stats compared side by side, category by category.`);
+      return pageMeta(`${cmp.a.player.name} vs ${cmp.b.player.name}`, `${cmp.a.player.name} and ${cmp.b.player.name} ${label} stats compared side by side, category by category.`, `/${league}/compare/players`);
     }
   }
-  return pageMeta(`Compare ${label} Players`, `Pick any two ${label} players and compare their season statistics side by side.`);
+  return pageMeta(`Compare ${label} Players`, `Pick any two ${label} players and compare their season statistics side by side.`, `/${league}/compare/players`);
 }
 
 function PlayerCard({ league, side }: { league: string; side: PlayerCompareSide }) {

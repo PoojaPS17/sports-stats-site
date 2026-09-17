@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
-import { weekDateRange, weekNoun } from "@/lib/matchweeks";
+import { weekDateRange, weekIndexPath, weekNoun, weekPath } from "@/lib/matchweeks";
 import { isSeasonSegment, loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 import { WeekHub, WeekIndex } from "@/components/WeekHub";
@@ -13,14 +13,15 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
   if (isSeasonSegment(n)) {
-    return pageMeta(`${label} ${weekNoun(league)}s ${formatSeasonLabel(league, Number(n))}`, `Every ${label} round of the ${formatSeasonLabel(league, Number(n))} season with results and tables.`);
+    return pageMeta(`${label} ${weekNoun(league)}s ${formatSeasonLabel(league, Number(n))}`, `Every ${label} round of the ${formatSeasonLabel(league, Number(n))} season with results and tables.`, weekIndexPath(league, Number(n)));
   }
   const ctx = await loadWeeks(league);
   const week = ctx?.weeks.find((w) => w.index === Number(n));
   if (!ctx || !week) return {};
   return pageMeta(
     `${label} ${week.label} Fixtures & Results`,
-    `${label} ${week.label} (${weekDateRange(week)}): every result and fixture, the table after the round, and the top performers.`
+    `${label} ${week.label} (${weekDateRange(week)}): every result and fixture, the table after the round, and the top performers.`,
+    weekPath(league, week.index)
   );
 }
 

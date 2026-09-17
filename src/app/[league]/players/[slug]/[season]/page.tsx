@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const player = await getPlayerBySlug(league, slug);
   if (!player) return {};
   const seasonLabel = formatSeasonLabel(league, Number(season)) ?? season;
-  return pageMeta(`${player.name} ${seasonLabel} Stats`, `${player.name} ${LEAGUE_LABEL[league]} statistics for the ${seasonLabel} season.`);
+  return pageMeta(`${player.name} ${seasonLabel} Stats`, `${player.name} ${LEAGUE_LABEL[league]} statistics for the ${seasonLabel} season.`, `/${league}/players/${slug}/${season}`);
 }
 
 export default async function PlayerSeasonPage({

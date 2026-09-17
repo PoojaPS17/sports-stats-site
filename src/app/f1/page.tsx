@@ -5,7 +5,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { F1SeasonSelect } from "@/components/F1SeasonSelect";
 import { CalendarButton } from "@/components/CalendarButton";
 
-export const metadata = pageMeta("F1 Calendar", "Formula 1 race calendar with circuits, dates and winners.");
+export const metadata = pageMeta("F1 Calendar", "Formula 1 race calendar with circuits, dates and winners.", "/f1");
 
 export const revalidate = 300;
 

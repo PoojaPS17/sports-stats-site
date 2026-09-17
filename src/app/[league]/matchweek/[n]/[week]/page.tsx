@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
-import { weekDateRange } from "@/lib/matchweeks";
+import { weekDateRange, weekPath } from "@/lib/matchweeks";
 import { isSeasonSegment, loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 import { WeekHub } from "@/components/WeekHub";
@@ -18,7 +18,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const label = LEAGUE_LABEL[league];
   return pageMeta(
     `${label} ${week.label} ${formatSeasonLabel(league, ctx.season)} Results`,
-    `${label} ${week.label} of the ${formatSeasonLabel(league, ctx.season)} season (${weekDateRange(week)}): every result, the table after the round, and the top performers.`
+    `${label} ${week.label} of the ${formatSeasonLabel(league, ctx.season)} season (${weekDateRange(week)}): every result, the table after the round, and the top performers.`,
+    weekPath(league, week.index, ctx.season)
   );
 }
 

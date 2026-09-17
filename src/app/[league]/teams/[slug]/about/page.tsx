@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
-  return pageMeta(`About ${team.name}`, `${team.name} facts: home venue, location and head coach.`);
+  return pageMeta(`About ${team.name}`, `${team.name} facts: home venue, location and head coach.`, `/${league}/teams/${slug}/about`);
 }
 
 function InfoRow({ label, value }: { label: string; value: string | null }) {

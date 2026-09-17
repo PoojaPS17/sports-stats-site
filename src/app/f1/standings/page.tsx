@@ -5,7 +5,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { F1SeasonSelect } from "@/components/F1SeasonSelect";
 import { TeamLogo } from "@/components/TeamLogo";
 
-export const metadata = pageMeta("F1 Standings", "Formula 1 drivers' and constructors' championship standings.");
+export const metadata = pageMeta("F1 Standings", "Formula 1 drivers' and constructors' championship standings.", "/f1/standings");
 
 export const revalidate = 300;
 

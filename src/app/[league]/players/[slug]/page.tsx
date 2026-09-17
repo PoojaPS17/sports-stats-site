@@ -22,6 +22,8 @@ import { PlayerHeader } from "@/components/PlayerHeader";
 import { PlayerSeasonStats, StatGroup } from "@/components/PlayerSeasonStats";
 import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { JsonLd } from "@/components/JsonLd";
+import { athleteSchema } from "@/lib/structuredData";
 
 export const revalidate = 300;
 
@@ -31,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const player = await getPlayerBySlug(league, slug);
   if (!player) return {};
   const team = player.team_name ? ` (${player.team_name})` : "";
-  return pageMeta(`${player.name} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} season stats and game-by-game log.`);
+  return pageMeta(`${player.name} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} season stats and game-by-game log.`, `/${league}/players/${slug}`);
 }
 
 function isSplitDimension(value: string | undefined): value is CricketSplitDimension {
@@ -86,6 +88,7 @@ export default async function PlayerPage({
         ]}
       />
 
+      <JsonLd data={athleteSchema(league, player)} />
       <PlayerHeader
         league={league}
         name={player.name}

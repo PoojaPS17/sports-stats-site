@@ -11,7 +11,7 @@ export const revalidate = 3600;
 export async function generateMetadata({ params }: { params: Promise<{ tour: string }> }): Promise<Metadata> {
   const { tour } = await params;
   if (!isTour(tour)) return {};
-  return pageMeta(`${TOUR_LABEL[tour]} Rankings`, `Current ${TOUR_LABEL[tour]} world rankings with points and week-on-week movement.`);
+  return pageMeta(`${TOUR_LABEL[tour]} Rankings`, `Current ${TOUR_LABEL[tour]} world rankings with points and week-on-week movement.`, `/tennis/${tour}/rankings`);
 }
 
 export default async function TennisRankingsPage({ params }: { params: Promise<{ tour: string }> }) {

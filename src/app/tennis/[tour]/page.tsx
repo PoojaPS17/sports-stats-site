@@ -11,7 +11,7 @@ export const revalidate = 300;
 export async function generateMetadata({ params }: { params: Promise<{ tour: string }> }): Promise<Metadata> {
   const { tour } = await params;
   if (!isTour(tour)) return {};
-  return pageMeta(`${TOUR_LABEL[tour]} Scores`, `Latest ${TOUR_LABEL[tour]} tennis results and upcoming matches from every tour event.`);
+  return pageMeta(`${TOUR_LABEL[tour]} Scores`, `Latest ${TOUR_LABEL[tour]} tennis results and upcoming matches from every tour event.`, `/tennis/${tour}`);
 }
 
 export default async function TennisScoresPage({ params }: { params: Promise<{ tour: string }> }) {

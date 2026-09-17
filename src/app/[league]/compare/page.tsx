@@ -30,11 +30,12 @@ export async function generateMetadata({
     if (cmp) {
       return pageMeta(
         `${cmp.a.team.name} vs ${cmp.b.team.name} Comparison`,
-        `${cmp.a.team.name} and ${cmp.b.team.name} side by side: ${label} position, record, scoring, home and away form, strength rating and head-to-head.`
+        `${cmp.a.team.name} and ${cmp.b.team.name} side by side: ${label} position, record, scoring, home and away form, strength rating and head-to-head.`,
+        `/${league}/compare`
       );
     }
   }
-  return pageMeta(`Compare ${label} Teams`, `Pick any two ${label} teams and compare their season, home and away form, strength rating and history side by side.`);
+  return pageMeta(`Compare ${label} Teams`, `Pick any two ${label} teams and compare their season, home and away form, strength rating and history side by side.`, `/${league}/compare`);
 }
 
 function TeamSelect({ name, label, teams, value }: { name: string; label: string; teams: { slug: string; name: string }[]; value: string }) {

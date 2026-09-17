@@ -15,7 +15,7 @@ import { TrendingCountrySelect } from "@/components/TrendingCountrySelect";
 import { TrendingFigures } from "@/components/TrendingFigures";
 import { TrendingApps } from "@/components/TrendingApps";
 
-export const metadata = pageMeta("Top Sports Games", "The most-viewed matches on ScoreDB right now, plus trending sports apps and figures.");
+export const metadata = pageMeta("Top Sports Games", "The most-viewed matches on ScoreDB right now, plus trending sports apps and figures.", "/top-games");
 
 export const revalidate = 300;
 

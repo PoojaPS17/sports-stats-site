@@ -26,6 +26,8 @@ import { h2hPath } from "@/lib/h2h";
 import { supportsScoreAnalytics } from "@/lib/analytics";
 import { CalendarButton } from "@/components/CalendarButton";
 import { LocalTime } from "@/components/LocalTime";
+import { JsonLd } from "@/components/JsonLd";
+import { teamSchema } from "@/lib/structuredData";
 
 export const revalidate = 300;
 
@@ -35,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${team.name} Schedule, Results & Roster`, `${team.name} ${label} fixtures, results, current roster, injuries and ten seasons of history.`);
+  return pageMeta(`${team.name} Schedule, Results & Roster`, `${team.name} ${label} fixtures, results, current roster, injuries and ten seasons of history.`, `/${league}/teams/${slug}`);
 }
 
 export default async function TeamPage({
@@ -78,6 +80,7 @@ export default async function TeamPage({
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Teams", href: `/${league}/teams` }, { label: team.name }]} />
 
+      <JsonLd data={teamSchema(league, team)} />
       <TeamHeader league={league} name={team.name} logoUrl={team.logo_url} color={team.color} meta={meta} />
 
       {(summary.form.length > 0 || next) && (

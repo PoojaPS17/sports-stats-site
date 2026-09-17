@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Power Rankings`, `${label} power rankings computed from every result on record with an Elo rating, plus the toughest and easiest upcoming fixture runs.`);
+  return pageMeta(`${label} Power Rankings`, `${label} power rankings computed from every result on record with an Elo rating, plus the toughest and easiest upcoming fixture runs.`, `/${league}/power-rankings`);
 }
 
 function RunList({ league, runs, tone }: { league: string; runs: FixtureDifficultyRow[]; tone: "hard" | "easy" }) {

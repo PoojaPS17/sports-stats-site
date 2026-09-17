@@ -35,9 +35,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
   const scope = asScope(season);
-  if (scope) return pageMeta(`${label} ${SCOPE_TITLE[scope]}`, `${label} ${SCOPE_TITLE[scope].toLowerCase()}, ${SCOPE_DESC[scope]}.`);
+  if (scope) return pageMeta(`${label} ${SCOPE_TITLE[scope]}`, `${label} ${SCOPE_TITLE[scope].toLowerCase()}, ${SCOPE_DESC[scope]}.`, `/${league}/standings/${scope}`);
   const seasonLabel = formatSeasonLabel(league, Number(season)) ?? season;
-  return pageMeta(`${label} Standings ${seasonLabel}`, `Final ${label} table for the ${seasonLabel} season.`);
+  return pageMeta(`${label} Standings ${seasonLabel}`, `Final ${label} table for the ${seasonLabel} season.`, `/${league}/standings/${season}`);
 }
 
 export default async function StandingsSeasonPage({

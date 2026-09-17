@@ -24,7 +24,7 @@ function resultLeagueLabel(r: SearchResult): string {
   return r.league;
 }
 
-export const metadata = pageMeta("Search", "Find any team, player or driver across football, NFL, NBA, cricket, tennis and F1.");
+export const metadata = pageMeta("Search", "Find any team, player or driver across football, NFL, NBA, cricket, tennis and F1.", "/search", { noindex: true });
 
 export default async function SearchPage({
   searchParams,

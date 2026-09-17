@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Teams`, `Every ${label} team with schedules, results, rosters and season history.`);
+  return pageMeta(`${label} Teams`, `Every ${label} team with schedules, results, rosters and season history.`, `/${league}/teams`);
 }
 
 export default async function TeamsIndexPage({ params }: { params: Promise<{ league: string }> }) {

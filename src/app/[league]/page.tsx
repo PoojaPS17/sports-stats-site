@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Scores & Fixtures`, `Latest ${label} results and upcoming fixtures with kickoff times, box scores and match stats.`);
+  return pageMeta(`${label} Scores & Fixtures`, `Latest ${label} results and upcoming fixtures with kickoff times, box scores and match stats.`, `/${league}`);
 }
 
 function groupByDay(games: Awaited<ReturnType<typeof getRecentAndUpcoming>>) {

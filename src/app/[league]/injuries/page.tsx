@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Injury Report`, `League-wide ${label} injury report: every player listed as out, doubtful, questionable or on injured reserve, by team.`);
+  return pageMeta(`${label} Injury Report`, `League-wide ${label} injury report: every player listed as out, doubtful, questionable or on injured reserve, by team.`, `/${league}/injuries`);
 }
 
 const STATUS_ORDER = ["Out", "Injured Reserve", "Doubtful", "Questionable", "Day-To-Day", "Suspension"];

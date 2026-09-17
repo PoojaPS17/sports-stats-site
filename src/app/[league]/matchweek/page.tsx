@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { isLeague, LEAGUE_LABEL } from "@/lib/queries";
-import { currentWeekIndex, weekNoun, weekPath } from "@/lib/matchweeks";
+import { currentWeekIndex, weekIndexPath, weekNoun, weekPath } from "@/lib/matchweeks";
 import { loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 
@@ -10,7 +10,7 @@ export const revalidate = 300;
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
   if (!isLeague(league)) return {};
-  return pageMeta(`${LEAGUE_LABEL[league]} ${weekNoun(league)}s`, `${LEAGUE_LABEL[league]} fixtures and results round by round.`);
+  return pageMeta(`${LEAGUE_LABEL[league]} ${weekNoun(league)}s`, `${LEAGUE_LABEL[league]} fixtures and results round by round.`, weekIndexPath(league));
 }
 
 // /[league]/matchweek → the current week's hub.

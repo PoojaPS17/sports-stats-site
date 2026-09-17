@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Standings`, `Current ${label} table with wins, losses, points and streaks, plus home, away and form tables and ten seasons of past standings.`);
+  return pageMeta(`${label} Standings`, `Current ${label} table with wins, losses, points and streaks, plus home, away and form tables and ten seasons of past standings.`, `/${league}/standings`);
 }
 
 export default async function StandingsPage({ params }: { params: Promise<{ league: string }> }) {
