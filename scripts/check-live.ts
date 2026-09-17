@@ -9,7 +9,7 @@ import { fetchScoreboard, type League } from "./lib/espn";
 // ESPN but is still open in our database, so the final score and box score land even
 // when nothing is live any more at the next tick. The once-daily / manually-triggered
 // run always does a full update of every league regardless.
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
 
 function toYYYYMMDD(d: Date): string {
   return d.toISOString().slice(0, 10).replace(/-/g, "");

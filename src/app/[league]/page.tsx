@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, getRecentAndUpcoming, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, leagueNameWithArticle, getRecentAndUpcoming, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
@@ -60,7 +60,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
       {groups.size === 0 && (
         <div className="card px-5 py-6">
-          <p className="font-semibold">The {LEAGUE_LABEL[league]} is between seasons.</p>
+          <p className="font-semibold">{leagueNameWithArticle(league, true)} is between seasons.</p>
           <p className="mt-1 text-sm text-[var(--text-muted)]">No games in the last two days or the next week. Catch up on the most recent season instead.</p>
           {mostRecentSeason !== null && mostRecentSeason !== undefined && (
             <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold">

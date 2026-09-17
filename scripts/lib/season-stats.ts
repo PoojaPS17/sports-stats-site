@@ -93,6 +93,14 @@ async function upsertOneSeason(
 // costs the exact same single request as storing just the current one used to. Called
 // both by the recurring scraper (keeps the current season fresh) and the one-time
 // historical backfill (populates the other ~10 years for free from the same response).
+const SOCCER_LEAGUE_SLUG: Partial<Record<League, string>> = {
+  epl: "eng.1",
+  laliga: "esp.1",
+  bundesliga: "ger.1",
+  seriea: "ita.1",
+  ucl: "uefa.champions",
+};
+
 export async function upsertPlayerSeasonStats(
   league: League,
   playerEspnId: string,
@@ -103,9 +111,9 @@ export async function upsertPlayerSeasonStats(
   const categories: any[] = data.categories ?? [];
   const minYear = new Date().getUTCFullYear() - yearsBack;
   // Soccer's stats endpoint is sport-wide, so seasons must be filtered to the actual
-  // league's rows (leagueSlug "eng.1" / "esp.1") — otherwise a player's time at a club in a different
-  // country's league would be collected and stored as if it were an EPL season.
-  const leagueSlug = league === "epl" ? "eng.1" : league === "laliga" ? "esp.1" : league === "ucl" ? "uefa.champions" : undefined;
+  // league's rows (leagueSlug "eng.1", "esp.1", ...) — otherwise a player's time at a club
+  // in a different country's league would be collected and stored as if it were an EPL season.
+  const leagueSlug = SOCCER_LEAGUE_SLUG[league];
 
   const years = new Set<number>();
   for (const category of categories) {

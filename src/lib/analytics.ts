@@ -70,7 +70,7 @@ async function getAllResults(league: League): Promise<ResultRow[]> {
   return rows;
 }
 
-async function getTeamMap(league: League): Promise<Map<string, TeamRef>> {
+export async function getTeamMap(league: League): Promise<Map<string, TeamRef>> {
   const { rows } = await pool.query(
     `select espn_id, name, slug, abbreviation, logo_url, color from teams where league = $1`,
     [league]
@@ -192,6 +192,8 @@ export const ELO_PARAMS: Record<string, { k: number; homeAdvantage: number; seas
   nfl: { k: 24, homeAdvantage: 55, seasonCarry: 0.67, marginScale: 7 },
   epl: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   laliga: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
+  bundesliga: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
+  seriea: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   // Few games per club per season, so ratings lean a little more on the previous season.
   ucl: { k: 24, homeAdvantage: 60, seasonCarry: 0.85, marginScale: 1 },
   default: { k: 20, homeAdvantage: 50, seasonCarry: 0.75, marginScale: 1 },

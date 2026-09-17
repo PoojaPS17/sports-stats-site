@@ -24,7 +24,7 @@ async function seedLeague(league: League) {
   console.log(`[seed-teams] ${league}: upserted ${teams.length} teams`);
 }
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
 
 async function main() {
   const target = process.argv[2] as League | undefined;

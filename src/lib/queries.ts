@@ -1,9 +1,10 @@
 import { pool } from "./db";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
+import type { GameDetails } from "./matchDetail";
 
 export type { League } from "./leagues";
-export { LEAGUES, CRICKET_LEAGUES, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM } from "./leagues";
+export { LEAGUES, CRICKET_LEAGUES, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
 
 export interface GameRow {
   league: League;
@@ -84,6 +85,13 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
     [league, espnId]
   );
   return rows[0] ?? null;
+}
+
+// The stored match report (see lib/matchDetail.ts GameDetails), written by the scraper
+// for completed games; null until the backfill reaches a game.
+export async function getGameDetails(league: League, espnId: string): Promise<GameDetails | null> {
+  const { rows } = await pool.query(`select details from game_details where league = $1 and game_espn_id = $2`, [league, espnId]);
+  return rows[0]?.details ?? null;
 }
 
 // Every game tagged with a playoff-stage round for a season, in chronological order —
@@ -430,6 +438,14 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
   cwc: [],
   t20wc: [],
   laliga: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
+  bundesliga: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
+  seriea: [
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },
   ],

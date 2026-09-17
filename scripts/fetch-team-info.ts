@@ -4,8 +4,9 @@
 import { pool } from "./lib/db";
 import { fetchCurrentSeasonYear, type League } from "./lib/espn";
 import { upsertTeamInfo } from "./lib/team-info";
+import { scopedLeagues } from "./lib/scope";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl"];
 
 async function processLeague(league: League) {
   const season = await fetchCurrentSeasonYear(league);
@@ -27,7 +28,8 @@ async function processLeague(league: League) {
 }
 
 async function main() {
-  for (const league of LEAGUES) {
+  const target = process.argv[2] as League | undefined;
+  for (const league of target ? [target] : scopedLeagues(LEAGUES)) {
     try {
       await processLeague(league);
     } catch (err) {

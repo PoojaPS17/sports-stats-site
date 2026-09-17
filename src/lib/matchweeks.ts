@@ -8,7 +8,7 @@
 import { pool } from "./db";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
-import { isCupCompetition, isQualifyingRound, type League } from "./leagues";
+import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
 
 export interface Matchweek {
   /** 1-based position in the season; doubles as the URL segment. */
@@ -25,7 +25,7 @@ export interface Matchweek {
 }
 
 export function supportsMatchweeks(league: League): boolean {
-  return league === "epl" || league === "laliga" || league === "ucl" || league === "nfl" || league === "nba";
+  return isSoccerLeague(league) || league === "nfl" || league === "nba";
 }
 
 export function weekNoun(league: League): string {
@@ -411,6 +411,16 @@ const PERFORMER_CONFIG: Partial<Record<League, { category: string; label: string
     { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
   ],
   laliga: [
+    { category: "match", label: "G", title: "Goals", unit: "G" },
+    { category: "match", label: "A", title: "Assists", unit: "A" },
+    { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
+  ],
+  bundesliga: [
+    { category: "match", label: "G", title: "Goals", unit: "G" },
+    { category: "match", label: "A", title: "Assists", unit: "A" },
+    { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
+  ],
+  seriea: [
     { category: "match", label: "G", title: "Goals", unit: "G" },
     { category: "match", label: "A", title: "Assists", unit: "A" },
     { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },

@@ -3,7 +3,7 @@ import { fetchScoreboard, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
 import { scopedLeagues } from "./lib/scope";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "ucl", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
 const DAYS_BACK = 2;
 const DAYS_FORWARD = 5;
 

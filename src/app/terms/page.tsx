@@ -27,7 +27,7 @@ export default function TermsPage() {
       <p>
         The site is not owned by, affiliated with, sponsored by, endorsed by or connected to any sports league, club,
         governing body, player, broadcaster, betting operator or data provider. In particular it has no relationship with
-        ESPN, UEFA, the Premier League, LaLiga, the National Football League, the National Basketball Association, the Indian
+        ESPN, UEFA, the Premier League, LaLiga, the Bundesliga, Serie A, the National Football League, the National Basketball Association, the Indian
         Premier League or the Board of Control for Cricket in India, Cricket Australia, the International Cricket Council,
         the ATP Tour, the WTA, or Formula 1 and the FIA. References to any of them are for identification only and imply
         no association.

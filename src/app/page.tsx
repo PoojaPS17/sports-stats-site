@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   LEAGUES,
-  LEAGUE_LABEL,
+  LEAGUE_LABEL, leagueNameWithArticle,
   SOCCER_LEAGUES,
   CRICKET_LEAGUES,
   getRecentAndUpcoming,
@@ -93,7 +93,7 @@ export default async function HomePage() {
               <div className="flex flex-col gap-3">
                 {games.length === 0 ? (
                   <div className="card px-4 py-5 text-sm text-[var(--text-muted)]">
-                    <p>The {LEAGUE_LABEL[league]} is between seasons. No fixtures in the next few days.</p>
+                    <p>{leagueNameWithArticle(league, true)} is between seasons. No fixtures in the next few days.</p>
                     {mostRecentSeason !== null && (
                       <Link
                         href={`/${league}/standings/${mostRecentSeason}`}

@@ -1,4 +1,4 @@
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "ucl";
+export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "bundesliga" | "seriea" | "ucl";
 
 // Cricket competition ids: IPL 8048, Big Bash League 8044, ICC Cricket World Cup
 // (ODI) 8039, ICC Men's T20 World Cup 8604 — each resolves to the *current* edition
@@ -13,15 +13,17 @@ export const SPORT_PATH: Record<League, string> = {
   cwc: "cricket/8039",
   t20wc: "cricket/8604",
   laliga: "soccer/esp.1",
+  bundesliga: "soccer/ger.1",
+  seriea: "soccer/ita.1",
   ucl: "soccer/uefa.champions",
 };
 
 const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
-function isCricketLeague(league: League): boolean {
+export function isCricketLeague(league: League): boolean {
   return CRICKET_LEAGUES.includes(league);
 }
 
-export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "ucl"];
+export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl"];
 export function isSoccerLeague(league: League): boolean {
   return SOCCER_LEAGUES.includes(league);
 }
@@ -166,6 +168,8 @@ const CORE_LEAGUE_PATH: Record<League, string> = {
   nfl: "football/leagues/nfl",
   epl: "soccer/leagues/eng.1",
   laliga: "soccer/leagues/esp.1",
+  bundesliga: "soccer/leagues/ger.1",
+  seriea: "soccer/leagues/ita.1",
   ucl: "soccer/leagues/uefa.champions",
   // Unused — team-info.ts never calls fetchCoreTeam for a cricket league (its
   // team-level core-API endpoints 404, same as the site API's /teams/{id}). Present

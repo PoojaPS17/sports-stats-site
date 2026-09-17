@@ -8,8 +8,9 @@ interface Zone {
   label: string;
 }
 
-// Qualification / relegation zones. Domestic leagues: a full 20-team table only, so a
-// partial table isn't mislabelled. Champions League: the 36-team league phase (top
+// Qualification / relegation zones. Domestic leagues: a full table only (20 teams, or
+// the Bundesliga's 18 with its relegation play-off place), so a partial table isn't
+// mislabelled. Champions League: the 36-team league phase (top
 // eight straight to the round of 16, ninth to 24th into the playoffs, the rest out)
 // or a four-team group from the old format (top two through, third to the Europa
 // League). Any other shape gets no zones rather than a guess.
@@ -18,6 +19,10 @@ function zoneRules(league: League, total: number): ((position: number) => Zone |
     if (total === 36) return (p) => (p <= 8 ? { cls: "zone-1", label: "Round of 16" } : p <= 24 ? { cls: "zone-2", label: "Knockout playoffs" } : { cls: "zone-3", label: "Eliminated" });
     if (total === 4) return (p) => (p <= 2 ? { cls: "zone-1", label: "Round of 16" } : p === 3 ? { cls: "zone-2", label: "Europa League" } : { cls: "zone-3", label: "Eliminated" });
     return null;
+  }
+  if (league === "bundesliga") {
+    if (total !== 18) return null;
+    return (p) => (p <= 4 ? { cls: "zone-1", label: "Champions League" } : p === 5 ? { cls: "zone-2", label: "Europa League" } : p === 16 ? { cls: "zone-2", label: "Relegation play-off" } : p >= 17 ? { cls: "zone-3", label: "Relegation" } : null);
   }
   if (total !== 20) return null;
   return (p) => (p <= 4 ? { cls: "zone-1", label: "Champions League" } : p === 5 ? { cls: "zone-2", label: "Europa League" } : p >= 18 ? { cls: "zone-3", label: "Relegation" } : null);
@@ -29,7 +34,7 @@ function legendFor(league: League, total: number): Zone[] {
   const seen = new Map<string, Zone>();
   for (let p = 1; p <= total; p++) {
     const z = rules(p);
-    if (z && !seen.has(z.cls)) seen.set(z.cls, z);
+    if (z && !seen.has(z.label)) seen.set(z.label, z);
   }
   return [...seen.values()];
 }
@@ -167,7 +172,7 @@ export function StandingsTable({ league, standings }: { league: League; standing
       {legend.length > 0 && (
         <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-[var(--text-muted)]">
           {legend.map((z) => (
-            <li key={z.cls} className="flex items-center gap-1.5">
+            <li key={z.label} className="flex items-center gap-1.5">
               <span className={`zone-marker ${z.cls}`} /> {z.label}
             </li>
           ))}

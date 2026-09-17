@@ -3,7 +3,7 @@
 // that runs in the browser (e.g. LeagueSubNav) must import from here directly instead
 // of from queries.ts, since importing any value from that module pulls in `pg` (via
 // ./db) and breaks the client bundle (`tls`/`util/types` aren't available there).
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "ucl";
+export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "bundesliga" | "seriea" | "ucl";
 
 // The 4 major, always-active leagues — these get homepage sections and top-level nav
 // links. The other competitions (only in season occasionally, or every 2-4 years for
@@ -11,8 +11,8 @@ export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "
 // don't clutter the homepage with empty "no games scheduled" sections most of the year.
 export const LEAGUES: League[] = ["epl", "nfl", "nba", "ipl"];
 export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
-export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "ucl"];
-export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "laliga", "ucl"];
+export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl"];
+export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "laliga", "bundesliga", "seriea", "ucl"];
 export const LEAGUE_LABEL: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
@@ -22,8 +22,16 @@ export const LEAGUE_LABEL: Record<League, string> = {
   cwc: "Cricket World Cup",
   t20wc: "T20 World Cup",
   laliga: "La Liga",
+  bundesliga: "Bundesliga",
+  seriea: "Serie A",
   ucl: "Champions League",
 };
+
+// "the NBA", "the Premier League", but "La Liga" and "Serie A" take no article.
+export function leagueNameWithArticle(league: League, capitalise = false): string {
+  if (league === "laliga" || league === "seriea") return LEAGUE_LABEL[league];
+  return `${capitalise ? "The" : "the"} ${LEAGUE_LABEL[league]}`;
+}
 
 export function isLeague(value: string): value is League {
   return ALL_LEAGUES.includes(value as League);

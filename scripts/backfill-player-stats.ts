@@ -11,7 +11,7 @@ import { upsertPlayerSeasonStats } from "./lib/season-stats";
 
 // Cricket has no per-player match data yet (ESPN's roster/boxscore endpoints 404 for
 // this competition), so there's no athlete season-stats endpoint to backfill from.
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea"];
 const REQUEST_DELAY_MS = 100;
 
 function sleep(ms: number) {

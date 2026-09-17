@@ -21,7 +21,7 @@ export default function PrivacyPage() {
       <h2>Who operates this site</h2>
       <p>
         {SITE_NAME} is operated independently. It is not owned by, affiliated with, endorsed by or connected to any
-        league, club, federation, broadcaster, betting company or data provider, including ESPN, UEFA, the Premier League,
+        league, club, federation, broadcaster, betting company or data provider, including ESPN, UEFA, the Premier League, the Bundesliga, Serie A,
         LaLiga, the National Football League, the National Basketball Association, the Board of Control for Cricket in
         India, the ATP, the WTA or Formula 1.
       </p>

@@ -3,11 +3,11 @@
 // from the fixtures and results already in the database.
 import { pool } from "./db";
 import { isSoccer, getEloRatings, homeWinProbability, type TeamRef } from "./analytics";
-import { GAME_SELECT, isCupCompetition, type GameRow, type League } from "./queries";
+import { GAME_SELECT, isCupCompetition, isSoccerLeague, type GameRow, type League } from "./queries";
 import { getSeasonsWithGames } from "./matchweeks";
 
 export function supportsProjections(league: League): boolean {
-  return league === "epl" || league === "laliga" || league === "ucl" || league === "nfl" || league === "nba";
+  return isSoccerLeague(league) || league === "nfl" || league === "nba";
 }
 
 export interface OutcomeColumn {

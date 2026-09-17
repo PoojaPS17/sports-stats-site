@@ -6,8 +6,9 @@
 import { pool } from "./lib/db";
 import { fetchCurrentSeasonYear, fetchTeamSchedule, isSoccerLeague, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
+import { scopedLeagues } from "./lib/scope";
 
-const LEAGUES: League[] = ["epl", "laliga", "ucl", "nfl", "nba"];
+const LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl", "nfl", "nba"];
 const REQUEST_DELAY_MS = 120;
 
 function sleep(ms: number) {
@@ -23,7 +24,8 @@ function variants(league: League): { seasontype?: number; fixtures?: boolean }[]
 }
 
 async function main() {
-  for (const league of LEAGUES) {
+  const target = process.argv[2] as League | undefined;
+  for (const league of target ? [target] : scopedLeagues(LEAGUES)) {
     const season = await fetchCurrentSeasonYear(league);
     if (!season) {
       console.error(`[fetch-fixtures] ${league}: could not determine current season, skipping`);
