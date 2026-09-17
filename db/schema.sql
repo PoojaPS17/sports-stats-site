@@ -240,3 +240,25 @@ create table if not exists tennis_rankings (
 );
 
 create index if not exists tennis_rankings_rank_idx on tennis_rankings (tour, rank);
+
+-- Real external trending signals (YouTube trending Sports videos, Wikipedia pageview
+-- spikes, Google Trends daily searches) to complement game_views, which only tells us
+-- what's popular on ScoreDB itself. Each fetch script wipes and re-inserts its own
+-- (source, country) slice, so a row's mere presence means "still trending as of the
+-- last fetch" — no separate expiry logic needed.
+create table if not exists trending_topics (
+  id bigserial primary key,
+  source text not null, -- 'youtube' | 'wikipedia' | 'google_trends'
+  country text not null, -- 'global' or an ISO-3166-1 alpha-2 code
+  rank int not null,
+  label text not null,
+  detail text,
+  url text not null,
+  image_url text,
+  matched_league text, -- our own League/Tour value, when this topic maps to a tracked player/team
+  matched_type text, -- 'player' | 'team', paired with matched_league/matched_slug
+  matched_slug text,
+  fetched_at timestamptz not null default now()
+);
+
+create index if not exists trending_topics_lookup_idx on trending_topics (source, country, rank);

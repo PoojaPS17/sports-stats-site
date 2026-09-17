@@ -2,20 +2,18 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-// Reads/writes the URL's "country" param directly via client-side navigation hooks
-// instead of taking a server-computed href-builder function as a prop — a function
-// isn't serializable across the Server/Client Component boundary and throws at
-// runtime ("Functions cannot be passed directly to Client Components").
-export function CountrySelect({ countries }: { countries: { country: string; views: number }[] }) {
+// See CountrySelect.tsx for why this reads/writes the URL itself rather than taking
+// a server-computed href-builder function prop.
+export function TrendingCountrySelect({ countries }: { countries: { code: string; label: string }[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const value = searchParams.get("country") ?? "";
+  const value = searchParams.get("trending") ?? "global";
 
   function handleChange(next: string) {
     const sp = new URLSearchParams(searchParams.toString());
-    if (next) sp.set("country", next);
-    else sp.delete("country");
+    if (next && next !== "global") sp.set("trending", next);
+    else sp.delete("trending");
     const qs = sp.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
@@ -26,10 +24,9 @@ export function CountrySelect({ countries }: { countries: { country: string; vie
       onChange={(e) => handleChange(e.target.value)}
       className="nav-pill shrink-0 border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-muted)]"
     >
-      <option value="">All Countries</option>
       {countries.map((c) => (
-        <option key={c.country} value={c.country}>
-          {c.country}
+        <option key={c.code} value={c.code}>
+          {c.label}
         </option>
       ))}
     </select>

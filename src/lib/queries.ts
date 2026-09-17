@@ -550,6 +550,63 @@ export async function getTrackedCountries(): Promise<{ country: string; views: n
   return rows;
 }
 
+// External trending signals — real ones (YouTube's own trending chart, Wikipedia
+// pageview spikes, Google's daily trending searches), unlike game_views above which
+// only reflects traffic to ScoreDB itself. See scripts/fetch-trending-*.ts for how
+// each is fetched and, for wikipedia/google_trends, matched against our own
+// players/teams.
+export type TrendingSource = "youtube" | "wikipedia" | "google_trends";
+
+export interface TrendingTopic {
+  rank: number;
+  label: string;
+  detail: string | null;
+  url: string;
+  image_url: string | null;
+  matched_league: League | null;
+  matched_type: "player" | "team" | null;
+  matched_slug: string | null;
+  avatar_url: string | null;
+  avatar_color: string | null;
+}
+
+// A fixed list rather than "every country we've fetched" — these three sources cover
+// a specific set of countries by design (see the fetch scripts), and offering only
+// what's actually fetched avoids a picker full of dead-end selections.
+export const TRENDING_COUNTRIES: { code: string; label: string }[] = [
+  { code: "global", label: "Global" },
+  { code: "US", label: "United States" },
+  { code: "GB", label: "United Kingdom" },
+  { code: "IN", label: "India" },
+  { code: "AU", label: "Australia" },
+  { code: "ES", label: "Spain" },
+  { code: "BR", label: "Brazil" },
+];
+
+// YouTube and Google Trends are inherently per-country (no "worldwide" chart to fetch),
+// so "Global" falls back to US data for those two; Wikipedia's "global" is a real fetch
+// (the English edition), so it's left as-is.
+export async function getTrendingTopics(source: TrendingSource, country: string): Promise<TrendingTopic[]> {
+  const effectiveCountry = country === "global" && source !== "wikipedia" ? "US" : country;
+  const { rows } = await pool.query(
+    `select t.rank, t.label, t.detail, t.url, t.image_url, t.matched_league, t.matched_type, t.matched_slug,
+            coalesce(p.headshot_url, tm.logo_url) as avatar_url,
+            tm.color as avatar_color
+     from trending_topics t
+     left join players p on t.matched_type = 'player' and p.league = t.matched_league and p.slug = t.matched_slug
+     left join teams tm on t.matched_type = 'team' and tm.league = t.matched_league and tm.slug = t.matched_slug
+     where t.source = $1 and t.country = $2
+     order by t.rank asc`,
+    [source, effectiveCountry]
+  );
+  return rows;
+}
+
+export function matchedTopicHref(topic: TrendingTopic): string | null {
+  if (!topic.matched_league || !topic.matched_type || !topic.matched_slug) return null;
+  return `/${topic.matched_league}/${topic.matched_type === "player" ? "players" : "teams"}/${topic.matched_slug}`;
+}
+
 export interface CricketCareerStats {
   matches: number;
   inningsBatted: number;
