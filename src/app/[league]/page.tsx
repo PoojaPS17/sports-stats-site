@@ -1,11 +1,21 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { isLeague, LEAGUE_LABEL, getRecentAndUpcoming, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
+import { pageMeta } from "@/lib/metadata";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { PageHeader } from "@/components/PageHeader";
 
 export const revalidate = 60;
+
+export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
+  const { league } = await params;
+  if (!isLeague(league)) return {};
+  const label = LEAGUE_LABEL[league];
+  return pageMeta(`${label} Scores & Fixtures`, `Latest ${label} results and upcoming fixtures with kickoff times, box scores and match stats.`);
+}
 
 function groupByDay(games: Awaited<ReturnType<typeof getRecentAndUpcoming>>) {
   const groups = new Map<string, typeof games>();
@@ -35,22 +45,26 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Scores</h1>
+      <PageHeader title={`${LEAGUE_LABEL[league]} Scores`} subtitle="Results from the last two days and fixtures for the week ahead" />
 
       <AdSlot label={`${LEAGUE_LABEL[league]} top`} />
 
       {groups.size === 0 && (
-        <div className="card px-4 py-6 text-sm text-[var(--text-muted)]">
-          <p>
-            No {LEAGUE_LABEL[league]} games in the last 2 days or next 7 — the competition may be between seasons right
-            now.
-          </p>
+        <div className="card px-5 py-6">
+          <p className="font-semibold">The {LEAGUE_LABEL[league]} is between seasons.</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">No games in the last two days or the next week. Catch up on the most recent season instead.</p>
           {mostRecentSeason !== null && mostRecentSeason !== undefined && (
-            <p className="mt-2">
-              <Link href={`/${league}/standings/${mostRecentSeason}`} className="font-semibold text-[var(--accent)] hover:underline">
-                See the {formatSeasonLabel(league, mostRecentSeason)} standings →
+            <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold">
+              <Link href={`/${league}/standings/${mostRecentSeason}`} className="text-[var(--accent)] hover:underline">
+                {formatSeasonLabel(league, mostRecentSeason)} standings →
               </Link>
-            </p>
+              <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">
+                Leaders →
+              </Link>
+              <Link href={`/${league}/teams`} className="text-[var(--accent)] hover:underline">
+                Teams →
+              </Link>
+            </div>
           )}
         </div>
       )}

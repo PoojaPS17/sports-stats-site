@@ -88,7 +88,7 @@ export function CricketCareer({
           <div className="card overflow-hidden">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="text-left text-xs text-[var(--text-muted)]">
+                <tr className="table-head text-left">
                   <th className="py-2 pl-4 font-medium">{CRICKET_SPLIT_DIMENSIONS.find((d) => d.key === activeSplit)?.label}</th>
                   <th className="px-2 py-2 text-right font-medium">M</th>
                   <th className="px-2 py-2 text-right font-medium">Runs</th>

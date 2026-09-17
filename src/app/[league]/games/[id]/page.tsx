@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, isCricketLeague, getGameByEspnId, getPlayerSlugsByEspnIds } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getPlayerSlugsByEspnIds } from "@/lib/queries";
+import { pageMeta } from "@/lib/metadata";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import {
   fetchMatchSummary,
   parseTeamStats,
@@ -18,6 +21,22 @@ import { ViewTracker } from "@/components/ViewTracker";
 // A live fetch to ESPN backs this page (see lib/matchDetail.ts) — revalidate keeps it
 // fresh during a live game without hitting ESPN on every single request.
 export const revalidate = 120;
+
+export async function generateMetadata({ params }: { params: Promise<{ league: string; id: string }> }): Promise<Metadata> {
+  const { league, id } = await params;
+  if (!isLeague(league)) return {};
+  const game = await getGameByEspnId(league, id);
+  if (!game) return {};
+  const date = new Date(game.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const score =
+    game.completed && game.away_score != null && game.home_score != null
+      ? ` ${game.away_score_display ?? game.away_score}-${game.home_score_display ?? game.home_score}`
+      : "";
+  return pageMeta(
+    `${game.away_name} vs ${game.home_name}${score}`,
+    `${LEAGUE_LABEL[league]} match ${game.away_name} at ${game.home_name}, ${date}. Score, team stats and player box score.`
+  );
+}
 
 export default async function GameDetailPage({
   params,
@@ -65,6 +84,13 @@ export default async function GameDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <ViewTracker league={league} gameId={id} />
+      <Breadcrumbs
+        items={[
+          { label: LEAGUE_LABEL[league], href: `/${league}` },
+          { label: "Scores", href: `/${league}` },
+          { label: `${game.away_name} vs ${game.home_name}` },
+        ]}
+      />
       <MatchHeader game={game} />
 
       <AdSlot label="Match detail top" />

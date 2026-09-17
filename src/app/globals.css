@@ -1,36 +1,58 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Design tokens
+   Light theme is the default; dark overrides live in the two blocks below
+   (system preference, then the explicit data-theme toggle which always wins).
+--------------------------------------------------------------------------- */
 :root {
-  --bg: #ffffff;
+  --bg: #f4f6fa;
   --surface: #ffffff;
-  --surface-muted: #f3f7fb;
-  --border: #e3e7f1;
-  --text: #060640;
-  --text-muted: #4a4a72;
-  --accent: #1470af;
-  --accent-hover: #0f5688;
-  --accent-2: #b7500f;
+  --surface-muted: #f0f3f8;
+  --surface-hover: #f6f8fc;
+  --border: #e1e6ef;
+  --border-strong: #c9d2e0;
+  --text: #0f172a;
+  --text-muted: #5b6577;
+  --text-faint: #8a94a6;
+
+  --accent: #1d4ed8;
+  --accent-hover: #1e40af;
+  --accent-soft: #e6eeff;
   --accent-foreground: #ffffff;
+  --accent-2: #d97706;
 
-  --header-bg: #ffffff;
-  --header-text: #060640;
-  --header-text-muted: #4a4a72;
-  --header-border: #e3e7f1;
-  --header-hover-bg: #f3f7fb;
+  --win: #15803d;
+  --loss: #b91c1c;
+  --draw: #64748b;
+  --live: #dc2626;
 
-  --pill-live-bg: #fbdada;
+  --zone-1: #1d4ed8; /* Champions League / playoff line */
+  --zone-2: #d97706; /* Europa / play-in */
+  --zone-3: #dc2626; /* relegation */
+
+  --header-bg: rgba(255, 255, 255, 0.92);
+  --header-text: #0f172a;
+  --header-text-muted: #475569;
+  --header-border: #e1e6ef;
+  --header-hover-bg: #f0f3f8;
+
+  --pill-live-bg: #fee2e2;
   --pill-live-text: #b91c1c;
-  --pill-final-bg: #eef0f5;
-  --pill-final-text: #4a4a72;
-  --pill-upcoming-bg: #dcebfa;
-  --pill-upcoming-text: #0f5688;
-  --pill-feature-bg: #dcf3e3;
-  --pill-feature-text: #0a6b25;
+  --pill-final-bg: #eef1f6;
+  --pill-final-text: #475569;
+  --pill-upcoming-bg: #e6eeff;
+  --pill-upcoming-text: #1e40af;
+  --pill-feature-bg: #dcfce7;
+  --pill-feature-text: #166534;
 
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
 
-  --shadow-card: 0 1px 2px rgba(6, 6, 64, 0.05), 0 8px 20px -12px rgba(6, 6, 64, 0.14);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-pop: 0 10px 30px -10px rgba(15, 23, 42, 0.25), 0 2px 6px rgba(15, 23, 42, 0.08);
+
+  --header-h: 3.5rem;
 }
 
 @theme inline {
@@ -47,109 +69,308 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0b1a;
-    --surface: #12132a;
-    --surface-muted: #1a1c3a;
-    --border: #262a4d;
-    --text: #f2f3ff;
-    --text-muted: #a3a8d0;
-    --accent: #5fa8e0;
-    --accent-hover: #7fbdf0;
-    --accent-2: #ff9d52;
-    --accent-foreground: #05060f;
+    --bg: #0b1220;
+    --surface: #111a2b;
+    --surface-muted: #172238;
+    --surface-hover: #1b2740;
+    --border: #233047;
+    --border-strong: #32415c;
+    --text: #e8edf6;
+    --text-muted: #9aa7bd;
+    --text-faint: #6b788f;
 
-    --header-bg: #0a0b1a;
-    --header-text: #f2f3ff;
-    --header-text-muted: #a3a8d0;
-    --header-border: #262a4d;
-    --header-hover-bg: #1a1c3a;
+    --accent: #6ea0ff;
+    --accent-hover: #8db3ff;
+    --accent-soft: #1a2a4d;
+    --accent-foreground: #0b1220;
+    --accent-2: #f59e0b;
 
-    --pill-live-bg: #3a1420;
-    --pill-live-text: #ff6b83;
-    --pill-final-bg: #1e2140;
-    --pill-final-text: #a6abcf;
-    --pill-upcoming-bg: #1c2452;
-    --pill-upcoming-text: #93a5ff;
-    --pill-feature-bg: #103324;
-    --pill-feature-text: #4fd88a;
+    --win: #4ade80;
+    --loss: #f87171;
+    --draw: #94a3b8;
+    --live: #f87171;
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    --zone-1: #6ea0ff;
+    --zone-2: #f59e0b;
+    --zone-3: #f87171;
+
+    --header-bg: rgba(17, 26, 43, 0.92);
+    --header-text: #e8edf6;
+    --header-text-muted: #9aa7bd;
+    --header-border: #233047;
+    --header-hover-bg: #172238;
+
+    --pill-live-bg: #3b1520;
+    --pill-live-text: #fb7185;
+    --pill-final-bg: #1b2740;
+    --pill-final-text: #9aa7bd;
+    --pill-upcoming-bg: #1a2a4d;
+    --pill-upcoming-text: #9dbcff;
+    --pill-feature-bg: #0f2f22;
+    --pill-feature-text: #4ade80;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0a0b1a;
-  --surface: #12132a;
-  --surface-muted: #1a1c3a;
-  --border: #262a4d;
-  --text: #f2f3ff;
-  --text-muted: #a3a8d0;
-  --accent: #5fa8e0;
-  --accent-hover: #7fbdf0;
-  --accent-2: #ff9d52;
-  --accent-foreground: #05060f;
+  --bg: #0b1220;
+  --surface: #111a2b;
+  --surface-muted: #172238;
+  --surface-hover: #1b2740;
+  --border: #233047;
+  --border-strong: #32415c;
+  --text: #e8edf6;
+  --text-muted: #9aa7bd;
+  --text-faint: #6b788f;
 
-  --header-bg: #0a0b1a;
-  --header-text: #f2f3ff;
-  --header-text-muted: #a3a8d0;
-  --header-border: #262a4d;
-  --header-hover-bg: #1a1c3a;
+  --accent: #6ea0ff;
+  --accent-hover: #8db3ff;
+  --accent-soft: #1a2a4d;
+  --accent-foreground: #0b1220;
+  --accent-2: #f59e0b;
 
-  --pill-live-bg: #3a1420;
-  --pill-live-text: #ff6b83;
-  --pill-final-bg: #1e2140;
-  --pill-final-text: #a6abcf;
-  --pill-upcoming-bg: #1c2452;
-  --pill-upcoming-text: #93a5ff;
-  --pill-feature-bg: #103324;
-  --pill-feature-text: #4fd88a;
+  --win: #4ade80;
+  --loss: #f87171;
+  --draw: #94a3b8;
+  --live: #f87171;
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --zone-1: #6ea0ff;
+  --zone-2: #f59e0b;
+  --zone-3: #f87171;
+
+  --header-bg: rgba(17, 26, 43, 0.92);
+  --header-text: #e8edf6;
+  --header-text-muted: #9aa7bd;
+  --header-border: #233047;
+  --header-hover-bg: #172238;
+
+  --pill-live-bg: #3b1520;
+  --pill-live-text: #fb7185;
+  --pill-final-bg: #1b2740;
+  --pill-final-text: #9aa7bd;
+  --pill-upcoming-bg: #1a2a4d;
+  --pill-upcoming-text: #9dbcff;
+  --pill-feature-bg: #0f2f22;
+  --pill-feature-text: #4ade80;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------------- */
+html {
+  color-scheme: light;
+  scroll-padding-top: calc(var(--header-h) + 1rem);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
 }
 
 body {
   background: var(--bg);
   color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* ---------------------------------------------------------------------------
+   Layout helpers
+--------------------------------------------------------------------------- */
+.container-x {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-x {
+    padding-inline: 1.5rem;
+  }
+}
+
+.page-title {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Surfaces
+--------------------------------------------------------------------------- */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.85rem;
+  border-radius: 0.75rem;
   box-shadow: var(--shadow-card);
 }
 
-.nav-pill {
-  border-radius: 10px;
-  padding: 0.4rem 0.7rem;
+a.card,
+.card-link {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+a.card:hover,
+.card-link:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-pop);
+}
+
+.table-head {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 0.7rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.table-row {
+  border-top: 1px solid var(--border);
+  transition: background-color 0.12s ease;
+}
+
+.table-row:hover {
+  background: var(--surface-hover);
+}
+
+/* ---------------------------------------------------------------------------
+   Navigation primitives
+--------------------------------------------------------------------------- */
+
+/* Compact chip used for season pickers, filters and small segmented controls. */
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .nav-pill:hover {
   background: var(--header-hover-bg);
+  color: var(--text);
+}
+
+.nav-pill-active,
+.nav-pill-active:hover {
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
-.nav-pill-active {
+/* Top-level header links. */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--header-text-muted);
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-link:hover {
+  background: var(--header-hover-bg);
+  color: var(--header-text);
+}
+
+.nav-link-active {
+  color: var(--accent);
+}
+
+.nav-link-active:hover {
+  color: var(--accent);
+}
+
+/* Underlined section tabs (league sub-navigation). */
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 0.25rem;
+  margin-right: 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.tab-active {
+  color: var(--text);
+}
+
+.tab-active::after {
   background: var(--accent);
-  color: var(--accent-foreground);
 }
 
-.nav-pill-active:hover {
-  background: var(--accent-hover);
-  color: var(--accent-foreground);
-}
-
+/* Small status pills on cards. */
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   border-radius: 9999px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -182,6 +403,52 @@ body {
   animation: pulse-dot 1.4s ease-in-out infinite;
 }
 
+/* Result letters (W / L / D) used in form strips and schedules. */
+.result-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.result-w {
+  background: var(--win);
+}
+
+.result-l {
+  background: var(--loss);
+}
+
+.result-d {
+  background: var(--draw);
+}
+
+/* Standings zone markers. */
+.zone-marker {
+  display: inline-block;
+  width: 3px;
+  height: 1.25rem;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.zone-1 {
+  background: var(--zone-1);
+}
+
+.zone-2 {
+  background: var(--zone-2);
+}
+
+.zone-3 {
+  background: var(--zone-3);
+}
+
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
@@ -193,5 +460,18 @@ body {
 }
 
 .animate-marquee {
-  animation: marquee 40s linear infinite;
+  animation: marquee 45s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+  .live-dot {
+    animation: none;
+  }
 }

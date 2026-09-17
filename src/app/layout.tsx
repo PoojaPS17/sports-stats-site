@@ -19,9 +19,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const SITE_NAME = "ScoreDB";
+
 export const metadata: Metadata = {
-  title: "ScoreDB — Premier League, NFL, NBA & IPL scores and standings",
-  description: "Live scores, standings and player stats for the Premier League, NFL, NBA and IPL cricket, updated daily.",
+  title: {
+    default: "ScoreDB — Live scores, standings and stats for football, NFL, NBA, cricket, tennis and F1",
+    template: "%s | ScoreDB",
+  },
+  description:
+    "Live scores, standings, schedules and player stats for the Premier League, La Liga, NFL, NBA, IPL, ATP, WTA and F1 — with ten years of history.",
 };
 
 function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): TickerItem {
@@ -67,9 +73,17 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
       </head>
       <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text)]">
-        <Ticker items={tickerItems} updatedAt={lastUpdated} />
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[var(--surface)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-[var(--shadow-pop)]"
+        >
+          Skip to content
+        </a>
         <Nav />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+        <Ticker items={tickerItems} updatedAt={lastUpdated} />
+        <main id="main" className="container-x flex-1 pb-12 pt-6">
+          {children}
+        </main>
         <Footer />
       </body>
     </html>

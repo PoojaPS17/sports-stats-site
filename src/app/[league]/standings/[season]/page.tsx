@@ -1,14 +1,25 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getStandingsBySeason, getStandingsSeasons, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
 import { summarizePlayoffs } from "@/lib/seasonSummary";
+import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
 import { StandingsTable } from "@/components/StandingsTable";
 import { SeasonTabs } from "@/components/SeasonTabs";
 import { SeasonSummary } from "@/components/SeasonSummary";
+import { PageHeader } from "@/components/PageHeader";
 
 // A past season's final table never changes, so this can be cached far longer than
 // the live current-season standings page.
 export const revalidate = 86400;
+
+export async function generateMetadata({ params }: { params: Promise<{ league: string; season: string }> }): Promise<Metadata> {
+  const { league, season } = await params;
+  if (!isLeague(league)) return {};
+  const label = LEAGUE_LABEL[league];
+  const seasonLabel = formatSeasonLabel(league, Number(season)) ?? season;
+  return pageMeta(`${label} Standings ${seasonLabel}`, `Final ${label} table for the ${seasonLabel} season.`);
+}
 
 export default async function StandingsSeasonPage({
   params,
@@ -31,10 +42,7 @@ export default async function StandingsSeasonPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Standings</h1>
-        <p className="mt-0.5 text-sm text-[var(--text-muted)]">{formatSeasonLabel(league, season)} Season</p>
-      </div>
+      <PageHeader title={`${LEAGUE_LABEL[league]} Standings`} subtitle={`${formatSeasonLabel(league, season)} season`} />
       <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />
 
       <SeasonTabs league={league} basePath={`/${league}/standings`} seasons={seasons} activeSeason={season} />

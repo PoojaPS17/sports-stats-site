@@ -1,51 +1,55 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { NAV_ITEMS, isNavItemActive } from "@/lib/nav";
+import { LogoMark } from "./Logo";
+import { NavDropdown } from "./NavDropdown";
+import { MobileMenu } from "./MobileMenu";
 import { SearchBar } from "./SearchBar";
 import { ThemeToggle } from "./ThemeToggle";
-import { CricketDropdown } from "./CricketDropdown";
-import { TennisDropdown } from "./TennisDropdown";
-import { FootballDropdown } from "./FootballDropdown";
-
-function Logo() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="9" fill="var(--accent)" />
-      <rect x="7" y="17" width="4" height="8" rx="1.5" fill="#ffffff" />
-      <rect x="14" y="11" width="4" height="14" rx="1.5" fill="#ffffff" />
-      <rect x="21" y="7" width="4" height="18" rx="1.5" fill="#ffffff" />
-    </svg>
-  );
-}
 
 export function Nav() {
+  const pathname = usePathname();
+
   return (
-    <header className="sticky top-0 z-10 border-b border-[var(--header-border)] bg-[var(--header-bg)]/95 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-2 gap-y-3 px-4 py-3">
-        <Link href="/" className="mr-3 flex items-center gap-2">
-          <Logo />
-          <span className="text-lg font-extrabold tracking-tight text-[var(--header-text)]">ScoreDB</span>
+    <header className="sticky top-0 z-30 border-b border-[var(--header-border)] bg-[var(--header-bg)] backdrop-blur">
+      <div className="container-x flex h-[var(--header-h)] items-center gap-2">
+        <Link href="/" className="mr-2 flex shrink-0 items-center gap-2" aria-label="ScoreDB home">
+          <LogoMark size={28} />
+          <span className="text-[17px] font-extrabold tracking-tight text-[var(--header-text)]">ScoreDB</span>
         </Link>
-        <nav className="flex gap-1 text-sm text-[var(--header-text-muted)]">
-          <FootballDropdown />
-          <Link href="/nfl" className="nav-pill">
-            NFL
-          </Link>
-          <Link href="/nba" className="nav-pill">
-            NBA
-          </Link>
-          <CricketDropdown />
-          <TennisDropdown />
-          <Link href="/f1" className="nav-pill">
-            F1
-          </Link>
-          <Link href="/top-games" className="nav-pill">
-            Top Sports Games
-          </Link>
+
+        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">
+          {NAV_ITEMS.map((item) => {
+            const active = isNavItemActive(pathname, item);
+            if (item.href) {
+              return (
+                <Link key={item.label} href={item.href} className={`nav-link ${active ? "nav-link-active" : ""}`}>
+                  {item.label}
+                </Link>
+              );
+            }
+            return <NavDropdown key={item.label} label={item.label} items={item.children ?? []} active={active} />;
+          })}
         </nav>
-        <div className="order-last flex w-full items-center gap-3 sm:order-none sm:ml-auto sm:w-auto">
-          <div className="w-full sm:w-72">
+
+        <div className="ml-auto flex items-center gap-2">
+          <div className="hidden w-64 md:block">
             <SearchBar />
           </div>
+          <Link
+            href="/search"
+            aria-label="Search"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--header-text)] transition hover:bg-[var(--header-hover-bg)] md:hidden"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+          </Link>
           <ThemeToggle />
+          <MobileMenu />
         </div>
       </div>
     </header>

@@ -22,9 +22,13 @@ export function LastUpdated({ iso }: { iso: string }) {
   }, [iso]);
 
   return (
-    <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-[var(--border)] pl-4 text-xs text-[var(--text-muted)]">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-      Updated {label}
+    <span
+      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-[var(--border)] pl-3 text-[11px] text-[var(--text-muted)]"
+      title={`Data last refreshed ${iso}`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-[var(--win)]" />
+      <span className="hidden sm:inline">Updated </span>
+      {label}
     </span>
   );
 }

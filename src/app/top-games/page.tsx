@@ -1,3 +1,4 @@
+import { pageMeta } from "@/lib/metadata";
 import Link from "next/link";
 import {
   TOP_GAMES_WINDOWS,
@@ -13,6 +14,8 @@ import { CountrySelect } from "@/components/CountrySelect";
 import { TrendingCountrySelect } from "@/components/TrendingCountrySelect";
 import { TrendingFigures } from "@/components/TrendingFigures";
 import { TrendingApps } from "@/components/TrendingApps";
+
+export const metadata = pageMeta("Top Sports Games", "The most-viewed matches on ScoreDB right now, plus trending sports apps and figures.");
 
 export const revalidate = 300;
 
@@ -66,7 +69,7 @@ export default async function TopGamesPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Top Sports Games</h1>
+        <h1 className="page-title">Top Sports Games</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
           Ranked by real visits to each match page on ScoreDB — across Premier League, NFL, NBA and IPL. Country and
           device come from real visitors, the same way an app store chart is built from actual usage.

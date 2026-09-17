@@ -1,12 +1,22 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getStandings, getStandingsSeasons, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
 import { summarizePlayoffs } from "@/lib/seasonSummary";
+import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
 import { StandingsTable } from "@/components/StandingsTable";
 import { SeasonTabs } from "@/components/SeasonTabs";
 import { SeasonSummary } from "@/components/SeasonSummary";
+import { PageHeader } from "@/components/PageHeader";
 
 export const revalidate = 300;
+
+export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
+  const { league } = await params;
+  if (!isLeague(league)) return {};
+  const label = LEAGUE_LABEL[league];
+  return pageMeta(`${label} Standings`, `Current ${label} table with wins, losses, points and streaks, plus ten seasons of past standings.`);
+}
 
 export default async function StandingsPage({ params }: { params: Promise<{ league: string }> }) {
   const { league } = await params;
@@ -18,10 +28,7 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Standings</h1>
-        {activeSeason && <p className="mt-0.5 text-sm text-[var(--text-muted)]">{formatSeasonLabel(league, activeSeason)} Season</p>}
-      </div>
+      <PageHeader title={`${LEAGUE_LABEL[league]} Standings`} subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} season` : undefined} />
       <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />
 
       <SeasonTabs league={league} basePath={`/${league}/standings`} seasons={seasons} activeSeason={activeSeason} />

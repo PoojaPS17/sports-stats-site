@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { pageMeta } from "@/lib/metadata";
 import Link from "next/link";
 import { isLeague, isCricketLeague, getCricketCenturies, LEAGUE_LABEL } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
+
+export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
+  const { league } = await params;
+  if (!isLeague(league)) return {};
+  const label = LEAGUE_LABEL[league];
+  return pageMeta(`${label} Centuries`, `Every century scored in the ${label}, most recent first.`);
+}
 
 export const revalidate = 3600;
 
@@ -15,7 +24,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">{LEAGUE_LABEL[league]} Centuries</h1>
+        <h1 className="page-title">{LEAGUE_LABEL[league]} Centuries</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
           Every century scored in the {LEAGUE_LABEL[league]} on record ({centuries.length} total) — most recent first.
         </p>
@@ -29,7 +38,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
         <div className="card overflow-hidden">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="text-left text-xs text-[var(--text-muted)]">
+              <tr className="table-head text-left">
                 <th className="py-2 pl-4 font-medium">Player</th>
                 <th className="px-2 py-2 font-medium">Team</th>
                 <th className="px-2 py-2 text-right font-medium">Runs</th>
@@ -44,7 +53,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
             </thead>
             <tbody>
               {centuries.map((c, i) => (
-                <tr key={`${c.player_espn_id}-${c.date}-${i}`} className="border-t border-[var(--border)] transition hover:bg-[var(--surface-muted)]">
+                <tr key={`${c.player_espn_id}-${c.date}-${i}`} className="table-row">
                   <td className="py-2 pl-4">
                     <Link href={`/${league}/players/${c.player_slug}`} className="flex items-center gap-2 font-medium hover:underline">
                       {c.headshot_url ? (

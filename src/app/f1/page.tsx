@@ -1,7 +1,10 @@
+import { pageMeta } from "@/lib/metadata";
 import Link from "next/link";
 import { getF1Calendar, getF1Seasons } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { F1SeasonSelect } from "@/components/F1SeasonSelect";
+
+export const metadata = pageMeta("F1 Calendar", "Formula 1 race calendar with circuits, dates and winners.");
 
 export const revalidate = 300;
 
@@ -15,17 +18,9 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
 
   return (
     <div className="flex flex-col gap-6">
-      <nav className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto border-b border-[var(--border)] px-4 py-2.5 sm:mx-0 sm:px-0">
-        <Link href="/f1" className="nav-pill nav-pill-active shrink-0 text-sm">
-          Calendar
-        </Link>
-        <Link href="/f1/standings" className="nav-pill shrink-0 text-sm text-[var(--text-muted)]">
-          Standings
-        </Link>
-      </nav>
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight">F1 Calendar</h1>
+        <h1 className="page-title">F1 Calendar</h1>
         {seasons.length > 1 && <F1SeasonSelect seasons={seasons} defaultSeason={defaultSeason} />}
       </div>
 

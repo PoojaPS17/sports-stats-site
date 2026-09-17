@@ -20,7 +20,7 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
       <div className="flex items-center gap-3">
         <TeamLogo name={driver.name} logoUrl={driver.headshot_url} size={56} />
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{driver.name}</h1>
+          <h1 className="page-title">{driver.name}</h1>
           <p className="text-sm text-[var(--text-muted)]">F1{currentTeam && ` · ${currentTeam}`}</p>
         </div>
       </div>

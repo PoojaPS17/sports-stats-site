@@ -19,7 +19,7 @@ export default async function F1ConstructorPage({ params }: { params: Promise<{ 
       <div className="flex items-center gap-3">
         <TeamLogo name={team.name} logoUrl={team.logo_url} color={team.color} size={56} />
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{team.name}</h1>
+          <h1 className="page-title">{team.name}</h1>
           <p className="text-sm text-[var(--text-muted)]">F1 Constructor</p>
         </div>
       </div>

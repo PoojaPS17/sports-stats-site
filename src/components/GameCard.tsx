@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { GameRow, League } from "@/lib/queries";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
+import { LocalTime } from "./LocalTime";
 
 function TeamRow({
   name,
@@ -26,23 +27,26 @@ function TeamRow({
   // compound score (cricket's "161/5 (18/20 ov, target 156)") was forcing the name to
   // truncate to a couple of letters to make room — give it its own line instead.
   const isLongScore = Boolean(scoreDisplay);
+  const loser = completed && !won;
 
   return (
-    <div className="flex flex-col gap-0.5 py-1.5">
+    <div className="flex flex-col gap-0.5 py-1">
       <span className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2.5">
-          <TeamLogo name={name} logoUrl={logo} color={color} size={28} />
-          <span className={`truncate text-sm ${completed && won ? "font-semibold" : "font-medium"}`}>
+          <TeamLogo name={name} logoUrl={logo} color={color} size={26} />
+          <span className={`truncate text-[15px] ${loser ? "font-medium text-[var(--text-muted)]" : "font-semibold text-[var(--text)]"}`}>
             <span className="sm:hidden">{abbr ?? name}</span>
             <span className="hidden sm:inline">{name}</span>
           </span>
         </span>
         {completed && !isLongScore && score !== null && (
-          <span className={`shrink-0 tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>{score}</span>
+          <span className={`shrink-0 text-base tabular-nums ${won ? "font-bold text-[var(--text)]" : "font-medium text-[var(--text-muted)]"}`}>
+            {score}
+          </span>
         )}
       </span>
       {completed && isLongScore && (
-        <span className={`pl-[38px] text-xs tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+        <span className={`pl-[36px] text-xs tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
           {scoreDisplay}
         </span>
       )}
@@ -50,22 +54,29 @@ function TeamRow({
   );
 }
 
+function accessibleLabel(game: GameRow): string {
+  if (game.completed) {
+    return `${game.away_name} ${game.away_score_display ?? game.away_score ?? ""}, ${game.home_name} ${
+      game.home_score_display ?? game.home_score ?? ""
+    }, ${game.round ?? "final"}`;
+  }
+  const date = new Date(game.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return `${game.away_name} at ${game.home_name}, ${date}`;
+}
+
 export function GameCard({ league, game }: { league: League; game: GameRow }) {
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
+  const live = game.status_state === "in";
+  const upcoming = !game.completed && !live;
 
   return (
     <Link
       href={`/${league}/games/${game.espn_id}`}
-      className="card group relative block overflow-hidden px-4 py-3 transition hover:-translate-y-0.5 hover:shadow-lg"
+      aria-label={accessibleLabel(game)}
+      className={`card block px-4 py-3 ${live ? "border-[var(--live)]/40" : ""}`}
     >
-      <div
-        className="absolute inset-x-0 top-0 h-1"
-        style={{
-          background: `linear-gradient(90deg, ${game.away_color ?? "var(--border)"}, ${game.home_color ?? "var(--border)"})`,
-        }}
-      />
-      <div className="mb-1.5 flex items-center justify-between">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
         <StatusPill
           statusState={game.status_state}
           statusDetail={game.status_detail}
@@ -73,6 +84,15 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           completed={game.completed}
           round={game.round}
         />
+        {upcoming ? (
+          <LocalTime iso={game.date} format="time" className="text-xs font-medium text-[var(--text-muted)]" />
+        ) : live && game.status_detail ? (
+          <span className="text-xs font-medium text-[var(--text-muted)]">{game.status_detail}</span>
+        ) : (
+          <span className="text-xs text-[var(--text-faint)]">
+            {new Date(game.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </span>
+        )}
       </div>
       <TeamRow
         name={game.away_name}
@@ -95,7 +115,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         won={homeWon}
       />
       {game.completed && game.status_summary && (
-        <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--accent)]">{game.status_summary}</p>
+        <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--text-muted)]">{game.status_summary}</p>
       )}
     </Link>
   );

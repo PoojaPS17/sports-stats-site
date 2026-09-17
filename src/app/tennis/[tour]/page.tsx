@@ -1,10 +1,18 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { pageMeta } from "@/lib/metadata";
+import { PageHeader } from "@/components/PageHeader";
 import { isTour, getTennisMatches, TOUR_LABEL } from "@/lib/tennis";
 import { AdSlot } from "@/components/AdSlot";
 import { TennisMatchCard } from "@/components/TennisMatchCard";
 
 export const revalidate = 300;
+
+export async function generateMetadata({ params }: { params: Promise<{ tour: string }> }): Promise<Metadata> {
+  const { tour } = await params;
+  if (!isTour(tour)) return {};
+  return pageMeta(`${TOUR_LABEL[tour]} Scores`, `Latest ${TOUR_LABEL[tour]} tennis results and upcoming matches from every tour event.`);
+}
 
 export default async function TennisScoresPage({ params }: { params: Promise<{ tour: string }> }) {
   const { tour } = await params;
@@ -14,16 +22,8 @@ export default async function TennisScoresPage({ params }: { params: Promise<{ t
 
   return (
     <div className="flex flex-col gap-6">
-      <nav className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto border-b border-[var(--border)] px-4 py-2.5 sm:mx-0 sm:px-0">
-        <Link href={`/tennis/${tour}`} className="nav-pill nav-pill-active shrink-0 text-sm">
-          Scores
-        </Link>
-        <Link href={`/tennis/${tour}/rankings`} className="nav-pill shrink-0 text-sm text-[var(--text-muted)]">
-          Rankings
-        </Link>
-      </nav>
 
-      <h1 className="text-2xl font-extrabold tracking-tight">{TOUR_LABEL[tour]} Scores</h1>
+      <PageHeader title={`${TOUR_LABEL[tour]} Scores`} subtitle="Recent results and upcoming matches" />
 
       <AdSlot label={`${TOUR_LABEL[tour]} top`} />
 

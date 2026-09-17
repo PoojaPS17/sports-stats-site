@@ -1,8 +1,11 @@
+import { pageMeta } from "@/lib/metadata";
 import Link from "next/link";
 import { getF1DriverStandings, getF1ConstructorStandings, getF1Seasons } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { F1SeasonSelect } from "@/components/F1SeasonSelect";
 import { TeamLogo } from "@/components/TeamLogo";
+
+export const metadata = pageMeta("F1 Standings", "Formula 1 drivers' and constructors' championship standings.");
 
 export const revalidate = 300;
 
@@ -38,17 +41,9 @@ export default async function F1StandingsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <nav className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto border-b border-[var(--border)] px-4 py-2.5 sm:mx-0 sm:px-0">
-        <Link href="/f1" className="nav-pill shrink-0 text-sm text-[var(--text-muted)]">
-          Calendar
-        </Link>
-        <Link href="/f1/standings" className="nav-pill nav-pill-active shrink-0 text-sm">
-          Standings
-        </Link>
-      </nav>
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight">F1 Standings</h1>
+        <h1 className="page-title">F1 Standings</h1>
         {seasons.length > 1 && <F1SeasonSelect seasons={seasons} defaultSeason={defaultSeason} />}
       </div>
 
@@ -73,7 +68,7 @@ export default async function F1StandingsPage({
           <div className="card overflow-hidden">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="text-left text-xs text-[var(--text-muted)]">
+                <tr className="table-head text-left">
                   <th className="py-2 pl-4 font-medium">#</th>
                   <th className="py-2 font-medium">Driver</th>
                   <th className="py-2 font-medium">Team</th>
@@ -83,7 +78,7 @@ export default async function F1StandingsPage({
               </thead>
               <tbody>
                 {drivers.map((d) => (
-                  <tr key={d.driver_espn_id} className="border-t border-[var(--border)] transition hover:bg-[var(--surface-muted)]">
+                  <tr key={d.driver_espn_id} className="table-row">
                     <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{d.position ?? "—"}</td>
                     <td className="py-2">
                       <Link href={`/f1/drivers/${d.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
@@ -106,7 +101,7 @@ export default async function F1StandingsPage({
         <div className="card overflow-hidden">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="text-left text-xs text-[var(--text-muted)]">
+              <tr className="table-head text-left">
                 <th className="py-2 pl-4 font-medium">#</th>
                 <th className="py-2 font-medium">Constructor</th>
                 <th className="py-2 text-right font-medium">Wins</th>
@@ -115,7 +110,7 @@ export default async function F1StandingsPage({
             </thead>
             <tbody>
               {constructors.map((c) => (
-                <tr key={c.team_espn_id} className="border-t border-[var(--border)] transition hover:bg-[var(--surface-muted)]">
+                <tr key={c.team_espn_id} className="table-row">
                   <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{c.position ?? "—"}</td>
                   <td className="py-2">
                     <Link href={`/f1/teams/${c.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">

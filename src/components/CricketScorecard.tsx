@@ -21,7 +21,7 @@ function ScorecardTable({
       <p className="px-4 pt-3 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{title}</p>
       <table className="w-full min-w-[420px] border-collapse text-sm">
         <thead>
-          <tr className="text-left text-xs text-[var(--text-muted)]">
+          <tr className="table-head text-left">
             <th className="py-2 pl-4 font-medium">Player</th>
             {labels.map((label) => (
               <th key={label} className="px-2 py-2 text-right font-medium">

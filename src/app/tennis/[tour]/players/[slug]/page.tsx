@@ -33,7 +33,7 @@ export default async function TennisPlayerPage({
           <span className="h-[72px] w-[72px] shrink-0 rounded-full bg-[var(--surface-muted)]" />
         )}
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{player.name}</h1>
+          <h1 className="page-title">{player.name}</h1>
           <p className="text-sm font-medium text-[var(--text-muted)]">
             {TOUR_LABEL[tour]}
             {ranking ? ` · Ranked #${ranking.rank}${ranking.points ? ` · ${ranking.points} pts` : ""}` : ""}

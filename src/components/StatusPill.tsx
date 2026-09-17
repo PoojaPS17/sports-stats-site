@@ -1,3 +1,5 @@
+import { LocalTime } from "./LocalTime";
+
 export function StatusPill({
   statusState,
   statusDetail,
@@ -29,6 +31,10 @@ export function StatusPill({
     return <span className="pill pill-final">{round ?? "Final"}</span>;
   }
 
-  const dateLabel = new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return <span className="pill pill-upcoming">{round ? `${round} · ${dateLabel}` : dateLabel}</span>;
+  return (
+    <span className="pill pill-upcoming">
+      {round ? `${round} · ` : ""}
+      <LocalTime iso={date} format="date" />
+    </span>
+  );
 }

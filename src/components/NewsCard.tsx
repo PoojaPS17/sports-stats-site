@@ -9,25 +9,28 @@ function timeAgo(iso: string | null): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-export function NewsCard({ article }: { article: NewsArticle }) {
+export function NewsCard({ article, compact = false }: { article: NewsArticle; compact?: boolean }) {
   return (
     <a
       href={article.link ?? "#"}
       target="_blank"
       rel="noopener noreferrer"
-      className="card group flex gap-3 overflow-hidden p-3 hover:-translate-y-0.5 hover:shadow-lg"
+      className={`card group flex gap-3 overflow-hidden ${compact ? "p-2.5" : "p-3"}`}
     >
       {article.image_url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={article.image_url}
           alt=""
-          className="h-20 w-28 shrink-0 rounded-lg object-cover"
+          loading="lazy"
+          className={`shrink-0 rounded-md bg-[var(--surface-muted)] object-cover ${compact ? "h-14 w-20" : "h-20 w-28 rounded-lg"}`}
         />
       )}
       <div className="flex min-w-0 flex-col justify-center gap-1">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug group-hover:underline">{article.headline}</p>
-        <p className="text-xs text-[var(--text-muted)]">{timeAgo(article.published)}</p>
+        <p className={`line-clamp-2 font-semibold leading-snug group-hover:text-[var(--accent)] ${compact ? "text-[13px]" : "text-sm"}`}>
+          {article.headline}
+        </p>
+        <p className="text-xs text-[var(--text-faint)]">{timeAgo(article.published)}</p>
       </div>
     </a>
   );

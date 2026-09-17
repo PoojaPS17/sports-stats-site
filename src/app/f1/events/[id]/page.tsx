@@ -40,7 +40,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
         <Link href="/f1" className="text-sm text-[var(--text-muted)] hover:underline">
           ← F1 Calendar
         </Link>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">{event.name}</h1>
+        <h1 className="page-title mt-1">{event.name}</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
           {new Date(event.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
           {event.circuit_name && ` · ${event.circuit_name}`}
@@ -66,7 +66,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                 <div className="card overflow-hidden">
                   <table className="w-full border-collapse text-sm">
                     <thead>
-                      <tr className="text-left text-xs text-[var(--text-muted)]">
+                      <tr className="table-head text-left">
                         <th className="py-2 pl-4 font-medium">Pos</th>
                         <th className="py-2 font-medium">Driver</th>
                         <th className="py-2 pr-4 font-medium">Team</th>
@@ -76,7 +76,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                       {sessionResults
                         .sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
                         .map((r) => (
-                          <tr key={r.driver_espn_id} className="border-t border-[var(--border)] transition hover:bg-[var(--surface-muted)]">
+                          <tr key={r.driver_espn_id} className="table-row">
                             <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{r.position ?? "—"}</td>
                             <td className="py-2">
                               <Link href={`/f1/drivers/${r.driver_slug}`} className="font-medium hover:underline">

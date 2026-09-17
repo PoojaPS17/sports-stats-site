@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LEAGUE_LABEL, CRICKET_LEAGUES, SOCCER_LEAGUES, type League } from "@/lib/queries";
 import { TOURS, TOUR_LABEL } from "@/lib/tennisTours";
+import { LogoMark } from "./Logo";
 
 const LEAGUE_SECTIONS: { label: string; suffix: string }[] = [
   { label: "Scores", suffix: "" },
@@ -10,34 +11,14 @@ const LEAGUE_SECTIONS: { label: string; suffix: string }[] = [
   { label: "News", suffix: "/news" },
 ];
 
-function LeagueColumn({ league }: { league: League }) {
+function Column({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--text)]">{LEAGUE_LABEL[league]}</h3>
-      <ul className="flex flex-col gap-1.5">
-        {LEAGUE_SECTIONS.map((s) => (
-          <li key={s.label}>
-            <Link href={`/${league}${s.suffix}`} className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline">
-              {s.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// Cricket, Football (multi-league) and Tennis (a different page shape entirely — no
-// standings/teams/leaders/news) get one flat list of leagues/tours per column instead
-// of the 5-deep link list above, which only makes sense for a single league.
-function GroupColumn({ title, links }: { title: string; links: { label: string; href: string }[] }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--text)]">{title}</h3>
+    <div className="flex flex-col gap-2.5">
+      <h3 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{title}</h3>
       <ul className="flex flex-col gap-1.5">
         {links.map((l) => (
           <li key={l.href}>
-            <Link href={l.href} className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline">
+            <Link href={l.href} className="text-sm text-[var(--text-muted)] transition hover:text-[var(--accent)]">
               {l.label}
             </Link>
           </li>
@@ -47,36 +28,42 @@ function GroupColumn({ title, links }: { title: string; links: { label: string; 
   );
 }
 
+function leagueLinks(league: League) {
+  return LEAGUE_SECTIONS.map((s) => ({ label: s.label, href: `/${league}${s.suffix}` }));
+}
+
 export function Footer() {
   return (
-    <footer className="border-t border-[var(--border)] bg-[var(--surface-muted)]">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-8 px-4 py-10 sm:grid-cols-3 lg:grid-cols-7">
-        <div className="col-span-2 flex flex-col gap-2 sm:col-span-3 lg:col-span-1">
-          <span className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--accent)] text-[var(--accent-foreground)]">📊</span>
+    <footer className="mt-auto border-t border-[var(--border)] bg-[var(--surface)]">
+      <div className="container-x grid grid-cols-2 gap-x-6 gap-y-8 py-10 sm:grid-cols-3 lg:grid-cols-8">
+        <div className="col-span-2 flex flex-col gap-3 sm:col-span-3 lg:col-span-2">
+          <Link href="/" className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight">
+            <LogoMark size={26} />
             ScoreDB
-          </span>
-          <p className="text-sm text-[var(--text-muted)]">
-            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1 — plus 10
-            years of history for every team and player.
+          </Link>
+          <p className="max-w-xs text-sm leading-relaxed text-[var(--text-muted)]">
+            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years
+            of history for every team and player.
           </p>
         </div>
-        <LeagueColumn league="nfl" />
-        <LeagueColumn league="nba" />
-        <GroupColumn title="Football" links={SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
-        <GroupColumn title="Cricket" links={CRICKET_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
-        <GroupColumn title="Tennis" links={TOURS.map((t) => ({ label: TOUR_LABEL[t], href: `/tennis/${t}` }))} />
-        <GroupColumn
-          title="F1"
+        <Column title="Football" links={SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
+        <Column title="NFL" links={leagueLinks("nfl")} />
+        <Column title="NBA" links={leagueLinks("nba")} />
+        <Column title="Cricket" links={CRICKET_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
+        <Column title="Tennis" links={TOURS.map((t) => ({ label: TOUR_LABEL[t], href: `/tennis/${t}` }))} />
+        <Column
+          title="More"
           links={[
-            { label: "Calendar", href: "/f1" },
-            { label: "Standings", href: "/f1/standings" },
+            { label: "F1 Calendar", href: "/f1" },
+            { label: "F1 Standings", href: "/f1/standings" },
+            { label: "Top Games", href: "/top-games" },
+            { label: "Search", href: "/search" },
           ]}
         />
       </div>
-      <div className="border-t border-[var(--border)] px-4 py-4">
-        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-2 text-xs text-[var(--text-muted)] sm:flex-row">
-          <span>© {new Date().getFullYear()} ScoreDB. All scores and stats via ESPN, refreshed automatically.</span>
+      <div className="border-t border-[var(--border)]">
+        <div className="container-x flex flex-col items-start justify-between gap-2 py-4 text-xs text-[var(--text-faint)] sm:flex-row sm:items-center">
+          <span>© {new Date().getFullYear()} ScoreDB. Scores and stats via ESPN, refreshed automatically.</span>
           <span>Not affiliated with the Premier League, La Liga, NFL, NBA, IPL, ATP, WTA, F1, or ESPN.</span>
         </div>
       </div>
