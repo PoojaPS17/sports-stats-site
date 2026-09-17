@@ -2,7 +2,8 @@
    JSON, same justification the scraper scripts use for the same API responses */
 import type { League } from "./queries";
 
-const SPORT_PATH: Record<League, string> = {
+// Competitions fed by ESPN; the international formats (Cricsheet) have no live source.
+const SPORT_PATH: Partial<Record<League, string>> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
   epl: "soccer/eng.1",
@@ -21,8 +22,10 @@ const SPORT_PATH: Record<League, string> = {
 // backfill hasn't reached. Everything stored comes through extractGameDetails below,
 // so the page renders the same shape either way.
 export async function fetchMatchSummary(league: League, espnId: string): Promise<any | null> {
+  const path = SPORT_PATH[league];
+  if (!path) return null;
   try {
-    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${SPORT_PATH[league]}/summary?event=${espnId}`, {
+    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${espnId}`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) return null;

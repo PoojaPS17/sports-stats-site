@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, LEAGUE_LABEL, leagueNameWithArticle, getRecentAndUpcoming, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, isInternationalCricket, LEAGUE_LABEL, leagueNameWithArticle, getRecentAndUpcoming, getLatestResults, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
 import { getCurrentSeasonTeams } from "@/lib/related";
 import { TeamLogo } from "@/components/TeamLogo";
 import { pageMeta } from "@/lib/metadata";
@@ -39,8 +39,11 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
   const { league } = await params;
   if (!isLeague(league)) notFound();
 
-  const [games, teams] = await Promise.all([getRecentAndUpcoming(league, 2, 7), getCurrentSeasonTeams(league)]);
-  const groups = groupByDay(games);
+  const international = isInternationalCricket(league);
+  const [games, teams, latest] = await Promise.all([getRecentAndUpcoming(league, 2, 7), getCurrentSeasonTeams(league), international ? getLatestResults(league, 12) : []]);
+  // The international archive has no fixtures, so the rolling window would often be
+  // empty; those pages open on the newest completed matches instead.
+  const groups = groupByDay(international && games.length === 0 ? latest : games);
   // This page is a rolling recent-and-upcoming window, not a live-only view — for a
   // seasonal competition (NBA preseason, IPL/BBL between tournaments) that window can
   // be genuinely empty for months at a time. Rather than a bare "nothing here" that
@@ -49,7 +52,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={`${LEAGUE_LABEL[league]} Scores`} subtitle="Results from the last two days and fixtures for the week ahead">
+      <PageHeader title={`${LEAGUE_LABEL[league]} Scores`} subtitle={international ? "Latest completed matches, with full scorecards" : "Results from the last two days and fixtures for the week ahead"}>
         {supportsMatchweeks(league) && (
           <Link href={weekIndexPath(league)} className="nav-pill nav-pill-active">
             Browse by {weekNoun(league).toLowerCase()} →
@@ -59,6 +62,13 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
       </PageHeader>
 
       <AdSlot label={`${LEAGUE_LABEL[league]} top`} />
+
+      {international && (
+        <p className="text-xs text-[var(--text-muted)]">
+          Men&apos;s internationals from Cricsheet&apos;s ball-by-ball archive, refreshed weekly: completed matches only, no fixtures or live scores. The archive
+          withholds matches involving Afghanistan&apos;s men&apos;s team, so those results and the figures from them are not included here.
+        </p>
+      )}
 
       {groups.size === 0 && (
         <div className="card px-5 py-6">

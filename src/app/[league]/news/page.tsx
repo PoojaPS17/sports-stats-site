@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getNews } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, getNews, hasNewsFeed } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
 import { NewsCard } from "@/components/NewsCard";
@@ -10,14 +10,14 @@ export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
-  if (!isLeague(league)) return {};
+  if (!isLeague(league) || !hasNewsFeed(league)) return {};
   const label = LEAGUE_LABEL[league];
   return pageMeta(`${label} News`, `The latest ${label} headlines, updated throughout the day.`, `/${league}/news`);
 }
 
 export default async function NewsPage({ params }: { params: Promise<{ league: string }> }) {
   const { league } = await params;
-  if (!isLeague(league)) notFound();
+  if (!isLeague(league) || !hasNewsFeed(league)) notFound();
 
   const news = await getNews(league, 20);
 

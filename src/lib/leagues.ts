@@ -3,16 +3,20 @@
 // that runs in the browser (e.g. LeagueSubNav) must import from here directly instead
 // of from queries.ts, since importing any value from that module pulls in `pg` (via
 // ./db) and breaks the client bundle (`tls`/`util/types` aren't available there).
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "bundesliga" | "seriea" | "ucl";
+export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "bundesliga" | "seriea" | "ucl" | "odi" | "t20i";
 
 // The 4 major, always-active leagues — these get homepage sections and top-level nav
 // links. The other competitions (only in season occasionally, or every 2-4 years for
 // the World Cups) are reachable via the Cricket/Soccer dropdowns instead, so they
 // don't clutter the homepage with empty "no games scheduled" sections most of the year.
 export const LEAGUES: League[] = ["epl", "nfl", "nba", "ipl"];
-export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "odi", "t20i"];
+// Bilateral internationals come from Cricsheet's archive (scripts/import-cricsheet.ts)
+// rather than an ESPN feed: completed matches with full scorecards, but no fixtures,
+// standings or news, and nothing live.
+export const INTERNATIONAL_CRICKET: League[] = ["odi", "t20i"];
 export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl"];
-export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "laliga", "bundesliga", "seriea", "ucl"];
+export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "odi", "t20i", "laliga", "bundesliga", "seriea", "ucl"];
 export const LEAGUE_LABEL: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
@@ -21,6 +25,8 @@ export const LEAGUE_LABEL: Record<League, string> = {
   bbl: "Big Bash League",
   cwc: "Cricket World Cup",
   t20wc: "T20 World Cup",
+  odi: "ODI Internationals",
+  t20i: "T20 Internationals",
   laliga: "La Liga",
   bundesliga: "Bundesliga",
   seriea: "Serie A",
@@ -29,7 +35,7 @@ export const LEAGUE_LABEL: Record<League, string> = {
 
 // "the NBA", "the Premier League", but "La Liga" and "Serie A" take no article.
 export function leagueNameWithArticle(league: League, capitalise = false): string {
-  if (league === "laliga" || league === "seriea") return LEAGUE_LABEL[league];
+  if (league === "laliga" || league === "seriea" || isInternationalCricket(league)) return LEAGUE_LABEL[league];
   return `${capitalise ? "The" : "the"} ${LEAGUE_LABEL[league]}`;
 }
 
@@ -39,6 +45,21 @@ export function isLeague(value: string): value is League {
 
 export function isCricketLeague(league: League): boolean {
   return (CRICKET_LEAGUES as string[]).includes(league);
+}
+
+export function isInternationalCricket(league: League): boolean {
+  return (INTERNATIONAL_CRICKET as string[]).includes(league);
+}
+
+// Tables exist for every competition with a season structure; bilateral
+// internationals have none (rankings are the ICC's, not derivable from results here).
+export function hasStandings(league: League): boolean {
+  return !isInternationalCricket(league);
+}
+
+// ESPN's news feed is per competition; the international formats have no feed.
+export function hasNewsFeed(league: League): boolean {
+  return !isInternationalCricket(league);
 }
 
 export function isSoccerLeague(league: League): boolean {

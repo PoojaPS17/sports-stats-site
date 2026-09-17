@@ -1,4 +1,4 @@
-import { isCricketLeague, LEAGUE_LABEL } from "@/lib/leagues";
+import { hasNewsFeed, hasStandings, isCricketLeague, LEAGUE_LABEL } from "@/lib/leagues";
 import type { League } from "@/lib/leagues";
 import { SubNav } from "./SubNav";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
@@ -10,7 +10,7 @@ export function LeagueSubNav({ league }: { league: League }) {
   const tabs = [
     { label: "Scores", href: `/${league}`, exact: true },
     ...(supportsMatchweeks(league) ? [{ label: `${weekNoun(league)}s`, href: weekIndexPath(league), match: `/${league}/matchweek` }] : []),
-    { label: "Standings", href: `/${league}/standings` },
+    ...(hasStandings(league) ? [{ label: "Standings", href: `/${league}/standings` }] : []),
     ...(supportsProjections(league) ? [{ label: "Projections", href: `/${league}/projections` }] : []),
     { label: "Teams", href: `/${league}/teams` },
     { label: "Leaders", href: `/${league}/leaders` },
@@ -27,7 +27,7 @@ export function LeagueSubNav({ league }: { league: League }) {
           { label: "Compare", href: `/${league}/compare` },
         ]),
     ...(injuries ? [{ label: "Injuries", href: `/${league}/injuries` }] : []),
-    { label: "News", href: `/${league}/news` },
+    ...(hasNewsFeed(league) ? [{ label: "News", href: `/${league}/news` }] : []),
   ];
 
   return <SubNav title={LEAGUE_LABEL[league]} titleHref={`/${league}`} tabs={tabs} />;

@@ -2,7 +2,7 @@
 // each stays well under the 50,000-URL limit and robots.txt can list them all.
 import type { MetadataRoute } from "next";
 import { pool } from "./db";
-import { ALL_LEAGUES, LEAGUES, isCricketLeague, type League } from "./leagues";
+import { ALL_LEAGUES, LEAGUES, hasNewsFeed, hasStandings, isCricketLeague, type League } from "./leagues";
 import { TOURS } from "./tennisTours";
 import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
@@ -37,7 +37,9 @@ async function core(): Promise<Entry[]> {
   ];
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
   for (const league of ALL_LEAGUES) {
-    out.push(entry(`/${league}`, "hourly", 0.9), entry(`/${league}/standings`, "daily", 0.9), entry(`/${league}/teams`, "weekly", 0.7), entry(`/${league}/leaders`, "daily", 0.7), entry(`/${league}/news`, "hourly", 0.5));
+    out.push(entry(`/${league}`, "hourly", 0.9), entry(`/${league}/teams`, "weekly", 0.7), entry(`/${league}/leaders`, "daily", 0.7));
+    if (hasStandings(league)) out.push(entry(`/${league}/standings`, "daily", 0.9));
+    if (hasNewsFeed(league)) out.push(entry(`/${league}/news`, "hourly", 0.5));
     if (supportsScoreAnalytics(league)) {
       out.push(entry(`/${league}/power-rankings`, "daily", 0.7), entry(`/${league}/records`, "weekly", 0.6), entry(`/${league}/compare`, "monthly", 0.4));
       for (const scope of ["home", "away", "form"]) out.push(entry(`/${league}/standings/${scope}`, "daily", 0.6));

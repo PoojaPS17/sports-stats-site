@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getStandings, getStandingsBySeason, getStandingsSeasons, getMostRecentPlayedSeason, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, hasStandings, LEAGUE_LABEL, getStandings, getStandingsBySeason, getStandingsSeasons, getMostRecentPlayedSeason, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
 import { summarizePlayoffs } from "@/lib/seasonSummary";
 import { supportsScoreAnalytics } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
@@ -15,14 +15,14 @@ export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
-  if (!isLeague(league)) return {};
+  if (!isLeague(league) || !hasStandings(league)) return {};
   const label = LEAGUE_LABEL[league];
   return pageMeta(`${label} Standings`, `Current ${label} table with wins, losses, points and streaks, plus home, away and form tables and ten seasons of past standings.`, `/${league}/standings`);
 }
 
 export default async function StandingsPage({ params }: { params: Promise<{ league: string }> }) {
   const { league } = await params;
-  if (!isLeague(league)) notFound();
+  if (!isLeague(league) || !hasStandings(league)) notFound();
 
   const [latest, seasons] = await Promise.all([getStandings(league), getStandingsSeasons(league)]);
   // A table for the coming season exists (every team 0-0) before a ball is kicked;

@@ -11,8 +11,7 @@ import {
   getTeamSeasons,
   getTeamRoster,
   getTeamInjuries,
-  formatSeasonLabel,
-} from "@/lib/queries";
+  formatSeasonLabel, hasStandings } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { teamNotFound } from "@/lib/legacySlug";
 import { summarizeTeamSeason } from "@/lib/teamSummary";
@@ -227,7 +226,7 @@ export default async function TeamPage({
           {
             title: LEAGUE_LABEL[league],
             links: [
-              { href: `/${league}/standings`, label: "Standings" },
+              ...(hasStandings(league) ? [{ href: `/${league}/standings`, label: "Standings" }] : []),
               ...(supportsScoreAnalytics(league) ? [{ href: `/${league}/power-rankings`, label: "Power rankings" }, { href: `/${league}/records`, label: "Records" }] : []),
               { href: `/${league}/leaders`, label: "Leaders" },
             ],

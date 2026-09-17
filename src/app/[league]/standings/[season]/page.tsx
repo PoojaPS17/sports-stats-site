@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getStandingsBySeason, getStandingsSeasons, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, hasStandings, LEAGUE_LABEL, getStandingsBySeason, getStandingsSeasons, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
 import { summarizePlayoffs } from "@/lib/seasonSummary";
 import { getComputedTable, getCurrentSeason, supportsScoreAnalytics, type TableScope } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
@@ -32,7 +32,7 @@ function asScope(value: string): TableScope | null {
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; season: string }> }): Promise<Metadata> {
   const { league, season } = await params;
-  if (!isLeague(league)) return {};
+  if (!isLeague(league) || !hasStandings(league)) return {};
   const label = LEAGUE_LABEL[league];
   const scope = asScope(season);
   if (scope) return pageMeta(`${label} ${SCOPE_TITLE[scope]}`, `${label} ${SCOPE_TITLE[scope].toLowerCase()}, ${SCOPE_DESC[scope]}.`, `/${league}/standings/${scope}`);
@@ -46,7 +46,7 @@ export default async function StandingsSeasonPage({
   params: Promise<{ league: string; season: string }>;
 }) {
   const { league, season: seasonParam } = await params;
-  if (!isLeague(league)) notFound();
+  if (!isLeague(league) || !hasStandings(league)) notFound();
 
   // /standings/home, /standings/away, /standings/form → computed tables for the
   // current season.

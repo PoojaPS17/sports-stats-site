@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LEAGUE_LABEL, CRICKET_LEAGUES, SOCCER_LEAGUES, type League } from "@/lib/queries";
+import { LEAGUE_LABEL, CRICKET_LEAGUES, SOCCER_LEAGUES, hasStandings, type League } from "@/lib/queries";
 import { TOURS, TOUR_LABEL } from "@/lib/tennisTours";
 import { LogoMark } from "./Logo";
 
@@ -29,7 +29,7 @@ function Column({ title, links }: { title: string; links: { label: string; href:
 }
 
 function leagueLinks(league: League) {
-  return LEAGUE_SECTIONS.map((s) => ({ label: s.label, href: `/${league}${s.suffix}` }));
+  return LEAGUE_SECTIONS.filter((s) => s.suffix !== "/standings" || hasStandings(league)).map((s) => ({ label: s.label, href: `/${league}${s.suffix}` }));
 }
 
 export function Footer() {
@@ -73,6 +73,10 @@ export function Footer() {
             Data is compiled from public sources and refreshed automatically; it may contain errors and is not an official record. Projections are
             statistical estimates, not forecasts, and nothing here is betting advice. <Link href="/privacy" className="hover:text-[var(--accent)]">Privacy</Link> ·{" "}
             <Link href="/terms" className="hover:text-[var(--accent)]">Terms</Link>
+          </p>
+          <p>
+            ODI and T20 international results and scorecards are derived from ball-by-ball data published by{" "}
+            <a href="https://cricsheet.org" className="hover:text-[var(--accent)]" rel="noopener">Cricsheet</a>, used under its attribution licence.
           </p>
         </div>
       </div>

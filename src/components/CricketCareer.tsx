@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SectionHeader } from "./SectionHeader";
-import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL } from "@/lib/queries";
+import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL, isInternationalCricket } from "@/lib/queries";
 import type { League, CricketCareerStats, CricketSplitDimension, CricketSplitRow } from "@/lib/queries";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -32,8 +32,9 @@ export function CricketCareer({
       <section>
         <SectionHeader>{LEAGUE_LABEL[league]} Career</SectionHeader>
         <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
-          From every {LEAGUE_LABEL[league]} match on record — we don&apos;t have a bilateral Test/ODI/T20I data source, so
-          this covers {LEAGUE_LABEL[league]} only, not a player&apos;s full international career.
+          {isInternationalCricket(league)
+            ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} in Cricsheet's ball-by-ball archive (${league === "odi" ? "2002" : "2005"} onward, World Cups included). Matches involving Afghanistan are withheld by the source, so figures from those games are missing.`
+            : `From every ${LEAGUE_LABEL[league]} match on record — this covers ${LEAGUE_LABEL[league]} only, not a player's other competitions or formats.`}
         </p>
         <div className="flex flex-col gap-4">
           <div>

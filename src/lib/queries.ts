@@ -5,7 +5,7 @@ import type { GameDetails } from "./matchDetail";
 import type { PlayerLogRow } from "./playerProfile";
 
 export type { League } from "./leagues";
-export { LEAGUES, CRICKET_LEAGUES, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
+export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
 
 export interface GameRow {
   league: League;
@@ -124,6 +124,12 @@ export async function getRecentAndUpcoming(league: League, daysBack = 2, daysFor
      order by g.date asc`,
     [league, daysBack, daysForward]
   );
+  return rows;
+}
+
+// Newest completed matches, for competitions that have results but no fixture feed.
+export async function getLatestResults(league: League, limit = 12): Promise<GameRow[]> {
+  const { rows } = await pool.query(`${GAME_SELECT} where g.league = $1 and g.completed = true order by g.date desc, g.espn_id desc limit $2`, [league, limit]);
   return rows;
 }
 
@@ -458,6 +464,8 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
   bbl: [],
   cwc: [],
   t20wc: [],
+  odi: [],
+  t20i: [],
   laliga: [
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },
