@@ -1,0 +1,233 @@
+import { pool } from "./db";
+
+export interface F1EventRow {
+  espn_id: string;
+  name: string;
+  short_name: string | null;
+  date: string;
+  end_date: string | null;
+  season_year: number | null;
+  circuit_name: string | null;
+  circuit_city: string | null;
+  circuit_country: string | null;
+  winner_name: string | null;
+  winner_slug: string | null;
+}
+
+// One row per event, with the race winner (if that session's finished) pulled in via
+// a correlated subquery rather than a join — an event has several sessions, but only
+// ever one "Race", so this avoids the fan-out a plain join would cause.
+// ESPN's circuit address data is inconsistently cased ("Monte carlo", "Kuala lumpur"
+// alongside already-correct "Melbourne", "Sakhir") — initcap() fixes the display
+// without needing to touch what's actually stored.
+const EVENT_SELECT = `
+  select e.espn_id, e.name, e.short_name, e.date, e.end_date, e.season_year,
+         e.circuit_name, initcap(e.circuit_city) as circuit_city, initcap(e.circuit_country) as circuit_country,
+         wp.name as winner_name, wp.slug as winner_slug
+  from f1_events e
+  left join lateral (
+    select r.driver_espn_id
+    from f1_session_results r
+    join f1_sessions s on s.espn_id = r.session_espn_id
+    where s.event_espn_id = e.espn_id and s.session_type = 'Race' and r.winner = true
+    limit 1
+  ) w on true
+  left join players wp on wp.league = 'f1' and wp.espn_id = w.driver_espn_id
+`;
+
+export async function getF1Seasons(): Promise<number[]> {
+  const { rows } = await pool.query(
+    `select distinct season_year from f1_events where season_year is not null order by season_year desc`
+  );
+  return rows.map((r) => r.season_year as number);
+}
+
+export async function getF1Calendar(seasonYear: number): Promise<F1EventRow[]> {
+  const { rows } = await pool.query(`${EVENT_SELECT} where e.season_year = $1 order by e.date asc`, [seasonYear]);
+  return rows;
+}
+
+export async function getF1Event(espnId: string): Promise<F1EventRow | null> {
+  const { rows } = await pool.query(`${EVENT_SELECT} where e.espn_id = $1`, [espnId]);
+  return rows[0] ?? null;
+}
+
+export interface F1SessionResultRow {
+  session_espn_id: string;
+  session_type: string;
+  session_date: string;
+  status_detail: string | null;
+  completed: boolean;
+  driver_espn_id: string;
+  driver_name: string;
+  driver_slug: string;
+  position: number | null;
+  winner: boolean;
+  constructor_name: string | null;
+  car_number: string | null;
+}
+
+export async function getF1EventResults(eventEspnId: string): Promise<F1SessionResultRow[]> {
+  const { rows } = await pool.query(
+    `select s.espn_id as session_espn_id, s.session_type, s.date as session_date, s.status_detail, s.completed,
+            p.espn_id as driver_espn_id, p.name as driver_name, p.slug as driver_slug,
+            r.position, r.winner, r.constructor_name, r.car_number
+     from f1_sessions s
+     join f1_session_results r on r.session_espn_id = s.espn_id
+     join players p on p.league = 'f1' and p.espn_id = r.driver_espn_id
+     where s.event_espn_id = $1
+     order by s.date asc, r.position asc nulls last`,
+    [eventEspnId]
+  );
+  return rows;
+}
+
+export interface F1DriverStandingRow {
+  position: number | null;
+  points: number | null;
+  wins: number | null;
+  driver_espn_id: string;
+  name: string;
+  slug: string;
+  headshot_url: string | null;
+  constructor_name: string | null;
+}
+
+// A driver's "current" constructor isn't on the standings row itself (ESPN's standings
+// entry is just points/wins, no team reference) — pulled instead from whichever
+// constructor they raced for in their most recent session, the same way a driver's
+// real-world team affiliation is understood day to day.
+export async function getF1DriverStandings(seasonYear: number): Promise<F1DriverStandingRow[]> {
+  const { rows } = await pool.query(
+    `select fs.position, fs.points, fs.wins, p.espn_id as driver_espn_id, p.name, p.slug, p.headshot_url,
+            (select r.constructor_name from f1_session_results r
+             join f1_sessions s on s.espn_id = r.session_espn_id
+             where r.driver_espn_id = p.espn_id and r.constructor_name is not null
+             order by s.date desc limit 1) as constructor_name
+     from f1_standings fs
+     join players p on p.league = 'f1' and p.espn_id = fs.entity_espn_id
+     where fs.standings_type = 'driver' and fs.season_year = $1
+     order by fs.position asc nulls last`,
+    [seasonYear]
+  );
+  return rows;
+}
+
+export interface F1ConstructorStandingRow {
+  position: number | null;
+  points: number | null;
+  wins: number | null;
+  team_espn_id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  color: string | null;
+}
+
+export async function getF1ConstructorStandings(seasonYear: number): Promise<F1ConstructorStandingRow[]> {
+  const { rows } = await pool.query(
+    `select fs.position, fs.points, fs.wins, t.espn_id as team_espn_id, t.name, t.slug, t.logo_url, t.color
+     from f1_standings fs
+     join teams t on t.league = 'f1' and t.espn_id = fs.entity_espn_id
+     where fs.standings_type = 'constructor' and fs.season_year = $1
+     order by fs.position asc nulls last`,
+    [seasonYear]
+  );
+  return rows;
+}
+
+export interface F1Driver {
+  espn_id: string;
+  name: string;
+  slug: string;
+  headshot_url: string | null;
+}
+
+export async function getF1DriverBySlug(slug: string): Promise<F1Driver | null> {
+  const { rows } = await pool.query(`select espn_id, name, slug, headshot_url from players where league = 'f1' and slug = $1`, [
+    slug,
+  ]);
+  return rows[0] ?? null;
+}
+
+export interface F1DriverResultRow {
+  event_espn_id: string;
+  event_name: string;
+  session_type: string;
+  session_date: string;
+  position: number | null;
+  winner: boolean;
+  constructor_name: string | null;
+}
+
+export async function getF1DriverResults(driverEspnId: string, limit = 20): Promise<F1DriverResultRow[]> {
+  const { rows } = await pool.query(
+    `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
+            r.position, r.winner, r.constructor_name
+     from f1_session_results r
+     join f1_sessions s on s.espn_id = r.session_espn_id
+     join f1_events e on e.espn_id = s.event_espn_id
+     where r.driver_espn_id = $1 and s.session_type = 'Race'
+     order by s.date desc
+     limit $2`,
+    [driverEspnId, limit]
+  );
+  return rows;
+}
+
+export interface F1Constructor {
+  espn_id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  color: string | null;
+}
+
+export async function getF1ConstructorBySlug(slug: string): Promise<F1Constructor | null> {
+  const { rows } = await pool.query(
+    `select espn_id, name, slug, logo_url, color from teams where league = 'f1' and slug = $1`,
+    [slug]
+  );
+  return rows[0] ?? null;
+}
+
+// Current drivers for a constructor — same "most recent race" signal as
+// getF1DriverStandings, just inverted: every driver whose latest race was for this
+// team.
+export async function getF1ConstructorDrivers(constructorName: string): Promise<F1Driver[]> {
+  const { rows } = await pool.query(
+    `select p.espn_id, p.name, p.slug, p.headshot_url
+     from players p
+     where p.league = 'f1'
+       and (
+         select r.constructor_name from f1_session_results r
+         join f1_sessions s on s.espn_id = r.session_espn_id
+         where r.driver_espn_id = p.espn_id and r.constructor_name is not null
+         order by s.date desc limit 1
+       ) = $1
+     order by p.name`,
+    [constructorName]
+  );
+  return rows;
+}
+
+export interface F1ConstructorResultRow extends F1DriverResultRow {
+  driver_name: string;
+  driver_slug: string;
+}
+
+export async function getF1ConstructorResults(constructorName: string, limit = 20): Promise<F1ConstructorResultRow[]> {
+  const { rows } = await pool.query(
+    `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
+            r.position, r.winner, r.constructor_name, p.name as driver_name, p.slug as driver_slug
+     from f1_session_results r
+     join f1_sessions s on s.espn_id = r.session_espn_id
+     join f1_events e on e.espn_id = s.event_espn_id
+     join players p on p.league = 'f1' and p.espn_id = r.driver_espn_id
+     where r.constructor_name = $1 and s.session_type = 'Race'
+     order by s.date desc
+     limit $2`,
+    [constructorName, limit]
+  );
+  return rows;
+}

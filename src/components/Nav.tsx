@@ -34,6 +34,9 @@ export function Nav() {
           </Link>
           <CricketDropdown />
           <TennisDropdown />
+          <Link href="/f1" className="nav-pill">
+            F1
+          </Link>
           <Link href="/top-games" className="nav-pill">
             Top Sports Games
           </Link>

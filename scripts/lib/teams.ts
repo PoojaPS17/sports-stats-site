@@ -1,5 +1,5 @@
 import { pool } from "./db";
-import { slugify, type League } from "./espn";
+import { slugify } from "./espn";
 
 // A hex color comes back bare ("552583") from the site API's /teams and scoreboard
 // `teams[]` shapes, but already `#`-prefixed ("#14c9e1") from an event's own embedded
@@ -18,7 +18,10 @@ function isPlaceholderTeam(name: string): boolean {
   return /^(tba|tbd|to be (announced|determined))$/i.test(name.trim());
 }
 
-export async function upsertTeam(league: League, team: any) {
+// `league` is a plain scoping string, not the team-sports `League` union — F1's
+// constructors reuse this same table/function with league='f1', which isn't a
+// `League` value (same reasoning as uniqueSlugFor in players.ts for tennis's tours).
+export async function upsertTeam(league: string, team: any) {
   const name = team?.displayName ?? team?.name;
   if (!team?.id || !name || isPlaceholderTeam(name)) return;
   // The event-embedded team object (cricket's usual source) has a singular `logo`

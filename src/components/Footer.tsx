@@ -50,15 +50,15 @@ function GroupColumn({ title, links }: { title: string; links: { label: string; 
 export function Footer() {
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--surface-muted)]">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-8 px-4 py-10 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-8 px-4 py-10 sm:grid-cols-3 lg:grid-cols-7">
         <div className="col-span-2 flex flex-col gap-2 sm:col-span-3 lg:col-span-1">
           <span className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--accent)] text-[var(--accent-foreground)]">📊</span>
             ScoreDB
           </span>
           <p className="text-sm text-[var(--text-muted)]">
-            Live scores, standings and player stats for football, the NFL, NBA, cricket and tennis — plus 10 years of
-            history for every team and player.
+            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1 — plus 10
+            years of history for every team and player.
           </p>
         </div>
         <LeagueColumn league="nfl" />
@@ -66,11 +66,18 @@ export function Footer() {
         <GroupColumn title="Football" links={SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
         <GroupColumn title="Cricket" links={CRICKET_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
         <GroupColumn title="Tennis" links={TOURS.map((t) => ({ label: TOUR_LABEL[t], href: `/tennis/${t}` }))} />
+        <GroupColumn
+          title="F1"
+          links={[
+            { label: "Calendar", href: "/f1" },
+            { label: "Standings", href: "/f1/standings" },
+          ]}
+        />
       </div>
       <div className="border-t border-[var(--border)] px-4 py-4">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-2 text-xs text-[var(--text-muted)] sm:flex-row">
           <span>© {new Date().getFullYear()} ScoreDB. All scores and stats via ESPN, refreshed automatically.</span>
-          <span>Not affiliated with the Premier League, La Liga, NFL, NBA, IPL, ATP, WTA, or ESPN.</span>
+          <span>Not affiliated with the Premier League, La Liga, NFL, NBA, IPL, ATP, WTA, F1, or ESPN.</span>
         </div>
       </div>
     </footer>

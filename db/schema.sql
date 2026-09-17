@@ -298,3 +298,63 @@ create table if not exists injuries (
 );
 
 create index if not exists injuries_team_idx on injuries (league, team_espn_id);
+
+-- F1: individual drivers racing across a season-long calendar of weekend "events",
+-- each made of multiple timed sessions (practice/qualifying/race) rather than a
+-- single team-vs-team match — a fundamentally different shape from every other sport
+-- here, so it's its own small parallel schema (same reasoning as tennis_matches).
+-- Constructors reuse the existing `teams` table (league='f1') since they're a genuine
+-- match for that shape (name/logo/color) — drivers likewise reuse `players`
+-- (league='f1', team_espn_id pointing at their constructor).
+create table if not exists f1_events (
+  espn_id text primary key,
+  name text not null,
+  short_name text,
+  date timestamptz not null,
+  end_date timestamptz,
+  season_year int,
+  circuit_name text,
+  circuit_city text,
+  circuit_country text,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists f1_events_season_idx on f1_events (season_year, date);
+
+create table if not exists f1_sessions (
+  espn_id text primary key,
+  event_espn_id text not null,
+  session_type text not null, -- 'FP1' | 'FP2' | 'FP3' | 'Qual' | 'Sprint' | 'Race', ESPN's own abbreviation
+  date timestamptz not null,
+  status_state text,
+  status_detail text,
+  completed boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists f1_sessions_event_idx on f1_sessions (event_espn_id, date);
+
+-- Finishing order only, not full timing/lap data (would need a separate request per
+-- driver per session — a 20-driver grid x 5 sessions x every race adds up fast for
+-- data a fan mostly just wants "who finished where"). Cumulative championship points
+-- come from f1_standings instead of being recomputed from race results here.
+create table if not exists f1_session_results (
+  session_espn_id text not null,
+  driver_espn_id text not null,
+  position int,
+  winner boolean not null default false,
+  constructor_name text,
+  car_number text,
+  primary key (session_espn_id, driver_espn_id)
+);
+
+create table if not exists f1_standings (
+  season_year int not null,
+  standings_type text not null, -- 'driver' | 'constructor'
+  entity_espn_id text not null, -- driver_espn_id (players.espn_id) or constructor team_espn_id (teams.espn_id)
+  position int,
+  points numeric,
+  wins int,
+  updated_at timestamptz not null default now(),
+  primary key (season_year, standings_type, entity_espn_id)
+);
