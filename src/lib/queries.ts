@@ -190,6 +190,21 @@ export async function getStandingsSeasons(league: League): Promise<number[]> {
   return rows.map((r) => r.season as number);
 }
 
+// The most recent season that's actually been played, as opposed to getStandingsSeasons()'s
+// most recent season *on file* — a standings row for the upcoming season already
+// exists (every team 0-0) well before it starts, so "most recent on file" points at an
+// empty table during preseason. Used for "nothing scheduled right now, see the last
+// real season" style empty states, where an all-zero table would be a non-answer.
+export async function getMostRecentPlayedSeason(league: League): Promise<number | null> {
+  const { rows } = await pool.query(
+    `select season from standings where league = $1
+     group by season having sum(wins + losses + coalesce(draws, 0)) > 0
+     order by season desc limit 1`,
+    [league]
+  );
+  return rows[0]?.season ?? null;
+}
+
 export interface TeamRow {
   espn_id: string;
   name: string;

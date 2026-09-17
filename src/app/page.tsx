@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LEAGUES, LEAGUE_LABEL, getRecentAndUpcoming, getFeaturedGames, getNews } from "@/lib/queries";
+import { LEAGUES, LEAGUE_LABEL, getRecentAndUpcoming, getFeaturedGames, getNews, getMostRecentPlayedSeason } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { SearchBar } from "@/components/SearchBar";
@@ -12,10 +12,14 @@ export default async function HomePage() {
   const featured = (await Promise.all(LEAGUES.map((l) => getFeaturedGames(l, 3)))).flat();
 
   const sections = await Promise.all(
-    LEAGUES.map(async (league) => ({
-      league,
-      games: (await getRecentAndUpcoming(league, 2, 5)).slice(0, 5),
-    }))
+    LEAGUES.map(async (league) => {
+      const games = (await getRecentAndUpcoming(league, 2, 5)).slice(0, 5);
+      // A standings row for the upcoming season already exists (every team 0-0) well
+      // before it starts, so the plain /standings link would default right back to an
+      // empty table during preseason — point at the season that's actually been played.
+      const mostRecentSeason = games.length === 0 ? await getMostRecentPlayedSeason(league) : null;
+      return { league, games, mostRecentSeason };
+    })
   );
 
   const news = (await Promise.all(LEAGUES.map((l) => getNews(l, 4))))
@@ -51,7 +55,7 @@ export default async function HomePage() {
       <AdSlot label="Homepage" />
 
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        {sections.map(({ league, games }) => (
+        {sections.map(({ league, games, mostRecentSeason }) => (
           <section key={league}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="border-l-4 border-[var(--accent)] pl-2.5 text-lg font-extrabold tracking-tight text-[var(--text)]">
@@ -63,13 +67,16 @@ export default async function HomePage() {
             </div>
             <div className="flex flex-col gap-3">
               {games.length === 0 ? (
-                <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games scheduled right now.</p>
+                <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
+                  No games in the next few days — {LEAGUE_LABEL[league]} may be between seasons right now.
+                  {mostRecentSeason !== null && " See Standings below for the last completed season."}
+                </p>
               ) : (
                 games.map((g) => <GameCard key={g.espn_id} league={league} game={g} />)
               )}
             </div>
             <div className="mt-3 flex gap-3 text-sm font-semibold">
-              <Link href={`/${league}/standings`} className="text-[var(--accent)] hover:underline">
+              <Link href={mostRecentSeason !== null ? `/${league}/standings/${mostRecentSeason}` : `/${league}/standings`} className="text-[var(--accent)] hover:underline">
                 Standings
               </Link>
               <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">
