@@ -110,13 +110,17 @@ export default async function TeamPage({
               </span>
             </Link>
           )}
-          {next && supportsScoreAnalytics(league) && (
-            <Link
-              href={h2hPath(league, slug, nextIsHome ? next.away_slug : next.home_slug)}
-              className="text-sm font-semibold text-[var(--accent)] hover:underline sm:col-span-2"
-            >
-              Head-to-head record vs {nextIsHome ? next.away_name : next.home_name} →
-            </Link>
+          {supportsScoreAnalytics(league) && (
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold sm:col-span-2">
+              {next && (
+                <Link href={h2hPath(league, slug, nextIsHome ? next.away_slug : next.home_slug)} className="text-[var(--accent)] hover:underline">
+                  Head-to-head vs {nextIsHome ? next.away_name : next.home_name} →
+                </Link>
+              )}
+              <Link href={`/${league}/compare?a=${slug}${next ? `&b=${nextIsHome ? next.away_slug : next.home_slug}` : ""}`} className="text-[var(--accent)] hover:underline">
+                Compare {team.name} with another team →
+              </Link>
+            </div>
           )}
         </div>
       )}

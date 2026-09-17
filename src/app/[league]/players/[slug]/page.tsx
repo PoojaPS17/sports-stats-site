@@ -95,6 +95,10 @@ export default async function PlayerPage({
         teamColor={player.team_color}
       />
 
+      <Link href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
+        Compare {player.name} with another player →
+      </Link>
+
       <AdSlot label="Player page top" />
 
       {cricketSection}

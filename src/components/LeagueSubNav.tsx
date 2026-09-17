@@ -13,10 +13,14 @@ export function LeagueSubNav({ league }: { league: League }) {
     // Score-based analytics need plain integer scores, which cricket's innings totals
     // aren't; cricket gets the Centuries record list instead.
     ...(cricket
-      ? [{ label: "Centuries", href: `/${league}/centuries` }]
+      ? [
+          { label: "Centuries", href: `/${league}/centuries` },
+          { label: "Compare", href: `/${league}/compare/players` },
+        ]
       : [
           { label: "Power Rankings", href: `/${league}/power-rankings` },
           { label: "Records", href: `/${league}/records` },
+          { label: "Compare", href: `/${league}/compare` },
         ]),
     ...(injuries ? [{ label: "Injuries", href: `/${league}/injuries` }] : []),
     { label: "News", href: `/${league}/news` },
