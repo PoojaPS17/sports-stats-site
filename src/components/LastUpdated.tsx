@@ -13,10 +13,16 @@ function formatRelative(iso: string): string {
   return `${days}d ago`;
 }
 
+// Like LocalTime: formatRelative depends on the moment it's called, so the server's
+// render time and the client's hydration time legitimately disagree whenever real
+// time passes between the two — suppressHydrationWarning on just this text node
+// covers that expected mismatch, same as there.
 export function LastUpdated({ iso }: { iso: string }) {
-  const [label, setLabel] = useState(() => formatRelative(iso));
+  const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLabel(formatRelative(iso));
     const id = setInterval(() => setLabel(formatRelative(iso)), 30_000);
     return () => clearInterval(id);
   }, [iso]);
@@ -28,7 +34,7 @@ export function LastUpdated({ iso }: { iso: string }) {
     >
       <span className="h-1.5 w-1.5 rounded-full bg-[var(--win)]" />
       <span className="hidden sm:inline">Updated </span>
-      {label}
+      <span suppressHydrationWarning>{label ?? formatRelative(iso)}</span>
     </span>
   );
 }

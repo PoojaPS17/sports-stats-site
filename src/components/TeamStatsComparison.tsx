@@ -17,13 +17,13 @@ export function TeamStatsComparison({ away, home }: { away: TeamStatGroup; home:
         <span>{away.teamName}</span>
         <span>{home.teamName}</span>
       </div>
-      {rows.map((row) => {
+      {rows.map((row, i) => {
         const a = Number(String(row.awayValue).replace(/[^0-9.-]/g, ""));
         const h = Number(String(row.homeValue).replace(/[^0-9.-]/g, ""));
         const total = Math.abs(a) + Math.abs(h);
         const awayPct = total > 0 ? (Math.abs(a) / total) * 100 : 50;
         return (
-          <div key={row.label} className="flex flex-col gap-1">
+          <div key={`${row.label}-${i}`} className="flex flex-col gap-1">
             <div className="flex items-center justify-between text-sm">
               <span className="tabular-nums font-semibold">{row.awayValue}</span>
               <span className="text-xs text-[var(--text-muted)]">{row.label}</span>
