@@ -30,6 +30,7 @@
     "fetch:f1-scores": "tsx scripts/fetch-f1-scores.ts",
     "fetch:f1-standings": "tsx scripts/fetch-f1-standings.ts",
     "backfill:f1-events": "tsx scripts/backfill-f1-events.ts",
+    "backfill:f1-standings": "tsx scripts/backfill-f1-standings.ts",
     "fetch:trending-wikipedia": "tsx scripts/fetch-trending-wikipedia.ts",
     "fetch:trending-appstore": "tsx scripts/fetch-trending-appstore.ts",
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"

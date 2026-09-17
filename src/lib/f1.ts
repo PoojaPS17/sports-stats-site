@@ -93,16 +93,20 @@ export interface F1DriverStandingRow {
   constructor_name: string | null;
 }
 
-// A driver's "current" constructor isn't on the standings row itself (ESPN's standings
-// entry is just points/wins, no team reference) — pulled instead from whichever
-// constructor they raced for in their most recent session, the same way a driver's
-// real-world team affiliation is understood day to day.
+// A driver's constructor isn't on the standings row itself (ESPN's standings entry is
+// just points/wins, no team reference) — pulled instead from whichever constructor
+// they raced for in their most recent session *that same season*, since a driver's
+// team can differ year to year (Vettel raced for Ferrari in 2017, Aston Martin now) —
+// scoping to the season being viewed matters here, unlike getF1ConstructorDrivers
+// below, which deliberately wants the all-time-most-recent team for "who's on the
+// roster right now".
 export async function getF1DriverStandings(seasonYear: number): Promise<F1DriverStandingRow[]> {
   const { rows } = await pool.query(
     `select fs.position, fs.points, fs.wins, p.espn_id as driver_espn_id, p.name, p.slug, p.headshot_url,
             (select r.constructor_name from f1_session_results r
              join f1_sessions s on s.espn_id = r.session_espn_id
-             where r.driver_espn_id = p.espn_id and r.constructor_name is not null
+             join f1_events e on e.espn_id = s.event_espn_id
+             where r.driver_espn_id = p.espn_id and r.constructor_name is not null and e.season_year = $1
              order by s.date desc limit 1) as constructor_name
      from f1_standings fs
      join players p on p.league = 'f1' and p.espn_id = fs.entity_espn_id

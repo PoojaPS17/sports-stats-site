@@ -44,3 +44,52 @@ export function fetchF1SeasonEventRefs(seasonYear: number) {
 export function fetchByRef<T = any>(ref: string): Promise<T> {
   return getJson<T>(ref);
 }
+
+function extractEntityId(ref: string | undefined): string | null {
+  const m = ref?.match(/\/(athletes|manufacturers)\/(\d+)/);
+  return m ? m[2] : null;
+}
+
+function statValue(stats: any[], name: string): number | null {
+  const stat = stats.find((s: any) => s.name === name);
+  return typeof stat?.value === "number" ? stat.value : null;
+}
+
+// Shared by both fetch-f1-standings.ts (current season, run on a schedule) and
+// backfill-f1-standings.ts (every past season, run once) — each standings group
+// references its driver/constructor only by a $ref URL (no inline name), so the
+// numeric id is pulled straight out of that URL rather than dereferencing it, since
+// the driver/constructor themselves are already upserted by fetch-f1-scores.ts /
+// backfill-f1-events.ts / seed-f1-teams.ts and this only needs their existing espn_id.
+export async function upsertF1StandingsForSeason(pool: import("pg").Pool, seasonYear: number): Promise<void> {
+  const data = await fetchF1Standings(seasonYear);
+  for (const item of data.items ?? []) {
+    const groupRef = item["$ref"];
+    try {
+      const group = await fetchByRef<any>(groupRef);
+      const type: "driver" | "constructor" = group.id === "0" ? "driver" : "constructor";
+
+      let count = 0;
+      for (const entry of group.standings ?? []) {
+        const entityId = extractEntityId(entry.athlete?.["$ref"]) ?? extractEntityId(entry.manufacturer?.["$ref"]);
+        if (!entityId) continue;
+        const stats = entry.records?.[0]?.stats ?? [];
+        const position = statValue(stats, "rank");
+        const points = statValue(stats, "championshipPts") ?? statValue(stats, "points");
+        const wins = statValue(stats, "wins");
+
+        await pool.query(
+          `insert into f1_standings (season_year, standings_type, entity_espn_id, position, points, wins, updated_at)
+           values ($1, $2, $3, $4, $5, $6, now())
+           on conflict (season_year, standings_type, entity_espn_id) do update set
+             position = excluded.position, points = excluded.points, wins = excluded.wins, updated_at = now()`,
+          [seasonYear, type, entityId, position, points, wins]
+        );
+        count++;
+      }
+      console.log(`[f1-standings] ${seasonYear} ${type}: ${count} rows`);
+    } catch (err) {
+      console.error(`[f1-standings] ${seasonYear} group failed:`, err instanceof Error ? err.message : err);
+    }
+  }
+}
