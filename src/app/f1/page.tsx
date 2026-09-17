@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getF1Calendar, getF1Seasons } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { F1SeasonSelect } from "@/components/F1SeasonSelect";
+import { CalendarButton } from "@/components/CalendarButton";
 
 export const metadata = pageMeta("F1 Calendar", "Formula 1 race calendar with circuits, dates and winners.");
 
@@ -21,7 +22,10 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="page-title">F1 Calendar</h1>
-        {seasons.length > 1 && <F1SeasonSelect seasons={seasons} defaultSeason={defaultSeason} />}
+        <div className="flex items-center gap-2">
+          {seasons.length > 1 && <F1SeasonSelect seasons={seasons} defaultSeason={defaultSeason} />}
+          <CalendarButton path="/calendar/f1" label="Race weekends to calendar" />
+        </div>
       </div>
 
       <AdSlot label="F1 top" />

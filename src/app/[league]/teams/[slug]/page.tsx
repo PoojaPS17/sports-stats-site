@@ -24,6 +24,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { TeamLogo } from "@/components/TeamLogo";
 import { h2hPath } from "@/lib/h2h";
 import { supportsScoreAnalytics } from "@/lib/analytics";
+import { CalendarButton } from "@/components/CalendarButton";
 
 export const revalidate = 300;
 
@@ -125,7 +126,10 @@ export default async function TeamPage({
         </div>
       )}
 
-      <TeamPageNav basePath={`/${league}/teams/${slug}`} active="overview" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <TeamPageNav basePath={`/${league}/teams/${slug}`} active="overview" />
+        <CalendarButton path={`/calendar/${league}/${slug}`} label={`${team.abbreviation ?? "Team"} fixtures to calendar`} />
+      </div>
 
       <AdSlot label="Team page top" />
 

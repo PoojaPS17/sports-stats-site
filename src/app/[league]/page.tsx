@@ -8,6 +8,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { PageHeader } from "@/components/PageHeader";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
+import { CalendarButton } from "@/components/CalendarButton";
 
 export const revalidate = 60;
 
@@ -52,6 +53,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
             Browse by {weekNoun(league).toLowerCase()} →
           </Link>
         )}
+        <CalendarButton path={`/calendar/${league}`} />
       </PageHeader>
 
       <AdSlot label={`${LEAGUE_LABEL[league]} top`} />
