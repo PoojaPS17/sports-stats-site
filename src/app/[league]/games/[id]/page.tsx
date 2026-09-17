@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetails, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
 import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
-import {
-  fetchMatchSummary,
-  parseTeamStats,
-  parseAmericanPlayerBox,
-  parseSoccerPlayerBox,
-  parseCricketScorecard,
-} from "@/lib/matchDetail";
+import { fetchMatchSummary, extractGameDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
+import { getMatchContext } from "@/lib/matchContext";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -20,10 +15,38 @@ import { TeamStatsComparison } from "@/components/TeamStatsComparison";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
 import { CricketScorecard } from "@/components/CricketScorecard";
 import { ViewTracker } from "@/components/ViewTracker";
+import { MatchFacts } from "@/components/MatchFacts";
+import { MatchTimeline } from "@/components/MatchTimeline";
+import { MatchLineups } from "@/components/MatchLineups";
+import { MatchContextCard } from "@/components/MatchContextCard";
+import { WinProbabilityChart } from "@/components/WinProbabilityChart";
+import { MatchLeaders } from "@/components/MatchLeaders";
+import type { League } from "@/lib/queries";
 
-// A live fetch to ESPN backs this page (see lib/matchDetail.ts) — revalidate keeps it
-// fresh during a live game without hitting ESPN on every single request.
+// Completed games read their stored report from the database. Games in progress (or
+// not yet backfilled) fall back to a live fetch (see lib/matchDetail.ts), so the
+// revalidation window keeps a live game fresh without hitting ESPN on every request.
 export const revalidate = 120;
+
+function sportOf(league: League): MatchSport {
+  return isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "american";
+}
+
+async function loadDetails(league: League, id: string, homeId: string, awayId: string, completed: boolean): Promise<{ details: GameDetails | null; stored: boolean }> {
+  if (completed) {
+    const stored = await getGameDetails(league, id);
+    if (stored) return { details: stored, stored: true };
+  }
+  const summary = await fetchMatchSummary(league, id);
+  return { details: summary ? extractGameDetails(sportOf(league), summary, homeId, awayId) : null, stored: false };
+}
+
+function scorersLine(details: GameDetails | null): string {
+  if (!details) return "";
+  const goals = details.events.filter((e) => (e.type === "goal" || e.type === "penalty" || e.type === "own-goal") && e.players[0]);
+  if (goals.length === 0) return "";
+  return ` Goals: ${goals.map((g) => `${g.players[0].name} ${g.clock}`).join(", ")}.`;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; id: string }> }): Promise<Metadata> {
   const { league, id } = await params;
@@ -35,35 +58,33 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     game.completed && game.away_score != null && game.home_score != null
       ? ` ${game.away_score_display ?? game.away_score}-${game.home_score_display ?? game.home_score}`
       : "";
+  const details = game.completed ? await getGameDetails(league, id) : null;
+  const where = details?.venue ? ` at ${details.venue}` : "";
+  const covers = isCricketLeague(league) ? "Scorecard and head-to-head." : isSoccerLeague(league) ? "Line-ups, timeline, team stats, box score and head-to-head." : "Scoring summary, win probability, team stats, box score and head-to-head.";
+  const extras = game.completed ? `${scorersLine(details)} ${covers}` : isCricketLeague(league) ? " Head-to-head record and recent form." : " Team form, head-to-head record and pre-match win probability.";
   return pageMeta(
     `${game.away_name} vs ${game.home_name}${score}`,
-    `${LEAGUE_LABEL[league]} match ${game.away_name} at ${game.home_name}, ${date}. Score, team stats and player box score.`,
+    `${LEAGUE_LABEL[league]}: ${game.away_name} at ${game.home_name}${where}, ${date}.${extras}`,
     `/${league}/games/${id}`
   );
 }
 
-export default async function GameDetailPage({
-  params,
-}: {
-  params: Promise<{ league: string; id: string }>;
-}) {
+export default async function GameDetailPage({ params }: { params: Promise<{ league: string; id: string }> }) {
   const { league, id } = await params;
   if (!isLeague(league)) notFound();
 
   const game = await getGameByEspnId(league, id);
   if (!game) notFound();
 
-  const summary = await fetchMatchSummary(league, id);
+  const [{ details, stored }, context] = await Promise.all([
+    loadDetails(league, id, game.home_team_espn_id, game.away_team_espn_id, game.completed),
+    getMatchContext(league, game),
+  ]);
 
   const isCricket = isCricketLeague(league);
-  const teamStats = summary ? parseTeamStats(summary) : [];
-  const playerBox =
-    summary && !isCricket
-      ? isSoccerLeague(league)
-        ? parseSoccerPlayerBox(summary)
-        : parseAmericanPlayerBox(summary)
-      : [];
-  const cricketScorecard = summary && isCricket ? parseCricketScorecard(summary) : [];
+  const teamStats = details?.team_stats ?? [];
+  const playerBox = details?.player_box ?? [];
+  const cricketScorecard = details?.scorecard ?? [];
   // Soccer's box score source (rosters[]) always has one entry per team, even before
   // kickoff — it's just the squad list, so categories comes back empty rather than the
   // array itself. playerBox.length alone can't tell "no stats yet" from "has stats".
@@ -75,6 +96,9 @@ export default async function GameDetailPage({
     for (const row of team.battingRows) athleteIds.add(row.athleteId);
     for (const row of team.bowlingRows) athleteIds.add(row.athleteId);
   }
+  for (const e of details?.events ?? []) for (const p of e.players) athleteIds.add(p.id);
+  for (const l of details?.lineups ?? []) for (const p of [...l.starters, ...l.subs]) athleteIds.add(p.id);
+  for (const l of details?.leaders ?? []) athleteIds.add(l.athlete_id);
   const playerSlugs = await getPlayerSlugsByEspnIds(league, [...athleteIds]);
 
   // The feed's boxscore.teams order differs by sport (home first for soccer, away
@@ -87,25 +111,39 @@ export default async function GameDetailPage({
   // real box score is labeled reads as if these numbers are from this game, which
   // they aren't — so call it out explicitly instead of leaving it ambiguous.
   const notYetStarted = game.status_state === "pre";
+  const events = details?.events ?? [];
+  const lineups = details?.lineups ?? [];
+  const winProb = details?.win_probability ?? [];
+  const leaders = details?.leaders ?? [];
 
   return (
     <div className="flex flex-col gap-6">
       <ViewTracker league={league} gameId={id} />
-      <JsonLd data={gameSchema(league, game, summary?.gameInfo?.venue?.fullName ?? null)} />
+      <JsonLd data={gameSchema(league, game, details?.venue ?? null)} />
       <Breadcrumbs
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
-          { label: "Scores", href: `/${league}` },
+          ...(context?.week ? [{ label: context.week.label, href: context.week.href }] : [{ label: "Scores", href: `/${league}` }]),
           { label: `${game.away_name} vs ${game.home_name}` },
         ]}
       />
       <MatchHeader game={game} />
+      {details && <MatchFacts league={league} game={game} details={details} />}
 
       <AdSlot label="Match detail top" />
 
+      {context && (
+        <section>
+          <SectionHeader description={game.completed ? "Ratings, form and standing before and after this game, from every result on record." : "Ratings and form going into this game, from every result on record."}>
+            {game.completed ? "Before and after" : "Going in"}
+          </SectionHeader>
+          <MatchContextCard league={league} game={game} context={context} />
+        </section>
+      )}
+
       {!isCricket && <HeadToHeadStrip league={league} homeSlug={game.home_slug} awaySlug={game.away_slug} excludeGameId={game.completed ? game.espn_id : null} />}
 
-      {!summary && <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Match details aren&apos;t available right now.</p>}
+      {!details && <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Match details aren&apos;t available right now.</p>}
 
       {(game.broadcast_network || game.weather_display) && (
         <div className="card flex flex-wrap gap-x-6 gap-y-1 px-4 py-3 text-sm text-[var(--text-muted)]">
@@ -123,6 +161,27 @@ export default async function GameDetailPage({
         </div>
       )}
 
+      {events.length > 0 && (
+        <section>
+          <SectionHeader>{isSoccerLeague(league) ? "Timeline" : "Scoring summary"}</SectionHeader>
+          <MatchTimeline league={league} game={game} events={events} playerSlugs={playerSlugs} />
+        </section>
+      )}
+
+      {winProb.length > 1 && (
+        <section>
+          <SectionHeader>Win probability</SectionHeader>
+          <WinProbabilityChart game={game} points={winProb} />
+        </section>
+      )}
+
+      {lineups.length > 0 && (
+        <section>
+          <SectionHeader>Line-ups</SectionHeader>
+          <MatchLineups league={league} game={game} lineups={lineups} playerSlugs={playerSlugs} />
+        </section>
+      )}
+
       {awayStats && homeStats && (
         <section>
           <SectionHeader>{notYetStarted ? "Season Comparison" : "Team Stats"}</SectionHeader>
@@ -132,6 +191,13 @@ export default async function GameDetailPage({
             </p>
           )}
           <TeamStatsComparison away={awayStats} home={homeStats} />
+        </section>
+      )}
+
+      {leaders.length > 0 && (
+        <section>
+          <SectionHeader>Game leaders</SectionHeader>
+          <MatchLeaders league={league} game={game} leaders={leaders} playerSlugs={playerSlugs} />
         </section>
       )}
 
@@ -152,6 +218,8 @@ export default async function GameDetailPage({
           ))}
         </section>
       )}
+
+      {stored && <p className="text-[11px] text-[var(--text-faint)]">Match report stored from the official feed after the final whistle.</p>}
     </div>
   );
 }

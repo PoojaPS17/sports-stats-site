@@ -371,3 +371,14 @@ create table if not exists f1_standings (
   updated_at timestamptz not null default now(),
   primary key (season_year, standings_type, entity_espn_id)
 );
+
+-- One stored match report per completed game (venue, timeline, line-ups, team and
+-- player box, win probability), extracted from ESPN's summary by the scraper so the
+-- match page never depends on a live request. See scripts/lib/game-details.ts.
+create table if not exists game_details (
+  league text not null,
+  game_espn_id text not null,
+  details jsonb not null,
+  fetched_at timestamptz not null default now(),
+  primary key (league, game_espn_id)
+);
