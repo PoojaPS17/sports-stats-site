@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { isLeague, getTeamBySlug, getTeamGamesBySeason, getTeamSeasons, getTeamRoster } from "@/lib/queries";
+import { isLeague, isCricketLeague, getTeamBySlug, getTeamGamesBySeason, getTeamSeasons, getTeamRoster, getTeamInjuries } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamSeasonGames } from "@/components/TeamSeasonGames";
@@ -22,9 +22,11 @@ export default async function TeamPage({
 
   const seasons = await getTeamSeasons(league, team.espn_id);
   const activeSeason = seasons[0] ?? null;
-  const [games, roster] = await Promise.all([
+  const hasInjuryFeed = !isCricketLeague(league);
+  const [games, roster, injuries] = await Promise.all([
     activeSeason ? getTeamGamesBySeason(league, team.espn_id, activeSeason) : Promise.resolve([]),
     getTeamRoster(league, team.espn_id),
+    hasInjuryFeed ? getTeamInjuries(league, team.espn_id) : Promise.resolve([]),
   ]);
 
   return (
@@ -42,6 +44,23 @@ export default async function TeamPage({
         activeSeason={activeSeason}
         basePath={`/${league}/teams/${slug}`}
       />
+
+      {hasInjuryFeed && injuries.length > 0 && (
+        <section>
+          <SectionHeader>Injuries</SectionHeader>
+          <div className="card divide-y divide-[var(--border)]">
+            {injuries.map((inj) => (
+              <div key={inj.player_espn_id} className="flex flex-col gap-1 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{inj.player_name}</span>
+                  <span className="pill pill-upcoming">{inj.status}</span>
+                </div>
+                {inj.short_comment && <p className="text-sm text-[var(--text-muted)]">{inj.short_comment}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <SectionHeader>Current Roster</SectionHeader>

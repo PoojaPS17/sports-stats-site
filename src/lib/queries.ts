@@ -35,6 +35,15 @@ export interface GameRow {
   away_abbr: string | null;
   away_logo: string | null;
   away_color: string | null;
+  // Only selected by getGameByEspnId (the game-detail page) — every other query that
+  // returns a GameRow is a list view that has no use for pre-game context like this.
+  odds_details?: string | null;
+  odds_spread?: number | null;
+  odds_over_under?: number | null;
+  odds_provider?: string | null;
+  broadcast_network?: string | null;
+  weather_display?: string | null;
+  weather_temperature?: number | null;
 }
 
 const GAME_SELECT = `
@@ -50,8 +59,26 @@ const GAME_SELECT = `
   join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
 `;
 
+// Only the single-game detail view needs odds/broadcast/weather context, so this has
+// its own SELECT rather than adding those columns to the shared GAME_SELECT that
+// every list query also uses.
 export async function getGameByEspnId(league: League, espnId: string): Promise<GameRow | null> {
-  const { rows } = await pool.query(`${GAME_SELECT} where g.league = $1 and g.espn_id = $2`, [league, espnId]);
+  const { rows } = await pool.query(
+    `select
+       g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
+       g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.completed,
+       g.home_team_espn_id, g.away_team_espn_id,
+       g.odds_details, g.odds_spread, g.odds_over_under, g.odds_provider,
+       g.broadcast_network, g.weather_display, g.weather_temperature,
+       ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
+       at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
+     from games g
+     join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
+     join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
+     where g.league = $1 and g.espn_id = $2`,
+    [league, espnId]
+  );
   return rows[0] ?? null;
 }
 
@@ -441,6 +468,27 @@ export async function getTeamRoster(league: League, teamEspnId: string): Promise
     `select espn_id, name, slug, position, jersey, height, weight, age, headshot_url, is_captain, is_wicketkeeper
      from players where league = $1 and team_espn_id = $2
      order by is_captain desc nulls last, position, name`,
+    [league, teamEspnId]
+  );
+  return rows;
+}
+
+export interface InjuryRow {
+  player_espn_id: string;
+  player_name: string;
+  status: string;
+  short_comment: string | null;
+  long_comment: string | null;
+  reported_date: string | null;
+}
+
+// Real injury reports from ESPN's own /injuries endpoint (see fetch-injuries.ts) —
+// only NBA/NFL/EPL/La Liga have one; cricket has no equivalent at all.
+export async function getTeamInjuries(league: League, teamEspnId: string): Promise<InjuryRow[]> {
+  const { rows } = await pool.query(
+    `select player_espn_id, player_name, status, short_comment, long_comment, reported_date
+     from injuries where league = $1 and team_espn_id = $2
+     order by reported_date desc nulls last`,
     [league, teamEspnId]
   );
   return rows;

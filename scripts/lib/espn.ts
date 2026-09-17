@@ -112,6 +112,14 @@ export function fetchNews(league: League, limit = 15) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/news?limit=${limit}`);
 }
 
+// Real per-player injury reports, one call per league covering every team at once.
+// Cricket 404s (same gap as its /teams and /roster endpoints); soccer's endpoint
+// responds 200 but has come back with zero entries in every check so far — that
+// looks like ESPN just not maintaining this data for soccer, not a request problem.
+export function fetchInjuries(league: League) {
+  return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/injuries`);
+}
+
 // Unlike every other endpoint here, soccer's athlete-stats path is NOT league-scoped —
 // `soccer/eng.1/athletes/...` 404s; it has to be the bare sport, `soccer/athletes/...`.
 // The response it returns is also sport-wide (a player's career across every league

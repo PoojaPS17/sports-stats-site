@@ -71,6 +71,30 @@ export default async function GameDetailPage({
 
       {!summary && <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Match details aren&apos;t available right now.</p>}
 
+      {(game.broadcast_network || game.weather_display || game.odds_details) && (
+        <div className="card flex flex-wrap gap-x-6 gap-y-1 px-4 py-3 text-sm text-[var(--text-muted)]">
+          {game.broadcast_network && (
+            <span>
+              <span className="font-semibold text-[var(--text)]">Watch:</span> {game.broadcast_network}
+            </span>
+          )}
+          {game.weather_display && (
+            <span>
+              <span className="font-semibold text-[var(--text)]">Weather:</span> {game.weather_display}
+              {game.weather_temperature !== null && game.weather_temperature !== undefined ? `, ${game.weather_temperature}°F` : ""}
+            </span>
+          )}
+          {game.odds_details && (
+            <span>
+              <span className="font-semibold text-[var(--text)]">Odds:</span> {game.odds_details}
+              {game.odds_over_under ? ` · O/U ${game.odds_over_under}` : ""}
+              {game.odds_provider ? ` (${game.odds_provider})` : ""}
+              <span className="text-xs"> — for reference only, not a betting offer</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {awayStats && homeStats && (
         <section>
           <SectionHeader>{notYetStarted ? "Season Comparison" : "Team Stats"}</SectionHeader>

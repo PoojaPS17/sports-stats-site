@@ -92,6 +92,17 @@ alter table games add column if not exists away_winner boolean;
 -- splits) — sourced from the summary endpoint's gameInfo.venue during the cricket
 -- player-stats backfill, not from the regular scores scrape.
 alter table games add column if not exists venue text;
+-- Odds/broadcast/weather all arrive embedded in the same scoreboard response the
+-- regular scrape already fetches every 15 minutes — previously discarded. Odds are a
+-- single provider's line (whichever ESPN lists first, usually DraftKings) rather than
+-- every book's, since this is display context for readers, not a betting product.
+alter table games add column if not exists odds_details text;
+alter table games add column if not exists odds_spread numeric;
+alter table games add column if not exists odds_over_under numeric;
+alter table games add column if not exists odds_provider text;
+alter table games add column if not exists broadcast_network text;
+alter table games add column if not exists weather_display text;
+alter table games add column if not exists weather_temperature int;
 
 create index if not exists games_league_date_idx on games (league, date);
 create index if not exists games_league_season_idx on games (league, season_year);
@@ -265,3 +276,25 @@ create table if not exists trending_topics (
 );
 
 create index if not exists trending_topics_lookup_idx on trending_topics (source, country, rank);
+
+-- NFL/NBA/EPL/La Liga injury reports — ESPN's own /injuries endpoint, one call per
+-- league covering every team at once. Cricket has no equivalent (404s, same gap as
+-- its /teams and /roster endpoints); soccer's endpoint responds but has come back
+-- consistently empty in testing, so its rows may just never populate — that's the
+-- endpoint being sparse, not a bug in the fetch script. Replaced wholesale on every
+-- fetch (delete-then-insert per league) rather than upserted, since a player who's
+-- no longer listed has recovered and should simply disappear, not linger as stale.
+create table if not exists injuries (
+  id bigserial primary key,
+  league text not null,
+  team_espn_id text not null,
+  player_espn_id text not null,
+  player_name text not null,
+  status text not null, -- 'Questionable' | 'Doubtful' | 'Out' | etc., ESPN's own wording
+  short_comment text,
+  long_comment text,
+  reported_date timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists injuries_team_idx on injuries (league, team_espn_id);

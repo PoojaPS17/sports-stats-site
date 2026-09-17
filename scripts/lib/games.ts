@@ -25,6 +25,38 @@ function parseWinner(raw: unknown): boolean | null {
   return null;
 }
 
+// Odds/broadcast/weather are only ever present on the live scoreboard fetch (the
+// endpoint that also powers the recurring 15-min scrape) — the per-team season
+// schedule endpoint used for historical backfills doesn't carry them, which is fine:
+// a betting line or forecast for a 2018 game has no meaning anyway. ESPN also stops
+// listing odds once a game goes final, so these are coalesced against the existing DB
+// value on upsert rather than overwritten with null — the pre-game line stays visible
+// as context after the game finishes instead of disappearing.
+function parseOdds(comp: any): { details: string | null; spread: number | null; overUnder: number | null; provider: string | null } {
+  const odds = comp.odds?.[0];
+  if (!odds) return { details: null, spread: null, overUnder: null, provider: null };
+  return {
+    details: typeof odds.details === "string" ? odds.details : null,
+    spread: typeof odds.spread === "number" ? odds.spread : null,
+    overUnder: typeof odds.overUnder === "number" ? odds.overUnder : null,
+    provider: odds.provider?.name ?? null,
+  };
+}
+
+function parseBroadcast(comp: any): string | null {
+  const names = comp.broadcasts?.[0]?.names;
+  return Array.isArray(names) && names.length > 0 ? names.join(", ") : null;
+}
+
+function parseWeather(ev: any): { display: string | null; temperature: number | null } {
+  const w = ev.weather;
+  if (!w) return { display: null, temperature: null };
+  return {
+    display: typeof w.displayValue === "string" ? w.displayValue : null,
+    temperature: typeof w.temperature === "number" ? w.temperature : null,
+  };
+}
+
 // Every completed match previously showed a generic "Final" status pill regardless of
 // stage — correct broadcast shorthand for an ordinary NBA/NFL/EPL game, but misleading
 // once real stages exist (IPL playoffs, NBA/NFL postseason rounds), and uninformative
@@ -71,6 +103,9 @@ export async function upsertEvent(league: League, ev: any) {
   const status = comp.status;
   const homeScore = parseScore(home?.score);
   const awayScore = parseScore(away?.score);
+  const odds = parseOdds(comp);
+  const broadcast = parseBroadcast(comp);
+  const weather = parseWeather(ev);
 
   if (home?.team) await upsertTeam(league, home.team);
   if (away?.team) await upsertTeam(league, away.team);
@@ -80,8 +115,10 @@ export async function upsertEvent(league: League, ev: any) {
        league, espn_id, date, name, short_name,
        home_team_espn_id, away_team_espn_id, home_score, away_score,
        home_score_display, away_score_display, home_winner, away_winner, season_year,
-       status_state, status_detail, status_summary, round, period, clock, completed, updated_at
-     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21, now())
+       status_state, status_detail, status_summary, round, period, clock, completed,
+       odds_details, odds_spread, odds_over_under, odds_provider, broadcast_network,
+       weather_display, weather_temperature, updated_at
+     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28, now())
      on conflict (league, espn_id) do update set
        date = excluded.date, home_score = excluded.home_score, away_score = excluded.away_score,
        home_score_display = excluded.home_score_display, away_score_display = excluded.away_score_display,
@@ -90,6 +127,13 @@ export async function upsertEvent(league: League, ev: any) {
        status_state = excluded.status_state, status_detail = excluded.status_detail,
        status_summary = excluded.status_summary, round = excluded.round,
        period = excluded.period, clock = excluded.clock, completed = excluded.completed,
+       odds_details = coalesce(excluded.odds_details, games.odds_details),
+       odds_spread = coalesce(excluded.odds_spread, games.odds_spread),
+       odds_over_under = coalesce(excluded.odds_over_under, games.odds_over_under),
+       odds_provider = coalesce(excluded.odds_provider, games.odds_provider),
+       broadcast_network = coalesce(excluded.broadcast_network, games.broadcast_network),
+       weather_display = coalesce(excluded.weather_display, games.weather_display),
+       weather_temperature = coalesce(excluded.weather_temperature, games.weather_temperature),
        updated_at = now()`,
     [
       league,
@@ -115,6 +159,13 @@ export async function upsertEvent(league: League, ev: any) {
       // Cricket's status.type has no `completed` boolean at all (unlike NBA/NFL/soccer,
       // confirmed to have it) — state === "post" is the reliable signal there instead.
       Boolean(status?.type?.completed ?? status?.type?.state === "post"),
+      odds.details,
+      odds.spread,
+      odds.overUnder,
+      odds.provider,
+      broadcast,
+      weather.display,
+      weather.temperature,
     ]
   );
 }
