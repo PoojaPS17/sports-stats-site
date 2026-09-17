@@ -2,7 +2,7 @@
 // scraper (recent games) and the historical backfill (every completed game).
 import { pool } from "./db";
 import type { League } from "./espn";
-import { uniqueSlugFor } from "./players";
+import { slugify } from "./espn";
 
 export type PlayerStats = Map<string, { athlete: any; teamId: string; stats: Record<string, Record<string, string>> }>;
 
@@ -69,12 +69,23 @@ export async function storeGameStats(league: League, gameEspnId: string, perPlay
   ]);
   const known = new Set(existing.map((r) => r.espn_id as string));
 
-  // New players need a unique slug each; existing ones keep theirs.
+  // New players need a unique slug each; existing ones keep theirs. Slug clashes are
+  // checked in one query for the whole batch (a historical backfill meets dozens of
+  // new players per game, and one round trip each was the bottleneck).
+  const fresh = [...perPlayer].filter(([id]) => !known.has(id));
+  const bases = new Map(fresh.map(([id, { athlete }]) => [id, slugify(athlete.displayName ?? athlete.fullName ?? `Player ${id}`)]));
+  const { rows: taken } = fresh.length
+    ? await pool.query(`select slug from players where league = $1 and slug = any($2)`, [league, [...new Set(bases.values())]])
+    : { rows: [] as { slug: string }[] };
+  const takenSlugs = new Set(taken.map((r) => r.slug as string));
+  const usedNow = new Set<string>();
   const inserts: { id: string; teamId: string; name: string; slug: string; headshot: string | null }[] = [];
-  for (const [id, { athlete, teamId }] of perPlayer) {
-    if (known.has(id)) continue;
+  for (const [id, { athlete, teamId }] of fresh) {
     const name = athlete.displayName ?? athlete.fullName ?? `Player ${id}`;
-    inserts.push({ id, teamId, name, slug: await uniqueSlugFor(league, id, name), headshot: athlete.headshot?.href ?? null });
+    const base = bases.get(id)!;
+    const slug = takenSlugs.has(base) || usedNow.has(base) ? `${base}-${id}` : base;
+    usedNow.add(slug);
+    inserts.push({ id, teamId, name, slug, headshot: athlete.headshot?.href ?? null });
   }
   if (inserts.length > 0) {
     const values: unknown[] = [];

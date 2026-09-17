@@ -39,7 +39,7 @@ async function backfillLeague(league: League) {
            values ($1, $2, $3, $4, $5)
            on conflict (league, espn_id) do update set
              name = excluded.name,
-             team_espn_id = coalesce(players.team_espn_id, excluded.team_espn_id)`,
+             team_espn_id = excluded.team_espn_id`,
           [league, p.athleteId, p.teamId, p.name, slug]
         );
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { League } from "@/lib/queries";
 import type { TeamPlayerBox } from "@/lib/matchDetail";
+import { formatStat, statTitle } from "@/lib/statGlossary";
 
 export function PlayerBoxScoreTable({
   league,
@@ -16,6 +17,7 @@ export function PlayerBoxScoreTable({
   return (
     <div className="card overflow-hidden">
       <h3 className="border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-bold">{team.teamName}</h3>
+      <p className="px-4 pt-2 text-[11px] text-[var(--text-faint)]">Hover a column heading for what the abbreviation means.</p>
       {team.categories.map((cat) => (
         <div key={cat.name} className="overflow-x-auto">
           {cat.name && (
@@ -26,8 +28,10 @@ export function PlayerBoxScoreTable({
               <tr className="table-head text-left">
                 <th className="py-2 pl-4 font-medium">Player</th>
                 {cat.labels.map((label) => (
-                  <th key={label} className="px-2 py-2 text-right font-medium">
-                    {label}
+                  <th key={label} className="px-2 py-2 text-right font-medium" title={statTitle(label)}>
+                    <abbr className="no-underline" title={statTitle(label)}>
+                      {label}
+                    </abbr>
                   </th>
                 ))}
               </tr>
@@ -48,7 +52,7 @@ export function PlayerBoxScoreTable({
                   </td>
                   {cat.labels.map((label, i) => (
                     <td key={label} className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
-                      {row.stats[i] ?? "-"}
+                      {row.stats[i] !== undefined ? formatStat(label, row.stats[i]) : "-"}
                     </td>
                   ))}
                 </tr>

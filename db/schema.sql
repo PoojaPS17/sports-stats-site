@@ -197,6 +197,9 @@ alter table standings add column if not exists goals_for int;
 alter table standings add column if not exists goals_against int;
 alter table standings add column if not exists no_result int;
 alter table standings add column if not exists net_run_rate numeric;
+-- Division within the conference (NFL: "AFC East"). Only the NFL standings fetch
+-- asks ESPN for division-level groups; other leagues leave this null.
+alter table standings add column if not exists division text;
 
 -- One row per real page view of a match-detail page, recorded client-side (see
 -- src/app/api/track-view) so it reflects actual visits rather than server-render

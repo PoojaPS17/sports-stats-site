@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getStandings, getStandingsSeasons, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, getStandings, getStandingsBySeason, getStandingsSeasons, getMostRecentPlayedSeason, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
 import { summarizePlayoffs } from "@/lib/seasonSummary";
 import { supportsScoreAnalytics } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
@@ -24,13 +24,21 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
   const { league } = await params;
   if (!isLeague(league)) notFound();
 
-  const [standings, seasons] = await Promise.all([getStandings(league), getStandingsSeasons(league)]);
+  const [latest, seasons] = await Promise.all([getStandings(league), getStandingsSeasons(league)]);
+  // A table for the coming season exists (every team 0-0) before a ball is kicked;
+  // showing it as "current" is meaningless, so fall back to the last season with games.
+  const played = latest.some((r) => r.wins + r.losses + (r.draws ?? 0) > 0);
+  const fallbackSeason = played ? null : await getMostRecentPlayedSeason(league);
+  const standings = fallbackSeason ? await getStandingsBySeason(league, fallbackSeason) : latest;
   const activeSeason = standings[0]?.season ?? seasons[0] ?? null;
   const playoffGames = activeSeason ? await getSeasonPlayoffGames(league, activeSeason) : [];
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={`${LEAGUE_LABEL[league]} Standings`} subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} season` : undefined}>
+      <PageHeader
+        title={`${LEAGUE_LABEL[league]} Standings`}
+        subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} season${fallbackSeason ? " (final). The new season has not started yet." : ""}` : undefined}
+      >
         {supportsScoreAnalytics(league) && <StandingsViewTabs league={league} active="overall" />}
       </PageHeader>
       <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />

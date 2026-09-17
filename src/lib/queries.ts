@@ -138,6 +138,7 @@ export interface StandingRow {
   logo_url: string | null;
   color: string | null;
   conference: string | null;
+  division: string | null;
   wins: number;
   losses: number;
   win_percent: string;
@@ -153,7 +154,7 @@ export interface StandingRow {
 
 const STANDING_SELECT = `
   select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
-         s.conference, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
+         s.conference, s.division, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
          s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate
   from standings s
   join teams t on t.league = s.league and t.espn_id = s.team_espn_id

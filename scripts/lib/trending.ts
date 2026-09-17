@@ -81,7 +81,11 @@ function escapeRegExp(s: string): string {
 // in general than about one specific mononym player buried in our historical roster
 // data. Requiring some length on a one-word match keeps genuine mononym stars
 // ("Neymar", "Ronaldinho") while dropping that noise.
-function isTrustworthyMatch(entity: EntityMatch): boolean {
+function isTrustworthyMatch(entity: EntityMatch, text: string): boolean {
+  // National cricket sides are named after countries ("Canada", "Australia"). A
+  // Wikipedia page or app called just "Canada" is about the country, so a one-word
+  // team name only counts when the text itself mentions cricket.
+  if (entity.type === "team" && !entity.name.includes(" ")) return /cricket/i.test(text);
   return entity.name.includes(" ") || entity.name.length >= 6;
 }
 
@@ -89,10 +93,10 @@ export function matchEntity(text: string, index: EntityIndex): EntityMatch | nul
   const norm = normalize(stripDisambiguation(text));
 
   const exact = index.byFullName.get(norm);
-  if (exact && isTrustworthyMatch(exact)) return exact;
+  if (exact && isTrustworthyMatch(exact, text)) return exact;
 
   for (const [key, entity] of index.byFullName) {
-    if (key.length > 3 && norm.includes(key) && isTrustworthyMatch(entity)) return entity;
+    if (key.length > 3 && norm.includes(key) && isTrustworthyMatch(entity, text)) return entity;
   }
   for (const [nick, entity] of index.teamNicknames) {
     if (new RegExp(`\\b${escapeRegExp(nick)}\\b`).test(norm)) return entity;

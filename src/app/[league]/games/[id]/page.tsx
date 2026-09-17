@@ -74,7 +74,10 @@ export default async function GameDetailPage({
   }
   const playerSlugs = await getPlayerSlugsByEspnIds(league, [...athleteIds]);
 
-  const [awayStats, homeStats] = teamStats;
+  // The feed's boxscore.teams order differs by sport (home first for soccer, away
+  // first for the US leagues), so match by team id rather than position.
+  const awayStats = teamStats.find((t) => t.teamId === game.away_team_espn_id) ?? teamStats[0];
+  const homeStats = teamStats.find((t) => t.teamId === game.home_team_espn_id) ?? teamStats[1];
   // Before a game starts, ESPN's "boxscore" is actually each team's season-to-date
   // per-game averages (entering the matchup) — there's no real box score yet since
   // nothing's been played. Labeling that "Team Stats" the same way a completed game's

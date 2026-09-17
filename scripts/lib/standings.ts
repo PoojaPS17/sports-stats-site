@@ -11,8 +11,11 @@ function statValue(stats: any[], ...names: string[]): string | undefined {
 
 function collectEntries(node: any, conference: string | null, out: any[]) {
   if (node.standings?.entries) {
+    // A group nested under a conference that is not itself a conference is a
+    // division (NFL "AFC East"); entries directly on the conference have none.
+    const division = conference && !node.isConference && node.name ? node.name : null;
     for (const entry of node.standings.entries) {
-      out.push({ entry, conference: conference ?? node.name ?? null });
+      out.push({ entry, conference: conference ?? node.name ?? null, division });
     }
   }
   for (const child of node.children ?? []) {
@@ -27,7 +30,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
   const entries: any[] = [];
   collectEntries(data, null, entries);
 
-  for (const { entry, conference } of entries) {
+  for (const { entry, conference, division } of entries) {
     const stats = entry.stats ?? [];
     const draws = statValue(stats, "ties");
     const points = statValue(stats, "points", "matchPoints");
@@ -39,10 +42,11 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
       `insert into standings (
          league, season, team_espn_id, conference, wins, losses,
          win_percent, streak, playoff_seed, games_behind,
-         draws, points, goals_for, goals_against, no_result, net_run_rate, updated_at
-       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, now())
+         draws, points, goals_for, goals_against, no_result, net_run_rate, division, updated_at
+       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17, now())
        on conflict (league, season, team_espn_id) do update set
-         conference = excluded.conference, wins = excluded.wins, losses = excluded.losses,
+         conference = excluded.conference, division = coalesce(excluded.division, standings.division),
+         wins = excluded.wins, losses = excluded.losses,
          win_percent = excluded.win_percent, streak = excluded.streak,
          playoff_seed = excluded.playoff_seed, games_behind = excluded.games_behind,
          draws = excluded.draws, points = excluded.points,
@@ -71,6 +75,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
         goalsAgainst !== undefined ? Math.round(Number(goalsAgainst)) : null,
         noResult !== undefined ? Math.round(Number(noResult)) : null,
         netRunRate !== undefined ? Number(netRunRate) : null,
+        division,
       ]
     );
   }

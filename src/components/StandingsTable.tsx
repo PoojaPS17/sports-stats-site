@@ -23,12 +23,19 @@ function StreakCell({ streak }: { streak: string | null }) {
 
 export function StandingsTable({ league, standings }: { league: League; standings: StandingRow[] }) {
   const mode = league === "epl" || league === "laliga" ? "soccer" : isCricketLeague(league) ? "cricket" : "default";
+  // The NFL table is conventionally shown by division; everything else by
+  // conference (or as one table). Divisions are only stored for the NFL.
+  const useDivisions = league === "nfl" && standings.every((r) => r.division);
   const byConference = new Map<string, StandingRow[]>();
   for (const row of standings) {
-    const key = row.conference ?? "All Teams";
+    const key = useDivisions ? row.division! : (row.conference ?? "All Teams");
     if (!byConference.has(key)) byConference.set(key, []);
     byConference.get(key)!.push(row);
   }
+
+  // Divisions read in the conventional order (AFC East, North, South, West, then NFC),
+  // which is also alphabetical.
+  const sections = useDivisions ? [...byConference.entries()].sort((a, b) => a[0].localeCompare(b[0])) : [...byConference.entries()];
 
   if (standings.length === 0) {
     return <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No standings found for this season.</p>;
@@ -39,8 +46,8 @@ export function StandingsTable({ league, standings }: { league: League; standing
 
   return (
     <div className="flex flex-col gap-4">
-      <div className={`grid gap-6 ${byConference.size > 1 ? "lg:grid-cols-2" : ""}`}>
-        {[...byConference.entries()].map(([conference, rows]) => (
+      <div className={`grid gap-6 ${byConference.size > 1 ? "lg:grid-cols-2" : ""}`} style={useDivisions ? { gridAutoFlow: "row dense" } : undefined}>
+        {sections.map(([conference, rows]) => (
           <section key={conference} className="card overflow-hidden">
             <h2 className="table-head border-b border-[var(--border)] px-4 py-2.5">{conference}</h2>
             <div className="overflow-x-auto">

@@ -1,9 +1,14 @@
 import type { TeamStatGroup } from "@/lib/matchDetail";
+import { formatStat } from "@/lib/statGlossary";
 
 // Renders each stat as a mini horizontal bar split between the two teams — makes the
 // side with the bigger number immediately visible instead of just two raw numbers.
 export function TeamStatsComparison({ away, home }: { away: TeamStatGroup; home: TeamStatGroup }) {
-  const rows = away.stats.map((stat, i) => ({ label: stat.label, awayValue: stat.value, homeValue: home.stats[i]?.value ?? "-" }));
+  const rows = away.stats.map((stat, i) => ({
+    label: stat.label,
+    awayValue: formatStat(stat.label, stat.value),
+    homeValue: formatStat(stat.label, home.stats[i]?.value ?? "-"),
+  }));
   if (rows.length === 0) return null;
 
   return (

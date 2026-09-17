@@ -78,15 +78,22 @@ export function fetchScoreboardBySeason(league: League, season: number) {
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/scoreboard?season=${season}`);
 }
 
+// `level=3` asks for the division-level groups (conference → division → teams) that
+// the NFL table is conventionally shown in; the default response stops at conferences.
+function standingsLevel(league: League): string {
+  return league === "nfl" ? "level=3" : "";
+}
+
 export function fetchStandings(league: League) {
-  return getJson<any>(`${CORE_BASE}/${SPORT_PATH[league]}/standings`);
+  const q = standingsLevel(league);
+  return getJson<any>(`${CORE_BASE}/${SPORT_PATH[league]}/standings${q ? `?${q}` : ""}`);
 }
 
 // Every league's standings endpoint accepts a `season` query param and returns that
 // year's final table — cricket additionally needs `seasontype=2` or it ignores the
 // season param and falls back to the current one.
 export function fetchStandingsBySeason(league: League, season: number) {
-  const q = isCricketLeague(league) ? `season=${season}&seasontype=2` : `season=${season}`;
+  const q = [isCricketLeague(league) ? `season=${season}&seasontype=2` : `season=${season}`, standingsLevel(league)].filter(Boolean).join("&");
   return getJson<any>(`${CORE_BASE}/${SPORT_PATH[league]}/standings?${q}`);
 }
 

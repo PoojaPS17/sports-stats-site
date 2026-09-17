@@ -25,6 +25,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { h2hPath } from "@/lib/h2h";
 import { supportsScoreAnalytics } from "@/lib/analytics";
 import { CalendarButton } from "@/components/CalendarButton";
+import { LocalTime } from "@/components/LocalTime";
 
 export const revalidate = 300;
 
@@ -105,9 +106,7 @@ export default async function TeamPage({
                   size={22}
                 />
                 <span className="truncate">{nextIsHome ? next.away_name : next.home_name}</span>
-                <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
-                  {new Date(next.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                </span>
+                <LocalTime iso={next.date} format="datetime" className="shrink-0 text-xs font-medium text-[var(--text-muted)]" />
               </span>
             </Link>
           )}
