@@ -11,6 +11,8 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { PageHeader } from "@/components/PageHeader";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 import { CalendarButton } from "@/components/CalendarButton";
+import { getOffseasonRecap } from "@/lib/offseason";
+import { OffseasonRecap } from "@/components/OffseasonRecap";
 
 export const revalidate = 60;
 
@@ -47,8 +49,9 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
   // This page is a rolling recent-and-upcoming window, not a live-only view — for a
   // seasonal competition (NBA preseason, IPL/BBL between tournaments) that window can
   // be genuinely empty for months at a time. Rather than a bare "nothing here" that
-  // reads like a bug, point at the most recent season's actual results.
-  const mostRecentSeason = groups.size === 0 ? await getMostRecentPlayedSeason(league) : null;
+  // reads like a bug, show how the last season ended, its table and its leaders.
+  const recap = groups.size === 0 ? await getOffseasonRecap(league) : null;
+  const mostRecentSeason = groups.size === 0 && !recap ? await getMostRecentPlayedSeason(league) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,7 +73,9 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
         </p>
       )}
 
-      {groups.size === 0 && (
+      {recap && <OffseasonRecap league={league} recap={recap} />}
+
+      {groups.size === 0 && !recap && (
         <div className="card px-5 py-6">
           <p className="font-semibold">{leagueNameWithArticle(league, true)} is between seasons.</p>
           <p className="mt-1 text-sm text-[var(--text-muted)]">No games in the last two days or the next week. Catch up on the most recent season instead.</p>

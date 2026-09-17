@@ -15,6 +15,7 @@ import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { NewsCard } from "@/components/NewsCard";
 import { SectionHeader } from "@/components/SectionHeader";
+import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
 
 export const revalidate = 60;
 
@@ -30,7 +31,9 @@ const QUICK_LINKS: { label: string; href: string }[] = [
 export default async function HomePage() {
   // The Champions League has no homepage section of its own but its games belong
   // among the headline fixtures whenever a matchday falls in the window.
-  const featured = (await Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3)))).flat();
+  const allFeatured = (await Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3)))).flat();
+  const spotlight = pickSpotlight(allFeatured);
+  const featured = allFeatured.filter((g) => g.espn_id !== spotlight?.espn_id);
 
   const sections = await Promise.all(
     LEAGUES.map(async (league) => {
@@ -50,26 +53,36 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <section className="flex flex-col gap-4">
-        <div>
-          <h1 className="page-title max-w-2xl">Live scores, standings and stats across the sports you follow</h1>
-          <p className="mt-2 max-w-xl text-[var(--text-muted)]">
-            Fixtures, results, tables, player game logs and ten seasons of history for football, the NFL, NBA, cricket,
-            tennis and Formula 1. Refreshed automatically from the league feeds.
-          </p>
+      <section className="grid gap-6 lg:grid-cols-5 lg:items-center">
+        <div className="flex flex-col gap-5 lg:col-span-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Scores · Tables · Stats · History</p>
+            <h1 className="mt-2 max-w-2xl text-3xl font-bold leading-[1.1] tracking-tight text-[var(--text)] sm:text-4xl lg:text-[2.75rem]">
+              Every score, table and stat line, across the sports you follow
+            </h1>
+            <p className="mt-3 max-w-xl text-[var(--text-muted)]">
+              Football, the NFL, NBA, cricket, tennis and Formula 1, with box scores, player game logs and more than a decade of
+              results. Refreshed automatically, all day.
+            </p>
+          </div>
+          <ul className="flex flex-wrap gap-2" aria-label="Browse by competition">
+            {QUICK_LINKS.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="flex flex-wrap gap-2" aria-label="Browse by competition">
-          {QUICK_LINKS.map((l) => (
-            <li key={l.href}>
-              <Link
-                href={l.href}
-                className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              >
-                {l.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {spotlight && (
+          <div className="lg:col-span-2">
+            <SpotlightCard game={spotlight} />
+          </div>
+        )}
       </section>
 
       {featured.length > 0 && (
