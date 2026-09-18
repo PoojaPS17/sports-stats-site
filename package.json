@@ -31,6 +31,7 @@
     "import:cricket-espn": "tsx scripts/import-cricket-espn.ts",
     "fetch:tennis-rankings": "tsx scripts/fetch-tennis-rankings.ts",
     "fetch:tennis-scores": "tsx scripts/fetch-tennis-scores.ts",
+    "fetch:tennis-daily": "tsx scripts/fetch-tennis-daily.ts",
     "backfill:tennis-matches": "tsx scripts/backfill-tennis-matches.ts",
     "seed:f1-teams": "tsx scripts/seed-f1-teams.ts",
     "fetch:f1-scores": "tsx scripts/fetch-f1-scores.ts",

@@ -53,3 +53,22 @@ export function fetchTournamentEventCompetitions(tour: Tour, tournamentId: strin
 export function fetchByRef<T = any>(ref: string): Promise<T> {
   return getJson<T>(ref);
 }
+
+// ESPN's cross-tour daily listing — the feed behind its own tennis scores page. One
+// request per calendar day (US Eastern) returns every match ESPN tracks that day, in
+// every tournament (tour events, Slams, Challengers, 125s), each with its round and
+// court, seeds, set-by-set scores with tie-breaks, and both players' ids and flags.
+// Unlike the tour scoreboard, it honours the date for any day, past or future.
+export function fetchTennisDay(dateYYYYMMDD: string) {
+  return getJson<any>(`https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=tennis&dates=${dateYYYYMMDD}`);
+}
+
+// One tournament edition: exact start/end dates and location.
+export function fetchTennisEvent(tour: Tour, eventId: string) {
+  return getJson<any>(`${CORE_BASE}/leagues/${tour}/events/${eventId}?lang=en&region=us`);
+}
+
+// Every tournament edition of a season, as $ref pointers — the season calendar.
+export function fetchTennisSeasonEventRefs(tour: Tour, year: number) {
+  return getJson<{ items?: { $ref: string }[] }>(`${CORE_BASE}/leagues/${tour}/seasons/${year}/types/2/events?limit=300&lang=en&region=us`);
+}

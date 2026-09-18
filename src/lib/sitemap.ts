@@ -35,7 +35,14 @@ async function core(): Promise<Entry[]> {
     entry("/privacy", "yearly", 0.2),
     entry("/terms", "yearly", 0.2),
   ];
+  out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7));
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
+  const { rows: tournaments } = await pool.query(`select espn_id, season, end_date from tennis_tournaments order by season desc, start_date`);
+  for (const { espn_id, end_date } of tournaments) out.push(entry(`/tennis/tournaments/${espn_id}`, "weekly", 0.5, end_date));
+  const { rows: tennisSeasons } = await pool.query(`select distinct season from tennis_tournaments order by season desc`);
+  for (const { season } of tennisSeasons.slice(1)) out.push(entry(`/tennis/tournaments/${season}`, "yearly", 0.4));
+  const { rows: tennisDays } = await pool.query(`select distinct to_char(day, 'YYYY-MM-DD') as day from tennis_matches where day >= current_date - 60 order by 1 desc`);
+  for (const { day } of tennisDays) out.push(entry(`/tennis/scores/${day}`, "daily", 0.5));
   for (const league of ALL_LEAGUES) {
     out.push(entry(`/${league}`, "hourly", 0.9), entry(`/${league}/teams`, "weekly", 0.7), entry(`/${league}/leaders`, "daily", 0.7));
     if (hasStandings(league)) out.push(entry(`/${league}/standings`, "daily", 0.9));

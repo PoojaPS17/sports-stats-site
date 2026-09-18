@@ -278,6 +278,44 @@ create table if not exists tennis_rankings (
 
 create index if not exists tennis_rankings_rank_idx on tennis_rankings (tour, rank);
 
+-- Day-by-day tennis, every tournament ESPN lists (tour events, Slams, Challengers,
+-- 125s), from the cross-tour daily feed (see scripts/fetch-tennis-daily.ts). A match
+-- keeps player1/player2 for singles; `side1`/`side2` carry everything the feed gives
+-- per side, doubles pairs included:
+--   { ids: text[], names: text[], countries: text[], seed, rank, score, sets: [{games, tiebreak, winner}] }
+-- `day` is the calendar date ESPN files the match under (US Eastern), so a page for
+-- a date shows exactly the day's play the way the feed groups it.
+create table if not exists tennis_tournaments (
+  espn_id text primary key,      -- "189-2026": tournament id + season (shared by both tours at a Slam)
+  tour text not null,            -- atp | wta | both (the tour(s) ESPN lists it under)
+  tournament_id text not null,
+  season int not null,
+  name text not null,
+  location text,
+  major boolean not null default false,
+  start_date timestamptz,
+  end_date timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists tennis_tournaments_season_idx on tennis_tournaments (season, start_date);
+
+alter table tennis_matches add column if not exists tournament_espn_id text;
+alter table tennis_matches add column if not exists competition_type text; -- mens-singles | womens-singles | mens-doubles | womens-doubles | mixed-doubles
+alter table tennis_matches add column if not exists round_number int;
+alter table tennis_matches add column if not exists court text;
+alter table tennis_matches add column if not exists day date;
+alter table tennis_matches add column if not exists side1 jsonb;
+alter table tennis_matches add column if not exists side2 jsonb;
+
+create index if not exists tennis_matches_day_idx on tennis_matches (day);
+create index if not exists tennis_matches_tournament_idx on tennis_matches (tournament_espn_id);
+create index if not exists tennis_matches_sides_idx on tennis_matches using gin ((side1 -> 'ids'), (side2 -> 'ids'));
+
+-- Nationality (ESPN's three-letter code, "ITA") — set for tennis players, where it is
+-- part of how every scoreboard shows a name.
+alter table players add column if not exists country text;
+
 -- Real external trending signals (Wikipedia pageview spikes, Apple App Store Sports
 -- app charts) to complement game_views, which only tells us what's popular on ScoreDB
 -- itself. Each fetch script wipes and re-inserts its own (source, country) slice, so

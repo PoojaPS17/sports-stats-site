@@ -30,7 +30,11 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Tennis",
-    children: TOURS.map((t) => ({ label: TOUR_LABEL[t], href: `/tennis/${t}` })),
+    children: [
+      { label: "Scores", href: "/tennis" },
+      { label: "Calendar", href: "/tennis/tournaments" },
+      ...TOURS.map((t) => ({ label: `${TOUR_LABEL[t]} rankings`, href: `/tennis/${t}/rankings` })),
+    ],
   },
   { label: "F1", href: "/f1" },
   { label: "Top Games", href: "/top-games" },

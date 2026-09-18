@@ -54,6 +54,22 @@ jobs:
           SCRAPE_LEAGUES: ${{ steps.gate.outputs.leagues }}
         run: npm run fetch:all
 
+      # Tennis runs all day in every time zone, so its day feed is read on every tick,
+      # gate or not: the last three days (late finishes, corrected results) and the
+      # week ahead (order of play), about ten cheap requests.
+      - name: Fetch tennis day feed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:tennis-daily
+
+      - name: Fetch tennis rankings and season calendar
+        if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npm run fetch:tennis-rankings
+          npm run fetch:tennis-daily -- --calendar --days 1 --ahead 1
+
       # Men's ODIs and T20Is the weekly Cricsheet archive does not carry yet (or ever:
       # it withholds Afghanistan's matches) — a three-week sweep of ESPN's daily
       # cricket listing, so leader boards and team results never lag a series.

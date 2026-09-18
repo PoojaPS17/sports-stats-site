@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
 import { isTour, getTennisRankings, TOUR_LABEL } from "@/lib/tennis";
 import { AdSlot } from "@/components/AdSlot";
+import { Flag } from "@/components/TennisScores";
 
 export const revalidate = 3600;
 
@@ -54,6 +55,7 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
                         ) : (
                           <span className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface-muted)]" />
                         )}
+                        <Flag code={r.country} />
                         {r.name}
                       </Link>
                     </td>
