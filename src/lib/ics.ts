@@ -5,8 +5,9 @@ import { GAME_SELECT, LEAGUE_LABEL, type GameRow } from "./queries";
 import { isCricketLeague, type League } from "./leagues";
 import { getF1Calendar, getF1Seasons } from "./f1";
 import { isSoccer } from "./analytics";
+import { SITE_URL } from "./site";
 
-const SITE = "https://sports-stats-site.vercel.app";
+const SITE = SITE_URL;
 const PRODID = "-//ScoreDB//Fixtures//EN";
 
 /* ------------------------------------------------------------------------ */
