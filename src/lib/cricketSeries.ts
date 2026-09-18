@@ -70,7 +70,12 @@ const SERIES_SELECT = `
   from cricket_series s`;
 
 function shape(row: Omit<CricketSeries, "league"> & { league: string | null }): CricketSeries {
-  return { ...row, league: row.league && isLeague(row.league) ? row.league : null };
+  return {
+    ...row,
+    // A final's "TBA" placeholder is not a team.
+    teams: (row.teams ?? []).filter((t) => !/^tb[ac]$/i.test(t.name)),
+    league: row.league && isLeague(row.league) ? row.league : null,
+  };
 }
 
 /** Series with play in a window: in progress today, starting within `ahead` days, or finished within `back` days. */

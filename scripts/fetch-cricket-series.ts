@@ -89,6 +89,14 @@ function kindOf(events: any[], leagueName: string): string {
 
 // "…-vs-…-10th-match-…" / "…-final-…" in the match link slug, the only place the
 // listing says which match of the series it is.
+// ESPN flags a match "in" from the scheduled start even when its summary still reads
+// "Match scheduled to begin at ..." (rain, a late toss); that is an upcoming match.
+function matchState(ev: any): string | null {
+  const state = ev.status ?? ev.fullStatus?.type?.state ?? null;
+  const summary = String(ev.fullStatus?.longSummary ?? ev.summary ?? "");
+  return state === "in" && /scheduled to begin/i.test(summary) ? "pre" : state;
+}
+
 function descriptionFromLink(link: unknown): string | null {
   if (typeof link !== "string") return null;
   const slug = link.split("/").pop() ?? "";
@@ -154,7 +162,7 @@ async function main() {
             card: ev.class?.generalClassCard ?? null,
             className: ev.class?.name ?? null,
             intl: String(ev.class?.internationalClassId ?? "0"),
-            state: ev.status ?? ev.fullStatus?.type?.state ?? null,
+            state: matchState(ev),
             summary: ev.fullStatus?.longSummary ?? ev.summary ?? null,
             home,
             away,
@@ -224,7 +232,8 @@ async function main() {
               array(select distinct x.class_card from cricket_series_matches x where x.series_espn_id = m.series_espn_id and x.class_card is not null order by 1) as formats,
               (select coalesce(jsonb_agg(t order by t ->> 'name'), '[]'::jsonb) from (
                  select distinct on (side ->> 'id') side as t from cricket_series_matches y, lateral (values (y.home), (y.away)) v(side)
-                 where y.series_espn_id = m.series_espn_id and side ->> 'id' <> '' order by side ->> 'id', y.date desc) q) as teams
+                 where y.series_espn_id = m.series_espn_id and side ->> 'id' <> '' and side ->> 'name' !~* '^tb[ac]$'
+                 order by side ->> 'id', y.date desc) q) as teams
        from cricket_series_matches m where m.series_espn_id = any($1::text[]) group by m.series_espn_id
      ) a where a.series_espn_id = s.espn_id`,
     [ids]

@@ -53,6 +53,8 @@ export async function fetchLiveCricketFromEspn(): Promise<CricketSeriesMatch[]> 
       for (const lg of sport.leagues ?? []) {
         for (const ev of lg.events ?? []) {
           if (ev.status !== "in" || !ev.id || out.has(String(ev.id))) continue;
+          // Flagged "in" from the scheduled start, but the summary says play has not begun.
+          if (/scheduled to begin/i.test(String(ev.fullStatus?.longSummary ?? ev.summary ?? ""))) continue;
           const seriesId = String(lg.id ?? "");
           const league = LEAGUE_BY_SERIES[seriesId] ?? null;
           out.set(String(ev.id), {

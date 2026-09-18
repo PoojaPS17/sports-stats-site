@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 
+// "Delhi Capitals Women" reads as DC, not CW: the women's-team suffix carries no identity.
 function initials(name: string) {
   return name
+    .replace(/\s+(Women|Women's|W)$/i, "")
     .split(" ")
     .map((w) => w[0])
     .join("")
