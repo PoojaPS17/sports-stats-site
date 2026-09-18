@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -7,6 +11,10 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+// Also the player avatar. A stored image URL is no guarantee the image exists —
+// ESPN's cricket headshot path 404s for many players (Nepal's and Bangladesh's
+// batters on the ODI leaders board, for instance), which rendered as the browser's
+// broken-image icon. On load failure the initials disc takes over instead.
 export function TeamLogo({
   name,
   logoUrl,
@@ -18,7 +26,8 @@ export function TeamLogo({
   color?: string | null;
   size?: number;
 }) {
-  if (logoUrl) {
+  const [failed, setFailed] = useState(false);
+  if (logoUrl && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -28,6 +37,7 @@ export function TeamLogo({
         height={size}
         style={{ width: size, height: size }}
         className="shrink-0 object-contain"
+        onError={() => setFailed(true)}
       />
     );
   }
