@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { LineupPlayer, TeamLineup } from "@/lib/matchDetail";
 import type { GameRow, League } from "@/lib/queries";
 
@@ -29,7 +30,7 @@ export function MatchLineups({ league, game, lineups, playerSlugs }: { league: L
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {ordered.map((l) => {
-        const name = l.team_id === game.home_team_espn_id ? game.home_name : game.away_name;
+        const name = teamDisplayName(l.team_id === game.home_team_espn_id ? game.home_name : game.away_name);
         return (
           <div key={l.team_id} className="card px-4 py-3">
             <h3 className="flex items-baseline justify-between text-sm font-bold">

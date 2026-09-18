@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
@@ -63,9 +64,9 @@ function StreakList({ league, streaks }: { league: string; streaks: StreakRecord
         <li key={`${s.team.espn_id}-${s.start}`} className="table-row first:border-t-0">
           <Link href={`/${league}/teams/${s.team.slug}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
             <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
-            <TeamLogo name={s.team.name} logoUrl={s.team.logo_url} color={s.team.color} size={22} />
+            <TeamLogo name={teamDisplayName(s.team.name)} logoUrl={s.team.logo_url} color={s.team.color} size={22} />
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-semibold">{s.team.name}</span>
+              <span className="truncate font-semibold">{teamDisplayName(s.team.name)}</span>
               <span className="text-xs text-[var(--text-faint)]">
                 {fmtDate(s.start)} to {fmtDate(s.end)}
               </span>

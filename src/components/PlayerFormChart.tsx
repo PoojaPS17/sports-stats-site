@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
 import { fmtDate } from "./PlayerStatsShared";
@@ -37,13 +38,13 @@ export function PlayerFormChart({ league, profile }: { league: League; profile: 
           const y = pad.t + innerH - bh;
           return (
             <Link key={p.row.game_espn_id} href={`/${league}/games/${p.row.game_espn_id}`}>
-              <title>{`${p.row.is_home ? "vs" : "at"} ${p.row.opponent_name}, ${fmtDate(p.row.date)}: ${p.value ?? "–"}`}</title>
+              <title>{`${p.row.is_home ? "vs" : "at"} ${teamDisplayName(p.row.opponent_name)}, ${fmtDate(p.row.date)}: ${p.value ?? "–"}`}</title>
               <rect x={x} y={y} width={barW} height={Math.max(bh, 1)} rx="3" fill={RESULT_FILL[p.row.result ?? "D"]} opacity={v === 0 ? 0.35 : 0.9} />
               <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--text)">
                 {p.value ?? ""}
               </text>
               <text x={x + barW / 2} y={pad.t + innerH + 14} textAnchor="middle" fontSize="9" fill="var(--text-muted)">
-                {p.row.opponent_abbr ?? p.row.opponent_name.slice(0, 3).toUpperCase()}
+                {p.row.opponent_abbr ?? teamDisplayName(p.row.opponent_name).slice(0, 3).toUpperCase()}
               </text>
             </Link>
           );

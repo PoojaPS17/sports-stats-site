@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
@@ -26,9 +27,9 @@ function RunList({ league, runs, tone }: { league: string; runs: FixtureDifficul
         <li key={r.team.espn_id} className="table-row first:border-t-0 px-4 py-2.5">
           <div className="flex items-center gap-3 text-sm">
             <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
-            <TeamLogo name={r.team.name} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
+            <TeamLogo name={teamDisplayName(r.team.name)} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
             <Link href={`/${league}/teams/${r.team.slug}`} className="min-w-0 flex-1 truncate font-semibold hover:text-[var(--accent)]">
-              {r.team.name}
+              {teamDisplayName(r.team.name)}
             </Link>
             <span className={`shrink-0 text-sm font-bold tabular-nums ${tone === "hard" ? "text-[var(--loss)]" : "text-[var(--win)]"}`}>
               {Math.round(r.averageOpponentRating)}
@@ -39,12 +40,12 @@ function RunList({ league, runs, tone }: { league: string; runs: FixtureDifficul
               <Link
                 key={o.espn_id}
                 href={`/${league}/games/${o.espn_id}`}
-                title={`${o.home ? "vs" : "at"} ${o.team.name}, rating ${Math.round(o.rating)}`}
+                title={`${o.home ? "vs" : "at"} ${teamDisplayName(o.team.name)}, rating ${Math.round(o.rating)}`}
                 className="flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-muted)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--accent)]"
               >
                 <span className="text-[var(--text-faint)]">{o.home ? "vs" : "at"}</span>
-                <TeamLogo name={o.team.name} logoUrl={o.team.logo_url} color={o.team.color} size={14} />
-                {o.team.abbreviation ?? o.team.name}
+                <TeamLogo name={teamDisplayName(o.team.name)} logoUrl={o.team.logo_url} color={o.team.color} size={14} />
+                {o.team.abbreviation ?? teamDisplayName(o.team.name)}
               </Link>
             ))}
           </div>
@@ -91,8 +92,8 @@ export default async function PowerRankingsPage({ params }: { params: Promise<{ 
                     <td className="py-2.5 pl-4">
                       <Link href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
                         <span className="w-5 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
-                        <TeamLogo name={r.team.name} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
-                        <span className="truncate">{r.team.name}</span>
+                        <TeamLogo name={teamDisplayName(r.team.name)} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
+                        <span className="truncate">{teamDisplayName(r.team.name)}</span>
                       </Link>
                     </td>
                     <td className="px-2 py-2.5 text-right font-bold tabular-nums">{Math.round(r.rating)}</td>

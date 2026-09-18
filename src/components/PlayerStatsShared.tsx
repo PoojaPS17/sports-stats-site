@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import type { League } from "@/lib/queries";
 import type { PlayerLogRow, Record3 } from "@/lib/playerProfile";
@@ -35,8 +36,8 @@ export function OpponentCell({ league, row, withDate = false }: { league: League
   return (
     <Link href={`/${league}/games/${row.game_espn_id}`} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
       <span className="w-5 text-[11px] font-semibold uppercase text-[var(--text-faint)]">{row.is_home ? "vs" : "at"}</span>
-      <TeamLogo name={row.opponent_name} logoUrl={row.opponent_logo} size={18} />
-      <span className="truncate font-medium">{row.opponent_name}</span>
+      <TeamLogo name={teamDisplayName(row.opponent_name)} logoUrl={row.opponent_logo} size={18} />
+      <span className="truncate font-medium">{teamDisplayName(row.opponent_name)}</span>
       {withDate && <span className="text-xs text-[var(--text-muted)]">{fmtDate(row.date)}</span>}
     </Link>
   );

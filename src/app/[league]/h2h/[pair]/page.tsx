@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
@@ -70,26 +71,26 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
   const { teamA, teamB } = h2h;
   const [rivalsA, rivalsB] = await Promise.all([getMostFacedOpponents(league, teamA.espn_id, 7), getMostFacedOpponents(league, teamB.espn_id, 7)]);
   const rivalLinks = (team: typeof teamA, other: typeof teamA, rivals: typeof rivalsA) =>
-    rivals.filter((r) => r.espn_id !== other.espn_id).slice(0, 6).map((r) => ({ href: h2hPath(league, team.slug, r.slug), label: `${team.name} vs ${r.name}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name }));
+    rivals.filter((r) => r.espn_id !== other.espn_id).slice(0, 6).map((r) => ({ href: h2hPath(league, team.slug, r.slug), label: `${teamDisplayName(team.name)} vs ${teamDisplayName(r.name)}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name }));
 
   const streakText =
     h2h.streak && h2h.streak.length > 1
       ? h2h.streak.team === "A"
-        ? `${teamA.name} have won the last ${h2h.streak.length}`
+        ? `${teamDisplayName(teamA.name)} have won the last ${h2h.streak.length}`
         : h2h.streak.team === "B"
-          ? `${teamB.name} have won the last ${h2h.streak.length}`
+          ? `${teamDisplayName(teamB.name)} have won the last ${h2h.streak.length}`
           : `The last ${h2h.streak.length} meetings were drawn`
       : null;
 
   return (
     <div className="flex flex-col gap-8">
-      <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Head-to-head" }, { label: `${teamA.name} vs ${teamB.name}` }]} />
+      <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Head-to-head" }, { label: `${teamDisplayName(teamA.name)} vs ${teamDisplayName(teamB.name)}` }]} />
 
       <section className="card overflow-hidden">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-6 sm:px-8">
           <Link href={`/${league}/teams/${teamA.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-            <TeamLogo name={teamA.name} logoUrl={teamA.logo_url} color={teamA.color} size={64} />
-            <span className="text-base font-bold sm:text-lg">{teamA.name}</span>
+            <TeamLogo name={teamDisplayName(teamA.name)} logoUrl={teamA.logo_url} color={teamA.color} size={64} />
+            <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamA.name)}</span>
           </Link>
           <div className="flex flex-col items-center">
             <span className="text-3xl font-extrabold tabular-nums tracking-tight sm:text-4xl">
@@ -101,8 +102,8 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
             {soccer && <span className="mt-1 text-xs text-[var(--text-muted)]">{h2h.draws} draws</span>}
           </div>
           <Link href={`/${league}/teams/${teamB.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-            <TeamLogo name={teamB.name} logoUrl={teamB.logo_url} color={teamB.color} size={64} />
-            <span className="text-base font-bold sm:text-lg">{teamB.name}</span>
+            <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} />
+            <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamB.name)}</span>
           </Link>
         </div>
         {h2h.meetings > 0 && (
@@ -116,8 +117,8 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         )}
         <div className="grid grid-cols-2 divide-x divide-[var(--border)] border-t border-[var(--border)] sm:grid-cols-4">
           <Stat label="Meetings" value={h2h.meetings} sub={h2h.firstSeason ? `since ${formatSeasonLabel(league, h2h.firstSeason)}` : undefined} />
-          <Stat label={`${scoreWord} for ${teamA.abbreviation ?? teamA.name}`} value={h2h.goalsA} sub={h2h.meetings ? `${(h2h.goalsA / total).toFixed(1)} per game` : undefined} />
-          <Stat label={`${scoreWord} for ${teamB.abbreviation ?? teamB.name}`} value={h2h.goalsB} sub={h2h.meetings ? `${(h2h.goalsB / total).toFixed(1)} per game` : undefined} />
+          <Stat label={`${scoreWord} for ${teamA.abbreviation ?? teamDisplayName(teamA.name)}`} value={h2h.goalsA} sub={h2h.meetings ? `${(h2h.goalsA / total).toFixed(1)} per game` : undefined} />
+          <Stat label={`${scoreWord} for ${teamB.abbreviation ?? teamDisplayName(teamB.name)}`} value={h2h.goalsB} sub={h2h.meetings ? `${(h2h.goalsB / total).toFixed(1)} per game` : undefined} />
           <Stat label="Current run" value={h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—"} sub={streakText ?? undefined} />
         </div>
       </section>
@@ -139,13 +140,13 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
           <div className="grid gap-3 sm:grid-cols-2">
             {h2h.biggestWinA && (
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-[var(--text-muted)]">{teamA.name}</p>
+                <p className="mb-1.5 text-xs font-semibold text-[var(--text-muted)]">{teamDisplayName(teamA.name)}</p>
                 <GameCard league={league} game={h2h.biggestWinA} />
               </div>
             )}
             {h2h.biggestWinB && (
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-[var(--text-muted)]">{teamB.name}</p>
+                <p className="mb-1.5 text-xs font-semibold text-[var(--text-muted)]">{teamDisplayName(teamB.name)}</p>
                 <GameCard league={league} game={h2h.biggestWinB} />
               </div>
             )}
@@ -168,13 +169,13 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
 
       <RelatedLinks
         groups={[
-          { title: `More ${teamA.name} head-to-heads`, links: rivalLinks(teamA, teamB, rivalsA) },
-          { title: `More ${teamB.name} head-to-heads`, links: rivalLinks(teamB, teamA, rivalsB) },
+          { title: `More ${teamDisplayName(teamA.name)} head-to-heads`, links: rivalLinks(teamA, teamB, rivalsA) },
+          { title: `More ${teamDisplayName(teamB.name)} head-to-heads`, links: rivalLinks(teamB, teamA, rivalsB) },
           {
             title: "Teams",
             links: [
-              { href: `/${league}/teams/${teamA.slug}`, label: teamA.name, sub: "Schedule, results and roster", image: teamA.logo_url, imageName: teamA.name },
-              { href: `/${league}/teams/${teamB.slug}`, label: teamB.name, sub: "Schedule, results and roster", image: teamB.logo_url, imageName: teamB.name },
+              { href: `/${league}/teams/${teamA.slug}`, label: teamDisplayName(teamA.name), sub: "Schedule, results and roster", image: teamA.logo_url, imageName: teamDisplayName(teamA.name) },
+              { href: `/${league}/teams/${teamB.slug}`, label: teamDisplayName(teamB.name), sub: "Schedule, results and roster", image: teamB.logo_url, imageName: teamDisplayName(teamB.name) },
               { href: `/${league}/compare?a=${teamA.slug}&b=${teamB.slug}`, label: "Compare the two teams", sub: "Season stats side by side" },
             ],
           },

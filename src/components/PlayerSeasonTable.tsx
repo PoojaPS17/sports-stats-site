@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
 import { formatStat, type PlayerProfile } from "@/lib/playerProfile";
@@ -38,7 +39,7 @@ export function PlayerSeasonTable({ league, profile, basePath, activeSeason }: {
                   <span className="flex items-center gap-1.5 whitespace-nowrap">
                     {row.teams.map((t) => (
                       <Link key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 hover:text-[var(--accent)]" title={t.name}>
-                        <TeamLogo name={t.name} logoUrl={t.logo} size={16} />
+                        <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={16} />
                         <span className="hidden sm:inline">{t.name}</span>
                       </Link>
                     ))}

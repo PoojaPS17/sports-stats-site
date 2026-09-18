@@ -1,4 +1,5 @@
 import { pageMeta } from "@/lib/metadata";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { search, LEAGUE_LABEL, isLeague, type SearchResult } from "@/lib/queries";
 import { isTour, TOUR_LABEL } from "@/lib/tennisTours";
@@ -55,12 +56,12 @@ export default async function SearchPage({
               href={resultHref(r)}
               className="card flex items-center gap-3 px-4 py-3"
             >
-              <TeamLogo name={r.name} logoUrl={r.image} size={32} />
+              <TeamLogo name={teamDisplayName(r.name)} logoUrl={r.image} size={32} />
               <div className="flex flex-col">
-                <span className="font-medium">{r.name}</span>
+                <span className="font-medium">{teamDisplayName(r.name)}</span>
                 <span className="text-xs text-[var(--text-muted)]">
                   {resultLeagueLabel(r)} {r.type === "player" ? "player" : "team"}
-                  {r.subtitle ? ` · ${r.subtitle}` : ""}
+                  {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}
                 </span>
               </div>
             </Link>

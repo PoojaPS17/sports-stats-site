@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
@@ -48,7 +49,7 @@ function PlayerCard({ league, side }: { league: string; side: PlayerCompareSide 
         <span className="block truncate text-base font-bold">{p.name}</span>
         <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
           {p.team_logo && <TeamLogo name={p.team_name ?? ""} logoUrl={p.team_logo} color={p.team_color} size={14} />}
-          <span className="truncate">{p.team_name ?? "Free agent"}</span>
+          <span className="truncate">{teamDisplayName(p.team_name) ?? "Free agent"}</span>
         </span>
         {facts && <span className="block text-xs text-[var(--text-faint)]">{facts}</span>}
       </span>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import type { GameRow, League } from "@/lib/queries";
@@ -53,7 +54,7 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
       <div className="flex flex-col gap-3">
         <TeamLine
           href={`/${league}/teams/${game.away_slug}`}
-          name={game.away_name}
+          name={teamDisplayName(game.away_name)}
           logo={game.away_logo}
           color={game.away_color}
           score={game.away_score}
@@ -63,7 +64,7 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
         />
         <TeamLine
           href={`/${league}/teams/${game.home_slug}`}
-          name={game.home_name}
+          name={teamDisplayName(game.home_name)}
           logo={game.home_logo}
           color={game.home_color}
           score={game.home_score}

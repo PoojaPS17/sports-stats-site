@@ -1,4 +1,5 @@
 import type { WinProbPoint } from "@/lib/matchDetail";
+import { teamDisplayName } from "@/lib/teamName";
 import type { GameRow } from "@/lib/queries";
 
 const W = 640;
@@ -18,8 +19,8 @@ export function WinProbabilityChart({ game, points }: { game: GameRow; points: W
     if (i > 0 && p.period !== points[i - 1].period) periodStarts.push({ i, period: p.period });
   });
   const last = points[points.length - 1];
-  const homeAbbr = game.home_abbr ?? game.home_name;
-  const awayAbbr = game.away_abbr ?? game.away_name;
+  const homeAbbr = game.home_abbr ?? teamDisplayName(game.home_name);
+  const awayAbbr = game.away_abbr ?? teamDisplayName(game.away_name);
 
   return (
     <div className="card px-3 py-3">

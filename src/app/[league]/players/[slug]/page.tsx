@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -105,7 +106,7 @@ export default async function PlayerPage({
   const onRoster = player.on_roster !== false;
   const headerTeam = onRoster ? player.team_name : null;
   const headerTeamSlug = onRoster ? player.team_slug : null;
-  const lastClub = !onRoster && player.team_name ? [`Last on record with ${player.team_name}`] : [];
+  const lastClub = !onRoster && player.team_name ? [`Last on record with ${teamDisplayName(player.team_name)}`] : [];
 
   const header = (meta: string[], description?: string) => (
     <>

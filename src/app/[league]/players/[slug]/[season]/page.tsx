@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { isLeague, isCricketLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerLog, getPlayerSeasonStatsBySeason, getPlayerSeasons, formatSeasonLabel, type League } from "@/lib/queries";
@@ -68,7 +69,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
       <Breadcrumbs
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
-          ...(player.team_name && player.team_slug ? [{ label: player.team_name, href: `/${league}/teams/${player.team_slug}` }] : []),
+          ...(player.team_name && player.team_slug ? [{ label: teamDisplayName(player.team_name), href: `/${league}/teams/${player.team_slug}` }] : []),
           { label: player.name, href: basePath },
           { label },
         ]}

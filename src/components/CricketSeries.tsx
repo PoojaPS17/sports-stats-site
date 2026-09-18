@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { LocalTime } from "@/components/LocalTime";
 import { TeamLogo } from "@/components/TeamLogo";
 import { LEAGUE_LABEL } from "@/lib/leagues";
@@ -42,9 +43,9 @@ export function SeriesCard({ s, now }: { s: CricketSeries; now: number }) {
       {s.teams.length > 0 && s.teams.length <= 4 && (
         <div className="flex items-center gap-1.5">
           {s.teams.map((t) => (
-            <TeamLogo key={t.id} name={t.name} logoUrl={t.logo} size={20} />
+            <TeamLogo key={t.id} name={teamDisplayName(t.name)} logoUrl={t.logo} size={20} />
           ))}
-          <span className="truncate text-xs text-[var(--text-muted)]">{s.teams.map((t) => t.abbreviation ?? t.name).join(" · ")}</span>
+          <span className="truncate text-xs text-[var(--text-muted)]">{s.teams.map((t) => t.abbreviation ?? teamDisplayName(t.name)).join(" · ")}</span>
         </div>
       )}
       {s.league && <p className="text-xs font-semibold text-[var(--accent)]">Full coverage: {LEAGUE_LABEL[s.league]} tables, scorecards and stats</p>}
@@ -57,8 +58,8 @@ function Side({ side, decided }: { side: SeriesSide | null; decided: boolean }) 
   const loser = decided && !side.winner;
   return (
     <div className="flex items-center gap-2 py-0.5">
-      <TeamLogo name={side.name} logoUrl={side.logo} size={20} />
-      <span className={`min-w-0 flex-1 truncate text-[15px] ${loser ? "text-[var(--text-muted)]" : "font-semibold"}`}>{side.name}</span>
+      <TeamLogo name={teamDisplayName(side.name)} logoUrl={side.logo} size={20} />
+      <span className={`min-w-0 flex-1 truncate text-[15px] ${loser ? "text-[var(--text-muted)]" : "font-semibold"}`}>{teamDisplayName(side.name)}</span>
       <span className={`shrink-0 text-sm tabular-nums ${loser ? "text-[var(--text-muted)]" : "font-bold"}`}>{side.score ?? ""}</span>
     </div>
   );
@@ -79,7 +80,7 @@ export function SeriesMatchRow({ m, showSeries = false }: { m: CricketSeriesMatc
       </div>
       <Side side={m.home} decided={decided} />
       <Side side={m.away} decided={decided} />
-      {m.status_summary && (live || done) && <p className="mt-1 text-xs text-[var(--text-muted)]">{m.status_summary}</p>}
+      {m.status_summary && (live || done) && <p className="mt-1 text-xs text-[var(--text-muted)]">{teamDisplayName(m.status_summary)}</p>}
     </Link>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetails, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
@@ -72,8 +73,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const covers = isCricketLeague(league) ? "Scorecard and head-to-head." : isSoccerLeague(league) ? "Line-ups, timeline, team stats, box score and head-to-head." : "Scoring summary, win probability, team stats, box score and head-to-head.";
   const extras = game.completed ? `${scorersLine(details)} ${covers}` : isCricketLeague(league) ? " Head-to-head record and recent form." : " Team form, head-to-head record and pre-match win probability.";
   return pageMeta(
-    `${game.away_name} vs ${game.home_name}${score}`,
-    `${LEAGUE_LABEL[league]}: ${game.away_name} at ${game.home_name}${where}, ${date}.${extras}`,
+    `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}${score}`,
+    `${LEAGUE_LABEL[league]}: ${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}${where}, ${date}.${extras}`,
     `/${league}/games/${id}`
   );
 }
@@ -133,7 +134,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
           ...(context?.week ? [{ label: context.week.label, href: context.week.href }] : [{ label: "Scores", href: `/${league}` }]),
-          { label: `${game.away_name} vs ${game.home_name}` },
+          { label: `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}` },
         ]}
       />
       <LiveRefresh active={game.status_state === "in"} />
@@ -243,12 +244,12 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           {
             title: "Teams",
             links: [
-              { href: `/${league}/teams/${game.home_slug}`, label: game.home_name, sub: "Schedule, results and roster", image: game.home_logo, imageName: game.home_name },
-              { href: `/${league}/teams/${game.away_slug}`, label: game.away_name, sub: "Schedule, results and roster", image: game.away_logo, imageName: game.away_name },
+              { href: `/${league}/teams/${game.home_slug}`, label: teamDisplayName(game.home_name), sub: "Schedule, results and roster", image: game.home_logo, imageName: teamDisplayName(game.home_name) },
+              { href: `/${league}/teams/${game.away_slug}`, label: teamDisplayName(game.away_name), sub: "Schedule, results and roster", image: game.away_logo, imageName: teamDisplayName(game.away_name) },
               ...(game.season_year
                 ? [
-                    { href: `/${league}/teams/${game.home_slug}/${game.season_year}`, label: `${game.home_name} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
-                    { href: `/${league}/teams/${game.away_slug}/${game.season_year}`, label: `${game.away_name} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
+                    { href: `/${league}/teams/${game.home_slug}/${game.season_year}`, label: `${teamDisplayName(game.home_name)} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
+                    { href: `/${league}/teams/${game.away_slug}/${game.season_year}`, label: `${teamDisplayName(game.away_name)} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
                   ]
                 : []),
             ],
@@ -257,7 +258,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
             title: "Head-to-head",
             links: supportsScoreAnalytics(league)
               ? [
-                  { href: h2hPath(league, game.home_slug, game.away_slug), label: `${game.away_name} vs ${game.home_name}`, sub: "All-time record and every meeting" },
+                  { href: h2hPath(league, game.home_slug, game.away_slug), label: `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}`, sub: "All-time record and every meeting" },
                   { href: `/${league}/compare?a=${game.home_slug}&b=${game.away_slug}`, label: "Compare the two teams", sub: "Season stats side by side" },
                 ]
               : [],

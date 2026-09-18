@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -44,8 +45,8 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
     // Cricsheet-sourced cricket rows carry no winner flag; the summary names the winner.
     const summaryWinner = g.status_summary && isCricketLeague(g.league) ? (g.status_summary.startsWith(g.home_name) ? true : g.status_summary.startsWith(g.away_name) ? false : null) : null;
     const homeWon = g.home_winner ?? summaryWinner ?? (g.home_score ?? 0) > (g.away_score ?? 0);
-    const winner = homeWon ? g.home_name : g.away_name;
-    const loser = homeWon ? g.away_name : g.home_name;
+    const winner = teamDisplayName(homeWon ? g.home_name : g.away_name);
+    const loser = teamDisplayName(homeWon ? g.away_name : g.home_name);
     const winScore = homeWon ? g.home_score_display ?? g.home_score : g.away_score_display ?? g.away_score;
     const loseScore = homeWon ? g.away_score_display ?? g.away_score : g.home_score_display ?? g.home_score;
     // A cricket result is a margin ("won by 7 wickets"), never a scoreline; a tie or
@@ -56,7 +57,7 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
     const noWinner = g.home_winner === false && g.away_winner === false;
     const label = isCricketLeague(g.league)
       ? noWinner || !margin
-        ? `${league} · ${g.status_summary ?? `${g.home_name} v ${g.away_name}`}`
+        ? `${league} · ${teamDisplayName(g.status_summary ?? `${g.home_name} v ${g.away_name}`)}`
         : `${league} · ${winner} beat ${loser} by ${margin}`
       : `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`;
     return { href: `/${g.league}/games/${g.espn_id}`, label };
@@ -64,7 +65,7 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
   const date = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return {
     href: `/${g.league}/games/${g.espn_id}`,
-    label: `${league} · ${g.away_name} at ${g.home_name} — ${date}`,
+    label: `${league} · ${teamDisplayName(g.away_name)} at ${teamDisplayName(g.home_name)} — ${date}`,
   };
 }
 

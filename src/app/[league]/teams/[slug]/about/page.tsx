@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
@@ -50,19 +51,19 @@ export default async function TeamAboutPage({
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
           { label: "Teams", href: `/${league}/teams` },
-          { label: team.name, href: `/${league}/teams/${slug}` },
+          { label: teamDisplayName(team.name), href: `/${league}/teams/${slug}` },
           { label: "About" },
         ]}
       />
 
-      <TeamHeader league={league} name={team.name} logoUrl={team.logo_url} color={team.color} />
+      <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} />
 
       <TeamPageNav basePath={`/${league}/teams/${slug}`} active="about" />
 
       <AdSlot label="Team page top" />
 
       <section>
-        <SectionHeader>About {team.name}</SectionHeader>
+        <SectionHeader>About {teamDisplayName(team.name)}</SectionHeader>
         {!hasInfo ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
             Background info isn&apos;t available for this team from our data source yet.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { finishedLabel } from "@/lib/stage";
 import type { GameRow, League } from "@/lib/queries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
@@ -53,8 +54,8 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={finishedLabel(league)} />
       </div>
       <div className="flex flex-col gap-2.5">
-        <Team name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
-        <Team name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
+        <Team name={teamDisplayName(game.away_name)} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
+        <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
       </div>
       <p className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-2.5 text-xs font-medium text-[var(--text-muted)]">
         <span>

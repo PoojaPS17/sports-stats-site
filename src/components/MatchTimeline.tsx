@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { TimelineEvent, TimelineEventType } from "@/lib/matchDetail";
 import type { GameRow, League } from "@/lib/queries";
 
@@ -61,7 +62,7 @@ export function MatchTimeline({ league, game, events, playerSlugs }: { league: L
             <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge.cls}`}>{badge.text}</span>
             <span className="min-w-0 flex-1">
               {description}
-              <span className="ml-1 text-xs text-[var(--text-muted)]">{home ? game.home_abbr ?? game.home_name : game.away_abbr ?? game.away_name}</span>
+              <span className="ml-1 text-xs text-[var(--text-muted)]">{home ? game.home_abbr ?? teamDisplayName(game.home_name) : game.away_abbr ?? teamDisplayName(game.away_name)}</span>
             </span>
             {scoring && (
               <span className="shrink-0 font-bold tabular-nums">

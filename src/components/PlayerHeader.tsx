@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 
@@ -48,7 +49,7 @@ export function PlayerHeader({
               <span className="mx-1.5 text-[var(--text-faint)]">·</span>
               {teamSlug ? (
                 <Link href={`/${league}/teams/${teamSlug}`} className="hover:text-[var(--accent)]">
-                  {teamName}
+                  {teamDisplayName(teamName)}
                 </Link>
               ) : (
                 teamName

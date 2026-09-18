@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { League } from "@/lib/queries";
 import type { CricketTeamScorecard, CricketInningsRow, CricketInningsTotal } from "@/lib/matchDetail";
 
@@ -117,12 +118,12 @@ export function CricketScorecards({ league, scorecard, playerSlugs }: { league: 
           <div key={period} className="card overflow-hidden">
             <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-bold">
               <span>
-                {batting?.teamName ?? "Batting"} <span className="font-semibold text-[var(--text-muted)]">{label}</span>
+                {teamDisplayName(batting?.teamName) ?? "Batting"} <span className="font-semibold text-[var(--text-muted)]">{label}</span>
               </span>
               {totalLabel && <span className="tabular-nums">{totalLabel}</span>}
             </h3>
             <ScorecardTable league={league} title="Batting" labels={batting?.battingLabels ?? []} rows={battingRows} playerSlugs={playerSlugs} />
-            <ScorecardTable league={league} title={bowling ? `Bowling · ${bowling.teamName}` : "Bowling"} labels={bowling?.bowlingLabels ?? []} rows={bowlingRows} playerSlugs={playerSlugs} />
+            <ScorecardTable league={league} title={bowling ? `Bowling · ${teamDisplayName(bowling.teamName)}` : "Bowling"} labels={bowling?.bowlingLabels ?? []} rows={bowlingRows} playerSlugs={playerSlugs} />
           </div>
         );
       })}

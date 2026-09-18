@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -91,7 +92,7 @@ export default async function TeamPage({
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Teams", href: `/${league}/teams` }, { label: team.name }]} />
 
       <JsonLd data={teamSchema(league, team)} />
-      <TeamHeader league={league} name={team.name} logoUrl={team.logo_url} color={team.color} meta={meta} />
+      <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={meta} />
 
       {(summary.form.length > 0 || next) && (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -113,12 +114,12 @@ export default async function TeamPage({
               <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
                 <span className="text-[var(--text-muted)]">{nextIsHome ? "vs" : "at"}</span>
                 <TeamLogo
-                  name={nextIsHome ? next.away_name : next.home_name}
+                  name={nextIsHome ? teamDisplayName(next.away_name) : teamDisplayName(next.home_name)}
                   logoUrl={nextIsHome ? next.away_logo : next.home_logo}
                   color={nextIsHome ? next.away_color : next.home_color}
                   size={22}
                 />
-                <span className="truncate">{nextIsHome ? next.away_name : next.home_name}</span>
+                <span className="truncate">{nextIsHome ? teamDisplayName(next.away_name) : teamDisplayName(next.home_name)}</span>
                 <LocalTime iso={next.date} format="datetime" className="shrink-0 text-xs font-medium text-[var(--text-muted)]" />
               </span>
             </Link>
@@ -127,11 +128,11 @@ export default async function TeamPage({
             <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold sm:col-span-2">
               {next && (
                 <Link href={h2hPath(league, slug, nextIsHome ? next.away_slug : next.home_slug)} className="text-[var(--accent)] hover:underline">
-                  Head-to-head vs {nextIsHome ? next.away_name : next.home_name} →
+                  Head-to-head vs {nextIsHome ? teamDisplayName(next.away_name) : teamDisplayName(next.home_name)} →
                 </Link>
               )}
               <Link href={`/${league}/compare?a=${slug}${next ? `&b=${nextIsHome ? next.away_slug : next.home_slug}` : ""}`} className="text-[var(--accent)] hover:underline">
-                Compare {team.name} with another team →
+                Compare {teamDisplayName(team.name)} with another team →
               </Link>
             </div>
           )}
@@ -221,12 +222,12 @@ export default async function TeamPage({
       </section>
       <RelatedLinks
         groups={[
-          { title: "Head-to-head", links: rivals.map((r) => ({ href: h2hPath(league, slug, r.slug), label: `${team.name} vs ${r.name}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name })) },
+          { title: "Head-to-head", links: rivals.map((r) => ({ href: h2hPath(league, slug, r.slug), label: `${teamDisplayName(team.name)} vs ${teamDisplayName(r.name)}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name })) },
           { title: "Top players this season", links: topPlayers },
           {
             title: "Seasons",
             links: [
-              ...seasons.slice(1, 7).map((s) => ({ href: `/${league}/teams/${slug}/${s}`, label: `${team.name} ${formatSeasonLabel(league, s)}`, sub: "Every result that season" })),
+              ...seasons.slice(1, 7).map((s) => ({ href: `/${league}/teams/${slug}/${s}`, label: `${teamDisplayName(team.name)} ${formatSeasonLabel(league, s)}`, sub: "Every result that season" })),
               ...(supportsScoreAnalytics(league) ? [{ href: `/${league}/teams/${slug}/history`, label: "Season-by-season history", sub: "Finishes, points and records" }] : []),
             ],
           },

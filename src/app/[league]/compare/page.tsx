@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getAllTeams, getStandings, formatSeasonLabel } from "@/lib/queries";
@@ -80,7 +81,7 @@ export default async function CompareTeamsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={cmp ? `${cmp.a.team.name} vs ${cmp.b.team.name}` : `Compare ${label} Teams`} subtitle={cmp && cmp.season ? `${formatSeasonLabel(league, cmp.season)} season, side by side` : "Pick any two teams to see them side by side"}>
+      <PageHeader title={cmp ? `${teamDisplayName(cmp.a.team.name)} vs ${teamDisplayName(cmp.b.team.name)}` : `Compare ${label} Teams`} subtitle={cmp && cmp.season ? `${formatSeasonLabel(league, cmp.season)} season, side by side` : "Pick any two teams to see them side by side"}>
         <CompareModeTabs league={league} active="teams" />
       </PageHeader>
 
@@ -102,9 +103,9 @@ export default async function CompareTeamsPage({
           <div className="grid grid-cols-2 gap-3">
             {[cmp.a, cmp.b].map((s) => (
               <Link key={s.team.espn_id} href={`/${league}/teams/${s.team.slug}`} className="card flex items-center gap-3 px-4 py-3" style={{ borderTop: `3px solid ${s.team.color ?? "var(--accent)"}` }}>
-                <TeamLogo name={s.team.name} logoUrl={s.team.logo_url} color={s.team.color} size={44} />
+                <TeamLogo name={teamDisplayName(s.team.name)} logoUrl={s.team.logo_url} color={s.team.color} size={44} />
                 <span className="min-w-0">
-                  <span className="block truncate text-base font-bold">{s.team.name}</span>
+                  <span className="block truncate text-base font-bold">{teamDisplayName(s.team.name)}</span>
                   <span className="block text-xs text-[var(--text-muted)]">
                     {s.position ? `${s.position}${s.position === 1 ? "st" : s.position === 2 ? "nd" : s.position === 3 ? "rd" : "th"} of ${s.teamsInTable}` : "Not in current table"}
                     {s.overall ? ` · ${s.overall.wins}${soccer ? `W ${s.overall.draws}D ${s.overall.losses}L` : `-${s.overall.losses}`}` : ""}
@@ -127,7 +128,7 @@ export default async function CompareTeamsPage({
             <Link href={h2hPath(league, cmp.a.team.slug, cmp.b.team.slug)} className="card flex flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 text-sm">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Head-to-head</span>
               <span className="font-semibold">
-                {cmp.a.team.abbreviation ?? cmp.a.team.name} <span className="text-[var(--win)]">{cmp.h2h.winsA}</span>
+                {cmp.a.team.abbreviation ?? teamDisplayName(cmp.a.team.name)} <span className="text-[var(--win)]">{cmp.h2h.winsA}</span>
                 {soccer && (
                   <>
                     {" · "}
@@ -135,14 +136,14 @@ export default async function CompareTeamsPage({
                   </>
                 )}
                 {" · "}
-                <span className="text-[var(--win)]">{cmp.h2h.winsB}</span> {cmp.b.team.abbreviation ?? cmp.b.team.name}
+                <span className="text-[var(--win)]">{cmp.h2h.winsB}</span> {cmp.b.team.abbreviation ?? teamDisplayName(cmp.b.team.name)}
               </span>
               <span className="text-xs text-[var(--text-muted)]">{cmp.h2h.meetings} meetings on record</span>
               <span className="ml-auto text-xs font-semibold text-[var(--accent)]">Full history →</span>
             </Link>
           )}
 
-          <CompareTable groups={cmp.groups} colorA={cmp.a.team.color} colorB={cmp.b.team.color} nameA={cmp.a.team.abbreviation ?? cmp.a.team.name} nameB={cmp.b.team.abbreviation ?? cmp.b.team.name} />
+          <CompareTable groups={cmp.groups} colorA={cmp.a.team.color} colorB={cmp.b.team.color} nameA={cmp.a.team.abbreviation ?? teamDisplayName(cmp.a.team.name)} nameB={cmp.b.team.abbreviation ?? teamDisplayName(cmp.b.team.name)} />
         </>
       )}
     </div>

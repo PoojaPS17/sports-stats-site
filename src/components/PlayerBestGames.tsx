@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { normalizeStage } from "@/lib/stage";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
@@ -23,9 +24,9 @@ export function PlayerBestGames({ league, profile }: { league: League; profile: 
           <span className="mt-0.5 w-5 shrink-0 text-lg font-bold tabular-nums text-[var(--text-faint)]">{i + 1}</span>
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2">
-              <TeamLogo name={row.opponent_name} logoUrl={row.opponent_logo} size={18} />
+              <TeamLogo name={teamDisplayName(row.opponent_name)} logoUrl={row.opponent_logo} size={18} />
               <span className="truncate font-semibold">
-                {row.is_home ? "vs" : "at"} {row.opponent_name}
+                {row.is_home ? "vs" : "at"} {teamDisplayName(row.opponent_name)}
               </span>
               <ResultChip row={row} />
             </span>

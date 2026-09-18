@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { GameRow, League } from "@/lib/queries";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
@@ -61,12 +62,12 @@ function TeamRow({
 
 function accessibleLabel(game: GameRow): string {
   if (game.completed) {
-    return `${game.away_name} ${game.away_score_display ?? game.away_score ?? ""}, ${game.home_name} ${
+    return `${teamDisplayName(game.away_name)} ${game.away_score_display ?? game.away_score ?? ""}, ${teamDisplayName(game.home_name)} ${
       game.home_score_display ?? game.home_score ?? ""
     }, ${game.round ?? "final"}`;
   }
   const date = new Date(game.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  return `${game.away_name} at ${game.home_name}, ${date}`;
+  return `${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}, ${date}`;
 }
 
 export function GameCard({ league, game }: { league: League; game: GameRow }) {
@@ -93,7 +94,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         {upcoming ? (
           <LocalTime iso={game.date} format="time" className="text-xs font-medium text-[var(--text-muted)]" />
         ) : live && game.status_detail ? (
-          <span className="text-xs font-medium text-[var(--text-muted)]">{game.status_detail}</span>
+          <span className="text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_detail)}</span>
         ) : (
           <span className="text-xs text-[var(--text-faint)]">
             {new Date(game.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -101,7 +102,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         )}
       </div>
       <TeamRow
-        name={game.away_name}
+        name={teamDisplayName(game.away_name)}
         abbr={game.away_abbr}
         logo={game.away_logo}
         color={game.away_color}
@@ -112,7 +113,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         won={awayWon}
       />
       <TeamRow
-        name={game.home_name}
+        name={teamDisplayName(game.home_name)}
         abbr={game.home_abbr}
         logo={game.home_logo}
         color={game.home_color}
@@ -123,7 +124,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         won={homeWon}
       />
       {game.completed && game.status_summary && (
-        <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--text-muted)]">{game.status_summary}</p>
+        <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_summary)}</p>
       )}
     </Link>
   );

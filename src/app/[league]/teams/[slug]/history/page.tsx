@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, isCupCompetition, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
@@ -48,19 +49,19 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
           { label: "Teams", href: `/${league}/teams` },
-          { label: team.name, href: `/${league}/teams/${slug}` },
+          { label: teamDisplayName(team.name), href: `/${league}/teams/${slug}` },
           { label: "History" },
         ]}
       />
 
-      <TeamHeader league={league} name={team.name} logoUrl={team.logo_url} color={team.color} meta={played.length ? [`${played.length} seasons on record`] : undefined} />
+      <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={played.length ? [`${played.length} seasons on record`] : undefined} />
 
       <TeamPageNav basePath={`/${league}/teams/${slug}`} active="history" />
 
       <AdSlot label="Team history top" />
 
       {played.length === 0 ? (
-        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No completed seasons on record for {team.name} yet.</p>
+        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No completed seasons on record for {teamDisplayName(team.name)} yet.</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

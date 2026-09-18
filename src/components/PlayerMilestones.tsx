@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
 import { fmtDate } from "./PlayerStatsShared";
@@ -16,7 +17,7 @@ export function PlayerMilestones({ league, profile }: { league: League; profile:
           </span>
           {m.game && (
             <Link href={`/${league}/games/${m.game.game_espn_id}`} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
-              {m.game.is_home ? "vs" : "at"} {m.game.opponent_name}, {fmtDate(m.game.date)}
+              {m.game.is_home ? "vs" : "at"} {teamDisplayName(m.game.opponent_name)}, {fmtDate(m.game.date)}
             </Link>
           )}
         </li>

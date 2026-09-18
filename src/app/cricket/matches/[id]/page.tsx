@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- ESPN feed JSON has no published schema */
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
@@ -50,7 +51,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const potm = (comp?.status?.featuredAthletes ?? []).find((a: any) => a.name === "playerOfTheMatch")?.athlete?.displayName ?? null;
 
   const sideRow = (c: any, fallback: SeriesSide | null) => {
-    const name = c?.team?.displayName ?? c?.team?.name ?? fallback?.name ?? "";
+    const name = teamDisplayName(c?.team?.displayName ?? c?.team?.name ?? fallback?.name ?? "");
     const score = typeof c?.score === "string" && c.score ? c.score : fallback?.score ?? "";
     const winner = c ? c.winner === true : fallback?.winner === true;
     const logo = c?.team?.logo ?? fallback?.logo ?? (c?.team?.id ? `https://a.espncdn.com/i/teamlogos/cricket/500/${c.team.id}.png` : null);
@@ -92,7 +93,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
         </div>
         {sideRow(home, stored?.home ?? null)}
         {sideRow(away, stored?.away ?? null)}
-        {summaryText && <p className="text-sm font-medium">{summaryText}</p>}
+        {summaryText && <p className="text-sm font-medium">{teamDisplayName(summaryText)}</p>}
         {potm && <p className="text-xs text-[var(--text-muted)]">Player of the Match: {potm}</p>}
         {details?.venue && <p className="text-xs text-[var(--text-muted)]">{details.city ? `${details.venue}, ${details.city}` : details.venue}</p>}
       </section>

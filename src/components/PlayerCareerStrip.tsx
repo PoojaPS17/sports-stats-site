@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, LEAGUE_LABEL, type League } from "@/lib/queries";
 import { formatStat, type PlayerProfile } from "@/lib/playerProfile";
@@ -31,7 +32,7 @@ export function PlayerCareerStrip({ league, profile }: { league: League; profile
             <span>Played for</span>
             {profile.teams.map((t) => (
               <Link key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 font-semibold text-[var(--text)] hover:text-[var(--accent)]">
-                <TeamLogo name={t.name} logoUrl={t.logo} size={14} />
+                <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={14} />
                 {t.name}
               </Link>
             ))}

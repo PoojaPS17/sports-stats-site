@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { pageMeta } from "@/lib/metadata";
 import Link from "next/link";
@@ -67,8 +68,8 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                   </td>
                   <td className="px-2 py-2">
                     <Link href={`/${league}/teams/${c.team_slug}`} className="flex items-center gap-1.5 text-[var(--text-muted)] hover:underline">
-                      <TeamLogo name={c.team_name} logoUrl={c.team_logo} color={c.team_color} size={18} />
-                      <span className="hidden sm:inline">{c.team_name}</span>
+                      <TeamLogo name={teamDisplayName(c.team_name)} logoUrl={c.team_logo} color={c.team_color} size={18} />
+                      <span className="hidden sm:inline">{teamDisplayName(c.team_name)}</span>
                     </Link>
                   </td>
                   <td className="px-2 py-2 text-right font-bold tabular-nums">
@@ -83,7 +84,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                   </td>
                   <td className="px-2 py-2">
                     <Link href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">
-                      vs {c.opponent_name}
+                      vs {teamDisplayName(c.opponent_name)}
                     </Link>
                   </td>
                   <td className="px-2 py-2 text-[var(--text-muted)]">{c.venue ?? "-"}</td>

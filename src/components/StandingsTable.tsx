@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { isCricketLeague, isSoccerLeague } from "@/lib/queries";
 import type { StandingRow, League } from "@/lib/queries";
@@ -123,8 +124,8 @@ export function StandingsTable({ league, standings }: { league: League; standing
                               <span className={`zone-marker ${zone?.cls ?? ""}`} title={zone?.label} />
                               <span className="w-4 text-right text-xs tabular-nums text-[var(--text-muted)]">{position}</span>
                             </span>
-                            <TeamLogo name={r.name} logoUrl={r.logo_url} color={r.color} size={22} />
-                            <span className="truncate">{r.name}</span>
+                            <TeamLogo name={teamDisplayName(r.name)} logoUrl={r.logo_url} color={r.color} size={22} />
+                            <span className="truncate">{teamDisplayName(r.name)}</span>
                           </Link>
                         </td>
                         {mode === "cricket" && (

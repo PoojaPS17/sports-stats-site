@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
@@ -76,13 +77,13 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
                 </div>
                 <div className="flex items-center justify-between gap-2 text-sm font-semibold">
                   <span className="flex min-w-0 items-center gap-2">
-                    <TeamLogo name={game.away_name} logoUrl={game.away_logo} color={game.away_color} size={22} />
-                    <span className="truncate">{game.away_abbr ?? game.away_name}</span>
+                    <TeamLogo name={teamDisplayName(game.away_name)} logoUrl={game.away_logo} color={game.away_color} size={22} />
+                    <span className="truncate">{game.away_abbr ?? teamDisplayName(game.away_name)}</span>
                   </span>
                   <span className="text-[var(--text-faint)]">at</span>
                   <span className="flex min-w-0 items-center justify-end gap-2">
-                    <span className="truncate">{game.home_abbr ?? game.home_name}</span>
-                    <TeamLogo name={game.home_name} logoUrl={game.home_logo} color={game.home_color} size={22} />
+                    <span className="truncate">{game.home_abbr ?? teamDisplayName(game.home_name)}</span>
+                    <TeamLogo name={teamDisplayName(game.home_name)} logoUrl={game.home_logo} color={game.home_color} size={22} />
                   </span>
                 </div>
                 <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
@@ -139,8 +140,8 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
                       <tr key={t.team.espn_id} className="table-row">
                         <td className="py-2 pl-4">
                           <Link href={`/${league}/teams/${t.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
-                            <TeamLogo name={t.team.name} logoUrl={t.team.logo_url} color={t.team.color} size={22} />
-                            <span className="truncate">{t.team.name}</span>
+                            <TeamLogo name={teamDisplayName(t.team.name)} logoUrl={t.team.logo_url} color={t.team.color} size={22} />
+                            <span className="truncate">{teamDisplayName(t.team.name)}</span>
                             {t.division && <span className="text-[10px] font-semibold uppercase text-[var(--text-faint)]">{t.division.replace(/^(AFC|NFC)\s+/, "")}</span>}
                           </Link>
                         </td>

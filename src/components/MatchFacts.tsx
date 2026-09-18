@@ -1,4 +1,5 @@
 import type { GameDetails } from "@/lib/matchDetail";
+import { teamDisplayName } from "@/lib/teamName";
 import type { GameRow, League } from "@/lib/queries";
 import { isSoccerLeague } from "@/lib/queries";
 
@@ -38,8 +39,8 @@ export function MatchFacts({ league, game, details }: { league: League; game: Ga
             </thead>
             <tbody>
               {[
-                { name: game.away_abbr ?? game.away_name, scores: ls.away, total: game.away_score_display ?? game.away_score },
-                { name: game.home_abbr ?? game.home_name, scores: ls.home, total: game.home_score_display ?? game.home_score },
+                { name: game.away_abbr ?? teamDisplayName(game.away_name), scores: ls.away, total: game.away_score_display ?? game.away_score },
+                { name: game.home_abbr ?? teamDisplayName(game.home_name), scores: ls.home, total: game.home_score_display ?? game.home_score },
               ].map((row) => (
                 <tr key={row.name} className="border-t border-[var(--border)]">
                   <td className="py-1.5 font-medium">{row.name}</td>

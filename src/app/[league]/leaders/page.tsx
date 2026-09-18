@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -86,7 +87,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
                           <TeamLogo name={row.name} logoUrl={row.headshot_url} size={26} />
                           <span className="min-w-0 truncate">
                             <span className="font-semibold">{row.name}</span>
-                            {row.team_name && <span className="block text-xs text-[var(--text-muted)]">{row.team_name}</span>}
+                            {row.team_name && <span className="block text-xs text-[var(--text-muted)]">{teamDisplayName(row.team_name)}</span>}
                           </span>
                         </span>
                         <span className="shrink-0 text-base font-bold tabular-nums">

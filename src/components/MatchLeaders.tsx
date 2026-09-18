@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { MatchLeader } from "@/lib/matchDetail";
 import type { GameRow, League } from "@/lib/queries";
 
 export function MatchLeaders({ league, game, leaders, playerSlugs }: { league: League; game: GameRow; leaders: MatchLeader[]; playerSlugs: Map<string, string> }) {
   if (leaders.length === 0) return null;
-  const abbr = (id: string) => (id === game.home_team_espn_id ? game.home_abbr ?? game.home_name : game.away_abbr ?? game.away_name);
+  const abbr = (id: string) => (id === game.home_team_espn_id ? game.home_abbr ?? teamDisplayName(game.home_name) : game.away_abbr ?? teamDisplayName(game.away_name));
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {leaders.map((l, i) => {

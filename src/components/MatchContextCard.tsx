@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import type { FormResult, MatchContext, SideContext } from "@/lib/matchContext";
 import type { GameRow, League } from "@/lib/queries";
 import { isSoccerLeague } from "@/lib/queries";
@@ -83,11 +84,11 @@ export function MatchContextCard({ league, game, context }: { league: League; ga
         <div>
           <div className="mb-1 flex justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>
-              {game.away_abbr ?? game.away_name} {Math.round(p.awayWin * 100)}%
+              {game.away_abbr ?? teamDisplayName(game.away_name)} {Math.round(p.awayWin * 100)}%
             </span>
             {soccer && <span>Draw {Math.round(p.draw * 100)}%</span>}
             <span>
-              {Math.round(p.homeWin * 100)}% {game.home_abbr ?? game.home_name}
+              {Math.round(p.homeWin * 100)}% {game.home_abbr ?? teamDisplayName(game.home_name)}
             </span>
           </div>
           <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">

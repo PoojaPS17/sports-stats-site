@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { pageMeta } from "@/lib/metadata";
 import Link from "next/link";
@@ -40,7 +41,7 @@ export default async function PlayersIndexPage({ params }: { params: Promise<{ l
               <TeamLogo name={p.name} logoUrl={p.headshot_url} color={p.team_color} size={24} />
               <span className="truncate">
                 <span className="font-medium">{p.name}</span>
-                {p.team_name && <span className="block text-xs text-[var(--text-muted)]">{p.team_name}</span>}
+                {p.team_name && <span className="block text-xs text-[var(--text-muted)]">{teamDisplayName(p.team_name)}</span>}
               </span>
             </Link>
           ))}

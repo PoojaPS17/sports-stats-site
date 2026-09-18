@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { getHeadToHead, isSoccer } from "@/lib/analytics";
 import { h2hPath } from "@/lib/h2h";
 import type { League } from "@/lib/queries";
@@ -42,7 +43,7 @@ export async function HeadToHeadStrip({
     <Link href={h2hPath(league, homeSlug, awaySlug)} className="card flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm">
       <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Head-to-head</span>
       <span className="flex items-center gap-2 font-semibold">
-        <span>{h2h.teamA.abbreviation ?? h2h.teamA.name}</span>
+        <span>{h2h.teamA.abbreviation ?? teamDisplayName(h2h.teamA.name)}</span>
         <span className="tabular-nums text-[var(--win)]">{winsA}</span>
         {soccer && (
           <>
@@ -52,7 +53,7 @@ export async function HeadToHeadStrip({
         )}
         <span className="text-[var(--text-faint)]">·</span>
         <span className="tabular-nums text-[var(--win)]">{winsB}</span>
-        <span>{h2h.teamB.abbreviation ?? h2h.teamB.name}</span>
+        <span>{h2h.teamB.abbreviation ?? teamDisplayName(h2h.teamB.name)}</span>
       </span>
       <span className="text-xs text-[var(--text-muted)]">
         {total} previous {total === 1 ? "meeting" : "meetings"}
@@ -64,7 +65,7 @@ export async function HeadToHeadStrip({
           const ga = aIsHome ? g.away_score! : g.home_score!;
           const r = gf > ga ? "W" : gf < ga ? "L" : "D";
           return (
-            <span key={g.espn_id} className={`result-badge result-${r.toLowerCase()}`} title={`${g.away_name} ${g.away_score} - ${g.home_score} ${g.home_name}`}>
+            <span key={g.espn_id} className={`result-badge result-${r.toLowerCase()}`} title={`${teamDisplayName(g.away_name)} ${g.away_score} - ${g.home_score} ${teamDisplayName(g.home_name)}`}>
               {r === "W" ? (h2h.teamA.abbreviation ?? "A").slice(0, 3) : r === "L" ? (h2h.teamB.abbreviation ?? "B").slice(0, 3) : "D"}
             </span>
           );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { LEAGUE_LABEL, formatSeasonLabel, type League } from "@/lib/queries";
 import { isCupCompetition, UCL_LEAGUE_PHASE_FROM } from "@/lib/leagues";
 import { isSoccer } from "@/lib/analytics";
@@ -145,7 +146,7 @@ export async function WeekHub({
             {
               label: "Biggest margin",
               value: summary.biggest ? Math.abs(summary.biggest.home_score! - summary.biggest.away_score!) : "—",
-              sub: summary.biggest ? `${summary.biggest.away_abbr ?? summary.biggest.away_name} ${summary.biggest.away_score}–${summary.biggest.home_score} ${summary.biggest.home_abbr ?? summary.biggest.home_name}` : "",
+              sub: summary.biggest ? `${summary.biggest.away_abbr ?? teamDisplayName(summary.biggest.away_name)} ${summary.biggest.away_score}–${summary.biggest.home_score} ${summary.biggest.home_abbr ?? teamDisplayName(summary.biggest.home_name)}` : "",
             },
           ].map((s) => (
             <div key={s.label} className="card flex flex-col gap-0.5 px-4 py-3">
@@ -227,7 +228,7 @@ export async function WeekHub({
                               {r.movement > 0 ? `▲${r.movement}` : r.movement < 0 ? `▼${-r.movement}` : "–"}
                             </span>
                             <TeamLogo name={r.team.name} logoUrl={r.team.logo_url} color={r.team.color} size={18} />
-                            <span className="truncate text-[13px] font-medium">{r.team.abbreviation ?? r.team.name}</span>
+                            <span className="truncate text-[13px] font-medium">{r.team.abbreviation ?? teamDisplayName(r.team.name)}</span>
                           </Link>
                         </td>
                         <td className="px-1 py-1.5 text-right text-xs tabular-nums text-[var(--text-muted)]">{soccer ? r.played : `${r.wins}-${r.losses}`}</td>

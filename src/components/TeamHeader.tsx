@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 
@@ -25,7 +26,7 @@ export function TeamHeader({
         <Link href={`/${league}`} className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--accent)]">
           {LEAGUE_LABEL[league]}
         </Link>
-        <h1 className="page-title truncate">{name}</h1>
+        <h1 className="page-title truncate">{teamDisplayName(name)}</h1>
         {meta && meta.length > 0 && (
           <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-[var(--text-muted)]">
             {meta.map((m) => (

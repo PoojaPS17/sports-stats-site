@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGamesBySeason, getTeamSeasons, formatSeasonLabel } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
@@ -50,12 +51,12 @@ export default async function TeamSeasonPage({
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
           { label: "Teams", href: `/${league}/teams` },
-          { label: team.name, href: `/${league}/teams/${slug}` },
+          { label: teamDisplayName(team.name), href: `/${league}/teams/${slug}` },
           { label: formatSeasonLabel(league, season) ?? String(season) },
         ]}
       />
 
-      <TeamHeader league={league} name={team.name} logoUrl={team.logo_url} color={team.color} meta={[`${formatSeasonLabel(league, season)} season`]} />
+      <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={[`${formatSeasonLabel(league, season)} season`]} />
 
       <TeamPageNav basePath={`/${league}/teams/${slug}`} active="overview" />
 
@@ -77,7 +78,7 @@ export default async function TeamSeasonPage({
             links: [
               { href: `/${league}/standings/${season}`, label: `${label} standings` },
               ...(supportsMatchweeks(league) ? [{ href: weekIndexPath(league, season), label: `Every ${weekNoun(league).toLowerCase()} of ${label}` }] : []),
-              { href: `/${league}/teams/${slug}`, label: `${team.name} now`, sub: "Current season, roster and injuries", image: team.logo_url, imageName: team.name },
+              { href: `/${league}/teams/${slug}`, label: `${teamDisplayName(team.name)} now`, sub: "Current season, roster and injuries", image: team.logo_url, imageName: team.name },
             ],
           },
         ]}
