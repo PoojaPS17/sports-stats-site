@@ -487,7 +487,7 @@ export async function getTeamHistory(league: League, teamEspnId: string): Promis
        from (
          -- A cup's group-stage seasons rank within the group (finishing 2nd in Group C),
          -- not across the whole competition; league seasons rank league-wide.
-         select *, case when $1 = 'ucl' then coalesce(conference, '') else '' end as grp from standings
+         select *, case when $1 in ('ucl', 'cwc', 't20wc', 'wcwc', 'wt20wc') then coalesce(conference, '') else '' end as grp from standings
        ) s where league = $1
      )
      select season, position::int, teams_in_season::int as "teamsInSeason", wins, losses, draws, points, goals_for, goals_against, win_percent, conference,

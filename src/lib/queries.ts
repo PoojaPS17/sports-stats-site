@@ -188,7 +188,9 @@ const STANDING_SELECT = `
 // misorder two teams on equal points (which matters for showing the right champion
 // and relegated teams in the season summary), so it's added ahead of net_run_rate
 // (which only ever applies to cricket, where goals_for/against are always null).
-const STANDING_ORDER = `order by s.conference, s.points desc nulls last,
+// A tournament with two stages (T20 World Cup groups, then Super Eights) keeps a
+// table per stage; the later stage leads.
+const STANDING_ORDER = `order by (s.conference ~* 'super|second round') desc, s.conference, s.points desc nulls last,
   (s.goals_for - s.goals_against) desc nulls last, s.goals_for desc nulls last,
   s.net_run_rate desc nulls last, s.wins desc, s.losses asc`;
 

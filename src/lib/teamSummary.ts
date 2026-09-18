@@ -18,6 +18,10 @@ function resultFor(game: GameRow, teamEspnId: string): ResultLetter | null {
   const lost = isHome ? game.away_winner : game.home_winner;
   if (won === true) return "W";
   if (lost === true) return "L";
+  // A washed-out or abandoned match is not a result at all, and a tie is not a
+  // win for whoever scored more in a rain-shortened chase.
+  if (/no result|abandon|cancel|postpon/i.test(game.status_summary ?? game.status_detail ?? "")) return null;
+  if (won === false && lost === false) return "D";
   const mine = isHome ? game.home_score : game.away_score;
   const theirs = isHome ? game.away_score : game.home_score;
   if (mine == null || theirs == null) return null;

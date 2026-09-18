@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- ESPN feed JSON has no published schema */
 // Live league games straight from ESPN at request time. The 15-minute scrape is
 // fine for fixtures and results; a game in play reads ESPN's scoreboard for its
-// league here with a 30-second cache, laid over the stored rows.
+// league here with a 10-second cache, laid over the stored rows.
 import type { GameRow, League } from "./queries";
 import { isCricketLeague } from "./leagues";
+import { resolveCricketWinner } from "./cricketResult";
 
-const LIVE_REVALIDATE = 30;
+const LIVE_REVALIDATE = 10;
 
 const SCOREBOARD_PATH: Partial<Record<League, string>> = {
   nba: "basketball/nba",
@@ -57,6 +58,11 @@ function applyEvent(g: GameRow, ev: any): GameRow {
   const cricket = isCricketLeague(g.league);
   const num = (s: unknown) => (typeof s === "string" && /^\d+$/.test(s) ? Number(s) : typeof s === "number" ? s : null);
   const completed = state === "post";
+  const flags = { home: home.winner === true ? true : home.winner === false ? false : null, away: away.winner === true ? true : away.winner === false ? false : null };
+  const winner =
+    completed && cricket
+      ? resolveCricketWinner(comp?.status?.summary ?? ev.status?.summary ?? null, { name: g.home_name, abbreviation: g.home_abbr, score: typeof home.score === "string" ? home.score : g.home_score_display }, { name: g.away_name, abbreviation: g.away_abbr, score: typeof away.score === "string" ? away.score : g.away_score_display }, flags)
+      : { home: home.winner === true, away: away.winner === true };
   return {
     ...g,
     status_state: state,
@@ -66,8 +72,8 @@ function applyEvent(g: GameRow, ev: any): GameRow {
     away_score: cricket ? g.away_score : num(away.score) ?? g.away_score,
     home_score_display: cricket && typeof home.score === "string" && home.score ? home.score : g.home_score_display,
     away_score_display: cricket && typeof away.score === "string" && away.score ? away.score : g.away_score_display,
-    home_winner: completed ? home.winner === true : g.home_winner,
-    away_winner: completed ? away.winner === true : g.away_winner,
+    home_winner: completed ? winner.home : g.home_winner,
+    away_winner: completed ? winner.away : g.away_winner,
   };
 }
 

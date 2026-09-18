@@ -12,7 +12,7 @@ import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesMatches, ge
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
 
-export const revalidate = 120;
+export const revalidate = 15;
 
 const SEASON_RE = /^\d{4}$/;
 
@@ -106,7 +106,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
 
       {live.length > 0 && (
         <section>
-          <SectionHeader description="Scores update every few minutes">Live now</SectionHeader>
+          <SectionHeader description="Scores refresh every 10 seconds">Live now</SectionHeader>
           <SeriesMatchList matches={live} />
         </section>
       )}

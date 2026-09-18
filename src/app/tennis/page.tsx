@@ -9,7 +9,7 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 import { overlayLiveTennis } from "@/lib/tennisLive";
 import { getLatestTennisDay, getTennisDay, getTennisDaysAround, getTennisRankings, getTennisTournamentsAround, TOURS, TOUR_LABEL } from "@/lib/tennis";
 
-export const revalidate = 120;
+export const revalidate = 15;
 
 export const metadata: Metadata = pageMeta(
   "Tennis Scores",

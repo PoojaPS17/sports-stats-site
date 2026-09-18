@@ -32,7 +32,9 @@ function collectEntries(node: any, conference: string | null, out: any[]) {
 }
 
 // Shared by the recurring current-season fetch and the one-time historical backfill —
-// both just point this at a different ESPN standings response.
+// both just point this at a different ESPN standings response. A team keeps one row
+// per stage table it appears in (a T20 World Cup side has a group row and a Super
+// Eights row), so the unique key includes the conference.
 export async function upsertStandingsResponse(league: League, data: any, seasonOverride?: number): Promise<number> {
   const season = seasonOverride ?? data.season?.year ?? new Date().getFullYear();
   const entries: any[] = [];
@@ -52,8 +54,8 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          win_percent, streak, playoff_seed, games_behind,
          draws, points, goals_for, goals_against, no_result, net_run_rate, division, updated_at
        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17, now())
-       on conflict (league, season, team_espn_id) do update set
-         conference = excluded.conference, division = coalesce(excluded.division, standings.division),
+       on conflict (league, season, team_espn_id, coalesce(conference, '')) do update set
+         division = coalesce(excluded.division, standings.division),
          wins = excluded.wins, losses = excluded.losses,
          win_percent = excluded.win_percent, streak = excluded.streak,
          playoff_seed = excluded.playoff_seed, games_behind = excluded.games_behind,

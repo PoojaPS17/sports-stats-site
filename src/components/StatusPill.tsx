@@ -37,6 +37,14 @@ export function StatusPill({
     return <span className="pill pill-final">{round ?? completedLabel ?? "Final"}</span>;
   }
 
+  // A game the feed closed without playing ("Postponed", "Canceled") is neither
+  // upcoming nor final; showing its old date as a fixture would be wrong.
+  const called = /postpon|cancel|abandon|suspend/i.exec(statusDetail ?? "");
+  if (called) {
+    const label = /cancel/i.test(called[0]) ? "Cancelled" : /abandon/i.test(called[0]) ? "Abandoned" : /suspend/i.test(called[0]) ? "Suspended" : "Postponed";
+    return <span className="pill pill-final">{round ? `${round} · ${label}` : label}</span>;
+  }
+
   return (
     <span className="pill pill-upcoming">
       {round ? `${round} · ` : ""}

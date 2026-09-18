@@ -77,7 +77,7 @@ export async function HomeLive() {
     <>
       <LiveRefresh active={anyLive} />
       <section>
-        <SectionHeader description={anyLive ? "Scores refresh every 30 seconds" : "Across football, the NFL, NBA, cricket and tennis"}>
+        <SectionHeader description={anyLive ? "Scores refresh every 10 seconds" : "Across football, the NFL, NBA, cricket and tennis"}>
           <span className="flex items-center gap-2">
             {anyLive && <span className="live-dot" />}
             Live now

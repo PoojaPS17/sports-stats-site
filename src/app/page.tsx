@@ -18,7 +18,7 @@ import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
 import { overlayLiveGames } from "@/lib/gamesLive";
 
-export const revalidate = 30;
+export const revalidate = 10;
 
 // One pill per sport (football's competitions are the sport's front doors); cricket
 // and tennis open on the whole sport, not one competition or tour.
@@ -35,7 +35,7 @@ export default async function HomePage() {
   // The Champions League has no homepage section of its own but its games belong
   // among the headline fixtures whenever a matchday falls in the window.
   // Stored rows lag ESPN by up to a scrape tick; anything that could be in play
-  // reads ESPN's scoreboard (30-second cache) so a finished game never shows as live.
+  // reads ESPN's scoreboard (10-second cache) so a finished game never shows as live.
   const allFeatured = await overlayLiveGames((await Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3)))).flat());
   const spotlight = pickSpotlight(allFeatured);
 

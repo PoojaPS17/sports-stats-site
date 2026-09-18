@@ -9,7 +9,7 @@ import { getTennisDay, getTennisDaysAround } from "@/lib/tennis";
 import { overlayLiveTennis } from "@/lib/tennisLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
 
-export const revalidate = 120;
+export const revalidate = 15;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

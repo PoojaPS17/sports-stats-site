@@ -1,11 +1,11 @@
 // Live tennis straight from ESPN at request time: the day's listing, read with a
-// 30-second cache and laid over the stored rows so a match in play shows its
+// 10-second cache and laid over the stored rows so a match in play shows its
 // current set score, and one that finished since the last scrape shows its result.
 import { pool } from "./db";
 import { easternDay, parseTennisEvent, TENNIS_HEADER_URL, type FeedMatch } from "./tennisFeed";
 import type { TennisMatch, TennisSide } from "./tennis";
 
-const LIVE_REVALIDATE = 30;
+const LIVE_REVALIDATE = 10;
 
 async function fetchDayFeed(day: string): Promise<FeedMatch[]> {
   try {

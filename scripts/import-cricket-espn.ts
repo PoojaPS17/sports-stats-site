@@ -20,6 +20,7 @@
 // Default window is the last 21 days (the weekly Cricsheet lag plus slack), which the
 // daily scrape runs; `--since` sweeps history.
 import { normalizeStage } from "../src/lib/stage";
+import { resolveCricketWinner } from "../src/lib/cricketResult";
 import { pool } from "./lib/db";
 import { extractCricketMatchStats } from "./lib/cricket-career";
 import { upsertTeam } from "./lib/teams";
@@ -213,7 +214,14 @@ async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
   }
 
   const date = comp.date ?? f.date;
-  const noResult = /no result|abandon|cancel/i.test(summaryText ?? "") || (home.winner !== true && away.winner !== true && !/tie/i.test(summaryText ?? ""));
+  // The summary copy served under the fallback series id carries no winner flags;
+  // the status summary settles them (a tie decided by a super over included).
+  const winner = resolveCricketWinner(
+    summaryText,
+    { name: home.team.displayName ?? home.team.name, abbreviation: home.team.abbreviation, score: typeof home.score === "string" ? home.score : null },
+    { name: away.team.displayName ?? away.team.name, abbreviation: away.team.abbreviation, score: typeof away.score === "string" ? away.score : null },
+    { home: home.winner === true ? true : home.winner === false ? false : null, away: away.winner === true ? true : away.winner === false ? false : null }
+  );
   const homeRuns = leadingRuns(home.score);
   const awayRuns = leadingRuns(away.score);
   const innings = [home, away].flatMap((c: any) => (c.linescores ?? []).filter((l: any) => l.isBatting || Number(l.runs) > 0 || Number(l.overs) > 0)).length;
@@ -252,10 +260,11 @@ async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
       String(away.team.id),
       homeRuns,
       awayRuns,
-      typeof home.score === "string" && /[^\d]/.test(home.score) ? home.score : null,
-      typeof away.score === "string" && /[^\d]/.test(away.score) ? away.score : null,
-      noResult ? null : home.winner === true,
-      noResult ? null : away.winner === true,
+      // A bare number is an all-out total ("55"); "0" with no innings is no score.
+      typeof home.score === "string" && home.score && home.score !== "0" ? home.score : null,
+      typeof away.score === "string" && away.score && away.score !== "0" ? away.score : null,
+      winner.home,
+      winner.away,
       // Calendar year of the match, as the Cricsheet importer files it — ESPN's own
       // season.year follows the series (a January match of a "2025-26" tour says 2025).
       Number(date.slice(0, 4)),

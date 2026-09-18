@@ -3,7 +3,7 @@ import { isLeague, LEAGUE_LABEL, getGamesByDate } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 
-export const revalidate = 60;
+export const revalidate = 15;
 
 export default async function ScoresByDatePage({
   params,

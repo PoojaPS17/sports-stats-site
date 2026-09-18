@@ -2,11 +2,11 @@
 // Live cricket straight from ESPN at request time. The scrape writes every series
 // match on a 15-minute tick, which is fine for fixtures and results but not for a
 // match in play; pages that show live scores read the same daily listing here with
-// a 30-second cache and overlay it on the stored rows.
+// a 10-second cache and overlay it on the stored rows.
 import type { CricketSeriesMatch, SeriesKind, SeriesSide } from "./cricketSeries";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
-const LIVE_REVALIDATE = 30;
+const LIVE_REVALIDATE = 10;
 
 const LEAGUE_BY_SERIES: Record<string, string> = {
   "8048": "ipl",

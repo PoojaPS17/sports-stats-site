@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
       // The Champions League counts matchdays.
       { source: "/:league/matchday", destination: "/:league/matchweek" },
       { source: "/:league/matchday/:path*", destination: "/:league/matchweek/:path*" },
+      // The conventional sitemap address serves the index of the per-section sitemaps
+      // (Next's metadata route owns /sitemap/<id>.xml, so the index lives beside it).
+      { source: "/sitemap.xml", destination: "/sitemap-index.xml" },
     ];
   },
 };

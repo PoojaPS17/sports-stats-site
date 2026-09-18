@@ -86,7 +86,8 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null)
   return {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
-    name: `${game.away_name} at ${game.home_name}`,
+    // American sports say "Away at Home"; football and cricket list the home side first.
+    name: league === "nfl" || league === "nba" ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`,
     sport: sportName(league),
     startDate: game.date,
     eventStatus: status,

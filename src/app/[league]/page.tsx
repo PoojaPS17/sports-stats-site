@@ -14,7 +14,7 @@ import { CalendarButton } from "@/components/CalendarButton";
 import { getOffseasonRecap } from "@/lib/offseason";
 import { OffseasonRecap } from "@/components/OffseasonRecap";
 
-export const revalidate = 60;
+export const revalidate = 15;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;

@@ -123,7 +123,7 @@ async function weeks(league: League): Promise<Entry[]> {
 // Head-to-head pages for every pairing of clubs in the current standings.
 async function h2h(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
-    `select t.slug from standings s join teams t on t.league = s.league and t.espn_id = s.team_espn_id
+    `select distinct t.slug from standings s join teams t on t.league = s.league and t.espn_id = s.team_espn_id
      where s.league = $1 and s.season = (select max(season) from standings where league = $1) order by t.slug`,
     [league]
   );

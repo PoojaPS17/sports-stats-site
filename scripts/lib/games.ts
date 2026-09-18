@@ -1,6 +1,7 @@
 import { pool } from "./db";
 import { normalizeStage } from "../../src/lib/stage";
-import { isCupCompetition, slugify, type League } from "./espn";
+import { isCricketLeague, isCupCompetition, slugify, type League } from "./espn";
+import { resolveCricketWinner } from "../../src/lib/cricketResult";
 import { upsertTeam } from "./teams";
 
 // The scoreboard endpoint reports a plain string/number score. The per-team schedule
@@ -150,9 +151,22 @@ export async function upsertEvent(league: League, ev: any) {
   }
   const home = comp.competitors?.find((c: any) => c.homeAway === "home");
   const away = comp.competitors?.find((c: any) => c.homeAway === "away");
+  // A fixture whose sides are not yet known ("TBA v TBA" finals week placeholders)
+  // is not a game; it would list as a match between two blank teams.
+  const placeholder = (c: any) => !c?.team?.id || /^(tba|tbc|tbd)$/i.test(String(c.team.displayName ?? c.team.name ?? c.team.abbreviation ?? ""));
+  if (placeholder(home) || placeholder(away) || String(home.team.id) === String(away.team.id)) {
+    console.log(`[upsertEvent] ${league} event ${ev.id}: sides not yet known, skipped`);
+    return;
+  }
   const status = comp.status;
   const homeScore = parseScore(home?.score);
   const awayScore = parseScore(away?.score);
+  // Cricket's feed flags miss a super-over winner (false/false) and are sometimes
+  // absent; the status summary names the outcome.
+  const winner =
+    isCricketLeague(league) && status?.type?.state === "post"
+      ? resolveCricketWinner(status?.summary ?? null, { name: home.team.displayName ?? home.team.name, abbreviation: home.team.abbreviation, score: typeof home.score === "string" ? home.score : null }, { name: away.team.displayName ?? away.team.name, abbreviation: away.team.abbreviation, score: typeof away.score === "string" ? away.score : null }, { home: parseWinner(home.winner), away: parseWinner(away.winner) })
+      : { home: parseWinner(home?.winner), away: parseWinner(away?.winner) };
   const odds = parseOdds(comp);
   const broadcast = parseBroadcast(comp);
   const weather = parseWeather(ev);
@@ -199,8 +213,8 @@ export async function upsertEvent(league: League, ev: any) {
       awayScore.num,
       homeScore.display,
       awayScore.display,
-      parseWinner(home?.winner),
-      parseWinner(away?.winner),
+      winner.home,
+      winner.away,
       ev.season?.year ?? null,
       status?.type?.state ?? null,
       status?.type?.detail ?? null,

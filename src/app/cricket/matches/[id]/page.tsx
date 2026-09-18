@@ -17,8 +17,8 @@ import { cricketSeriesMatchSchema } from "@/lib/structuredData";
 import { normalizeStage } from "@/lib/stage";
 
 // The live page for any cricket match ESPN lists: read straight from ESPN's summary
-// with a 30-second cache, refreshed in the browser while the match is in play.
-export const revalidate = 30;
+// with a 10-second cache, refreshed in the browser while the match is in play.
+export const revalidate = 10;
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -65,7 +65,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
 
   return (
     <div className="flex flex-col gap-6">
-      <LiveRefresh active={live} seconds={30} />
+      <LiveRefresh active={live} />
       {stored && <JsonLd data={cricketSeriesMatchSchema({ ...stored, status_state: state, status_summary: summaryText }, details?.venue ?? null)} />}
       <nav className="text-xs text-[var(--text-muted)]">
         <Link href="/cricket/series" className="hover:underline">
@@ -108,7 +108,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
       )}
 
-      <p className="text-xs text-[var(--text-muted)]">Live scores and scorecard from ESPN, refreshed every 30 seconds while in play.</p>
+      <p className="text-xs text-[var(--text-muted)]">Live scores and scorecard from ESPN, refreshed every 10 seconds while in play.</p>
     </div>
   );
 }

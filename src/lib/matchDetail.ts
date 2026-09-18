@@ -31,8 +31,8 @@ export async function fetchMatchSummary(league: League, espnId: string): Promise
   try {
     const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${espnId}`, {
       // Short enough that a match in play tracks ESPN's feed (the page re-renders in
-      // the browser every 30 seconds while live); finished games read stored details.
-      next: { revalidate: 30 },
+      // the browser every 10 seconds while live); finished games read stored details.
+      next: { revalidate: 10 },
     });
     if (!res.ok) return null;
     return await res.json();

@@ -34,8 +34,8 @@ import type { League } from "@/lib/queries";
 // not yet backfilled) fall back to a live fetch (see lib/matchDetail.ts), so the
 // revalidation window keeps a live game fresh without hitting ESPN on every request.
 // Short so a game in play tracks the feed; the page re-renders in the browser every
-// 30 seconds while live, and finished games are served from stored details anyway.
-export const revalidate = 30;
+// 10 seconds while live, and finished games are served from stored details anyway.
+export const revalidate = 10;
 
 function sportOf(league: League): MatchSport {
   return isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "american";

@@ -62,6 +62,13 @@ export default async function TeamPage({
     supportsScoreAnalytics(league) ? getMostFacedOpponents(league, team.espn_id) : Promise.resolve([]),
     getTeamTopPlayers(league, team.espn_id),
   ]);
+  // Cricket rosters carry no numbers, heights, weights or ages; a table of dashes says nothing.
+  const rosterCols = {
+    jersey: roster.some((p) => p.jersey),
+    height: roster.some((p) => p.height),
+    weight: roster.some((p) => p.weight),
+    age: roster.some((p) => p.age != null),
+  };
 
   const summary = summarizeTeamSeason(games, team.espn_id);
   const isSoccer = (SOCCER_LEAGUES as string[]).includes(league);
@@ -170,15 +177,15 @@ export default async function TeamPage({
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] border-collapse text-sm">
+              <table className={`w-full border-collapse text-sm ${rosterCols.jersey || rosterCols.height ? "min-w-[520px]" : ""}`}>
                 <thead>
                   <tr className="table-head text-left">
                     <th className="py-2 pl-4 font-semibold">Player</th>
                     <th className="py-2 font-semibold">Pos</th>
-                    <th className="py-2 text-right font-semibold">No.</th>
-                    <th className="py-2 pl-4 font-semibold">Height</th>
-                    <th className="py-2 pl-4 font-semibold">Weight</th>
-                    <th className="py-2 pl-4 pr-4 text-right font-semibold">Age</th>
+                    {rosterCols.jersey && <th className="py-2 text-right font-semibold">No.</th>}
+                    {rosterCols.height && <th className="py-2 pl-4 font-semibold">Height</th>}
+                    {rosterCols.weight && <th className="py-2 pl-4 font-semibold">Weight</th>}
+                    {rosterCols.age && <th className="py-2 pl-4 pr-4 text-right font-semibold">Age</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -199,11 +206,11 @@ export default async function TeamPage({
                           </span>
                         </Link>
                       </td>
-                      <td className="py-2 text-[var(--text-muted)]">{p.position ?? "—"}</td>
-                      <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{p.jersey ?? "—"}</td>
-                      <td className="py-2 pl-4 text-[var(--text-muted)]">{p.height ?? "—"}</td>
-                      <td className="py-2 pl-4 text-[var(--text-muted)]">{p.weight ?? "—"}</td>
-                      <td className="py-2 pl-4 pr-4 text-right tabular-nums text-[var(--text-muted)]">{p.age ?? "—"}</td>
+                      <td className="py-2 text-[var(--text-muted)]">{p.position && !/^unknown$/i.test(p.position) ? p.position : "—"}</td>
+                      {rosterCols.jersey && <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{p.jersey ?? "—"}</td>}
+                      {rosterCols.height && <td className="py-2 pl-4 text-[var(--text-muted)]">{p.height ?? "—"}</td>}
+                      {rosterCols.weight && <td className="py-2 pl-4 text-[var(--text-muted)]">{p.weight ?? "—"}</td>}
+                      {rosterCols.age && <td className="py-2 pl-4 pr-4 text-right tabular-nums text-[var(--text-muted)]">{p.age ?? "—"}</td>}
                     </tr>
                   ))}
                 </tbody>

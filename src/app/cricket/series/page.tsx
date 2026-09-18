@@ -9,7 +9,7 @@ import { byPriority, getCricketSeriesWindow, getLiveCricketMatches, SERIES_KIND_
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
 
-export const revalidate = 120;
+export const revalidate = 15;
 
 export const metadata: Metadata = pageMeta(
   "Cricket Series",
@@ -82,7 +82,7 @@ export default async function CricketSeriesPage() {
 
       {live.length > 0 && (
         <section>
-          <SectionHeader description="Scores update every few minutes">Live now</SectionHeader>
+          <SectionHeader description="Scores refresh every 10 seconds">Live now</SectionHeader>
           <SeriesMatchList matches={live} showSeries />
         </section>
       )}

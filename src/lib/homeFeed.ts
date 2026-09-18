@@ -38,12 +38,14 @@ type Ranked = GameRow & { table_rank: number | null };
  */
 export async function getUpcomingGames(limit = 6, perLeague = 2, withinDays = 7): Promise<GameRow[]> {
   const { rows } = await pool.query(
-    `with pos as (
+    `with ranked as (
        select league, team_espn_id,
-              rank() over (partition by league, season order by points desc nulls last, win_percent desc nulls last, wins desc) as pos
+              rank() over (partition by league, season, coalesce(conference, '') order by points desc nulls last, win_percent desc nulls last, wins desc) as pos
        from standings s
        where season = (select max(season) from standings x where x.league = s.league and (x.wins + x.losses + coalesce(x.draws, 0)) > 0)
-     )
+     ),
+     -- A team in two stage tables (group, then Super Eights) counts by its best place.
+     pos as (select league, team_espn_id, min(pos) as pos from ranked group by 1, 2)
      ${GAME_SELECT.replace("from games g", ", least(ph.pos, pa.pos)::int as table_rank from games g")}
      left join pos ph on ph.league = g.league and ph.team_espn_id = g.home_team_espn_id
      left join pos pa on pa.league = g.league and pa.team_espn_id = g.away_team_espn_id
