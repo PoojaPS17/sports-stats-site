@@ -3,6 +3,7 @@ import { LocalTime } from "@/components/LocalTime";
 import { TeamLogo } from "@/components/TeamLogo";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { SERIES_KIND_LABEL, type CricketSeries, type CricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
+import { normalizeStage } from "@/lib/stage";
 
 export function formatSeriesDates(start: string | null, end: string | null): string | null {
   if (!start) return null;
@@ -74,7 +75,7 @@ export function SeriesMatchRow({ m, showSeries = false }: { m: CricketSeriesMatc
           {live ? <span className="pill pill-live">Live</span> : done ? <span className="pill pill-final">Result</span> : <span className="pill pill-upcoming"><LocalTime iso={m.date} format="datetime" /></span>}
           {showSeries && <span className="truncate font-semibold text-[var(--text-muted)]">{m.series_name}</span>}
         </span>
-        <span className="shrink-0 truncate text-[var(--text-faint)]">{[m.description, m.class_card].filter(Boolean).join(" · ")}</span>
+        <span className="shrink-0 truncate text-[var(--text-faint)]">{[normalizeStage(m.description), m.class_card].filter(Boolean).join(" · ")}</span>
       </div>
       <Side side={m.home} decided={decided} />
       <Side side={m.away} decided={decided} />

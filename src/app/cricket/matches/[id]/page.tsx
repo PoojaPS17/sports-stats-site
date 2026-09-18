@@ -12,6 +12,9 @@ import { CricketScorecard } from "@/components/CricketScorecard";
 import { extractGameDetails } from "@/lib/matchDetail";
 import { getCricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
 import { fetchCricketSummaryLive } from "@/lib/cricketLive";
+import { JsonLd } from "@/components/JsonLd";
+import { cricketSeriesMatchSchema } from "@/lib/structuredData";
+import { normalizeStage } from "@/lib/stage";
 
 // The live page for any cricket match ESPN lists: read straight from ESPN's summary
 // with a 30-second cache, refreshed in the browser while the match is in play.
@@ -41,7 +44,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const live = state === "in";
   const summaryText: string | null = comp?.status?.summary ?? stored?.status_summary ?? null;
   const details = summary && home?.team?.id && away?.team?.id ? extractGameDetails("cricket", summary, String(home.team.id), String(away.team.id)) : null;
-  const description = comp?.description ?? stored?.description ?? null;
+  const description = normalizeStage(comp?.description ?? stored?.description ?? null);
   const seriesName = stored?.series_name ?? summary?.header?.league?.name ?? null;
   const date = comp?.date ?? stored?.date ?? null;
   const potm = (comp?.status?.featuredAthletes ?? []).find((a: any) => a.name === "playerOfTheMatch")?.athlete?.displayName ?? null;
@@ -63,6 +66,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   return (
     <div className="flex flex-col gap-6">
       <LiveRefresh active={live} seconds={30} />
+      {stored && <JsonLd data={cricketSeriesMatchSchema({ ...stored, status_state: state, status_summary: summaryText }, details?.venue ?? null)} />}
       <nav className="text-xs text-[var(--text-muted)]">
         <Link href="/cricket/series" className="hover:underline">
           Cricket series

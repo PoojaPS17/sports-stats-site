@@ -75,7 +75,8 @@ export function athleteSchema(
 }
 
 export function gameSchema(league: League, game: GameRow, venue?: string | null) {
-  const status = game.completed ? "https://schema.org/EventScheduled" : game.status_state === "in" ? "https://schema.org/EventScheduled" : "https://schema.org/EventScheduled";
+  // schema.org has no "finished" status; scheduled covers played and in-play games.
+  const status = /postponed/i.test(game.status_detail ?? "") ? "https://schema.org/EventPostponed" : /cancel/i.test(game.status_detail ?? "") ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled";
   const team = (name: string, slug: string, logo: string | null) => ({
     "@type": "SportsTeam",
     name,
@@ -107,4 +108,34 @@ function sportName(league: League): string {
   if (league === "nba") return "Basketball";
   if (isSoccerLeague(league)) return "Soccer";
   return "Cricket";
+}
+
+/** A cricket match from the series listing (no ScoreDB team pages to link). */
+export function cricketSeriesMatchSchema(m: {
+  espn_id: string;
+  name: string;
+  date: string;
+  series_name: string;
+  status_summary: string | null;
+  status_state: string | null;
+  home: { name: string; logo: string | null } | null;
+  away: { name: string; logo: string | null } | null;
+}, venue?: string | null) {
+  const team = (t: { name: string; logo: string | null } | null) => (t ? { "@type": "SportsTeam", name: t.name, ...(t.logo ? { logo: t.logo } : {}) } : undefined);
+  return {
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    name: m.name,
+    sport: "Cricket",
+    startDate: m.date,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    url: absoluteUrl(`/cricket/matches/${m.espn_id}`),
+    ...(m.home ? { homeTeam: team(m.home) } : {}),
+    ...(m.away ? { awayTeam: team(m.away) } : {}),
+    competitor: [team(m.home), team(m.away)].filter(Boolean),
+    organizer: { "@type": "SportsOrganization", name: m.series_name },
+    ...(venue ? { location: { "@type": "Place", name: venue } } : {}),
+    ...(m.status_state === "post" && m.status_summary ? { description: m.status_summary } : {}),
+  };
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { normalizeStage } from "@/lib/stage";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
 import { formatStat, type PlayerLogRow, type PlayerProfile } from "@/lib/playerProfile";
@@ -32,7 +33,7 @@ export function PlayerBestGames({ league, profile }: { league: League; profile: 
             <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
               {fmtDate(row.date)}
               {row.season_year ? ` · ${formatSeasonLabel(league, row.season_year)}` : ""}
-              {row.round ? ` · ${row.round}` : row.week ? ` · Week ${row.week}` : ""}
+              {row.round ? ` · ${normalizeStage(row.round)}` : row.week ? ` · Week ${row.week}` : ""}
             </span>
           </span>
         </Link>

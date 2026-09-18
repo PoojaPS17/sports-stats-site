@@ -30,6 +30,7 @@
 // For games already stored that have no player rows, the matching Cricsheet file
 // (same Cricinfo id) supplies the scorecard: player figures and the match report are
 // written, the game row is left as ESPN has it, and players keep their current club.
+import { normalizeStage } from "../src/lib/stage";
 import { readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pool } from "./lib/db";
@@ -503,7 +504,7 @@ async function writeMatch(
   const homeInn = inningsOf(m.teams[0]);
   const awayInn = inningsOf(m.teams[1]);
   const display = (inn: Innings | undefined) => (inn ? scoreDisplay(inn, m.maxOvers, m.ballsPerOver, inn === second) : null);
-  const stage = m.event.stage && /final|semi|quarter|qualifier|eliminator|play-?off/i.test(m.event.stage) ? m.event.stage : null;
+  const stage = normalizeStage(m.event.stage && /final|semi|quarter|qualifier|eliminator|play-?off/i.test(m.event.stage) ? m.event.stage : null);
   const noScores = m.innings.length === 0;
 
   if (!cardsOnly) await pool.query(

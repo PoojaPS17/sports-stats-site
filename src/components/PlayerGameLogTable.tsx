@@ -1,4 +1,5 @@
 import { formatSeasonLabel, type League } from "@/lib/queries";
+import { normalizeStage } from "@/lib/stage";
 import { formatStat, type PlayerLogRow, type PlayerProfile } from "@/lib/playerProfile";
 import { fmtDate, OpponentCell, ResultChip } from "./PlayerStatsShared";
 
@@ -30,7 +31,7 @@ function LogTable({ league, profile, rows }: { league: League; profile: PlayerPr
               <td className="py-2 pl-2">
                 <OpponentCell league={league} row={row} />
               </td>
-              {showRound && <td className="whitespace-nowrap py-2 pl-2 text-xs text-[var(--text-muted)]">{row.round ?? (row.week ? `Week ${row.week}` : "")}</td>}
+              {showRound && <td className="whitespace-nowrap py-2 pl-2 text-xs text-[var(--text-muted)]">{normalizeStage(row.round) ?? (row.week ? `Week ${row.week}` : "")}</td>}
               <td className="py-2 pl-2">
                 <ResultChip row={row} />
               </td>

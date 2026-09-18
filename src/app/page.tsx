@@ -3,14 +3,12 @@ import {
   LEAGUES,
   LEAGUE_LABEL, leagueNameWithArticle,
   SOCCER_LEAGUES,
-  CRICKET_LEAGUES,
   getRecentAndUpcoming,
   getFeaturedGames,
   getNews,
   getMostRecentPlayedSeason,
   formatSeasonLabel,
 } from "@/lib/queries";
-import { TOURS, TOUR_LABEL } from "@/lib/tennisTours";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { NewsCard } from "@/components/NewsCard";
@@ -22,12 +20,14 @@ import { overlayLiveGames } from "@/lib/gamesLive";
 
 export const revalidate = 30;
 
+// One pill per sport (football's competitions are the sport's front doors); cricket
+// and tennis open on the whole sport, not one competition or tour.
 const QUICK_LINKS: { label: string; href: string }[] = [
   ...SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` })),
   { label: "NFL", href: "/nfl" },
   { label: "NBA", href: "/nba" },
-  ...CRICKET_LEAGUES.slice(0, 2).map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` })),
-  ...TOURS.map((t) => ({ label: TOUR_LABEL[t], href: `/tennis/${t}` })),
+  { label: "Cricket", href: "/cricket/series" },
+  { label: "Tennis", href: "/tennis" },
   { label: "F1", href: "/f1" },
 ];
 

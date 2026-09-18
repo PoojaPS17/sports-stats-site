@@ -1,11 +1,12 @@
 import { LocalTime } from "./LocalTime";
+import { normalizeStage } from "@/lib/stage";
 
 export function StatusPill({
   statusState,
   statusDetail,
   date,
   completed,
-  round,
+  round: rawRound,
   completedLabel,
 }: {
   statusState: string | null;
@@ -16,6 +17,7 @@ export function StatusPill({
   /** What a finished game with no stage is labelled; "Final" by default, "Result" for cricket. */
   completedLabel?: string;
 }) {
+  const round = normalizeStage(rawRound);
   if (statusState === "in") {
     return (
       <span className="pill pill-live">

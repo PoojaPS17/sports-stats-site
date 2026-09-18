@@ -62,8 +62,10 @@ export async function HomeLive() {
 
   const liveGames = games.filter((g) => g.status_state === "in");
   const liveGameIds = new Set(liveGames.map((g) => g.espn_id));
-  // A live IPL or World Cup match is a league game above; the series feed carries the rest.
-  const liveCricket = cricketLiveAll.filter((m) => m.status_state === "in" && !liveGameIds.has(m.espn_id) && important(m)).sort(byImportance);
+  // A live IPL or World Cup match is a league game above; the series feed carries the
+  // rest: everything in play, internationals first, the long tail behind one link.
+  const liveCricketAll = cricketLiveAll.filter((m) => m.status_state === "in" && !liveGameIds.has(m.espn_id)).sort(byImportance);
+  const liveCricket = liveCricketAll.slice(0, 6);
   const liveTennis = tennis.matches.filter((m) => m.status_state === "in").sort((a, b) => Number(b.major) - Number(a.major) || (b.round_number ?? 0) - (a.round_number ?? 0)).slice(0, 4);
   const anyLive = liveGames.length > 0 || liveCricket.length > 0 || liveTennis.length > 0;
 
@@ -92,7 +94,16 @@ export async function HomeLive() {
                 ))}
               </div>
             )}
-            {liveCricket.length > 0 && <SeriesMatchList matches={liveCricket} showSeries />}
+            {liveCricket.length > 0 && (
+              <div>
+                <SeriesMatchList matches={liveCricket} showSeries />
+                {liveCricketAll.length > liveCricket.length && (
+                  <Link href="/cricket/series" className="mt-2 inline-block text-sm font-semibold text-[var(--accent)] hover:underline">
+                    All {liveCricketAll.length} live cricket matches →
+                  </Link>
+                )}
+              </div>
+            )}
             {liveTennis.length > 0 && (
               <div className="card divide-y divide-[var(--border)] overflow-hidden">
                 {liveTennis.map((m) => (

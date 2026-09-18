@@ -38,6 +38,15 @@ async function core(): Promise<Entry[]> {
   out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7), entry("/cricket/series", "hourly", 0.8));
   const { rows: cricketSeries } = await pool.query(`select espn_id, end_date from cricket_series where end_date >= now() - interval '400 days' order by start_date desc`);
   for (const { espn_id, end_date } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, "daily", 0.5, end_date));
+  // Matches outside the archived competitions live at /cricket/matches; the archived
+  // ones are in their league's games sitemap.
+  const { rows: seriesMatches } = await pool.query(
+    `select m.espn_id, m.date from cricket_series_matches m
+     where m.date >= now() - interval '45 days' and m.date <= now() + interval '14 days'
+       and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates))
+     order by m.date desc`
+  );
+  for (const { espn_id, date } of seriesMatches) out.push(entry(`/cricket/matches/${espn_id}`, "hourly", 0.4, date));
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
   const { rows: tournaments } = await pool.query(`select espn_id, season, end_date from tennis_tournaments order by season desc, start_date`);
   for (const { espn_id, end_date } of tournaments) out.push(entry(`/tennis/tournaments/${espn_id}`, "weekly", 0.5, end_date));

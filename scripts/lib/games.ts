@@ -1,4 +1,5 @@
 import { pool } from "./db";
+import { normalizeStage } from "../../src/lib/stage";
 import { isCupCompetition, slugify, type League } from "./espn";
 import { upsertTeam } from "./teams";
 
@@ -85,7 +86,7 @@ function parseRound(league: League, ev: any): string | null {
   // it carries a notes tag.
   if (ev.seasonType?.type !== 3) return null;
   const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
-  return typeof headline === "string" ? headline : null;
+  return typeof headline === "string" ? normalizeStage(headline) : null;
 }
 
 // Cup competitions (Champions League): every event carries its stage — as

@@ -5,7 +5,7 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Ticker, type TickerItem } from "@/components/Ticker";
-import { getTickerGames, getLastUpdated, LEAGUE_LABEL } from "@/lib/queries";
+import { getTickerGames, getLastUpdated, LEAGUE_LABEL, isCricketLeague } from "@/lib/queries";
 import { SITE_URL } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 import { organizationSchema, websiteSchema } from "@/lib/structuredData";
@@ -35,25 +35,35 @@ export const metadata: Metadata = {
     template: "%s | ScoreDB",
   },
   description:
-    "Live scores, standings, schedules and player stats for the Premier League, La Liga, NFL, NBA, IPL, ATP, WTA and F1 — with ten years of history.",
+    "Live scores, standings, schedules and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years of history.",
 };
 
 function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): TickerItem {
   const league = LEAGUE_LABEL[g.league];
   if (g.completed) {
-    const homeWon = g.home_winner ?? (g.home_score ?? 0) > (g.away_score ?? 0);
+    // Cricsheet-sourced cricket rows carry no winner flag; the summary names the winner.
+    const summaryWinner = g.status_summary && isCricketLeague(g.league) ? (g.status_summary.startsWith(g.home_name) ? true : g.status_summary.startsWith(g.away_name) ? false : null) : null;
+    const homeWon = g.home_winner ?? summaryWinner ?? (g.home_score ?? 0) > (g.away_score ?? 0);
     const winner = homeWon ? g.home_name : g.away_name;
     const loser = homeWon ? g.away_name : g.home_name;
     const winScore = homeWon ? g.home_score_display ?? g.home_score : g.away_score_display ?? g.away_score;
     const loseScore = homeWon ? g.away_score_display ?? g.away_score : g.home_score_display ?? g.home_score;
-    return {
-      href: `/${g.league}/teams/${homeWon ? g.home_slug : g.away_slug}`,
-      label: `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`,
-    };
+    // A cricket result is a margin ("won by 7 wickets"), never a scoreline; a tie or
+    // no-result has no winner to name, so the feed's own summary stands.
+    const margin = g.status_summary
+      ?.match(/\bwon by (.+?)(?: \(.*\))?$/i)?.[1]
+      .replace(/\bwkts?\b/i, (w) => (w.toLowerCase() === "wkt" ? "wicket" : "wickets"));
+    const noWinner = g.home_winner === false && g.away_winner === false;
+    const label = isCricketLeague(g.league)
+      ? noWinner || !margin
+        ? `${league} · ${g.status_summary ?? `${g.home_name} v ${g.away_name}`}`
+        : `${league} · ${winner} beat ${loser} by ${margin}`
+      : `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`;
+    return { href: `/${g.league}/games/${g.espn_id}`, label };
   }
   const date = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return {
-    href: `/${g.league}/teams/${g.home_slug}`,
+    href: `/${g.league}/games/${g.espn_id}`,
     label: `${league} · ${g.away_name} at ${g.home_name} — ${date}`,
   };
 }

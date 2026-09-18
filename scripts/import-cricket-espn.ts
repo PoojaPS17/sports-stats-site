@@ -19,6 +19,7 @@
 //
 // Default window is the last 21 days (the weekly Cricsheet lag plus slack), which the
 // daily scrape runs; `--since` sweeps history.
+import { normalizeStage } from "../src/lib/stage";
 import { pool } from "./lib/db";
 import { extractCricketMatchStats } from "./lib/cricket-career";
 import { upsertTeam } from "./lib/teams";
@@ -159,7 +160,7 @@ function leadingRuns(score: unknown): number | null {
 function stageOf(description: unknown): string | null {
   if (typeof description !== "string") return null;
   const stage = description.split(",")[0].replace(/\s*\([DN/]+\)\s*$/, "").trim();
-  return /final|semi|quarter|qualifier|eliminator|play-?off/i.test(stage) ? stage : null;
+  return normalizeStage(/final|semi|quarter|qualifier|eliminator|play-?off/i.test(stage) ? stage : null);
 }
 
 function abbreviationOf(team: any): string {
