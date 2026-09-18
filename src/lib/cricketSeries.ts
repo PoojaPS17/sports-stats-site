@@ -150,6 +150,8 @@ export async function getUpcomingCricketMatches(limit = 6, withinDays = 7): Prom
   const { rows } = await pool.query(
     `${MATCH_SELECT}
      where coalesce(m.status_state, 'pre') = 'pre' and m.date >= now() - interval '1 hour' and m.date <= now() + ($2 || ' days')::interval
+       -- a knockout fixture whose sides are still "TBA" is a placeholder, not a match to list
+       and coalesce(m.home->>'name', '') !~* '^t?tb[acd]$' and coalesce(m.away->>'name', '') !~* '^t?tb[acd]$'
      order by s.kind = 'other', m.date limit $1`,
     [limit, withinDays]
   );

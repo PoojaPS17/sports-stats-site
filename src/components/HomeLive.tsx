@@ -5,34 +5,8 @@ import { SeriesMatchList } from "@/components/CricketSeries";
 import { TennisMatchLine } from "@/components/TennisScores";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { LocalTime } from "@/components/LocalTime";
-import { getLiveGames, getNextF1Event, getUpcomingGames } from "@/lib/homeFeed";
-import { overlayLiveGames } from "@/lib/gamesLive";
-import { byPriority, getLiveCricketMatches, getUpcomingCricketMatches, type CricketSeriesMatch } from "@/lib/cricketSeries";
-import { overlayLiveCricket } from "@/lib/cricketLive";
-import { getTennisDay } from "@/lib/tennis";
-import { overlayLiveTennis } from "@/lib/tennisLive";
-import { easternDay } from "@/lib/tennisFeed";
+import type { HomeData } from "@/lib/homeData";
 import type { F1EventRow } from "@/lib/f1";
-
-// Cricket beyond the archived competitions counts as "important" here when it is
-// international; domestic first-class and youth cricket stays in the Cricket block.
-function important(m: CricketSeriesMatch): boolean {
-  return m.scorecard_league !== null || m.series_kind === "international" || m.series_kind === "womens-international";
-}
-
-const FULL_MEMBERS = /^(India|Australia|England|Pakistan|South Africa|New Zealand|Sri Lanka|West Indies|Bangladesh|Afghanistan|Zimbabwe|Ireland)( Women)?$/;
-
-// Full-member internationals before associate fixtures; the archived competitions
-// (IPL, World Cups) rank with them.
-function weight(m: CricketSeriesMatch): number {
-  if (m.scorecard_league) return 0;
-  const full = [m.home, m.away].filter((s) => s && FULL_MEMBERS.test(s.name)).length;
-  return 2 - full;
-}
-
-function byImportance(a: CricketSeriesMatch, b: CricketSeriesMatch): number {
-  return weight(a) - weight(b) || byPriority(a, b);
-}
 
 function F1Card({ ev }: { ev: F1EventRow }) {
   const where = [ev.circuit_name, ev.circuit_city ?? ev.circuit_country].filter(Boolean).join(", ");
@@ -48,36 +22,19 @@ function F1Card({ ev }: { ev: F1EventRow }) {
   );
 }
 
-export async function HomeLive() {
-  const today = easternDay(new Date().toISOString());
-  const [storedGames, upcomingGames, storedCricketLive, upcomingCricket, tennisRows, f1] = await Promise.all([
-    getLiveGames(),
-    getUpcomingGames(6, 2),
-    getLiveCricketMatches(),
-    getUpcomingCricketMatches(12, 7),
-    getTennisDay(today),
-    getNextF1Event(7),
-  ]);
-  const [games, cricketLiveAll, tennis] = await Promise.all([overlayLiveGames(storedGames), overlayLiveCricket(storedCricketLive), overlayLiveTennis(today, tennisRows)]);
-
-  const liveGames = games.filter((g) => g.status_state === "in");
-  const liveGameIds = new Set(liveGames.map((g) => g.espn_id));
-  // A live IPL or World Cup match is a league game above; the series feed carries the
-  // rest: everything in play, internationals first, the long tail behind one link.
-  const liveCricketAll = cricketLiveAll.filter((m) => m.status_state === "in" && !liveGameIds.has(m.espn_id)).sort(byImportance);
-  const liveCricket = liveCricketAll.slice(0, 6);
-  const liveTennis = tennis.matches.filter((m) => m.status_state === "in").sort((a, b) => Number(b.major) - Number(a.major) || (b.round_number ?? 0) - (a.round_number ?? 0)).slice(0, 4);
-  const anyLive = liveGames.length > 0 || liveCricket.length > 0 || liveTennis.length > 0;
-
-  const upcomingIds = new Set(upcomingGames.map((g) => g.espn_id));
-  const nextCricket = upcomingCricket.filter((m) => !upcomingIds.has(m.espn_id) && !liveGameIds.has(m.espn_id) && important(m)).sort(byImportance).slice(0, 3);
-  const nextTennis = tennis.matches.filter((m) => m.status_state !== "in" && !m.completed && m.major).slice(0, 2);
+// The two blocks at the top of the homepage: what is in play right now across every
+// sport, and the headline fixtures of the coming week. Everything here is read once
+// per request in getHomeData(); the league blocks below it skip what these show.
+export function HomeLive({ data }: { data: HomeData }) {
+  const { anyLive, liveGames, liveTennis, upcomingGames, nextCricket, nextTennis, f1 } = data;
+  const liveCricket = data.liveCricket.slice(0, 6);
+  const liveCount = liveGames.length + data.liveCricket.length + liveTennis.length;
 
   return (
     <>
       <LiveRefresh active={anyLive} />
       <section>
-        <SectionHeader description={anyLive ? "Scores refresh every 10 seconds" : "Across football, the NFL, NBA, cricket and tennis"}>
+        <SectionHeader description={anyLive ? `${liveCount} in play · scores refresh every 10 seconds` : "Across football, the NFL, NBA, cricket and tennis"}>
           <span className="flex items-center gap-2">
             {anyLive && <span className="live-dot" />}
             Live now
@@ -97,9 +54,9 @@ export async function HomeLive() {
             {liveCricket.length > 0 && (
               <div>
                 <SeriesMatchList matches={liveCricket} showSeries />
-                {liveCricketAll.length > liveCricket.length && (
+                {data.liveCricket.length > liveCricket.length && (
                   <Link href="/cricket/series" className="mt-2 inline-block text-sm font-semibold text-[var(--accent)] hover:underline">
-                    All {liveCricketAll.length} live cricket matches →
+                    All {data.liveCricket.length} live cricket matches →
                   </Link>
                 )}
               </div>
@@ -116,8 +73,8 @@ export async function HomeLive() {
       </section>
 
       <section>
-        <SectionHeader description="The biggest fixtures of the next seven days" action={{ label: "All cricket series", href: "/cricket/series" }}>
-          Upcoming
+        <SectionHeader description="The biggest fixtures of the next seven days, across every sport">
+          Coming up
         </SectionHeader>
         {upcomingGames.length + nextCricket.length + nextTennis.length === 0 && !f1 ? (
           <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">No fixtures listed for the coming week yet.</p>

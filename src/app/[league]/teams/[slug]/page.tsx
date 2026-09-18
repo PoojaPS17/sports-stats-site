@@ -89,7 +89,7 @@ export default async function TeamPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Teams", href: `/${league}/teams` }, { label: team.name }]} />
+      <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Teams", href: `/${league}/teams` }, { label: teamDisplayName(team.name) }]} />
 
       <JsonLd data={teamSchema(league, team)} />
       <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={meta} />

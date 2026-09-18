@@ -1,14 +1,5 @@
 import Link from "next/link";
-import {
-  LEAGUES,
-  LEAGUE_LABEL, leagueNameWithArticle,
-  SOCCER_LEAGUES,
-  getRecentAndUpcoming,
-  getFeaturedGames,
-  getNews,
-  getMostRecentPlayedSeason,
-  formatSeasonLabel,
-} from "@/lib/queries";
+import { LEAGUE_LABEL, leagueNameWithArticle, SOCCER_LEAGUES, formatSeasonLabel } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { NewsCard } from "@/components/NewsCard";
@@ -16,8 +7,11 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
 import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
-import { overlayLiveGames } from "@/lib/gamesLive";
+import { getHomeData, type HomeSection } from "@/lib/homeData";
 
+// Regenerated every 10 seconds so in-play scores stay current; the stored data
+// behind the page is cached in longer tiers (see getHomeData) so each regeneration
+// costs only the live ESPN reads.
 export const revalidate = 10;
 
 // One pill per sport (football's competitions are the sport's front doors); cricket
@@ -31,31 +25,49 @@ const QUICK_LINKS: { label: string; href: string }[] = [
   { label: "F1", href: "/f1" },
 ];
 
-export default async function HomePage() {
-  // The Champions League has no homepage section of its own but its games belong
-  // among the headline fixtures whenever a matchday falls in the window.
-  // Stored rows lag ESPN by up to a scrape tick; anything that could be in play
-  // reads ESPN's scoreboard (10-second cache) so a finished game never shows as live.
-  const allFeatured = await overlayLiveGames((await Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3)))).flat());
-  const spotlight = pickSpotlight(allFeatured);
-
-  // Cricket gets its own block below (every series, live and upcoming) rather than
-  // one competition's fixtures.
-  const sections = await Promise.all(
-    LEAGUES.filter((l) => l !== "ipl").map(async (league) => {
-      const games = await overlayLiveGames((await getRecentAndUpcoming(league, 2, 5)).slice(0, 4));
-      // A standings row for the upcoming season already exists (every team 0-0) well
-      // before it starts, so the plain /standings link would default right back to an
-      // empty table during preseason — point at the season that's actually been played.
-      const mostRecentSeason = games.length === 0 ? await getMostRecentPlayedSeason(league) : null;
-      return { league, games, mostRecentSeason };
-    })
+function LeagueBlock({ section }: { section: HomeSection }) {
+  const { league, games, liveCount } = section;
+  return (
+    <section>
+      <SectionHeader
+        action={{ label: "All fixtures", href: `/${league}` }}
+        description={liveCount > 0 ? `${liveCount} in play, listed under Live now above` : "Latest results and next fixtures"}
+      >
+        {LEAGUE_LABEL[league]}
+      </SectionHeader>
+      <div className="flex flex-col gap-3">
+        {games.length === 0 ? (
+          <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">Everything this week is listed above.</p>
+        ) : (
+          games.map((g) => <GameCard key={g.espn_id} league={league} game={g} />)
+        )}
+      </div>
+      <div className="mt-3 flex gap-4 text-sm font-semibold">
+        <Link href={`/${league}/standings`} className="text-[var(--accent)] hover:underline">
+          Standings
+        </Link>
+        <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">
+          Leaders
+        </Link>
+        <Link href={`/${league}/teams`} className="text-[var(--accent)] hover:underline">
+          Teams
+        </Link>
+      </div>
+    </section>
   );
+}
 
-  const news = (await Promise.all(LEAGUES.map((l) => getNews(l, 4))))
-    .flat()
-    .sort((a, b) => (b.published ? new Date(b.published).getTime() : 0) - (a.published ? new Date(a.published).getTime() : 0))
-    .slice(0, 8);
+export default async function HomePage() {
+  const home = await getHomeData();
+  const spotlight = pickSpotlight(home.featured);
+
+  // League blocks most active first; the cricket block ranks by its own live count
+  // (a full day of internationals outranks a league with nothing on). Leagues
+  // between seasons collapse into one line each at the very end.
+  const blocks: React.ReactNode[] = home.sections.map((s) => <LeagueBlock key={s.league} section={s} />);
+  const cricketBlock = <HomeCricket key="cricket" live={home.liveCricket.length} next={home.moreCricket} />;
+  const cricketAt = home.sections.findIndex((s) => s.liveCount < home.liveCricket.length);
+  blocks.splice(cricketAt === -1 ? blocks.length : cricketAt, 0, cricketBlock);
 
   return (
     <div className="flex flex-col gap-10">
@@ -91,56 +103,46 @@ export default async function HomePage() {
         )}
       </section>
 
-      <HomeLive />
+      <HomeLive data={home} />
 
       <AdSlot label="Homepage" />
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="grid gap-8 sm:grid-cols-2 lg:col-span-2">
-          {sections.map(({ league, games, mostRecentSeason }) => (
-            <section key={league}>
-              <SectionHeader action={{ label: "All fixtures", href: `/${league}` }}>{LEAGUE_LABEL[league]}</SectionHeader>
-              <div className="flex flex-col gap-3">
-                {games.length === 0 ? (
-                  <div className="card px-4 py-5 text-sm text-[var(--text-muted)]">
-                    <p>{leagueNameWithArticle(league, true)} is between seasons. No fixtures in the next few days.</p>
-                    {mostRecentSeason !== null && (
-                      <Link
-                        href={`/${league}/standings/${mostRecentSeason}`}
-                        className="mt-2 inline-block font-semibold text-[var(--accent)] hover:underline"
-                      >
-                        View the {formatSeasonLabel(league, mostRecentSeason)} standings →
+          {blocks}
+          {home.offSeason.length > 0 && (
+            <section className="sm:col-span-2">
+              <SectionHeader description="Nothing scheduled in the next few days">Between seasons</SectionHeader>
+              <ul className="card divide-y divide-[var(--border)] overflow-hidden">
+                {home.offSeason.map(({ league, lastSeason }) => (
+                  <li key={league} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
+                    <span>
+                      <span className="font-semibold">{LEAGUE_LABEL[league]}</span>
+                      <span className="text-[var(--text-muted)]"> · {leagueNameWithArticle(league, true)} is between seasons</span>
+                    </span>
+                    <span className="flex gap-4 font-semibold text-[var(--accent)]">
+                      <Link href={lastSeason !== null ? `/${league}/standings/${lastSeason}` : `/${league}/standings`} className="hover:underline">
+                        {lastSeason !== null ? `${formatSeasonLabel(league, lastSeason)} standings` : "Standings"}
                       </Link>
-                    )}
-                  </div>
-                ) : (
-                  games.map((g) => <GameCard key={g.espn_id} league={league} game={g} />)
-                )}
-              </div>
-              <div className="mt-3 flex gap-4 text-sm font-semibold">
-                <Link
-                  href={mostRecentSeason !== null ? `/${league}/standings/${mostRecentSeason}` : `/${league}/standings`}
-                  className="text-[var(--accent)] hover:underline"
-                >
-                  Standings
-                </Link>
-                <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">
-                  Leaders
-                </Link>
-                <Link href={`/${league}/teams`} className="text-[var(--accent)] hover:underline">
-                  Teams
-                </Link>
-              </div>
+                      <Link href={`/${league}/leaders`} className="hover:underline">
+                        Leaders
+                      </Link>
+                      <Link href={`/${league}`} className="hover:underline">
+                        Fixtures
+                      </Link>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </section>
-          ))}
-          <HomeCricket />
+          )}
         </div>
 
-        {news.length > 0 && (
+        {home.news.length > 0 && (
           <aside className="lg:col-span-1">
             <SectionHeader>Latest news</SectionHeader>
             <div className="flex flex-col gap-2">
-              {news.map((a) => (
+              {home.news.map((a) => (
                 <NewsCard key={a.article_id} article={a} compact />
               ))}
             </div>

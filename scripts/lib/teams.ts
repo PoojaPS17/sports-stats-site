@@ -1,4 +1,5 @@
 import { pool } from "./db";
+import { resolveTeamLogo } from "../../src/lib/teamLogos";
 import { slugify } from "./espn";
 
 // A hex color comes back bare ("552583") from the site API's /teams and scoreboard
@@ -26,7 +27,7 @@ export async function upsertTeam(league: string, team: any) {
   if (!team?.id || !name || isPlaceholderTeam(name)) return;
   // The event-embedded team object (cricket's usual source) has a singular `logo`
   // string field instead of the site API's `logos` array.
-  const logo = team.logos?.find((l: any) => l.rel?.includes("default"))?.href ?? team.logos?.[0]?.href ?? team.logo ?? null;
+  const logo = resolveTeamLogo(team.id, team.logos?.find((l: any) => l.rel?.includes("default"))?.href ?? team.logos?.[0]?.href ?? team.logo ?? null);
   const color = normalizeColor(team.color);
   const alternateColor = normalizeColor(team.alternateColor);
   await pool.query(

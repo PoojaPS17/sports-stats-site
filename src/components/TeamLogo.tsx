@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// "Delhi Capitals Women" reads as DC, not CW: the women's-team suffix carries no identity.
+// "Delhi Capitals Women" (shown as "Delhi Capitals-W") reads as DC, not CW: the
+// women's-team suffix carries no identity.
 function initials(name: string) {
   return name
-    .replace(/\s+(Women|Women's|W)$/i, "")
+    .replace(/(\s+(Women|Women's|W)|-W)$/i, "")
     .split(" ")
     .map((w) => w[0])
     .join("")
@@ -15,8 +16,11 @@ function initials(name: string) {
 
 // Also the player avatar. A stored image URL is no guarantee the image exists —
 // ESPN's cricket headshot path 404s for many players (Nepal's and Bangladesh's
-// batters on the ODI leaders board, for instance), which rendered as the browser's
-// broken-image icon. On load failure the initials disc takes over instead.
+// batters on the ODI leaders board, for instance), and its team-logo path for
+// many women's sides, which rendered as the browser's broken-image icon. On load
+// failure the initials disc takes over instead. The page is server-rendered, so
+// the failure usually happens before React hydrates and attaches onError; the
+// effect catches that case by inspecting the image after mount.
 export function TeamLogo({
   name,
   logoUrl,
@@ -29,10 +33,16 @@ export function TeamLogo({
   size?: number;
 }) {
   const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const img = ref.current;
+    if (img && img.complete && img.naturalWidth === 0) setFailed(true);
+  }, [logoUrl]);
   if (logoUrl && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        ref={ref}
         src={logoUrl}
         alt={name}
         width={size}

@@ -9,6 +9,7 @@
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --days 10 --ahead 90
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --since 2024-01-01 # backfill
 import { pool } from "./lib/db";
+import { resolveTeamLogo } from "../src/lib/teamLogos";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
 const REQUEST_DELAY_MS = 120;
@@ -115,7 +116,7 @@ function competitor(c: any) {
     abbreviation: c.abbreviation ?? null,
     score: typeof c.score === "string" && c.score ? c.score : null,
     winner: c.winner === true,
-    logo: c.logo ?? null,
+    logo: resolveTeamLogo(c.id, c.logo ?? null),
   };
 }
 
