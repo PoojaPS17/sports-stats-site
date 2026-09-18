@@ -803,7 +803,7 @@ export async function getTrackedCountries(): Promise<{ country: string; views: n
 }
 
 // External trending signals — real ones (Wikipedia pageview spikes, Apple's App Store
-// Sports top charts), unlike game_views above which only reflects traffic to ScoreDB
+// Sports top charts), unlike game_views above which only reflects traffic to SportsDB
 // itself. See scripts/fetch-trending-*.ts for how each is fetched; wikipedia is also
 // matched against our own players/teams (app_store_ios isn't — an app isn't a player
 // or team). Google Trends' daily list was tried and dropped: only 10 general-topic

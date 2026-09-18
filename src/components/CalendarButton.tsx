@@ -36,7 +36,7 @@ export function CalendarButton({ path, label = "Add to calendar" }: { path: stri
   const httpsUrl = `${origin}${path}`;
   const webcalUrl = httpsUrl.replace(/^https?:\/\//, "webcal://");
   const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`;
-  const outlookUrl = `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(httpsUrl)}&name=${encodeURIComponent("ScoreDB fixtures")}`;
+  const outlookUrl = `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(httpsUrl)}&name=${encodeURIComponent("SportsDB fixtures")}`;
 
   async function copy() {
     try {

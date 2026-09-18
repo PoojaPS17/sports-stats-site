@@ -1,4 +1,4 @@
-# ScoreDB — NBA, NFL, Premier League & IPL scores, standings and player stats
+# SportsDB — NBA, NFL, Premier League & IPL scores, standings and player stats
 
 Programmatic-SEO sports tracker. Pattern: free ESPN data → scraper cron → Postgres → templated pages → ads. See `/Users/ps/.claude/plans/validated-singing-crane.md` for the original build plan.
 

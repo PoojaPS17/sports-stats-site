@@ -23,17 +23,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const SITE_NAME = "ScoreDB";
+export const SITE_NAME = "SportsDB";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: "/" },
-  openGraph: { siteName: "ScoreDB", type: "website", locale: "en_US" },
+  openGraph: { siteName: "SportsDB", type: "website", locale: "en_US" },
   twitter: { card: "summary_large_image" },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   title: {
-    default: "ScoreDB — Live scores, standings and stats for football, NFL, NBA, cricket, tennis and F1",
-    template: "%s | ScoreDB",
+    default: "SportsDB — Live scores, standings and stats for football, NFL, NBA, cricket, tennis and F1",
+    template: "%s | SportsDB",
   },
   description:
     "Live scores, standings, schedules and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years of history.",

@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Records`, `${label} record book: highest-scoring games, biggest wins, longest winning and unbeaten streaks across every season on ScoreDB.`, `/${league}/records`);
+  return pageMeta(`${label} Records`, `${label} record book: highest-scoring games, biggest wins, longest winning and unbeaten streaks across every season on SportsDB.`, `/${league}/records`);
 }
 
 function fmtDate(iso: string) {
@@ -104,7 +104,7 @@ export default async function RecordsPage({ params }: { params: Promise<{ league
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title={`${label} Records`} subtitle={coverage ? `Record book for every game on ScoreDB: ${coverage}` : undefined} />
+      <PageHeader title={`${label} Records`} subtitle={coverage ? `Record book for every game on SportsDB: ${coverage}` : undefined} />
       <AdSlot label={`${label} records top`} />
 
       <div>

@@ -32,7 +32,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const { id } = await params;
   if (!/^\d+$/.test(id)) notFound();
   const stored = await getCricketSeriesMatch(id);
-  // Competitions ScoreDB archives have their own match page with career links.
+  // Competitions SportsDB archives have their own match page with career links.
   if (stored?.scorecard_league) redirect(`/${stored.scorecard_league}/games/${id}`);
 
   const summary = await fetchCricketSummaryLive(id, stored?.series_espn_id);

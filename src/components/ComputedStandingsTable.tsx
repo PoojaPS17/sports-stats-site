@@ -76,7 +76,7 @@ export function ComputedStandingsTable({ league, rows, scope }: { league: League
           </table>
         </div>
       </section>
-      <p className="text-xs text-[var(--text-faint)]">{SCOPE_NOTE[scope]} Computed from match results on ScoreDB, so it can differ from the official table if a result is missing.</p>
+      <p className="text-xs text-[var(--text-faint)]">{SCOPE_NOTE[scope]} Computed from match results on SportsDB, so it can differ from the official table if a result is missing.</p>
     </div>
   );
 }

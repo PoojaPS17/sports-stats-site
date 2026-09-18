@@ -111,7 +111,7 @@ function sportName(league: League): string {
   return "Cricket";
 }
 
-/** A cricket match from the series listing (no ScoreDB team pages to link). */
+/** A cricket match from the series listing (no SportsDB team pages to link). */
 export function cricketSeriesMatchSchema(m: {
   espn_id: string;
   name: string;

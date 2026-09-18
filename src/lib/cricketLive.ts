@@ -81,7 +81,7 @@ export async function fetchLiveCricketFromEspn(): Promise<CricketSeriesMatch[]> 
             status_summary: ev.fullStatus?.longSummary ?? ev.summary ?? null,
             home: side((ev.competitors ?? []).find((c: any) => c.homeAway === "home") ?? ev.competitors?.[0]),
             away: side((ev.competitors ?? []).find((c: any) => c.homeAway === "away") ?? ev.competitors?.[1]),
-            // Only competitions ScoreDB archives have their own match page; the live
+            // Only competitions SportsDB archives have their own match page; the live
             // page serves everything else (and a live match's stored page may not exist yet).
             scorecard_league: league as CricketSeriesMatch["scorecard_league"],
           });

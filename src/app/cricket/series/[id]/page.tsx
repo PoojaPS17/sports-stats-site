@@ -129,7 +129,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
 
       <p className="text-xs text-[var(--text-muted)]">
         {s.league
-          ? `This competition is fully covered on ScoreDB: every match links to its stored scorecard, and the ${LEAGUE_LABEL[s.league]} hub has tables, leaders and player records.`
+          ? `This competition is fully covered on SportsDB: every match links to its stored scorecard, and the ${LEAGUE_LABEL[s.league]} hub has tables, leaders and player records.`
           : "Scores and results from ESPN's cricket listing. A match's scorecard opens live from ESPN while it is in play and after it ends."}
       </p>
     </div>

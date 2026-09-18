@@ -8,7 +8,7 @@ import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
 
 const SITE = SITE_URL;
-const PRODID = "-//ScoreDB//Fixtures//EN";
+const PRODID = "-//SportsDB//Fixtures//EN";
 
 /* ------------------------------------------------------------------------ */
 /* iCalendar formatting                                                      */
@@ -149,7 +149,7 @@ function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: string)
   parts.push(`Match page: ${SITE}/${league}/games/${g.espn_id}`);
   const location = g.venue_name ? [g.venue_name, g.venue_city].filter(Boolean).join(", ") : undefined;
   return {
-    uid: `${league}-${g.espn_id}@scoredb`,
+    uid: `${league}-${g.espn_id}@sportsdb`,
     start,
     end,
     summary: gameSummary(league, g, perspectiveTeamId),
@@ -196,7 +196,7 @@ export async function buildTeamFeed(league: League, slug: string): Promise<Feed 
     filename: `${slug}-${league}.ics`,
     ics: buildIcs(
       `${team.name} (${label})`,
-      `${team.name} ${label} fixtures and results from ScoreDB. Scores appear in the event title once a game finishes.`,
+      `${team.name} ${label} fixtures and results from SportsDB. Scores appear in the event title once a game finishes.`,
       games.map((g) => gameEvent(league, g, team.espn_id))
     ),
   };
@@ -213,7 +213,7 @@ export async function buildLeagueFeed(league: League): Promise<Feed | null> {
   const label = LEAGUE_LABEL[league];
   return {
     filename: `${league}-fixtures.ics`,
-    ics: buildIcs(`${label} fixtures`, `All ${label} fixtures and recent results from ScoreDB, refreshed automatically.`, games.map((g) => gameEvent(league, g))),
+    ics: buildIcs(`${label} fixtures`, `All ${label} fixtures and recent results from SportsDB, refreshed automatically.`, games.map((g) => gameEvent(league, g))),
   };
 }
 
@@ -227,7 +227,7 @@ export async function buildF1Feed(): Promise<Feed | null> {
     filename: `f1-${season}.ics`,
     ics: buildIcs(
       `Formula 1 ${season}`,
-      "Formula 1 race weekends from ScoreDB.",
+      "Formula 1 race weekends from SportsDB.",
       events.map((e) => {
         const start = new Date(e.date);
         // Race weekends run Friday to Sunday; the feed stores the race day, so the
@@ -237,7 +237,7 @@ export async function buildF1Feed(): Promise<Feed | null> {
         const endExclusive = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1));
         const where = [e.circuit_name, e.circuit_city, e.circuit_country].filter(Boolean).join(", ");
         return {
-          uid: `f1-${e.espn_id}@scoredb`,
+          uid: `f1-${e.espn_id}@sportsdb`,
           start: weekendStart,
           end: endExclusive,
           allDay: true,

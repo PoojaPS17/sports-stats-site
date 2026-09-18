@@ -38,7 +38,7 @@ export function Footer() {
         <div className="flex flex-col gap-3">
           <Link href="/" className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight">
             <LogoMark size={26} />
-            ScoreDB
+            SportsDB
           </Link>
           <p className="max-w-lg text-sm leading-relaxed text-[var(--text-muted)]">
             Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years of history for every team
@@ -98,7 +98,7 @@ export function Footer() {
       <div className="border-t border-[var(--border)]">
         <div className="container-x flex flex-col gap-2 py-4 text-xs text-[var(--text-faint)]">
           <p>
-            © {new Date().getFullYear()} ScoreDB. An independent site, not affiliated with or endorsed by any league, club, player, broadcaster, betting
+            © {new Date().getFullYear()} SportsDB. An independent site, not affiliated with or endorsed by any league, club, player, broadcaster, betting
             operator or data provider. Team names, crests and logos are the property of their respective owners and appear for identification only.
           </p>
           <p>

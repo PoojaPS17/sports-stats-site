@@ -26,7 +26,7 @@ export interface CricketSeries {
   completed_count: number;
   live_count: number;
   teams: { id: string; name: string; abbreviation: string | null; logo: string | null }[];
-  /** The ScoreDB competition this series is, when it is one (IPL, World Cups, ...). */
+  /** The SportsDB competition this series is, when it is one (IPL, World Cups, ...). */
   league: League | null;
 }
 
@@ -60,7 +60,7 @@ export interface CricketSeriesMatch {
   status_summary: string | null;
   home: SeriesSide | null;
   away: SeriesSide | null;
-  /** ScoreDB league holding this match's stored scorecard, when one exists. */
+  /** SportsDB league holding this match's stored scorecard, when one exists. */
   scorecard_league: League | null;
 }
 

@@ -21,7 +21,7 @@ const SPORT_LEAGUES: Record<string, string[]> = {
   nfl: ["nfl"],
 };
 
-const USER_AGENT = "ScoreDB/1.0 (https://sports-stats-site.vercel.app; player photo import)";
+const USER_AGENT = "SportsDB/1.0 (https://sports-stats-site.vercel.app; player photo import)";
 const SPARQL = `SELECT ?sport ?espn ?img WHERE {
   VALUES (?prop ?sport) { (wdt:P3681 "soccer") (wdt:P3685 "nba") (wdt:P3686 "nfl") }
   ?item ?prop ?espn ; wdt:P18 ?img .

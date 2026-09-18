@@ -17,7 +17,7 @@ export function formatSeriesDates(start: string | null, end: string | null): str
   return `${s.toLocaleDateString("en-US", opts)} – ${sameMonth ? e.getUTCDate() : e.toLocaleDateString("en-US", opts)}, ${e.getUTCFullYear()}`;
 }
 
-/** Where a match's scorecard lives: ScoreDB's own page when the competition is archived, else the live page. */
+/** Where a match's scorecard lives: SportsDB's own page when the competition is archived, else the live page. */
 export function matchHref(m: CricketSeriesMatch): string {
   return m.scorecard_league ? `/${m.scorecard_league}/games/${m.espn_id}` : `/cricket/matches/${m.espn_id}`;
 }

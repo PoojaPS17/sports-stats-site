@@ -15,7 +15,7 @@ import { TrendingCountrySelect } from "@/components/TrendingCountrySelect";
 import { TrendingFigures } from "@/components/TrendingFigures";
 import { TrendingApps } from "@/components/TrendingApps";
 
-export const metadata = pageMeta("Top Sports Games", "The most-viewed matches on ScoreDB right now, plus trending sports apps and figures.", "/top-games");
+export const metadata = pageMeta("Top Sports Games", "The most-viewed matches on SportsDB right now, plus trending sports apps and figures.", "/top-games");
 
 export const revalidate = 300;
 
@@ -71,7 +71,7 @@ export default async function TopGamesPage({
       <div>
         <h1 className="page-title">Top Sports Games</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          Ranked by real visits to each match page on ScoreDB — across Premier League, NFL, NBA and IPL. Country and
+          Ranked by real visits to each match page on SportsDB — across Premier League, NFL, NBA and IPL. Country and
           device come from real visitors, the same way an app store chart is built from actual usage.
         </p>
       </div>
@@ -130,7 +130,7 @@ export default async function TopGamesPage({
       <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-extrabold tracking-tight">Trending Beyond ScoreDB</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">Trending Beyond SportsDB</h2>
             <p className="mt-0.5 text-sm text-[var(--text-muted)]">
               Real external signals — Apple App Store Sports app rankings and Wikipedia pageview spikes —
               cross-checked against the players and teams we track.

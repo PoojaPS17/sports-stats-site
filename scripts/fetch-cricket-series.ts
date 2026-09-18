@@ -3,7 +3,7 @@
 // A-team — with each one's fixtures and results. One request per calendar day; the
 // same feed scripts/import-cricket-espn.ts reads for the men's and women's
 // internationals, so the listing's series ids and match ids line up with the
-// scorecards ScoreDB already stores under its own competitions.
+// scorecards SportsDB already stores under its own competitions.
 //
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts                    # last 3 days + next 10
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --days 10 --ahead 90
@@ -15,7 +15,7 @@ const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?spor
 const REQUEST_DELAY_MS = 120;
 const RETRIES = 4;
 
-// ESPN series ids of the competitions ScoreDB keeps scorecards for, and the
+// ESPN series ids of the competitions SportsDB keeps scorecards for, and the
 // international class ids that route a match to the bilateral archives.
 const LEAGUE_BY_SERIES: Record<string, string> = {
   "8048": "ipl",

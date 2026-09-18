@@ -25,7 +25,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const { league, id } = await params;
   const game = isLeague(league) ? await getGameByEspnId(league, id) : null;
   if (!game) {
-    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1220", color: "#e8edf6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>ScoreDB</div>, size);
+    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1220", color: "#e8edf6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
   }
   const played = game.completed && game.home_score != null && game.away_score != null;
   const homeWon = played && (game.home_winner ?? game.home_score! > game.away_score!);
@@ -56,7 +56,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           <div style={{ fontSize: 40, color: "#6b788f", fontWeight: 700 }}>{played ? "" : "vs"}</div>
           <Side name={game.home_name} logo={game.home_logo} score={played ? String(game.home_score_display ?? game.home_score) : null} muted={played && !homeWon} />
         </div>
-        <div style={{ fontSize: 26, color: "#6ea0ff", fontWeight: 700 }}>ScoreDB</div>
+        <div style={{ fontSize: 26, color: "#6ea0ff", fontWeight: 700 }}>SportsDB</div>
       </div>
     ),
     size

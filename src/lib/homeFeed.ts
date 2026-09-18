@@ -1,5 +1,5 @@
 // The home page's cross-sport feed: what is in play right now and the biggest
-// fixtures of the coming week, across every competition ScoreDB covers.
+// fixtures of the coming week, across every competition SportsDB covers.
 import { pool } from "./db";
 import { GAME_SELECT, type GameRow, type League } from "./queries";
 import { ALL_LEAGUES } from "./leagues";

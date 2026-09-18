@@ -13,7 +13,7 @@ const EDITIONS: { country: string; project: string }[] = [
   { country: "BR", project: "pt.wikipedia" },
 ];
 
-const USER_AGENT = "ScoreDB/1.0 (https://github.com/PoojaPS17/sports-stats-site)";
+const USER_AGENT = "SportsDB/1.0 (https://github.com/PoojaPS17/sports-stats-site)";
 const MAX_MATCHES_PER_EDITION = 15;
 
 interface WikiArticle {
