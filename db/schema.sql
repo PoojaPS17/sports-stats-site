@@ -316,6 +316,52 @@ create index if not exists tennis_matches_sides_idx on tennis_matches using gin 
 -- part of how every scoreboard shows a name.
 alter table players add column if not exists country text;
 
+-- Every cricket series ESPN lists — tours, tournaments, domestic leagues, men's and
+-- women's, youth and A-team — with its fixtures and results, from the same daily
+-- listing the internationals importer reads (scripts/fetch-cricket-series.ts). This
+-- is the "Series" directory: the competitions ScoreDB keeps scorecards for link
+-- through to their match pages; everything else shows scores and results only.
+create table if not exists cricket_series (
+  espn_id text primary key,
+  name text not null,
+  short_name text,
+  abbreviation text,
+  slug text,
+  is_tournament boolean not null default false,
+  kind text not null,             -- international | womens-international | domestic | womens-domestic | other
+  formats text[] not null default '{}',   -- distinct class cards seen: ODI, T20I, Test, First-class, ...
+  season int,
+  start_date timestamptz,
+  end_date timestamptz,
+  match_count int not null default 0,
+  completed_count int not null default 0,
+  teams jsonb not null default '[]'::jsonb,   -- [{id, name, abbreviation, logo}]
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists cricket_series_dates_idx on cricket_series (start_date, end_date);
+
+create table if not exists cricket_series_matches (
+  espn_id text primary key,
+  series_espn_id text not null,
+  date timestamptz not null,
+  name text not null,
+  short_name text,
+  description text,               -- "2nd ODI", "Final", "10th Match" when the listing gives it
+  class_card text,
+  class_name text,
+  international_class_id text,
+  status_state text,              -- pre | in | post
+  status_summary text,
+  home jsonb,                     -- {id, name, abbreviation, score, winner, logo}
+  away jsonb,
+  league_candidates text[] not null default '{}',   -- ScoreDB leagues this match may have a scorecard under
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists cricket_series_matches_series_idx on cricket_series_matches (series_espn_id, date);
+create index if not exists cricket_series_matches_date_idx on cricket_series_matches (date);
+
 -- Real external trending signals (Wikipedia pageview spikes, Apple App Store Sports
 -- app charts) to complement game_views, which only tells us what's popular on ScoreDB
 -- itself. Each fetch script wipes and re-inserts its own (source, country) slice, so

@@ -7,7 +7,7 @@ import { pool } from "./lib/db";
 import { fetchSummary, type League } from "./lib/espn";
 import { uniqueSlugFor } from "./lib/players";
 
-const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
 async function processTeam(league: League, teamEspnId: string) {
   const { rows } = await pool.query(

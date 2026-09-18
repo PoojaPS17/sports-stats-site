@@ -3,20 +3,42 @@
 // that runs in the browser (e.g. LeagueSubNav) must import from here directly instead
 // of from queries.ts, since importing any value from that module pulls in `pg` (via
 // ./db) and breaks the client bundle (`tls`/`util/types` aren't available there).
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "bundesliga" | "seriea" | "ucl" | "odi" | "t20i";
+export type League =
+  | "nba"
+  | "nfl"
+  | "epl"
+  | "ipl"
+  | "bbl"
+  | "cwc"
+  | "t20wc"
+  | "laliga"
+  | "bundesliga"
+  | "seriea"
+  | "ucl"
+  | "odi"
+  | "t20i"
+  | "wpl"
+  | "wbbl"
+  | "wcwc"
+  | "wt20wc"
+  | "wodi"
+  | "wt20i";
 
 // The 4 major, always-active leagues — these get homepage sections and top-level nav
 // links. The other competitions (only in season occasionally, or every 2-4 years for
 // the World Cups) are reachable via the Cricket/Soccer dropdowns instead, so they
 // don't clutter the homepage with empty "no games scheduled" sections most of the year.
 export const LEAGUES: League[] = ["epl", "nfl", "nba", "ipl"];
-export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "odi", "t20i"];
+export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i"];
+// The women's game: the WPL and WBBL, both World Cups, and the bilateral formats.
+export const WOMENS_CRICKET: League[] = ["wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i"];
 // Bilateral internationals come from Cricsheet's archive (scripts/import-cricsheet.ts)
-// rather than an ESPN feed: completed matches with full scorecards, but no fixtures,
-// standings or news, and nothing live.
-export const INTERNATIONAL_CRICKET: League[] = ["odi", "t20i"];
+// and ESPN's daily listing (scripts/import-cricket-espn.ts) rather than a competition
+// feed: completed matches with full scorecards, but no fixtures, standings or news,
+// and nothing live.
+export const INTERNATIONAL_CRICKET: League[] = ["odi", "t20i", "wodi", "wt20i"];
 export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl"];
-export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "odi", "t20i", "laliga", "bundesliga", "seriea", "ucl"];
+export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i", "laliga", "bundesliga", "seriea", "ucl"];
 export const LEAGUE_LABEL: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
@@ -27,11 +49,21 @@ export const LEAGUE_LABEL: Record<League, string> = {
   t20wc: "T20 World Cup",
   odi: "ODI Internationals",
   t20i: "T20 Internationals",
+  wpl: "Women's Premier League",
+  wbbl: "Women's Big Bash",
+  wcwc: "Women's World Cup",
+  wt20wc: "Women's T20 World Cup",
+  wodi: "Women's ODIs",
+  wt20i: "Women's T20Is",
   laliga: "La Liga",
   bundesliga: "Bundesliga",
   seriea: "Serie A",
   ucl: "Champions League",
 };
+
+export function isWomensCricket(league: League): boolean {
+  return (WOMENS_CRICKET as string[]).includes(league);
+}
 
 // "the NBA", "the Premier League", but "La Liga" and "Serie A" take no article.
 export function leagueNameWithArticle(league: League, capitalise = false): string {

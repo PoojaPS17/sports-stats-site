@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { Flag, TennisDayStrip, TennisDayView, TournamentCard, formatDayLabel } from "@/components/TennisScores";
+import { LiveRefresh } from "@/components/LiveRefresh";
+import { overlayLiveTennis } from "@/lib/tennisLive";
 import { getLatestTennisDay, getTennisDay, getTennisDaysAround, getTennisRankings, getTennisTournamentsAround, TOURS, TOUR_LABEL } from "@/lib/tennis";
 
 export const revalidate = 120;
@@ -25,11 +27,18 @@ export default async function TennisHubPage() {
   const [todayMatches, latest] = await Promise.all([getTennisDay(today), getLatestTennisDay()]);
   // A quiet Monday between tournaments falls back to the last day with play.
   const day = todayMatches.length > 0 ? today : (latest ?? today);
-  const matches = day === today ? todayMatches : await getTennisDay(day);
-  const [days, tournaments, atp, wta] = await Promise.all([getTennisDaysAround(day), getTennisTournamentsAround(today), getTennisRankings("atp", 5), getTennisRankings("wta", 5)]);
+  const stored = day === today ? todayMatches : await getTennisDay(day);
+  const [{ matches, live }, days, tournaments, atp, wta] = await Promise.all([
+    overlayLiveTennis(day, stored),
+    getTennisDaysAround(day),
+    getTennisTournamentsAround(today),
+    getTennisRankings("atp", 5),
+    getTennisRankings("wta", 5),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
+      <LiveRefresh active={live} />
       <PageHeader title="Tennis" subtitle="Every ATP and WTA tournament, day by day: set scores, order of play, draws and rankings.">
         <Link href="/tennis/tournaments" className="nav-pill">
           Calendar

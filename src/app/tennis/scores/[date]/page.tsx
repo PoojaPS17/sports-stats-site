@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { TennisDayStrip, TennisDayView, formatDayLabel } from "@/components/TennisScores";
 import { getTennisDay, getTennisDaysAround } from "@/lib/tennis";
+import { overlayLiveTennis } from "@/lib/tennisLive";
+import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 120;
 
@@ -21,10 +23,12 @@ export default async function TennisDayPage({ params }: { params: Promise<{ date
   const { date } = await params;
   if (!DATE_RE.test(date) || Number.isNaN(new Date(`${date}T12:00:00Z`).getTime())) notFound();
 
-  const [matches, days] = await Promise.all([getTennisDay(date), getTennisDaysAround(date)]);
+  const [stored, days] = await Promise.all([getTennisDay(date), getTennisDaysAround(date)]);
+  const { matches, live } = await overlayLiveTennis(date, stored);
 
   return (
     <div className="flex flex-col gap-6">
+      <LiveRefresh active={live} />
       <PageHeader title={formatDayLabel(date)} subtitle="Tennis scores from every tournament in play, grouped by tournament and draw. Times are in your local time zone.">
         <Link href="/tennis" className="nav-pill">
           Today

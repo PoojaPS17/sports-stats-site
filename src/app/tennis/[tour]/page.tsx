@@ -7,6 +7,8 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { Flag, TennisDayStrip, TennisDayView, TournamentCard, formatDayLabel } from "@/components/TennisScores";
 import { isTour, getTennisDay, getTennisDaysAround, getLatestTennisDay, getTennisRankings, getTennisTournamentsAround, TOUR_LABEL } from "@/lib/tennis";
+import { overlayLiveTennis } from "@/lib/tennisLive";
+import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 120;
 
@@ -23,12 +25,13 @@ export default async function TennisTourPage({ params }: { params: Promise<{ tou
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
   const [todayMatches, latest] = await Promise.all([getTennisDay(today, tour), getLatestTennisDay()]);
   const day = todayMatches.length > 0 ? today : (latest ?? today);
-  const matches = day === today ? todayMatches : await getTennisDay(day, tour);
-  const [days, tournaments, rankings] = await Promise.all([getTennisDaysAround(day), getTennisTournamentsAround(today), getTennisRankings(tour, 10)]);
+  const stored = day === today ? todayMatches : await getTennisDay(day, tour);
+  const [{ matches, live }, days, tournaments, rankings] = await Promise.all([overlayLiveTennis(day, stored, tour), getTennisDaysAround(day), getTennisTournamentsAround(today), getTennisRankings(tour, 10)]);
   const tourTournaments = tournaments.filter((t) => t.tour === tour || t.tour === "both");
 
   return (
     <div className="flex flex-col gap-8">
+      <LiveRefresh active={live} />
       <PageHeader title={`${TOUR_LABEL[tour]} Scores`} subtitle={`${TOUR_LABEL[tour]} matches day by day, from every tournament ESPN lists, with set scores, seeds and courts.`}>
         <Link href="/tennis" className="nav-pill">
           All tennis

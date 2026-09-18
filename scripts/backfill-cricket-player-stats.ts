@@ -10,7 +10,7 @@ import { extractCricketMatchStats } from "./lib/cricket-career";
 import { uniqueSlugFor } from "./lib/players";
 
 const REQUEST_DELAY_MS = 100;
-const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

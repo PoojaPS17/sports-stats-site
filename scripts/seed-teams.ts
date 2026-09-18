@@ -3,7 +3,7 @@ import { fetchTeams, fetchCricketTeams, type League } from "./lib/espn";
 import { upsertTeam } from "./lib/teams";
 import { scopedLeagues } from "./lib/scope";
 
-const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
 // Cricket's team source is the current scoreboard's own embedded `teams` array (its
 // /teams endpoint 404s) — that's 0 teams for a tournament that isn't currently in
@@ -24,7 +24,7 @@ async function seedLeague(league: League) {
   console.log(`[seed-teams] ${league}: upserted ${teams.length} teams`);
 }
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
 async function main() {
   const target = process.argv[2] as League | undefined;

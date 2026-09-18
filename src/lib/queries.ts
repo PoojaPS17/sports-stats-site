@@ -483,6 +483,12 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
   t20wc: [],
   odi: [],
   t20i: [],
+  wpl: [],
+  wbbl: [],
+  wcwc: [],
+  wt20wc: [],
+  wodi: [],
+  wt20i: [],
   laliga: [
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },

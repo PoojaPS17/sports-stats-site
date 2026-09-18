@@ -25,10 +25,10 @@ import { upsertTeam } from "./lib/teams";
 import { uniqueSlugFor } from "./lib/players";
 import { extractGameDetails } from "../src/lib/matchDetail";
 
-type IntlLeague = "odi" | "t20i";
+type IntlLeague = "odi" | "t20i" | "wodi" | "wt20i";
 // ESPN's `class.internationalClassId`: 2 = men's ODI, 3 = men's T20I (women's
 // internationals and every domestic/first-class card use other ids).
-const CLASS_TO_LEAGUE: Record<string, IntlLeague> = { "2": "odi", "3": "t20i" };
+const CLASS_TO_LEAGUE: Record<string, IntlLeague> = { "2": "odi", "3": "t20i", "9": "wodi", "10": "wt20i" };
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
 const SUMMARY_URL = (seriesId: string, eventId: string) => `https://site.api.espn.com/apis/site/v2/sports/cricket/${seriesId}/summary?event=${eventId}`;
@@ -80,8 +80,8 @@ function parseArgs() {
     process.exit(1);
   }
   const league = opt("league") as IntlLeague | undefined;
-  if (league && !(league === "odi" || league === "t20i")) {
-    console.error("--league must be odi or t20i");
+  if (league && !["odi", "t20i", "wodi", "wt20i"].includes(league)) {
+    console.error("--league must be odi, t20i, wodi or wt20i");
     process.exit(1);
   }
   return { since, until, league, dryRun: args.includes("--dry-run") };
@@ -363,14 +363,14 @@ async function main() {
   // Stored means the game row exists: a washed-out match legitimately has no player
   // figures (from either source), so checking for cards would re-fetch it every run.
   const ids = [...found.values()];
-  const { rows: stored } = await pool.query(`select league, espn_id from games where league in ('odi','t20i') and espn_id = any($1::text[])`, [
+  const { rows: stored } = await pool.query(`select league, espn_id from games where league in ('odi','t20i','wodi','wt20i') and espn_id = any($1::text[])`, [
     ids.map((f) => f.id),
   ]);
   const have = new Set(stored.map((r) => `${r.league}:${r.espn_id}`));
   const missing = ids.filter((f) => !have.has(`${f.league}:${f.id}`)).sort((a, b) => a.date.localeCompare(b.date));
   console.log(`[import-cricket-espn] ${ids.length - missing.length} already stored, ${missing.length} to fetch`);
 
-  const written: Record<IntlLeague, number> = { odi: 0, t20i: 0 };
+  const written: Record<IntlLeague, number> = { odi: 0, t20i: 0, wodi: 0, wt20i: 0 };
   let failed = 0;
   for (const f of missing) {
     try {
@@ -382,7 +382,7 @@ async function main() {
     }
     await sleep(REQUEST_DELAY_MS);
   }
-  console.log(`[import-cricket-espn] done: odi ${written.odi}, t20i ${written.t20i} written, ${failed} skipped/failed`);
+  console.log(`[import-cricket-espn] done: odi ${written.odi}, t20i ${written.t20i}, wodi ${written.wodi}, wt20i ${written.wt20i} written, ${failed} skipped/failed`);
   await pool.end();
 }
 

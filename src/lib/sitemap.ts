@@ -35,7 +35,9 @@ async function core(): Promise<Entry[]> {
     entry("/privacy", "yearly", 0.2),
     entry("/terms", "yearly", 0.2),
   ];
-  out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7));
+  out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7), entry("/cricket/series", "hourly", 0.8));
+  const { rows: cricketSeries } = await pool.query(`select espn_id, end_date from cricket_series where end_date >= now() - interval '400 days' order by start_date desc`);
+  for (const { espn_id, end_date } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, "daily", 0.5, end_date));
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
   const { rows: tournaments } = await pool.query(`select espn_id, season, end_date from tennis_tournaments order by season desc, start_date`);
   for (const { espn_id, end_date } of tournaments) out.push(entry(`/tennis/tournaments/${espn_id}`, "weekly", 0.5, end_date));

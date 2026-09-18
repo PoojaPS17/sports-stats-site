@@ -62,6 +62,20 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run fetch:tennis-daily
 
+      # Every cricket series ESPN lists (tours, tournaments, domestic leagues, men's
+      # and women's) with fixtures and results: the Series directory. Three requests
+      # per tick for the live window; the daily run also sweeps the next 90 days.
+      - name: Fetch cricket series listing
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:cricket-series -- --days 1 --ahead 2
+
+      - name: Sweep the cricket series calendar
+        if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run fetch:cricket-series -- --days 10 --ahead 90
+
       - name: Fetch tennis rankings and season calendar
         if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
         env:

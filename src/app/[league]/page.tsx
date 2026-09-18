@@ -68,8 +68,9 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
       {international && (
         <p className="text-xs text-[var(--text-muted)]">
-          Men&apos;s internationals from Cricsheet&apos;s ball-by-ball archive, with the matches it does not carry (every match involving Afghanistan&apos;s
-          men&apos;s team, and the newest results) filled daily from ESPN&apos;s scorecards: completed matches only, no fixtures or live scores.
+          {league === "wodi" || league === "wt20i"
+            ? "Women's internationals from ESPN's scorecards, refreshed daily: completed matches only, no fixtures or live scores."
+            : "Men's internationals from Cricsheet's ball-by-ball archive, with the matches it does not carry (every match involving Afghanistan's men's team, and the newest results) filled daily from ESPN's scorecards: completed matches only, no fixtures or live scores."}
         </p>
       )}
 

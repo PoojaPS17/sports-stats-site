@@ -13,7 +13,7 @@ import { upsertEvent } from "./lib/games";
 
 const YEARS_BACK = 10;
 const REQUEST_DELAY_MS = 120;
-const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -141,7 +141,7 @@ async function backfillCricketViaSeasonScoreboard(league: League, onlySeasons: n
 
 async function main() {
   const target = process.argv[2] as League | undefined;
-  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
+  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
   // Optional comma-separated seasons (cricket only): `backfill-games cwc 1987,1992`.
   const onlySeasons = process.argv[3] ? process.argv[3].split(",").map(Number).filter(Number.isInteger) : null;
 

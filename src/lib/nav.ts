@@ -26,7 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "NBA", href: "/nba" },
   {
     label: "Cricket",
-    children: CRICKET_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` })),
+    children: [{ label: "All series & live", href: "/cricket/series" }, ...CRICKET_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))],
   },
   {
     label: "Tennis",

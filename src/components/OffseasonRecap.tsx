@@ -17,7 +17,7 @@ function record(league: League, r: Recap["table"][number]): string {
 export function OffseasonRecap({ league, recap }: { league: League; recap: Recap }) {
   const ended = recap.endedOn ? new Date(recap.endedOn).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null;
   // World Cups are editions, not seasons.
-  const noun = league === "cwc" || league === "t20wc" ? "tournament" : "season";
+  const noun = league === "cwc" || league === "t20wc" || league === "wcwc" || league === "wt20wc" ? "tournament" : "season";
   const closingTitle = recap.playoffs.length > 0 ? `How the ${recap.seasonLabel} ${noun} ended` : `Final results of ${recap.seasonLabel}`;
 
   return (

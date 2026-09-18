@@ -11,6 +11,10 @@ const SPORT_PATH: Partial<Record<League, string>> = {
   bbl: "cricket/8044",
   cwc: "cricket/8039",
   t20wc: "cricket/8604",
+  wpl: "cricket/21282",
+  wbbl: "cricket/21284",
+  wcwc: "cricket/8584",
+  wt20wc: "cricket/8634",
   laliga: "soccer/esp.1",
   bundesliga: "soccer/ger.1",
   seriea: "soccer/ita.1",
@@ -26,7 +30,9 @@ export async function fetchMatchSummary(league: League, espnId: string): Promise
   if (!path) return null;
   try {
     const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${espnId}`, {
-      next: { revalidate: 300 },
+      // Short enough that a match in play tracks ESPN's feed (the page re-renders in
+      // the browser every 30 seconds while live); finished games read stored details.
+      next: { revalidate: 30 },
     });
     if (!res.ok) return null;
     return await res.json();

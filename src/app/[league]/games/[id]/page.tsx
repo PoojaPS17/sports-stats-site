@@ -10,6 +10,7 @@ import { fetchMatchSummary, extractGameDetails, type GameDetails, type MatchSpor
 import { getMatchContext } from "@/lib/matchContext";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamStatsComparison } from "@/components/TeamStatsComparison";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
@@ -32,7 +33,9 @@ import type { League } from "@/lib/queries";
 // Completed games read their stored report from the database. Games in progress (or
 // not yet backfilled) fall back to a live fetch (see lib/matchDetail.ts), so the
 // revalidation window keeps a live game fresh without hitting ESPN on every request.
-export const revalidate = 120;
+// Short so a game in play tracks the feed; the page re-renders in the browser every
+// 30 seconds while live, and finished games are served from stored details anyway.
+export const revalidate = 30;
 
 function sportOf(league: League): MatchSport {
   return isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "american";
@@ -133,6 +136,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           { label: `${game.away_name} vs ${game.home_name}` },
         ]}
       />
+      <LiveRefresh active={game.status_state === "in"} />
       <MatchHeader league={league} game={game} />
       {details && <MatchFacts league={league} game={game} details={details} />}
 

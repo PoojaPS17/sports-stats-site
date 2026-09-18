@@ -1,7 +1,7 @@
 import { pool } from "./db";
 import { fetchCoreTeam, fetchByRef, type League, isSoccerLeague } from "./espn";
 
-const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
 // Fetches venue + current head coach for one team and stores it on the `teams` row.
 // Not available for any cricket competition (their team-level core-API endpoints

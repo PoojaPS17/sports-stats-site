@@ -32,7 +32,7 @@ async function backfillLeague(league: League) {
 
 async function main() {
   const target = process.argv[2] as League | undefined;
-  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc"];
+  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
   for (const league of leagues) {
     console.log(`[backfill-standings] starting ${league} (${HISTORY_START[league] ? `since ${HISTORY_START[league]}` : `last ${YEARS_BACK} years`})...`);

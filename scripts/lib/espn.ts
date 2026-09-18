@@ -1,9 +1,10 @@
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "laliga" | "bundesliga" | "seriea" | "ucl";
+export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "wpl" | "wbbl" | "wcwc" | "wt20wc" | "laliga" | "bundesliga" | "seriea" | "ucl";
 
 // Cricket competition ids: IPL 8048, Big Bash League 8044, ICC Cricket World Cup
-// (ODI) 8039, ICC Men's T20 World Cup 8604 — each resolves to the *current* edition
-// by default via this path, but accepts `season=` for any other year (see
-// fetchScoreboardBySeason/fetchStandingsBySeason).
+// (ODI) 8039, ICC Men's T20 World Cup 8604, Women's Premier League 21282, Women's
+// Big Bash League 21284, ICC Women's World Cup 8584, ICC Women's T20 World Cup 8634
+// — each resolves to the *current* edition by default via this path, but accepts
+// `season=` for any other year (see fetchScoreboardBySeason/fetchStandingsBySeason).
 export const SPORT_PATH: Record<League, string> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
@@ -12,13 +13,17 @@ export const SPORT_PATH: Record<League, string> = {
   bbl: "cricket/8044",
   cwc: "cricket/8039",
   t20wc: "cricket/8604",
+  wpl: "cricket/21282",
+  wbbl: "cricket/21284",
+  wcwc: "cricket/8584",
+  wt20wc: "cricket/8634",
   laliga: "soccer/esp.1",
   bundesliga: "soccer/ger.1",
   seriea: "soccer/ita.1",
   ucl: "soccer/uefa.champions",
 };
 
-const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc"];
+const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 export function isCricketLeague(league: League): boolean {
   return CRICKET_LEAGUES.includes(league);
 }
@@ -112,7 +117,7 @@ export function fetchScoreboardBySeason(league: League, season: number, options:
 // default window: IPL from 2008, the Big Bash from 2011-12, the ODI World Cup from
 // the first edition in 1975 and the T20 World Cup from 2007. Years without an
 // edition simply return no matches.
-export const HISTORY_START: Partial<Record<League, number>> = { ipl: 2008, bbl: 2011, cwc: 1975, t20wc: 2007 };
+export const HISTORY_START: Partial<Record<League, number>> = { ipl: 2008, bbl: 2011, cwc: 1975, t20wc: 2007, wpl: 2023, wbbl: 2015, wcwc: 1973, wt20wc: 2009 };
 
 // `level=3` asks for the division-level groups (conference → division → teams) that
 // the NFL table is conventionally shown in; the default response stops at conferences.
@@ -200,6 +205,10 @@ const CORE_LEAGUE_PATH: Record<League, string> = {
   bbl: "cricket/leagues/8044",
   cwc: "cricket/leagues/8039",
   t20wc: "cricket/leagues/8604",
+  wpl: "cricket/leagues/21282",
+  wbbl: "cricket/leagues/21284",
+  wcwc: "cricket/leagues/8584",
+  wt20wc: "cricket/leagues/8634",
 };
 
 // The core API's season-scoped team resource carries venue + a coaches reference in
