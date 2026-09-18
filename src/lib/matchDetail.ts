@@ -115,6 +115,21 @@ export interface CricketInningsRow {
   name: string;
   athleteId: string;
   stats: string[];
+  /** Match innings number (ESPN period): 1–2 in a limited-overs match, 1–4 in a first-class one. Absent in reports stored before innings were tracked. */
+  innings?: number;
+  /** Batting order or bowling order within the innings. */
+  position?: number;
+  /** How the batter was out ("c Currie b Abbott"), "not out", or null for bowling rows. */
+  dismissal?: string | null;
+}
+
+export interface CricketInningsTotal {
+  period: number;
+  runs: number;
+  wickets: number;
+  overs: number;
+  /** ESPN's innings note: "all out", "declared", "super over"… empty while in progress. */
+  description: string;
 }
 
 export interface CricketTeamScorecard {
@@ -124,6 +139,8 @@ export interface CricketTeamScorecard {
   battingRows: CricketInningsRow[];
   bowlingLabels: string[];
   bowlingRows: CricketInningsRow[];
+  /** The team's batting innings totals, in match order. Absent in older stored reports. */
+  innings?: CricketInningsTotal[];
 }
 
 const BATTING_FIELDS: [string, string][] = [
@@ -141,11 +158,19 @@ const BOWLING_FIELDS: [string, string][] = [
   ["economyRate", "Econ"],
 ];
 
+// ESPN's dismissal text carries HTML entities (&dagger; marks the keeper).
+function decodeEntities(text: string): string {
+  return text.replace(/&dagger;/g, "†").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
+}
+
 // Cricket has no boxscore/rosters-with-flat-stats shape like the other sports — each
 // player's batting and bowling figures live inside rosters[].roster[].linescores[],
-// one entry per innings they took part in, with the underlying stat names differing
-// depending on whether that entry represents a batting or a bowling contribution.
+// one entry per innings they took part in (period = the match innings number), with
+// the underlying stat names differing depending on whether that entry represents a
+// batting or a bowling contribution. A first-class match therefore yields two batting
+// entries for the same player; the innings number keeps them apart on the page.
 export function parseCricketScorecard(data: any): CricketTeamScorecard[] {
+  const competitors: any[] = data.header?.competitions?.[0]?.competitors ?? [];
   return (data.rosters ?? []).map((r: any) => {
     const battingRows: CricketInningsRow[] = [];
     const bowlingRows: CricketInningsRow[] = [];
@@ -155,33 +180,62 @@ export function parseCricketScorecard(data: any): CricketTeamScorecard[] {
         const stats: any[] = period.statistics?.categories?.[0]?.stats ?? [];
         if (stats.length === 0) continue;
         const get = (name: string) => stats.find((s) => s.name === name)?.displayValue;
+        const num = (name: string) => Number(stats.find((s) => s.name === name)?.value ?? get(name) ?? 0);
+        const innings = Number(period.period) > 0 ? Number(period.period) : undefined;
         const isBatting = stats.some((s) => s.name === "ballsFaced");
         const isBowling = stats.some((s) => s.name === "overs");
 
-        if (isBatting && Number(get("ballsFaced") ?? 0) > 0) {
+        // "batted" is ESPN's own flag; the balls-faced fallback covers feeds without it.
+        // A batter run out without facing a ball still batted.
+        if (isBatting && (num("batted") > 0 || num("ballsFaced") > 0)) {
+          const outText: string | undefined = period.statistics?.batting?.outDetails?.shortText;
           battingRows.push({
             athleteId: p.athlete.id,
             name: p.athlete.displayName,
             stats: BATTING_FIELDS.map(([key]) => get(key) ?? "-"),
+            innings,
+            position: num("battingPosition") || undefined,
+            dismissal: outText ? decodeEntities(outText) : num("outs") > 0 ? "out" : "not out",
           });
         }
-        if (isBowling && Number(get("overs") ?? 0) > 0) {
+        if (isBowling && num("overs") > 0) {
           bowlingRows.push({
             athleteId: p.athlete.id,
             name: p.athlete.displayName,
             stats: BOWLING_FIELDS.map(([key]) => get(key) ?? "-"),
+            innings,
+            position: num("bowlingPosition") || undefined,
+            dismissal: null,
           });
         }
       }
     }
 
+    // Roster order is squad order; the scorecard reads in batting and bowling order.
+    const byOrder = (a: CricketInningsRow, b: CricketInningsRow) => (a.innings ?? 0) - (b.innings ?? 0) || (a.position ?? 99) - (b.position ?? 99);
+    battingRows.sort(byOrder);
+    bowlingRows.sort(byOrder);
+
+    const teamId = r.team?.id;
+    const competitor = competitors.find((c) => String(c.team?.id) === String(teamId));
+    const innings: CricketInningsTotal[] = (competitor?.linescores ?? [])
+      .filter((l: any) => l.isBatting === true && Number(l.period) > 0)
+      .map((l: any) => ({
+        period: Number(l.period),
+        runs: Number(l.runs ?? 0),
+        wickets: Number(l.wickets ?? 0),
+        overs: Number(l.overs ?? 0),
+        description: String(l.description ?? "").trim(),
+      }));
+
     return {
-      teamId: r.team?.id,
+      teamId,
       teamName: r.team?.displayName ?? r.team?.name,
       battingLabels: BATTING_FIELDS.map(([, label]) => label),
       battingRows,
       bowlingLabels: BOWLING_FIELDS.map(([, label]) => label),
       bowlingRows,
+      innings,
     };
   });
 }

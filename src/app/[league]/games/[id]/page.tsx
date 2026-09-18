@@ -14,7 +14,7 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamStatsComparison } from "@/components/TeamStatsComparison";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
-import { CricketScorecard } from "@/components/CricketScorecard";
+import { CricketScorecards } from "@/components/CricketScorecard";
 import { ViewTracker } from "@/components/ViewTracker";
 import { MatchFacts } from "@/components/MatchFacts";
 import { MatchTimeline } from "@/components/MatchTimeline";
@@ -214,9 +214,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
       {isCricket && cricketScorecard.length > 0 && (
         <section className="flex flex-col gap-4">
           <SectionHeader>Scorecard</SectionHeader>
-          {cricketScorecard.map((team) => (
-            <CricketScorecard key={team.teamId} league={league} team={team} playerSlugs={playerSlugs} />
-          ))}
+          <CricketScorecards league={league} scorecard={cricketScorecard} playerSlugs={playerSlugs} />
         </section>
       )}
 

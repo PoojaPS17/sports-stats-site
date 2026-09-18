@@ -8,7 +8,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
 import { LocalTime } from "@/components/LocalTime";
 import { LiveRefresh } from "@/components/LiveRefresh";
-import { CricketScorecard } from "@/components/CricketScorecard";
+import { CricketScorecards } from "@/components/CricketScorecard";
 import { extractGameDetails } from "@/lib/matchDetail";
 import { getCricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
 import { fetchCricketSummaryLive } from "@/lib/cricketLive";
@@ -102,9 +102,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
       {details && details.scorecard.length > 0 ? (
         <section className="flex flex-col gap-4">
           <SectionHeader description={live ? "Updating while the match is in play" : undefined}>Scorecard</SectionHeader>
-          {details.scorecard.map((team) => (
-            <CricketScorecard key={team.teamId} league="odi" team={team} playerSlugs={new Map()} />
-          ))}
+          <CricketScorecards league="odi" scorecard={details.scorecard} playerSlugs={new Map()} />
         </section>
       ) : (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
