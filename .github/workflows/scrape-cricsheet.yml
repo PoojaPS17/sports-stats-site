@@ -31,9 +31,13 @@ jobs:
           mkdir -p cricsheet
           curl -sSL -o cricsheet/odis_male_json.zip https://cricsheet.org/downloads/odis_male_json.zip
           curl -sSL -o cricsheet/t20s_male_json.zip https://cricsheet.org/downloads/t20s_male_json.zip
+          curl -sSL -o cricsheet/ipl_male_json.zip https://cricsheet.org/downloads/ipl_male_json.zip
+          curl -sSL -o cricsheet/bbl_male_json.zip https://cricsheet.org/downloads/bbl_male_json.zip
           curl -sSL -o cricsheet/people.csv https://cricsheet.org/register/people.csv
           unzip -q -o cricsheet/odis_male_json.zip -d cricsheet/odis
           unzip -q -o cricsheet/t20s_male_json.zip -d cricsheet/t20s
+          unzip -q -o cricsheet/ipl_male_json.zip -d cricsheet/ipl
+          unzip -q -o cricsheet/bbl_male_json.zip -d cricsheet/bbl
 
       - name: Import new ODIs
         env:
@@ -44,3 +48,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run import:cricsheet -- t20i cricsheet/t20s --people cricsheet/people.csv --missing
+
+      - name: Fill IPL and BBL scorecards ESPN has none for
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          npm run import:cricsheet -- ipl cricsheet/ipl --people cricsheet/people.csv
+          npm run import:cricsheet -- bbl cricsheet/bbl --people cricsheet/people.csv

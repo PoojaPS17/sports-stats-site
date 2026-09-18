@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { GameRow, League } from "@/lib/queries";
-import { LEAGUE_LABEL } from "@/lib/leagues";
+import { LEAGUE_LABEL, isCricketLeague } from "@/lib/leagues";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { LocalTime } from "./LocalTime";
@@ -49,7 +49,7 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
           {label} · {LEAGUE_LABEL[league]}
         </span>
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={isCricketLeague(league) ? "Result" : undefined} />
       </div>
       <div className="flex flex-col gap-2.5">
         <Team name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />

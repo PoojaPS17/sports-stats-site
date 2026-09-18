@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import type { GameRow, League } from "@/lib/queries";
+import { isCricketLeague } from "@/lib/leagues";
 
 function TeamLine({
   href,
@@ -44,7 +45,7 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
   return (
     <div className="card overflow-hidden px-6 py-5">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={isCricketLeague(league) ? "Result" : undefined} />
         <span className="text-xs text-[var(--text-muted)]">
           {new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
         </span>

@@ -23,6 +23,12 @@
 //
 // Everything is an upsert; `--missing` skips matches already stored, for a cheap weekly
 // top-up after downloading a fresh archive.
+//
+// Cards-only mode (`ipl` / `bbl`, archives ipl_male_json.zip and bbl_male_json.zip):
+// those competitions are ESPN-fed, but ESPN has no scorecard for ~100 older matches.
+// For games already stored that have no player rows, the matching Cricsheet file
+// (same Cricinfo id) supplies the scorecard: player figures and the match report are
+// written, the game row is left as ESPN has it, and players keep their current club.
 import { readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pool } from "./lib/db";
@@ -31,7 +37,10 @@ import { uniqueSlugFor } from "./lib/players";
 import type { CricketPlayerMatchStats } from "./lib/cricket-career";
 
 type IntlLeague = "odi" | "t20i";
-const MATCH_TYPE: Record<IntlLeague, string> = { odi: "ODI", t20i: "T20" };
+type CardsLeague = "ipl" | "bbl";
+type CsLeague = IntlLeague | CardsLeague;
+const MATCH_TYPE: Record<CsLeague, string> = { odi: "ODI", t20i: "T20", ipl: "T20", bbl: "T20" };
+const CARDS_ONLY: Record<CsLeague, boolean> = { odi: false, t20i: false, ipl: true, bbl: true };
 const NAME_FETCH_CONCURRENCY = 4;
 
 /* ------------------------------------------------------------------------ */
@@ -45,10 +54,10 @@ function parseArgs() {
     const i = args.indexOf(`--${name}`);
     return i >= 0 ? args[i + 1] : undefined;
   };
-  const league = positional[0] as IntlLeague | undefined;
+  const league = positional[0] as CsLeague | undefined;
   const dir = positional[1];
-  if ((league !== "odi" && league !== "t20i") || !dir || !opt("people")) {
-    console.error("usage: import-cricsheet.ts <odi|t20i> <dir> --people <people.csv> [--names <cache.json>] [--missing] [--limit N]");
+  if (!league || !(league in MATCH_TYPE) || !dir || !opt("people")) {
+    console.error("usage: import-cricsheet.ts <odi|t20i|ipl|bbl> <dir> --people <people.csv> [--names <cache.json>] [--missing] [--limit N]");
     process.exit(1);
   }
   return {
@@ -465,7 +474,7 @@ async function resolveNames(ids: string[], cachePath: string | undefined): Promi
 /* Writing                                                                   */
 /* ------------------------------------------------------------------------ */
 
-async function upsertTeam(league: IntlLeague, t: TeamInfo, slug: string) {
+async function upsertTeam(league: CsLeague, t: TeamInfo, slug: string) {
   await pool.query(
     `insert into teams (league, espn_id, name, slug, abbreviation, logo_url, color, alternate_color)
      values ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -477,13 +486,14 @@ async function upsertTeam(league: IntlLeague, t: TeamInfo, slug: string) {
 }
 
 async function writeMatch(
-  league: IntlLeague,
+  league: CsLeague,
   m: ParsedMatch,
   teamMap: Map<string, TeamInfo>,
   names: Map<string, NameRecord>,
   slugs: Map<string, string>,
   seenPlayers: Set<string>
 ): Promise<number> {
+  const cardsOnly = CARDS_ONLY[league];
   const home = teamMap.get(m.teams[0])!;
   const away = teamMap.get(m.teams[1])!;
   const result = resultSummary(m);
@@ -495,7 +505,7 @@ async function writeMatch(
   const stage = m.event.stage && /final|semi|quarter|qualifier|eliminator|play-?off/i.test(m.event.stage) ? m.event.stage : null;
   const noScores = m.innings.length === 0;
 
-  await pool.query(
+  if (!cardsOnly) await pool.query(
     `insert into games (
        league, espn_id, date, name, short_name, home_team_espn_id, away_team_espn_id,
        home_score, away_score, home_score_display, away_score_display, home_winner, away_winner,
@@ -547,7 +557,9 @@ async function writeMatch(
       const name = rec?.name || m.names.get(id) || id;
       if (!slugs.has(id)) slugs.set(id, await uniqueSlugFor(league, id, name));
       const b = values.length;
-      values.push(league, id, teamMap.get(m.squads.get(id)!)!.espn_id, name, slugs.get(id), rec?.headshot ?? null, rec?.position ?? null, `${m.date}T12:00:00Z`);
+      // In cards-only mode a newly seen player is filed under the side they played for
+      // that day, with no roster sighting, so they read as a past player of that club.
+      values.push(league, id, teamMap.get(m.squads.get(id)!)!.espn_id, name, slugs.get(id), rec?.headshot ?? null, rec?.position ?? null, cardsOnly ? null : `${m.date}T12:00:00Z`);
       tuples.push(`($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},$${b + 7},$${b + 8})`);
       seenPlayers.add(id);
     }
@@ -555,15 +567,15 @@ async function writeMatch(
       `insert into players (league, espn_id, team_espn_id, name, slug, headshot_url, position, roster_seen_at)
        values ${tuples.join(",")}
        on conflict (league, espn_id) do update set
-         name = excluded.name, team_espn_id = excluded.team_espn_id,
+         name = excluded.name, team_espn_id = case when $${values.length + 1} then players.team_espn_id else excluded.team_espn_id end,
          headshot_url = coalesce(excluded.headshot_url, players.headshot_url),
          position = coalesce(excluded.position, players.position),
          roster_seen_at = greatest(players.roster_seen_at, excluded.roster_seen_at)`,
-      values
+      [...values, cardsOnly]
     );
   }
   const teamOf = (id: string) => teamMap.get(m.squads.get(id)!)?.espn_id ?? null;
-  await pool.query(
+  if (!cardsOnly) await pool.query(
     `update players set team_espn_id = t.team, roster_seen_at = greatest(roster_seen_at, $3::timestamptz)
      from (select unnest($2::text[]) as id, unnest($4::text[]) as team) t
      where players.league = $1 and players.espn_id = t.id`,
@@ -643,10 +655,13 @@ async function writeMatch(
     leaders,
     win_probability: [],
   };
+  // Cards-only: keep whatever ESPN's report holds and add the scorecard to it.
   await pool.query(
     `insert into game_details (league, game_espn_id, details, fetched_at) values ($1, $2, $3, now())
-     on conflict (league, game_espn_id) do update set details = excluded.details, fetched_at = now()`,
-    [league, m.id, JSON.stringify(details)]
+     on conflict (league, game_espn_id) do update set
+       details = case when $4 then coalesce(game_details.details, '{}'::jsonb) || excluded.details else excluded.details end,
+       fetched_at = now()`,
+    [league, m.id, JSON.stringify(cardsOnly ? { scorecard, leaders, officials: m.officials, venue: m.venue, city: m.city } : details), cardsOnly]
   );
   return rows.length;
 }
@@ -675,7 +690,41 @@ async function main() {
   console.log(`[import-cricsheet] ${league}: ${parsed.length} matches in ${dir}${skippedType ? ` (${skippedType} files of another type skipped)` : ""}`);
 
   let queue = parsed;
-  if (missingOnly) {
+  // Cards-only: the queue is the stored games with no player rows; each file's two
+  // team names are matched onto the game's home/away sides by shared name words
+  // ("Royal Challengers Bangalore" -> "Royal Challengers Bengaluru", "Delhi
+  // Daredevils" -> "Delhi Capitals", "Kings XI Punjab" -> "Punjab Kings").
+  const gameTeams = new Map<string, Map<string, TeamInfo>>();
+  if (CARDS_ONLY[league]) {
+    const { rows } = await pool.query(
+      `select g.espn_id, h.espn_id as home_id, h.name as home_name, h.abbreviation as home_abbr, a.espn_id as away_id, a.name as away_name, a.abbreviation as away_abbr
+       from games g
+       join teams h on h.league = g.league and h.espn_id = g.home_team_espn_id
+       join teams a on a.league = g.league and a.espn_id = g.away_team_espn_id
+       where g.league = $1 and g.completed
+         and not exists (select 1 from player_game_stats s where s.league = g.league and s.game_espn_id = g.espn_id)`,
+      [league]
+    );
+    const targets = new Map(rows.map((r) => [r.espn_id as string, r]));
+    const words = (n: string) => new Set(n.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2));
+    const overlap = (a: string, b: string) => [...words(a)].filter((w) => words(b).has(w)).length;
+    queue = [];
+    for (const m of parsed) {
+      const g = targets.get(m.id);
+      if (!g) continue;
+      const info = (id: string, name: string, abbr: string | null): TeamInfo => ({ espn_id: id, name, abbreviation: abbr, logo_url: null, color: null, alternate_color: null });
+      const straight = overlap(m.teams[0], g.home_name) + overlap(m.teams[1], g.away_name);
+      const swapped = overlap(m.teams[0], g.away_name) + overlap(m.teams[1], g.home_name);
+      if (straight === swapped) {
+        console.warn(`[import-cricsheet] ${league} ${m.id}: cannot tell ${m.teams.join(" / ")} from ${g.home_name} / ${g.away_name}; skipped`);
+        continue;
+      }
+      const [homeName, awayName] = straight > swapped ? m.teams : [m.teams[1], m.teams[0]];
+      gameTeams.set(m.id, new Map([[homeName, info(g.home_id, g.home_name, g.home_abbr)], [awayName, info(g.away_id, g.away_name, g.away_abbr)]]));
+      queue.push(m);
+    }
+    console.log(`[import-cricsheet] ${league}: ${targets.size} stored games without scorecards, ${queue.length} found in the archive`);
+  } else if (missingOnly) {
     const { rows } = await pool.query(`select espn_id from games where league = $1 and espn_id = any($2)`, [league, parsed.map((m) => m.id)]);
     const have = new Set(rows.map((r) => r.espn_id as string));
     queue = parsed.filter((m) => !have.has(m.id));
@@ -695,22 +744,25 @@ async function main() {
   }
   const names = await resolveNames([...playerIds], namesPath);
 
-  const fromAthletes = new Map<string, TeamInfo>();
-  for (const rec of names.values()) if (rec.team && teamNames.has(rec.team.name) && !fromAthletes.has(rec.team.name)) fromAthletes.set(rec.team.name, rec.team);
-  const teamMap = await buildTeamMap(teamNames, fromAthletes);
-  const { rows: existingTeams } = await pool.query(`select espn_id, slug from teams where league = $1`, [league]);
-  const teamSlugs = new Map<string, string>(existingTeams.map((r) => [r.espn_id, r.slug]));
-  const usedSlugs = new Set(teamSlugs.values());
-  for (const t of teamMap.values()) {
-    if (!teamSlugs.has(t.espn_id)) {
-      const base = slugify(t.name);
-      const slug = usedSlugs.has(base) ? `${base}-${t.espn_id}` : base;
-      usedSlugs.add(slug);
-      teamSlugs.set(t.espn_id, slug);
+  const teamMap = new Map<string, TeamInfo>();
+  if (!CARDS_ONLY[league]) {
+    const fromAthletes = new Map<string, TeamInfo>();
+    for (const rec of names.values()) if (rec.team && teamNames.has(rec.team.name) && !fromAthletes.has(rec.team.name)) fromAthletes.set(rec.team.name, rec.team);
+    for (const [k, v] of await buildTeamMap(teamNames, fromAthletes)) teamMap.set(k, v);
+    const { rows: existingTeams } = await pool.query(`select espn_id, slug from teams where league = $1`, [league]);
+    const teamSlugs = new Map<string, string>(existingTeams.map((r) => [r.espn_id, r.slug]));
+    const usedSlugs = new Set(teamSlugs.values());
+    for (const t of teamMap.values()) {
+      if (!teamSlugs.has(t.espn_id)) {
+        const base = slugify(t.name);
+        const slug = usedSlugs.has(base) ? `${base}-${t.espn_id}` : base;
+        usedSlugs.add(slug);
+        teamSlugs.set(t.espn_id, slug);
+      }
+      await upsertTeam(league, t, teamSlugs.get(t.espn_id)!);
     }
-    await upsertTeam(league, t, teamSlugs.get(t.espn_id)!);
+    console.log(`[import-cricsheet] ${league}: ${teamMap.size} teams ready`);
   }
-  console.log(`[import-cricsheet] ${league}: ${teamMap.size} teams ready`);
 
   const { rows: existingPlayers } = await pool.query(`select espn_id, slug from players where league = $1`, [league]);
   const slugs = new Map<string, string>(existingPlayers.map((r) => [r.espn_id, r.slug]));
@@ -719,7 +771,7 @@ async function main() {
   let cardRows = 0;
   for (const m of queue) {
     try {
-      cardRows += await writeMatch(league, m, teamMap, names, slugs, seenPlayers);
+      cardRows += await writeMatch(league, m, gameTeams.get(m.id) ?? teamMap, names, slugs, seenPlayers);
       games++;
       if (games % 250 === 0) console.log(`[import-cricsheet] ${league}: ${games}/${queue.length} matches written`);
     } catch (err) {

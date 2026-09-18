@@ -3,6 +3,7 @@ import type { GameRow, League } from "@/lib/queries";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { LocalTime } from "./LocalTime";
+import { isCricketLeague } from "@/lib/leagues";
 
 function TeamRow({
   name,
@@ -83,6 +84,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           date={game.date}
           completed={game.completed}
           round={game.round}
+          completedLabel={isCricketLeague(league) ? "Result" : undefined}
         />
         {upcoming ? (
           <LocalTime iso={game.date} format="time" className="text-xs font-medium text-[var(--text-muted)]" />
