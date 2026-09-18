@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { LEAGUE_LABEL, CRICKET_LEAGUES, SOCCER_LEAGUES, hasStandings, type League } from "@/lib/queries";
-import { TOURS, TOUR_LABEL } from "@/lib/tennisTours";
+import { LEAGUE_LABEL, SOCCER_LEAGUES, hasStandings, type League } from "@/lib/queries";
 import { LogoMark } from "./Logo";
 
 const LEAGUE_SECTIONS: { label: string; suffix: string }[] = [
@@ -35,33 +34,66 @@ function leagueLinks(league: League) {
 export function Footer() {
   return (
     <footer className="mt-auto border-t border-[var(--border)] bg-[var(--surface)]">
-      <div className="container-x grid grid-cols-2 gap-x-6 gap-y-8 py-10 sm:grid-cols-3 lg:grid-cols-8">
-        <div className="col-span-2 flex flex-col gap-3 sm:col-span-3 lg:col-span-2">
+      <div className="container-x flex flex-col gap-8 py-10">
+        <div className="flex flex-col gap-3">
           <Link href="/" className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight">
             <LogoMark size={26} />
             ScoreDB
           </Link>
-          <p className="max-w-xs text-sm leading-relaxed text-[var(--text-muted)]">
-            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years
-            of history for every team and player.
+          <p className="max-w-lg text-sm leading-relaxed text-[var(--text-muted)]">
+            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years of history for every team
+            and player.
           </p>
         </div>
-        <Column title="Football" links={SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
-        <Column title="NFL" links={leagueLinks("nfl")} />
-        <Column title="NBA" links={leagueLinks("nba")} />
-        <Column title="Cricket" links={CRICKET_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
-        <Column title="Tennis" links={TOURS.map((t) => ({ label: TOUR_LABEL[t], href: `/tennis/${t}` }))} />
-        <Column
-          title="More"
-          links={[
-            { label: "F1 Calendar", href: "/f1" },
-            { label: "F1 Standings", href: "/f1/standings" },
-            { label: "Top Games", href: "/top-games" },
-            { label: "Search", href: "/search" },
-            { label: "Privacy Policy", href: "/privacy" },
-            { label: "Terms of Use", href: "/terms" },
-          ]}
-        />
+        {/* Seven columns of similar depth, so no one sport runs the page long. */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
+          <Column title="Football" links={SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
+          <Column title="NFL" links={leagueLinks("nfl")} />
+          <Column title="NBA" links={leagueLinks("nba")} />
+          <Column
+            title="Cricket"
+            links={[
+              { label: "All series & live", href: "/cricket/series" },
+              { label: "IPL", href: "/ipl" },
+              { label: "Big Bash", href: "/bbl" },
+              { label: "World Cup", href: "/cwc" },
+              { label: "T20 World Cup", href: "/t20wc" },
+              { label: "ODIs", href: "/odi" },
+              { label: "T20Is", href: "/t20i" },
+            ]}
+          />
+          <Column
+            title="Women's cricket"
+            links={[
+              { label: "WPL", href: "/wpl" },
+              { label: "Big Bash", href: "/wbbl" },
+              { label: "World Cup", href: "/wcwc" },
+              { label: "T20 World Cup", href: "/wt20wc" },
+              { label: "ODIs", href: "/wodi" },
+              { label: "T20Is", href: "/wt20i" },
+            ]}
+          />
+          <Column
+            title="Tennis"
+            links={[
+              { label: "Scores", href: "/tennis" },
+              { label: "Calendar", href: "/tennis/tournaments" },
+              { label: "ATP rankings", href: "/tennis/atp" },
+              { label: "WTA rankings", href: "/tennis/wta" },
+            ]}
+          />
+          <Column
+            title="F1 & more"
+            links={[
+              { label: "F1 Calendar", href: "/f1" },
+              { label: "F1 Standings", href: "/f1/standings" },
+              { label: "Top Games", href: "/top-games" },
+              { label: "Search", href: "/search" },
+              { label: "Privacy Policy", href: "/privacy" },
+              { label: "Terms of Use", href: "/terms" },
+            ]}
+          />
+        </div>
       </div>
       <div className="border-t border-[var(--border)]">
         <div className="container-x flex flex-col gap-2 py-4 text-xs text-[var(--text-faint)]">

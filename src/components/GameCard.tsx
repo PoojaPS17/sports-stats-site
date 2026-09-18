@@ -13,6 +13,7 @@ function TeamRow({
   score,
   scoreDisplay,
   completed,
+  live = false,
   won,
 }: {
   name: string;
@@ -22,6 +23,7 @@ function TeamRow({
   score: number | null;
   scoreDisplay: string | null;
   completed: boolean;
+  live?: boolean;
   won: boolean;
 }) {
   // A plain integer score ("119") sits fine on the same line as the team name. A long
@@ -29,6 +31,8 @@ function TeamRow({
   // truncate to a couple of letters to make room — give it its own line instead.
   const isLongScore = Boolean(scoreDisplay);
   const loser = completed && !won;
+  // A game in play shows its running score too.
+  const showScore = completed || live;
 
   return (
     <div className="flex flex-col gap-0.5 py-1">
@@ -40,13 +44,13 @@ function TeamRow({
             <span className="hidden sm:inline">{name}</span>
           </span>
         </span>
-        {completed && !isLongScore && score !== null && (
+        {showScore && !isLongScore && score !== null && (
           <span className={`shrink-0 text-base tabular-nums ${won ? "font-bold text-[var(--text)]" : "font-medium text-[var(--text-muted)]"}`}>
             {score}
           </span>
         )}
       </span>
-      {completed && isLongScore && (
+      {showScore && isLongScore && (
         <span className={`pl-[36px] text-xs tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
           {scoreDisplay}
         </span>
@@ -104,6 +108,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         score={game.away_score}
         scoreDisplay={game.away_score_display}
         completed={game.completed}
+        live={live}
         won={awayWon}
       />
       <TeamRow
@@ -114,6 +119,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         score={game.home_score}
         scoreDisplay={game.home_score_display}
         completed={game.completed}
+        live={live}
         won={homeWon}
       />
       {game.completed && game.status_summary && (

@@ -16,8 +16,11 @@ import { AdSlot } from "@/components/AdSlot";
 import { NewsCard } from "@/components/NewsCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
+import { HomeCricket } from "@/components/HomeCricket";
+import { HomeLive } from "@/components/HomeLive";
+import { overlayLiveGames } from "@/lib/gamesLive";
 
-export const revalidate = 60;
+export const revalidate = 30;
 
 const QUICK_LINKS: { label: string; href: string }[] = [
   ...SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` })),
@@ -31,13 +34,16 @@ const QUICK_LINKS: { label: string; href: string }[] = [
 export default async function HomePage() {
   // The Champions League has no homepage section of its own but its games belong
   // among the headline fixtures whenever a matchday falls in the window.
-  const allFeatured = (await Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3)))).flat();
+  // Stored rows lag ESPN by up to a scrape tick; anything that could be in play
+  // reads ESPN's scoreboard (30-second cache) so a finished game never shows as live.
+  const allFeatured = await overlayLiveGames((await Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3)))).flat());
   const spotlight = pickSpotlight(allFeatured);
-  const featured = allFeatured.filter((g) => g.espn_id !== spotlight?.espn_id);
 
+  // Cricket gets its own block below (every series, live and upcoming) rather than
+  // one competition's fixtures.
   const sections = await Promise.all(
-    LEAGUES.map(async (league) => {
-      const games = (await getRecentAndUpcoming(league, 2, 5)).slice(0, 4);
+    LEAGUES.filter((l) => l !== "ipl").map(async (league) => {
+      const games = await overlayLiveGames((await getRecentAndUpcoming(league, 2, 5)).slice(0, 4));
       // A standings row for the upcoming season already exists (every team 0-0) well
       // before it starts, so the plain /standings link would default right back to an
       // empty table during preseason — point at the season that's actually been played.
@@ -85,16 +91,7 @@ export default async function HomePage() {
         )}
       </section>
 
-      {featured.length > 0 && (
-        <section>
-          <SectionHeader description="Recent results and the biggest fixtures coming up">Headline games</SectionHeader>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((g) => (
-              <GameCard key={g.espn_id} league={g.league} game={g} />
-            ))}
-          </div>
-        </section>
-      )}
+      <HomeLive />
 
       <AdSlot label="Homepage" />
 
@@ -136,6 +133,7 @@ export default async function HomePage() {
               </div>
             </section>
           ))}
+          <HomeCricket />
         </div>
 
         {news.length > 0 && (

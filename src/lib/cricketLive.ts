@@ -3,7 +3,7 @@
 // match on a 15-minute tick, which is fine for fixtures and results but not for a
 // match in play; pages that show live scores read the same daily listing here with
 // a 30-second cache and overlay it on the stored rows.
-import type { CricketSeriesMatch, SeriesSide } from "./cricketSeries";
+import type { CricketSeriesMatch, SeriesKind, SeriesSide } from "./cricketSeries";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
 const LIVE_REVALIDATE = 30;
@@ -18,6 +18,15 @@ const LEAGUE_BY_SERIES: Record<string, string> = {
   "8584": "wcwc",
   "8634": "wt20wc",
 };
+
+// The daily listing has no series kind; the match's international class tells men's
+// and women's internationals apart from everything else.
+function kindOf(ev: any): SeriesKind | null {
+  const cls = Number(ev.class?.internationalClassId ?? 0);
+  if (cls >= 1 && cls <= 3) return "international";
+  if (cls >= 8 && cls <= 10) return "womens-international";
+  return null;
+}
 
 function side(c: any): SeriesSide | null {
   if (!c) return null;
@@ -61,6 +70,7 @@ export async function fetchLiveCricketFromEspn(): Promise<CricketSeriesMatch[]> 
             espn_id: String(ev.id),
             series_espn_id: seriesId,
             series_name: String(lg.name ?? ""),
+            series_kind: kindOf(ev),
             date: ev.date,
             name: String(ev.name ?? ""),
             short_name: ev.shortName ?? null,
@@ -89,7 +99,7 @@ export async function overlayLiveCricket(rows: CricketSeriesMatch[], seriesEspnI
   for (const m of live) {
     if (seriesEspnId && m.series_espn_id !== seriesEspnId) continue;
     const stored = byId.get(m.espn_id);
-    byId.set(m.espn_id, stored ? { ...stored, status_state: "in", status_summary: m.status_summary, home: m.home, away: m.away } : m);
+    byId.set(m.espn_id, stored ? { ...stored, status_state: "in", status_summary: m.status_summary, home: m.home, away: m.away } : { ...m, series_kind: m.series_kind ?? "domestic" });
   }
   return [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
 }

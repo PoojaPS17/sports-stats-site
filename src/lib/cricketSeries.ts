@@ -30,6 +30,13 @@ export interface CricketSeries {
   league: League | null;
 }
 
+const KIND_RANK: Record<SeriesKind, number> = { international: 0, "womens-international": 1, domestic: 2, "womens-domestic": 3, other: 4 };
+
+/** Internationals first, then domestic, then youth and A-team cricket; by start time within each. */
+export function byPriority(a: CricketSeriesMatch, b: CricketSeriesMatch): number {
+  return KIND_RANK[a.series_kind ?? "other"] - KIND_RANK[b.series_kind ?? "other"] || a.date.localeCompare(b.date);
+}
+
 export interface SeriesSide {
   id: string;
   name: string;
@@ -43,6 +50,7 @@ export interface CricketSeriesMatch {
   espn_id: string;
   series_espn_id: string;
   series_name: string;
+  series_kind: SeriesKind | null;
   date: string;
   name: string;
   short_name: string | null;
@@ -107,7 +115,7 @@ export async function getCricketSeries(espnId: string): Promise<CricketSeries | 
 }
 
 const MATCH_SELECT = `
-  select m.espn_id, m.series_espn_id, s.name as series_name,
+  select m.espn_id, m.series_espn_id, s.name as series_name, s.kind as series_kind,
          to_char(m.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
          m.name, m.short_name, m.description, m.class_card, m.status_state, m.status_summary, m.home, m.away,
          (select g.league from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates)
@@ -134,5 +142,16 @@ export async function getLiveCricketMatches(): Promise<CricketSeriesMatch[]> {
 /** A day's cricket across every series: results, live and fixtures. */
 export async function getCricketMatchesOnDay(day: string): Promise<CricketSeriesMatch[]> {
   const { rows } = await pool.query(`${MATCH_SELECT} where (m.date at time zone 'UTC')::date = $1::date order by s.kind = 'other', m.date`, [day]);
+  return rows;
+}
+
+/** The next fixtures across every series, nearest first; youth and A-team cricket last. */
+export async function getUpcomingCricketMatches(limit = 6, withinDays = 7): Promise<CricketSeriesMatch[]> {
+  const { rows } = await pool.query(
+    `${MATCH_SELECT}
+     where coalesce(m.status_state, 'pre') = 'pre' and m.date >= now() - interval '1 hour' and m.date <= now() + ($2 || ' days')::interval
+     order by s.kind = 'other', m.date limit $1`,
+    [limit, withinDays]
+  );
   return rows;
 }

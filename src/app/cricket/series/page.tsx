@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { SeriesCard, SeriesMatchList } from "@/components/CricketSeries";
-import { getCricketSeriesWindow, getLiveCricketMatches, SERIES_KIND_LABEL, type CricketSeries, type SeriesKind } from "@/lib/cricketSeries";
+import { byPriority, getCricketSeriesWindow, getLiveCricketMatches, SERIES_KIND_LABEL, type CricketSeries, type SeriesKind } from "@/lib/cricketSeries";
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
 
@@ -64,7 +64,7 @@ export default async function CricketSeriesPage() {
   const [series, storedLive] = await Promise.all([getCricketSeriesWindow(14, 60), getLiveCricketMatches()]);
   // ESPN's current state over the stored rows: a match that started since the last
   // scrape appears, a stale score is replaced, a finished one drops off.
-  const live = (await overlayLiveCricket(storedLive)).filter((m) => m.status_state === "in");
+  const live = (await overlayLiveCricket(storedLive)).filter((m) => m.status_state === "in").sort(byPriority);
   const liveSeries = new Set(live.map((m) => m.series_espn_id));
   const now = clock();
   const { inProgress, upcoming, finished } = split(series.map((s) => (liveSeries.has(s.espn_id) ? { ...s, live_count: Math.max(s.live_count, 1) } : s)));
