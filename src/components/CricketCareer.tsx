@@ -33,7 +33,7 @@ export function CricketCareer({
         <SectionHeader>{LEAGUE_LABEL[league]} Career</SectionHeader>
         <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
           {isInternationalCricket(league)
-            ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} in Cricsheet's ball-by-ball archive (${league === "odi" ? "2002" : "2005"} onward, World Cups included). Matches involving Afghanistan are withheld by the source, so figures from those games are missing.`
+            ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} on record (${league === "odi" ? "2002" : "2005"} onward, World Cups included): Cricsheet's ball-by-ball archive, with the matches it does not carry (those involving Afghanistan, and the newest results) filled from ESPN's scorecards. Matches counts a game only when the player batted, bowled or took a catch in it.`
             : `From every ${LEAGUE_LABEL[league]} match on record — this covers ${LEAGUE_LABEL[league]} only, not a player's other competitions or formats.`}
         </p>
         <div className="flex flex-col gap-4">

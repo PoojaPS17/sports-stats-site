@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Records`, `${label} record book: highest-scoring games, biggest wins, longest winning and unbeaten streaks across ten seasons.`, `/${league}/records`);
+  return pageMeta(`${label} Records`, `${label} record book: highest-scoring games, biggest wins, longest winning and unbeaten streaks across every season on ScoreDB.`, `/${league}/records`);
 }
 
 function fmtDate(iso: string) {

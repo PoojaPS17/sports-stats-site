@@ -54,6 +54,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
     season = s;
     boards = categories.map((c, i) => ({ label: c.label, unit: c.unit, rows: lists[i] }));
     if (isCupCompetition(league)) note = "Summed from the box score of every match on record for the season, knockout rounds included.";
+    if (league === "nba") note = "Per-game averages, for players who have appeared in at least 70% of the games played so far (the NBA's qualifying rule).";
   }
 
   return (

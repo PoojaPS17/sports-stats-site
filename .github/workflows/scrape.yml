@@ -54,6 +54,15 @@ jobs:
           SCRAPE_LEAGUES: ${{ steps.gate.outputs.leagues }}
         run: npm run fetch:all
 
+      # Men's ODIs and T20Is the weekly Cricsheet archive does not carry yet (or ever:
+      # it withholds Afghanistan's matches) — a three-week sweep of ESPN's daily
+      # cricket listing, so leader boards and team results never lag a series.
+      - name: Fill international cricket gaps from ESPN
+        if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run import:cricket-espn
+
       # Whole-season schedules (every remaining fixture, plus NFL week numbers) —
       # once a day is plenty; the 15-minute tick only needs the scoreboard window.
       - name: Fetch full-season fixtures

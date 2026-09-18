@@ -9,7 +9,8 @@
 // Data: https://cricsheet.org/downloads/ (odis_male_json.zip, t20s_male_json.zip) and
 // the people register https://cricsheet.org/register/people.csv. Cricsheet's licence
 // requires attribution, which the site footer carries. Cricsheet withholds matches
-// involving Afghanistan's men's team, so those are absent here (see the league page note).
+// involving Afghanistan's men's team and publishes a match a week or two after it
+// ends; scripts/import-cricket-espn.ts fills both gaps from ESPN in this same shape.
 //
 // Ids: Cricsheet file names are Cricinfo match ids, and the register maps each person
 // to their Cricinfo id — both are exactly the ids ESPN's cricket feeds use, so a

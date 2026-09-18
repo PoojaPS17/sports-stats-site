@@ -68,8 +68,8 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
       {international && (
         <p className="text-xs text-[var(--text-muted)]">
-          Men&apos;s internationals from Cricsheet&apos;s ball-by-ball archive, refreshed weekly: completed matches only, no fixtures or live scores. The archive
-          withholds matches involving Afghanistan&apos;s men&apos;s team, so those results and the figures from them are not included here.
+          Men&apos;s internationals from Cricsheet&apos;s ball-by-ball archive, with the matches it does not carry (every match involving Afghanistan&apos;s
+          men&apos;s team, and the newest results) filled daily from ESPN&apos;s scorecards: completed matches only, no fixtures or live scores.
         </p>
       )}
 

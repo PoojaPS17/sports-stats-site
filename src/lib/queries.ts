@@ -512,6 +512,13 @@ const LEADER_COLUMNS = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) =
 // not the new one whose zero rows may already exist); default is the latest on file.
 export async function getLeaders(league: League, column: string, limit = 10, season?: number): Promise<LeaderRow[]> {
   if (!LEADER_COLUMNS.has(column)) throw new Error(`Unknown leader column: ${column}`);
+  // A per-game average is only a leader-board figure once the player has played a
+  // qualifying share of the season (the NBA's own rule is 70% of games, 58 of 82):
+  // without it a ten-game injury season outranks a full one. The threshold follows
+  // the most games anyone has played so far, so it tracks the season as it goes.
+  const qualifier = column.endsWith("_avg")
+    ? `and pss.games_played >= ceil(0.7 * (select max(games_played) from player_season_stats q where q.league = pss.league and q.season = pss.season))`
+    : "";
   const { rows } = await pool.query(
     `select pss.player_espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
             t.name as team_name, t.slug as team_slug, pss.${column} as value
@@ -520,6 +527,7 @@ export async function getLeaders(league: League, column: string, limit = 10, sea
      left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
      where pss.league = $1 and pss.${column} is not null
        and pss.season = coalesce($3, (select max(season) from player_season_stats where league = $1))
+       ${qualifier}
      order by pss.${column} desc
      limit $2`,
     [league, limit, season ?? null]
@@ -866,8 +874,8 @@ export interface CricketCareerStats {
 // Computed fresh from every backfilled match's per-player figures (see
 // backfill-cricket-player-stats.ts) rather than a maintained running total — always
 // correct, and re-running the backfill can never double-count. Only covers whichever
-// cricket competitions we've backfilled (IPL, Big Bash, World Cups) — we have no
-// bilateral Test/ODI/T20I data source, so this is real but partial for any player who
+// cricket competitions we've backfilled (IPL, Big Bash, World Cups, and every men's
+// ODI/T20I from Cricsheet plus ESPN) — no Test data, so this is real but partial for any player who
 // also plays international cricket outside those tournaments.
 export async function getPlayerCricketCareer(league: League, playerEspnId: string): Promise<CricketCareerStats | null> {
   if (!isCricketLeague(league)) return null;

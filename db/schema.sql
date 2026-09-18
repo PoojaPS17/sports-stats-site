@@ -157,6 +157,9 @@ create table if not exists player_season_stats (
 -- pts_avg/passing_yards/etc already are — powers the Leaders page.
 alter table player_season_stats add column if not exists goals int;
 alter table player_season_stats add column if not exists assists int;
+-- Games played that season (NBA "GP"), so per-game leader boards can apply the
+-- usual qualifying threshold instead of ranking a ten-game injury season first.
+alter table player_season_stats add column if not exists games_played int;
 
 create index if not exists player_season_stats_pts_idx on player_season_stats (league, season, pts_avg desc nulls last);
 create index if not exists player_season_stats_reb_idx on player_season_stats (league, season, reb_avg desc nulls last);

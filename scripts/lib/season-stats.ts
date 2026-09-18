@@ -45,6 +45,7 @@ async function upsertOneSeason(
   let receivingYards: number | null = null;
   let goals: number | null = null;
   let assists: number | null = null;
+  let gamesPlayed: number | null = null;
   let found = false;
 
   for (const category of categories) {
@@ -58,6 +59,7 @@ async function upsertOneSeason(
       ptsAvg = positiveOrNull(numberAt(row.labels, row.values, "PTS"));
       rebAvg = positiveOrNull(numberAt(row.labels, row.values, "REB"));
       astAvg = positiveOrNull(numberAt(row.labels, row.values, "AST"));
+      gamesPlayed = positiveOrNull(numberAt(row.labels, row.values, "GP"));
     }
     if (key === "passing") passingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
     if (key === "rushing") rushingYards = positiveOrNull(numberAt(row.labels, row.values, "YDS"));
@@ -75,15 +77,15 @@ async function upsertOneSeason(
   await pool.query(
     `insert into player_season_stats (
        league, season, player_espn_id, team_espn_id, categories,
-       pts_avg, reb_avg, ast_avg, passing_yards, rushing_yards, receiving_yards, goals, assists, updated_at
-     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now())
+       pts_avg, reb_avg, ast_avg, passing_yards, rushing_yards, receiving_yards, goals, assists, games_played, updated_at
+     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
      on conflict (league, season, player_espn_id) do update set
        team_espn_id = excluded.team_espn_id, categories = excluded.categories,
        pts_avg = excluded.pts_avg, reb_avg = excluded.reb_avg, ast_avg = excluded.ast_avg,
        passing_yards = excluded.passing_yards, rushing_yards = excluded.rushing_yards,
        receiving_yards = excluded.receiving_yards, goals = excluded.goals, assists = excluded.assists,
-       updated_at = now()`,
-    [league, seasonYear, playerEspnId, teamEspnId, JSON.stringify(out), ptsAvg, rebAvg, astAvg, passingYards, rushingYards, receivingYards, goals, assists]
+       games_played = excluded.games_played, updated_at = now()`,
+    [league, seasonYear, playerEspnId, teamEspnId, JSON.stringify(out), ptsAvg, rebAvg, astAvg, passingYards, rushingYards, receivingYards, goals, assists, gamesPlayed]
   );
   return true;
 }

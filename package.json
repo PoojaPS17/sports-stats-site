@@ -28,6 +28,7 @@
     "fetch:team-info": "tsx scripts/fetch-team-info.ts",
     "backfill:cricket-player-stats": "tsx scripts/backfill-cricket-player-stats.ts",
     "import:cricsheet": "tsx scripts/import-cricsheet.ts",
+    "import:cricket-espn": "tsx scripts/import-cricket-espn.ts",
     "fetch:tennis-rankings": "tsx scripts/fetch-tennis-rankings.ts",
     "fetch:tennis-scores": "tsx scripts/fetch-tennis-scores.ts",
     "backfill:tennis-matches": "tsx scripts/backfill-tennis-matches.ts",
