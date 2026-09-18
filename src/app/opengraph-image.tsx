@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { PixelBall } from "@/components/Logo";
 
 export const alt = "SportsDB: live scores, standings and stats";
 export const size = { width: 1200, height: 630 };
@@ -22,11 +23,7 @@ export default function Image() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 16, background: "#6ea0ff", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 6, padding: 12 }}>
-            <div style={{ width: 8, height: 16, background: "#0b1220", borderRadius: 3 }} />
-            <div style={{ width: 8, height: 28, background: "#0b1220", borderRadius: 3 }} />
-            <div style={{ width: 8, height: 40, background: "#0b1220", borderRadius: 3 }} />
-          </div>
+          <PixelBall size={64} fill="#6ea0ff" live="#f87171" />
           <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: -1 }}>SportsDB</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>

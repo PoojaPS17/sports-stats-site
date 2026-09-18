@@ -8,7 +8,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const OWN_DOMAIN = /(^|\.)sports-db\.live$/i;
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|icon|apple-icon|opengraph-image).*)"],
 };
 
 export default function proxy(request: NextRequest) {

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { PixelBall } from "@/components/Logo";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
 
 export const alt = "Team page";
@@ -39,7 +40,10 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           <div style={{ fontSize: 30, color: "#9aa7bd", textTransform: "uppercase", letterSpacing: 4 }}>{label}</div>
           <div style={{ fontSize: 72, fontWeight: 800, lineHeight: 1.05, letterSpacing: -2 }}>{name}</div>
           <div style={{ fontSize: 28, color: "#9aa7bd", marginTop: 12 }}>Fixtures · Results · Roster · History</div>
-          <div style={{ fontSize: 24, color: "#6ea0ff", marginTop: 28, fontWeight: 700 }}>SportsDB</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 24, color: "#6ea0ff", marginTop: 28, fontWeight: 700 }}>
+            <PixelBall size={26} fill="#6ea0ff" live="#f87171" />
+            SportsDB
+          </div>
         </div>
       </div>
     ),
