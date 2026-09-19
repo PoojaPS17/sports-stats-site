@@ -7,7 +7,8 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 import { FollowButton } from "@/components/FollowButton";
-import { ShareButton } from "@/components/ShareButton";
+import { ImageActions } from "@/components/ImageActions";
+import { SeriesMatchesExportCard } from "@/components/SeriesMatchesExportCard";
 import { SeriesCard, SeriesMatchList, formatSeriesDates } from "@/components/CricketSeries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesMatches, getCricketSeriesSeasons, SERIES_KIND_LABEL } from "@/lib/cricketSeries";
@@ -91,7 +92,6 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
           </Link>
         )}
         <FollowButton item={{ kind: "series", league: s.league ?? "cricket", refId: s.espn_id, label: s.name, sublabel: "Cricket", href: `/cricket/series/${s.espn_id}` }} />
-        <ShareButton path={`/cricket/series/${s.espn_id}`} title={s.name} />
       </PageHeader>
 
       <AdSlot label="Cricket series detail top" />
@@ -119,14 +119,14 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
 
       {fixtures.length > 0 && (
         <section>
-          <SectionHeader description="Times shown in your local time zone">Fixtures</SectionHeader>
+          <SectionHeader description="Times shown in your local time zone" tools={<ImageActions filename={`${s.espn_id}-fixtures-cricket`} width={860} shareTitle={`${s.name} fixtures`} card={<SeriesMatchesExportCard series={s} title="Fixtures" matches={fixtures} />} />}>Fixtures</SectionHeader>
           <SeriesMatchList matches={fixtures} />
         </section>
       )}
 
       {results.length > 0 && (
         <section>
-          <SectionHeader description="Most recent first">Results</SectionHeader>
+          <SectionHeader description="Most recent first" tools={<ImageActions filename={`${s.espn_id}-results-cricket`} width={860} shareTitle={`${s.name} results`} card={<SeriesMatchesExportCard series={s} title="Results" matches={results} />} />}>Results</SectionHeader>
           <SeriesMatchList matches={results} />
         </section>
       )}

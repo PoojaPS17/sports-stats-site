@@ -9,6 +9,8 @@ import { AdSlot } from "@/components/AdSlot";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
+import { ImageActions } from "@/components/ImageActions";
+import { FixtureRunsExportCard, PowerRankingsExportCard } from "@/components/PowerRankingsExportCards";
 
 export const revalidate = 900;
 
@@ -75,48 +77,65 @@ export default async function PowerRankingsPage({ params }: { params: Promise<{ 
       <AdSlot label={`${label} power rankings top`} />
 
       <div className="grid gap-8 lg:grid-cols-3">
-        <section className="card overflow-hidden lg:col-span-2">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[440px] border-collapse text-sm">
-              <thead>
-                <tr className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
-                  <th className="py-2 pl-4 text-left font-semibold">Team</th>
-                  <th className="px-2 py-2 text-right font-semibold">Rating</th>
-                  <th className="px-2 py-2 text-right font-semibold">Last 5</th>
-                  <th className="py-2 pl-2 pr-4 text-right font-semibold">Peak</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pr.rows.map((r, i) => (
-                  <tr key={r.team.espn_id} className="table-row">
-                    <td className="py-2.5 pl-4">
-                      <Link href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
-                        <span className="w-5 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
-                        <TeamLogo name={teamDisplayName(r.team.name)} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
-                        <span className="truncate">{teamDisplayName(r.team.name)}</span>
-                      </Link>
-                    </td>
-                    <td className="px-2 py-2.5 text-right font-bold tabular-nums">{Math.round(r.rating)}</td>
-                    <td className={`px-2 py-2.5 text-right tabular-nums ${r.trend > 0 ? "text-[var(--win)]" : r.trend < 0 ? "text-[var(--loss)]" : "text-[var(--text-muted)]"}`}>
-                      {r.trend > 0 ? "▲" : r.trend < 0 ? "▼" : ""} {Math.abs(Math.round(r.trend))}
-                    </td>
-                    <td className="py-2.5 pl-2 pr-4 text-right tabular-nums text-[var(--text-muted)]">{Math.round(r.peak)}</td>
+        <div className="flex flex-col gap-3 lg:col-span-2">
+          <ImageActions
+            filename={`${league}-power-rankings`}
+            shareTitle={`${label} power rankings`}
+            card={<PowerRankingsExportCard league={league} season={pr.season} rows={pr.rows} title={`${label} power rankings`} />}
+          />
+          <section className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[440px] border-collapse text-sm">
+                <thead>
+                  <tr className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                    <th className="py-2 pl-4 text-left font-semibold">Team</th>
+                    <th className="px-2 py-2 text-right font-semibold">Rating</th>
+                    <th className="px-2 py-2 text-right font-semibold">Last 5</th>
+                    <th className="py-2 pl-2 pr-4 text-right font-semibold">Peak</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+                <tbody>
+                  {pr.rows.map((r, i) => (
+                    <tr key={r.team.espn_id} className="table-row">
+                      <td className="py-2.5 pl-4">
+                        <Link href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
+                          <span className="w-5 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
+                          <TeamLogo name={teamDisplayName(r.team.name)} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
+                          <span className="truncate">{teamDisplayName(r.team.name)}</span>
+                        </Link>
+                      </td>
+                      <td className="px-2 py-2.5 text-right font-bold tabular-nums">{Math.round(r.rating)}</td>
+                      <td className={`px-2 py-2.5 text-right tabular-nums ${r.trend > 0 ? "text-[var(--win)]" : r.trend < 0 ? "text-[var(--loss)]" : "text-[var(--text-muted)]"}`}>
+                        {r.trend > 0 ? "▲" : r.trend < 0 ? "▼" : ""} {Math.abs(Math.round(r.trend))}
+                      </td>
+                      <td className="py-2.5 pl-2 pr-4 text-right tabular-nums text-[var(--text-muted)]">{Math.round(r.peak)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
 
         <aside className="flex flex-col gap-6">
           <div>
-            <SectionHeader description="Average rating of upcoming opponents on the schedule, up to five">Toughest runs ahead</SectionHeader>
+            <SectionHeader
+              description="Average rating of upcoming opponents on the schedule, up to five"
+              tools={pr.hardestRuns.length > 0 && <ImageActions filename={`${league}-toughest-runs`} shareTitle={`${label} toughest runs ahead`} width={640} card={<FixtureRunsExportCard league={league} title={`${label} toughest runs ahead`} subtitle="Average rating of each team's next five opponents" runs={pr.hardestRuns} tone="hard" />} />}
+            >
+              Toughest runs ahead
+            </SectionHeader>
             <div className="card overflow-hidden">
               <RunList league={league} runs={pr.hardestRuns} tone="hard" />
             </div>
           </div>
           <div>
-            <SectionHeader description="Average rating of upcoming opponents on the schedule, up to five">Easiest runs ahead</SectionHeader>
+            <SectionHeader
+              description="Average rating of upcoming opponents on the schedule, up to five"
+              tools={pr.easiestRuns.length > 0 && <ImageActions filename={`${league}-easiest-runs`} shareTitle={`${label} easiest runs ahead`} width={640} card={<FixtureRunsExportCard league={league} title={`${label} easiest runs ahead`} subtitle="Average rating of each team's next five opponents" runs={pr.easiestRuns} tone="easy" />} />}
+            >
+              Easiest runs ahead
+            </SectionHeader>
             <div className="card overflow-hidden">
               <RunList league={league} runs={pr.easiestRuns} tone="easy" />
             </div>

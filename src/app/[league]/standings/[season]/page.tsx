@@ -11,6 +11,8 @@ import { SeasonSummary } from "@/components/SeasonSummary";
 import { PageHeader } from "@/components/PageHeader";
 import { StandingsViewTabs } from "@/components/StandingsViewTabs";
 import { ComputedStandingsTable } from "@/components/ComputedStandingsTable";
+import { ImageActions } from "@/components/ImageActions";
+import { ComputedStandingsExportCard, StandingsExportCard, standingsExportWidth } from "@/components/StandingsExportCard";
 
 // A past season's final table never changes, so this can be cached far longer than
 // the live current-season standings page. The computed views (home/away/form) share
@@ -61,7 +63,17 @@ export default async function StandingsSeasonPage({
           <StandingsViewTabs league={league} active={scope} />
         </PageHeader>
         <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />
-        <ComputedStandingsTable league={league} rows={rows} scope={scope} />
+        <div className="flex flex-col gap-3">
+          {rows.length > 0 && (
+            <ImageActions
+              filename={`${league}-${scope}-table`}
+              shareTitle={`${LEAGUE_LABEL[league]} ${SCOPE_TITLE[scope].toLowerCase()}`}
+              width={820}
+              card={<ComputedStandingsExportCard league={league} rows={rows} title={`${LEAGUE_LABEL[league]} ${SCOPE_TITLE[scope].toLowerCase()}`} subtitle={current ? `${formatSeasonLabel(league, current)} season, ${SCOPE_DESC[scope]}` : null} context={`${LEAGUE_LABEL[league]} ${SCOPE_TITLE[scope].toLowerCase()}`} />}
+            />
+          )}
+          <ComputedStandingsTable league={league} rows={rows} scope={scope} />
+        </div>
       </div>
     );
   }
@@ -86,7 +98,17 @@ export default async function StandingsSeasonPage({
 
       <SeasonSummary league={league} playoffResults={summarizePlayoffs(playoffGames)} standings={standings} />
 
-      <StandingsTable league={league} standings={standings} />
+      <div className="flex flex-col gap-3">
+        {standings.length > 0 && (
+          <ImageActions
+            filename={`${league}-standings-${season}`}
+            shareTitle={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`}
+            width={standingsExportWidth(league, standings)}
+            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={`${formatSeasonLabel(league, season)} season`} context={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`} />}
+          />
+        )}
+        <StandingsTable league={league} standings={standings} />
+      </div>
     </div>
   );
 }

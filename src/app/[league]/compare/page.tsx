@@ -11,6 +11,8 @@ import { AdSlot } from "@/components/AdSlot";
 import { PageHeader } from "@/components/PageHeader";
 import { TeamLogo } from "@/components/TeamLogo";
 import { CompareTable } from "@/components/CompareTable";
+import { ImageActions } from "@/components/ImageActions";
+import { CompareExportCard } from "@/components/CompareExportCard";
 import { CompareModeTabs } from "@/components/CompareModeTabs";
 
 export const revalidate = 600;
@@ -78,6 +80,16 @@ export default async function CompareTeamsPage({
 
   const cmp = a && b && a !== b ? await getTeamComparison(league, a, b) : null;
   const soccer = isSoccer(league);
+  const ordinal = (n: number) => `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
+  const sideOf = (s: NonNullable<typeof cmp>["a"]) => ({
+    name: teamDisplayName(s.team.name),
+    logoUrl: s.team.logo_url,
+    color: s.team.color,
+    lines: [
+      `${s.position ? `${ordinal(s.position)} of ${s.teamsInTable}` : "Not in current table"}${s.overall ? ` · ${s.overall.wins}${soccer ? `W ${s.overall.draws}D ${s.overall.losses}L` : `-${s.overall.losses}`}` : ""}`,
+      ...(s.form.length > 0 ? [`Form ${[...s.form].reverse().join(" ")}`] : []),
+    ],
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -143,6 +155,23 @@ export default async function CompareTeamsPage({
             </Link>
           )}
 
+          <ImageActions
+            filename={`${league}-compare-${cmp.a.team.slug}-vs-${cmp.b.team.slug}`}
+            shareTitle={`${teamDisplayName(cmp.a.team.name)} vs ${teamDisplayName(cmp.b.team.name)}`}
+            width={820}
+            card={
+              <CompareExportCard
+                league={league}
+                title={`${teamDisplayName(cmp.a.team.name)} vs ${teamDisplayName(cmp.b.team.name)}`}
+                subtitle={cmp.season ? `${formatSeasonLabel(league, cmp.season)} season, side by side` : null}
+                a={sideOf(cmp.a)}
+                b={sideOf(cmp.b)}
+                groups={cmp.groups}
+                nameA={cmp.a.team.abbreviation ?? teamDisplayName(cmp.a.team.name)}
+                nameB={cmp.b.team.abbreviation ?? teamDisplayName(cmp.b.team.name)}
+              />
+            }
+          />
           <CompareTable groups={cmp.groups} colorA={cmp.a.team.color} colorB={cmp.b.team.color} nameA={cmp.a.team.abbreviation ?? teamDisplayName(cmp.a.team.name)} nameB={cmp.b.team.abbreviation ?? teamDisplayName(cmp.b.team.name)} />
         </>
       )}

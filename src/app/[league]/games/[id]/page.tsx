@@ -16,6 +16,12 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { TeamStatsComparison } from "@/components/TeamStatsComparison";
 import { ImageActions } from "@/components/ImageActions";
 import { TeamStatsExportCard } from "@/components/TeamStatsExportCard";
+import { MatchTimelineExportCard } from "@/components/MatchTimelineExportCard";
+import { MatchLineupsExportCard } from "@/components/MatchLineupsExportCard";
+import { MatchLeadersExportCard } from "@/components/MatchLeadersExportCard";
+import { PlayerBoxScoreExportCard } from "@/components/PlayerBoxScoreExportCard";
+import { CricketScorecardExportCard } from "@/components/CricketScorecardExportCard";
+import { MatchScoreHeader } from "@/components/MatchScoreHeader";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
 import { CricketScorecards } from "@/components/CricketScorecard";
 import { ViewTracker } from "@/components/ViewTracker";
@@ -203,7 +209,17 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
       {events.length > 0 && (
         <section>
-          <SectionHeader>{isSoccerLeague(league) ? "Timeline" : "Scoring summary"}</SectionHeader>
+          <SectionHeader
+            tools={
+              <ImageActions
+                filename={`${id}-${isSoccerLeague(league) ? "timeline" : "scoring"}-${league}`}
+                shareTitle={`${matchName} ${isSoccerLeague(league) ? "timeline" : "scoring summary"}`}
+                card={<MatchTimelineExportCard league={league} game={game} events={events} title={isSoccerLeague(league) ? "Timeline" : "Scoring summary"} />}
+              />
+            }
+          >
+            {isSoccerLeague(league) ? "Timeline" : "Scoring summary"}
+          </SectionHeader>
           <MatchTimeline league={league} game={game} events={events} playerSlugs={playerSlugs} />
         </section>
       )}
@@ -217,7 +233,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
       {lineups.length > 0 && (
         <section>
-          <SectionHeader>Line-ups</SectionHeader>
+          <SectionHeader tools={<ImageActions filename={`${id}-lineups-${league}`} width={860} shareTitle={`${matchName} line-ups`} card={<MatchLineupsExportCard league={league} game={game} lineups={lineups} />} />}>Line-ups</SectionHeader>
           <MatchLineups league={league} game={game} lineups={lineups} playerSlugs={playerSlugs} />
         </section>
       )}
@@ -242,21 +258,32 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
       {leaders.length > 0 && (
         <section>
-          <SectionHeader>Game leaders</SectionHeader>
+          <SectionHeader tools={<ImageActions filename={`${id}-leaders-${league}`} width={860} shareTitle={`${matchName} game leaders`} card={<MatchLeadersExportCard league={league} game={game} leaders={leaders} />} />}>Game leaders</SectionHeader>
           <MatchLeaders league={league} game={game} leaders={leaders} playerSlugs={playerSlugs} />
         </section>
       )}
 
       {isCricket && cricketScorecard.length > 0 && (
         <section className="flex flex-col gap-4">
-          <SectionHeader>Scorecard</SectionHeader>
+          <SectionHeader
+            tools={
+              <ImageActions
+                filename={`${id}-scorecard-${league}`}
+                width={860}
+                shareTitle={`${matchName} scorecard`}
+                card={<CricketScorecardExportCard header={<MatchScoreHeader league={league} game={game} />} context={`${matchName} · Scorecard`} scorecard={cricketScorecard} />}
+              />
+            }
+          >
+            Scorecard
+          </SectionHeader>
           <CricketScorecards league={league} scorecard={cricketScorecard} playerSlugs={playerSlugs} />
         </section>
       )}
 
       {!isCricket && hasPlayerStats && (
         <section className="flex flex-col gap-4">
-          <SectionHeader>Player Stats</SectionHeader>
+          <SectionHeader tools={<ImageActions filename={`${id}-box-score-${league}`} width={900} shareTitle={`${matchName} box score`} card={<PlayerBoxScoreExportCard league={league} game={game} playerBox={playerBox} />} />}>Player Stats</SectionHeader>
           {playerBox.map((team) => (
             <PlayerBoxScoreTable key={team.teamId} league={league} team={team} playerSlugs={playerSlugs} />
           ))}

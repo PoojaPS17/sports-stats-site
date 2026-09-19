@@ -11,6 +11,8 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { CompareTable } from "@/components/CompareTable";
 import { CompareModeTabs } from "@/components/CompareModeTabs";
 import { PlayerPicker } from "@/components/PlayerPicker";
+import { ImageActions } from "@/components/ImageActions";
+import { CompareExportCard } from "@/components/CompareExportCard";
 
 export const revalidate = 600;
 
@@ -32,6 +34,12 @@ export async function generateMetadata({
     }
   }
   return pageMeta(`Compare ${label} Players`, `Pick any two ${label} players and compare their season statistics side by side.`, `/${league}/compare/players`);
+}
+
+function sideOf(side: PlayerCompareSide) {
+  const p = side.player;
+  const facts = [p.position, p.jersey ? `#${p.jersey}` : null, p.age ? `${p.age} yrs` : null, p.height].filter(Boolean).join(" · ");
+  return { name: p.name, logoUrl: p.headshot_url, color: p.team_color, lines: [teamDisplayName(p.team_name) ?? "Free agent", ...(facts ? [facts] : [])] };
 }
 
 function PlayerCard({ league, side }: { league: string; side: PlayerCompareSide }) {
@@ -102,20 +110,39 @@ export default async function ComparePlayersPage({
 
       {cmp && (
         <>
-          <div className="grid grid-cols-2 gap-3">
-            <PlayerCard league={league} side={cmp.a} />
-            <PlayerCard league={league} side={cmp.b} />
-          </div>
-          {cmp.groups.length === 0 ? (
-            <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No season stats on record for one or both players yet.</p>
-          ) : (
-            <CompareTable
-              groups={cmp.groups}
-              colorA={cmp.a.player.team_color}
-              colorB={cmp.b.player.team_color}
-              nameA={cmp.a.player.name.split(" ").slice(-1)[0]}
-              nameB={cmp.b.player.name.split(" ").slice(-1)[0]}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <PlayerCard league={league} side={cmp.a} />
+              <PlayerCard league={league} side={cmp.b} />
+            </div>
+            {cmp.groups.length === 0 ? (
+              <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No season stats on record for one or both players yet.</p>
+            ) : (
+              <>
+              <ImageActions
+                filename={`${league}-compare-${cmp.a.player.slug}-vs-${cmp.b.player.slug}`}
+                shareTitle={`${cmp.a.player.name} vs ${cmp.b.player.name}`}
+                width={820}
+                card={
+                  <CompareExportCard
+                    league={league}
+                    title={`${cmp.a.player.name} vs ${cmp.b.player.name}`}
+                    subtitle={seasonNote}
+                    a={sideOf(cmp.a)}
+                    b={sideOf(cmp.b)}
+                    groups={cmp.groups}
+                    nameA={cmp.a.player.name.split(" ").slice(-1)[0]}
+                    nameB={cmp.b.player.name.split(" ").slice(-1)[0]}
+                  />
+                }
+              />
+              <CompareTable
+                groups={cmp.groups}
+                colorA={cmp.a.player.team_color}
+                colorB={cmp.b.player.team_color}
+                nameA={cmp.a.player.name.split(" ").slice(-1)[0]}
+                nameB={cmp.b.player.name.split(" ").slice(-1)[0]}
+              />
+            </>
           )}
           <p className="text-xs text-[var(--text-faint)]">Bold marks the better figure for each stat. For stats like interceptions thrown, fouls or turnovers, lower is treated as better.</p>
         </>

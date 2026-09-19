@@ -20,6 +20,9 @@ import { GameCard } from "./GameCard";
 import { PageHeader } from "./PageHeader";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
+import { ImageActions } from "./ImageActions";
+import { ScoreboardExportCard, scoreboardExportWidth } from "./ScoreboardExportCard";
+import { WeekPerformersExportCard, WeekTableExportCard } from "./WeekExportCards";
 
 function groupByDay(games: Matchweek["games"]) {
   const groups = new Map<string, typeof games>();
@@ -162,7 +165,18 @@ export async function WeekHub({
         <div className="flex flex-col gap-6 lg:col-span-2">
           {[...days.entries()].map(([day, games]) => (
             <section key={day}>
-              <SectionHeader>{day}</SectionHeader>
+              <SectionHeader
+                tools={
+                  <ImageActions
+                    filename={`${league}-${week.shortLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${new Date(games[0].date).toISOString().slice(0, 10)}`}
+                    shareTitle={`${LEAGUE_LABEL[league]} ${week.label}, ${day}`}
+                    width={scoreboardExportWidth(league)}
+                    card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} ${week.label}`} subtitle={`${day}, ${new Date(games[0].date).getFullYear()} · ${formatSeasonLabel(league, season)} season`} games={games} />}
+                  />
+                }
+              >
+                {day}
+              </SectionHeader>
               <div className="grid gap-3 sm:grid-cols-2">
                 {games.map((g) => (
                   <GameCard key={g.espn_id} league={league} game={g} />
@@ -173,7 +187,19 @@ export async function WeekHub({
 
           {performers.length > 0 && (
             <section>
-              <SectionHeader description="Best single-game figures from this round's box scores">Top performers</SectionHeader>
+              <SectionHeader
+                description="Best single-game figures from this round's box scores"
+                tools={
+                  <ImageActions
+                    filename={`${league}-${week.shortLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-top-performers`}
+                    shareTitle={`${LEAGUE_LABEL[league]} ${week.label} top performers`}
+                    width={820}
+                    card={<WeekPerformersExportCard league={league} title={`${LEAGUE_LABEL[league]} ${week.label} top performers`} subtitle={`${formatSeasonLabel(league, season)} season. Best single-game figures from the round's box scores.`} boards={performers} />}
+                  />
+                }
+              >
+                Top performers
+              </SectionHeader>
               <div className="grid gap-4 sm:grid-cols-3">
                 {performers.map((b) => (
                   <div key={b.title} className="card overflow-hidden">
@@ -205,7 +231,19 @@ export async function WeekHub({
         <aside className="flex flex-col gap-6">
           {table.length > 0 && (
             <section>
-              <SectionHeader description={`${isCupCompetition(league) ? "League-phase" : "Regular-season"} table after this round, with movement from the round before`}>Table after {week.numbered ? week.shortLabel : "this round"}</SectionHeader>
+              <SectionHeader
+                description={`${isCupCompetition(league) ? "League-phase" : "Regular-season"} table after this round, with movement from the round before`}
+                tools={
+                  <ImageActions
+                    filename={`${league}-table-after-${week.shortLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                    shareTitle={`${LEAGUE_LABEL[league]} table after ${week.label}`}
+                    width={640}
+                    card={<WeekTableExportCard league={league} title={`${LEAGUE_LABEL[league]} table after ${week.numbered ? week.shortLabel : "this round"}`} subtitle={`${formatSeasonLabel(league, season)} season, with movement since the round before`} table={table} />}
+                  />
+                }
+              >
+                Table after {week.numbered ? week.shortLabel : "this round"}
+              </SectionHeader>
               <div className="card overflow-hidden">
                 <table className="w-full border-collapse text-sm">
                   <thead>

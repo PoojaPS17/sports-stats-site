@@ -10,6 +10,8 @@ import { SeasonTabs } from "@/components/SeasonTabs";
 import { SeasonSummary } from "@/components/SeasonSummary";
 import { PageHeader } from "@/components/PageHeader";
 import { StandingsViewTabs } from "@/components/StandingsViewTabs";
+import { ImageActions } from "@/components/ImageActions";
+import { StandingsExportCard, standingsExportWidth } from "@/components/StandingsExportCard";
 
 export const revalidate = 300;
 
@@ -47,7 +49,17 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
 
       <SeasonSummary league={league} playoffResults={summarizePlayoffs(playoffGames)} standings={standings} />
 
-      <StandingsTable league={league} standings={standings} />
+      <div className="flex flex-col gap-3">
+        {standings.length > 0 && (
+          <ImageActions
+            filename={`${league}-standings-${activeSeason}`}
+            shareTitle={`${LEAGUE_LABEL[league]} standings`}
+            width={standingsExportWidth(league, standings)}
+            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} season${fallbackSeason ? " (final)" : ""}` : null} context={`${LEAGUE_LABEL[league]} standings`} />}
+          />
+        )}
+        <StandingsTable league={league} standings={standings} />
+      </div>
     </div>
   );
 }

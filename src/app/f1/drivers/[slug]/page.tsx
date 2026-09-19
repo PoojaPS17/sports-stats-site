@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getF1DriverBySlug, getF1DriverResults } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { F1ResultsExportCard, driverResultRows } from "@/components/F1ExportCards";
 import { TeamLogo } from "@/components/TeamLogo";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
@@ -46,7 +48,11 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
       <AdSlot label="F1 driver top" />
 
       <section>
-        <SectionHeader>Recent Race Results</SectionHeader>
+        <SectionHeader
+          tools={results.length > 0 && <ImageActions filename={`f1-${slug}-results`} shareTitle={`${driver.name} recent race results`} width={640} card={<F1ResultsExportCard title={`${driver.name}: recent race results`} subtitle={currentTeam} rows={driverResultRows(results)} />} />}
+        >
+          Recent Race Results
+        </SectionHeader>
         {results.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No race results on record yet.</p>
         ) : (

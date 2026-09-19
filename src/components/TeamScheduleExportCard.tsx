@@ -2,6 +2,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportTeamLine } from "./ExportTeamLine";
 import { ExportFooter } from "./ExportFooter";
+import { ExportMore, capRows } from "./ExportShell";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 
@@ -25,9 +26,8 @@ function ScheduleRow({ game }: { game: GameRow }) {
 }
 
 // The downloadable version of "Results & Schedule": every game of one season for one
-// team, laid out as a fixed-width grid so a full 17- or 82-game season still fits into
-// one shareable image - unlike a live-page screenshot, it isn't limited to whatever
-// happened to be scrolled into view.
+// team, laid out as a fixed-width grid. Past 25 games it stops and says how many more
+// there are, so an 82-game season stays a shareable picture rather than a poster.
 export function TeamScheduleExportCard({
   league,
   teamName,
@@ -43,6 +43,7 @@ export function TeamScheduleExportCard({
   seasonLabel: string;
   games: GameRow[];
 }) {
+  const { shown, hidden } = capRows(games);
   return (
     <div style={{ background: CARD.surface, border: `1px solid ${CARD.border}`, borderRadius: 16, padding: 24 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -59,11 +60,14 @@ export function TeamScheduleExportCard({
       {games.length === 0 ? (
         <p style={{ marginTop: 16, fontSize: 14, color: CARD.textMuted }}>No games found for this season.</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 16 }}>
-          {games.map((g) => (
-            <ScheduleRow key={g.espn_id} game={g} />
-          ))}
-        </div>
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 16 }}>
+            {shown.map((g) => (
+              <ScheduleRow key={g.espn_id} game={g} />
+            ))}
+          </div>
+          <ExportMore boxed count={hidden} noun={hidden === 1 ? "more game" : "more games"} />
+        </>
       )}
       <ExportFooter context={`${teamDisplayName(teamName)} ${seasonLabel}`} />
     </div>

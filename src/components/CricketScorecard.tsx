@@ -60,19 +60,6 @@ function ScorecardTable({
   );
 }
 
-// One card per team: the shape of reports stored before innings were tracked, which
-// is fine for a limited-overs match where each side bats once.
-export function CricketScorecard({ league, team, playerSlugs }: { league: League; team: CricketTeamScorecard; playerSlugs: Map<string, string> }) {
-  if (team.battingRows.length === 0 && team.bowlingRows.length === 0) return null;
-  return (
-    <div className="card overflow-hidden">
-      <h3 className="border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-bold">{team.teamName}</h3>
-      <ScorecardTable league={league} title="Batting" labels={team.battingLabels} rows={team.battingRows} playerSlugs={playerSlugs} />
-      <ScorecardTable league={league} title="Bowling" labels={team.bowlingLabels} rows={team.bowlingRows} playerSlugs={playerSlugs} />
-    </div>
-  );
-}
-
 const ORDINAL = ["1st", "2nd", "3rd", "4th"];
 
 function totalText(t: CricketInningsTotal | undefined): string | null {
@@ -82,51 +69,82 @@ function totalText(t: CricketInningsTotal | undefined): string | null {
   return `${score} (${t.overs} ov)`;
 }
 
-// One card per innings in match order, the way a scorecard reads: the batting side's
-// batters, then the fielding side's bowlers. A first-class match has four cards; a
-// limited-overs match two; a super over adds its own.
-export function CricketScorecards({ league, scorecard, playerSlugs }: { league: League; scorecard: CricketTeamScorecard[]; playerSlugs: Map<string, string> }) {
+export interface ScorecardTableData {
+  title: string;
+  labels: string[];
+  rows: CricketInningsRow[];
+}
+
+// One innings as a scorecard reads it: the batting side's batters, then the fielding
+// side's bowlers. The live page and the downloadable card both render from this list,
+// so the two can't disagree about which innings exist or what they're called.
+export interface ScorecardBlock {
+  key: string;
+  team: string;
+  label: string | null;
+  total: string | null;
+  batting: ScorecardTableData;
+  bowling: ScorecardTableData;
+}
+
+// A first-class match has four blocks; a limited-overs match two; a super over adds its own.
+// Reports stored before innings were tracked fall back to one block per team.
+export function scorecardBlocks(scorecard: CricketTeamScorecard[]): ScorecardBlock[] {
   const tracked = scorecard.some((t) => t.battingRows.some((r) => r.innings !== undefined) || t.bowlingRows.some((r) => r.innings !== undefined));
   if (!tracked) {
-    return (
-      <>
-        {scorecard.map((team) => (
-          <CricketScorecard key={team.teamId} league={league} team={team} playerSlugs={playerSlugs} />
-        ))}
-      </>
-    );
+    return scorecard
+      .filter((team) => team.battingRows.length > 0 || team.bowlingRows.length > 0)
+      .map((team) => ({
+        key: team.teamId,
+        team: team.teamName,
+        label: null,
+        total: null,
+        batting: { title: "Batting", labels: team.battingLabels, rows: team.battingRows },
+        bowling: { title: "Bowling", labels: team.bowlingLabels, rows: team.bowlingRows },
+      }));
   }
 
   const periods = Array.from(new Set(scorecard.flatMap((t) => [...t.battingRows, ...t.bowlingRows].map((r) => r.innings ?? 0)).filter((n) => n > 0))).sort((a, b) => a - b);
+  const blocks: ScorecardBlock[] = [];
+  for (const period of periods) {
+    const batting = scorecard.find((t) => t.battingRows.some((r) => r.innings === period)) ?? scorecard.find((t) => (t.innings ?? []).some((i) => i.period === period));
+    const bowling = scorecard.find((t) => t !== batting && t.bowlingRows.some((r) => r.innings === period));
+    const battingRows = batting?.battingRows.filter((r) => r.innings === period) ?? [];
+    const bowlingRows = bowling?.bowlingRows.filter((r) => r.innings === period) ?? [];
+    if (battingRows.length === 0 && bowlingRows.length === 0) continue;
 
+    const teamPeriods = Array.from(new Set([...(batting?.innings ?? []).map((i) => i.period), ...(batting?.battingRows ?? []).map((r) => r.innings ?? 0)].filter((n) => n > 0))).sort((a, b) => a - b);
+    const total = batting?.innings?.find((i) => i.period === period);
+    const ordinal = teamPeriods.indexOf(period);
+    blocks.push({
+      key: String(period),
+      team: teamDisplayName(batting?.teamName) ?? "Batting",
+      label: /super/i.test(total?.description ?? "") ? "Super over" : teamPeriods.length > 1 && ordinal >= 0 ? `${ORDINAL[ordinal] ?? `${ordinal + 1}th`} innings` : "innings",
+      total: totalText(total),
+      batting: { title: "Batting", labels: batting?.battingLabels ?? [], rows: battingRows },
+      bowling: { title: bowling ? `Bowling · ${teamDisplayName(bowling.teamName)}` : "Bowling", labels: bowling?.bowlingLabels ?? [], rows: bowlingRows },
+    });
+  }
+  return blocks;
+}
+
+// One card per innings in match order.
+export function CricketScorecards({ league, scorecard, playerSlugs }: { league: League; scorecard: CricketTeamScorecard[]; playerSlugs: Map<string, string> }) {
   return (
     <>
-      {periods.map((period) => {
-        const batting = scorecard.find((t) => t.battingRows.some((r) => r.innings === period)) ?? scorecard.find((t) => (t.innings ?? []).some((i) => i.period === period));
-        const bowling = scorecard.find((t) => t !== batting && t.bowlingRows.some((r) => r.innings === period));
-        const battingRows = batting?.battingRows.filter((r) => r.innings === period) ?? [];
-        const bowlingRows = bowling?.bowlingRows.filter((r) => r.innings === period) ?? [];
-        if (battingRows.length === 0 && bowlingRows.length === 0) return null;
-
-        const teamPeriods = Array.from(new Set([...(batting?.innings ?? []).map((i) => i.period), ...(batting?.battingRows ?? []).map((r) => r.innings ?? 0)].filter((n) => n > 0))).sort((a, b) => a - b);
-        const total = batting?.innings?.find((i) => i.period === period);
-        const ordinal = teamPeriods.indexOf(period);
-        const label = /super/i.test(total?.description ?? "") ? "Super over" : teamPeriods.length > 1 && ordinal >= 0 ? `${ORDINAL[ordinal] ?? `${ordinal + 1}th`} innings` : "innings";
-        const totalLabel = totalText(total);
-
-        return (
-          <div key={period} className="card overflow-hidden">
-            <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-bold">
-              <span>
-                {teamDisplayName(batting?.teamName) ?? "Batting"} <span className="font-semibold text-[var(--text-muted)]">{label}</span>
-              </span>
-              {totalLabel && <span className="tabular-nums">{totalLabel}</span>}
-            </h3>
-            <ScorecardTable league={league} title="Batting" labels={batting?.battingLabels ?? []} rows={battingRows} playerSlugs={playerSlugs} />
-            <ScorecardTable league={league} title={bowling ? `Bowling · ${teamDisplayName(bowling.teamName)}` : "Bowling"} labels={bowling?.bowlingLabels ?? []} rows={bowlingRows} playerSlugs={playerSlugs} />
-          </div>
-        );
-      })}
+      {scorecardBlocks(scorecard).map((b) => (
+        <div key={b.key} className="card overflow-hidden">
+          <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-bold">
+            <span>
+              {b.team}
+              {b.label && <span className="font-semibold text-[var(--text-muted)]"> {b.label}</span>}
+            </span>
+            {b.total && <span className="tabular-nums">{b.total}</span>}
+          </h3>
+          <ScorecardTable league={league} title={b.batting.title} labels={b.batting.labels} rows={b.batting.rows} playerSlugs={playerSlugs} />
+          <ScorecardTable league={league} title={b.bowling.title} labels={b.bowling.labels} rows={b.bowling.rows} playerSlugs={playerSlugs} />
+        </div>
+      ))}
     </>
   );
 }

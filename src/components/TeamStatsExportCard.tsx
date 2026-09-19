@@ -1,39 +1,28 @@
 import type { TeamStatGroup } from "@/lib/matchDetail";
 import { formatStat } from "@/lib/statGlossary";
 import { teamDisplayName } from "@/lib/teamName";
-import { ExportFooter } from "./ExportFooter";
-import { ExportTeamLine } from "./ExportTeamLine";
-import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
+import { ExportShell, ExportLabel } from "./ExportShell";
+import { MatchScoreHeader } from "./MatchScoreHeader";
+import type { GameRow, League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 
 const AWAY_COLOR = "#d97706";
 
-// The downloadable version of TeamStatsComparison. It opens with the scoreline so the
-// image says who played and how it ended, then the same stat-by-stat split bars, all on
-// the fixed light card so it reads the same shared into a group chat as it does live.
+// The downloadable version of TeamStatsComparison: the same stat-by-stat split bars,
+// under the scoreline, on the fixed light card so it reads the same shared into a
+// group chat as it does live.
 export function TeamStatsExportCard({ league, game, away, home, title }: { league: League; game: GameRow; away: TeamStatGroup; home: TeamStatGroup; title: string }) {
   const rows = away.stats.map((stat, i) => ({
     label: stat.label,
     awayValue: formatStat(stat.label, stat.value),
     homeValue: formatStat(stat.label, home.stats[i]?.value ?? "-"),
   }));
-  const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
-  const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
-  const when = new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
   return (
-    <div style={{ background: CARD.surface, border: `1px solid ${CARD.border}`, borderRadius: 16, padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>
-        <span>{LEAGUE_LABEL[league]}</span>
-        <span>{game.completed ? `Final · ${when}` : when}</span>
+    <ExportShell header={<MatchScoreHeader league={league} game={game} />} context={`${teamDisplayName(away.teamName)} vs ${teamDisplayName(home.teamName)}`}>
+      <div style={{ paddingTop: 16, borderTop: `1px solid ${CARD.border}` }}>
+        <ExportLabel>{title}</ExportLabel>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
-        <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
-        <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
-      </div>
-      {game.completed && game.status_summary && <div style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: CARD.accent }}>{game.status_summary}</div>}
-
-      <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${CARD.border}`, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>{title}</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6, fontSize: 14, fontWeight: 800, color: CARD.text }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 10, height: 10, borderRadius: 999, background: AWAY_COLOR }} />
@@ -65,7 +54,6 @@ export function TeamStatsExportCard({ league, game, away, home, title }: { leagu
           );
         })}
       </div>
-      <ExportFooter context={`${teamDisplayName(away.teamName)} vs ${teamDisplayName(home.teamName)}`} />
-    </div>
+    </ExportShell>
   );
 }

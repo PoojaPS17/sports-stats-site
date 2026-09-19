@@ -13,6 +13,7 @@ export function ExportTeamLine({
   scoreDisplay,
   completed,
   won,
+  showScore = completed,
 }: {
   name: string;
   logo: string | null;
@@ -21,6 +22,8 @@ export function ExportTeamLine({
   scoreDisplay: string | null;
   completed: boolean;
   won: boolean;
+  /** Scores show for finished games by default; pass true for one in play. */
+  showScore?: boolean;
 }) {
   const loser = completed && !won;
   return (
@@ -29,7 +32,7 @@ export function ExportTeamLine({
         <TeamLogo name={name} logoUrl={logo} color={color} size={24} />
         <span style={{ fontSize: 14, fontWeight: loser ? 500 : 700, color: loser ? CARD.textMuted : CARD.text }}>{teamDisplayName(name)}</span>
       </div>
-      {completed && (score !== null || scoreDisplay) && (
+      {showScore && (score !== null || scoreDisplay) && (
         <span style={{ fontSize: 15, fontWeight: won ? 800 : 500, color: won ? CARD.text : CARD.textMuted, whiteSpace: "nowrap" }}>
           {scoreDisplay ?? score}
         </span>

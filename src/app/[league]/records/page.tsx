@@ -9,6 +9,8 @@ import { AdSlot } from "@/components/AdSlot";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
+import { ImageActions } from "@/components/ImageActions";
+import { RecordsExportCard, recordsExportWidth, type RecordBoard } from "@/components/RecordsExportCards";
 
 export const revalidate = 3600;
 
@@ -102,13 +104,29 @@ export default async function RecordsPage({ params }: { params: Promise<{ league
     ? `${formatSeasonLabel(league, r.seasonsCovered[0])} to ${formatSeasonLabel(league, r.seasonsCovered[1])}, ${r.gamesCovered.toLocaleString()} games`
     : undefined;
 
+  const gameBoards: RecordBoard[] = [
+    { title: "Highest-scoring games", kind: "games", games: r.highestScoring, unit },
+    { title: "Biggest margins of victory", kind: "games", games: r.biggestMargins, unit: `${unit} margin` },
+    { title: soccer ? "Most goals by one team" : "Highest team scores", kind: "games", games: r.highestTeamScore, unit },
+    { title: "Biggest away wins", kind: "games", games: r.biggestAwayWins, unit: `${unit} margin` },
+  ];
+  const streakBoards: RecordBoard[] = [
+    { title: "Longest winning streaks", kind: "streaks", streaks: r.longestWinStreaks },
+    ...(soccer ? [{ title: "Longest unbeaten runs", kind: "streaks", streaks: r.longestUnbeaten } as RecordBoard] : []),
+    { title: soccer ? "Longest winless runs" : "Longest losing streaks", kind: "streaks", streaks: r.longestWinless },
+  ];
+  const lowBoards: RecordBoard[] = [{ title: "Lowest-scoring games", kind: "games", games: r.lowestScoring, unit }];
+  const tools = (name: string, title: string, boards: RecordBoard[]) => (
+    <ImageActions filename={`${league}-records-${name}`} shareTitle={`${label} ${title.toLowerCase()}`} width={recordsExportWidth(boards)} card={<RecordsExportCard league={league} title={`${label} records: ${title}`} subtitle={coverage ?? null} boards={boards} />} />
+  );
+
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title={`${label} Records`} subtitle={coverage ? `Record book for every game on SportsDB: ${coverage}` : undefined} />
       <AdSlot label={`${label} records top`} />
 
       <div>
-        <SectionHeader>Games</SectionHeader>
+        <SectionHeader tools={tools("games", "Games", gameBoards)}>Games</SectionHeader>
         <div className="grid gap-6 lg:grid-cols-2">
           <Board title={`Highest-scoring games`}>
             <GameList league={league} games={r.highestScoring} unit={unit} />
@@ -126,7 +144,9 @@ export default async function RecordsPage({ params }: { params: Promise<{ league
       </div>
 
       <div>
-        <SectionHeader description="Regular season and playoffs combined, across every season on record">Streaks</SectionHeader>
+        <SectionHeader description="Regular season and playoffs combined, across every season on record" tools={tools("streaks", "Streaks", streakBoards)}>
+          Streaks
+        </SectionHeader>
         <div className={`grid gap-6 ${soccer ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
           <Board title="Longest winning streaks">
             <StreakList league={league} streaks={r.longestWinStreaks} />
@@ -144,7 +164,7 @@ export default async function RecordsPage({ params }: { params: Promise<{ league
 
       {!soccer && (
         <div>
-          <SectionHeader>Low scoring</SectionHeader>
+          <SectionHeader tools={tools("low-scoring", "Low scoring", lowBoards)}>Low scoring</SectionHeader>
           <div className="grid gap-6 lg:grid-cols-2">
             <Board title="Lowest-scoring games">
               <GameList league={league} games={r.lowestScoring} unit={unit} />

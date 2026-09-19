@@ -12,6 +12,8 @@ import { TeamPageNav } from "@/components/TeamPageNav";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { PositionChart } from "@/components/PositionChart";
+import { ImageActions } from "@/components/ImageActions";
+import { TeamHistoryExportCard } from "@/components/TeamHistoryExportCard";
 
 export const revalidate = 3600;
 
@@ -43,6 +45,13 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
   const titles = played.filter((h) => h.position === 1);
   const avgPos = played.length ? played.reduce((s, h) => s + h.position, 0) / played.length : null;
 
+  const summary = [
+    { label: soccer && !isCupCompetition(league) ? "Titles" : "1st-place finishes", value: titles.length, sub: titles.map((t) => formatSeasonLabel(league, t.season)).join(", ") || "None on record" },
+    { label: "Best finish", value: best ? ordinal(best.position) : "—", sub: best ? formatSeasonLabel(league, best.season) ?? "" : "" },
+    { label: "Lowest finish", value: worst ? ordinal(worst.position) : "—", sub: worst ? formatSeasonLabel(league, worst.season) ?? "" : "" },
+    { label: "Average finish", value: avgPos ? avgPos.toFixed(1) : "—", sub: `across ${played.length} seasons` },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs
@@ -65,12 +74,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { label: soccer && !isCupCompetition(league) ? "Titles" : "1st-place finishes", value: titles.length, sub: titles.map((t) => formatSeasonLabel(league, t.season)).join(", ") || "None on record" },
-              { label: "Best finish", value: best ? ordinal(best.position) : "—", sub: best ? formatSeasonLabel(league, best.season) ?? "" : "" },
-              { label: "Lowest finish", value: worst ? ordinal(worst.position) : "—", sub: worst ? formatSeasonLabel(league, worst.season) ?? "" : "" },
-              { label: "Average finish", value: avgPos ? avgPos.toFixed(1) : "—", sub: `across ${played.length} seasons` },
-            ].map((s) => (
+            {summary.map((s) => (
               <div key={s.label} className="card flex flex-col gap-0.5 px-4 py-3">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{s.label}</span>
                 <span className="text-2xl font-bold tabular-nums tracking-tight">{s.value}</span>
@@ -87,7 +91,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
           </section>
 
           <section>
-            <SectionHeader>Season by season</SectionHeader>
+            <SectionHeader tools={<ImageActions filename={`${slug}-history-${league}`} width={860} shareTitle={`${teamDisplayName(team.name)} season history`} card={<TeamHistoryExportCard league={league} teamName={team.name} teamLogo={team.logo_url} teamColor={team.color} played={played} soccer={soccer} summary={summary} />} />}>Season by season</SectionHeader>
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[520px] border-collapse text-sm">

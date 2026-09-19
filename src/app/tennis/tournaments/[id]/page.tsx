@@ -5,7 +5,9 @@ import { pageMeta } from "@/lib/metadata";
 import { PageHeader } from "@/components/PageHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { FollowButton } from "@/components/FollowButton";
-import { ShareButton } from "@/components/ShareButton";
+import { ImageActions } from "@/components/ImageActions";
+import { SectionHeader } from "@/components/SectionHeader";
+import { TennisChampionsExportCard, TennisDrawExportCard } from "@/components/TennisTournamentExportCards";
 import { TournamentCalendar } from "@/components/TennisCalendar";
 import { TennisDrawSection, formatDateRange, groupMatches } from "@/components/TennisScores";
 import { COMPETITION_LABEL, getTennisTournament, getTennisTournamentEditions, getTennisTournamentMatches, getTennisTournamentSeasons, getTennisTournaments } from "@/lib/tennis";
@@ -43,6 +45,7 @@ export default async function TennisTournamentPage({ params }: { params: Promise
   const draws = groupMatches(matches)[0]?.draws ?? [];
   const range = formatDateRange(t.start_date, t.end_date);
   const tourLabel = t.tour === "both" ? "ATP · WTA" : t.tour.toUpperCase();
+  const info = { name: t.name, season: t.season, tourLabel, major: t.major, location: t.location, range };
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,15 +61,14 @@ export default async function TennisTournamentPage({ params }: { params: Promise
           Calendar
         </Link>
         <FollowButton item={{ kind: "tournament", league: "tennis", refId: t.espn_id, label: `${t.name} ${t.season}`, sublabel: tourLabel, href: `/tennis/tournaments/${t.espn_id}` }} />
-        <ShareButton path={`/tennis/tournaments/${t.espn_id}`} title={`${t.name} ${t.season}`} />
       </PageHeader>
 
       <AdSlot label="Tennis tournament top" />
 
       {t.champions.length > 0 && (
-        <section className="card px-4 py-3">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Champions</p>
-          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+        <section>
+          <SectionHeader tools={<ImageActions filename={`${t.espn_id}-champions-tennis`} shareTitle={`${t.name} ${t.season} champions`} card={<TennisChampionsExportCard tournament={info} champions={t.champions} />} />}>Champions</SectionHeader>
+          <div className="card grid gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-2">
             {t.champions.map((c) => (
               <div key={c.competition_type} className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="text-[var(--text-muted)]">{COMPETITION_LABEL[c.competition_type]}</span>
@@ -106,10 +108,13 @@ export default async function TennisTournamentPage({ params }: { params: Promise
           {t.start_date && t.start_date.slice(0, 10) > new Date().toISOString().slice(0, 10) ? "The draw is published once play begins." : "No matches on file for this edition."}
         </p>
       ) : (
-        <section className="card overflow-hidden">
-          {draws.map((d) => (
-            <TennisDrawSection key={d.type ?? "singles"} type={d.type} matches={d.matches} byRound />
-          ))}
+        <section>
+          <SectionHeader tools={<ImageActions filename={`${t.espn_id}-draw-tennis`} width={860} shareTitle={`${t.name} ${t.season} draw`} card={<TennisDrawExportCard tournament={info} draws={draws} />} />}>Draw</SectionHeader>
+          <div className="card overflow-hidden">
+            {draws.map((d) => (
+              <TennisDrawSection key={d.type ?? "singles"} type={d.type} matches={d.matches} byRound />
+            ))}
+          </div>
         </section>
       )}
 

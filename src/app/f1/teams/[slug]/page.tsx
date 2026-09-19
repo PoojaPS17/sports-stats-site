@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getF1ConstructorBySlug, getF1ConstructorDrivers, getF1ConstructorResults } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { F1ResultsExportCard, constructorResultRows } from "@/components/F1ExportCards";
 import { TeamLogo } from "@/components/TeamLogo";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
@@ -68,7 +70,11 @@ export default async function F1ConstructorPage({ params }: { params: Promise<{ 
       </section>
 
       <section>
-        <SectionHeader>Recent Race Results</SectionHeader>
+        <SectionHeader
+          tools={results.length > 0 && <ImageActions filename={`f1-${slug}-results`} shareTitle={`${team.name} recent race results`} width={640} card={<F1ResultsExportCard title={`${team.name}: recent race results`} subtitle="Constructor" rows={constructorResultRows(results)} />} />}
+        >
+          Recent Race Results
+        </SectionHeader>
         {results.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No race results on record yet.</p>
         ) : (

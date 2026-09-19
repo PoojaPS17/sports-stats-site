@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
 import { PageHeader } from "@/components/PageHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { TennisRankingsExportCard, TennisScoresExportCard } from "@/components/TennisExportCards";
+
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { Flag, TennisDayStrip, TennisDayView, TournamentCard, formatDayLabel } from "@/components/TennisScores";
@@ -44,7 +47,11 @@ export default async function TennisTourPage({ params }: { params: Promise<{ tou
       <AdSlot label={`${TOUR_LABEL[tour]} top`} />
 
       <section className="flex flex-col gap-3">
-        <SectionHeader description={day === today ? "Today's play" : "The most recent day with results"} action={{ label: "All tours", href: `/tennis/scores/${day}` }}>
+        <SectionHeader
+          description={day === today ? "Today's play" : "The most recent day with results"}
+          action={{ label: "All tours", href: `/tennis/scores/${day}` }}
+          tools={matches.length > 0 && <ImageActions filename={`tennis-${tour}-scores-${day}`} shareTitle={`${TOUR_LABEL[tour]} scores, ${formatDayLabel(day)}`} width={820} card={<TennisScoresExportCard title={`${TOUR_LABEL[tour]} scores`} subtitle={formatDayLabel(day)} matches={matches} />} />}
+        >
           {formatDayLabel(day)}
         </SectionHeader>
         <TennisDayStrip day={day} daysWithPlay={days} />
@@ -63,7 +70,12 @@ export default async function TennisTourPage({ params }: { params: Promise<{ tou
       )}
 
       <section>
-        <SectionHeader action={{ label: "Top 100", href: `/tennis/${tour}/rankings` }}>{TOUR_LABEL[tour]} rankings</SectionHeader>
+        <SectionHeader
+          action={{ label: "Top 100", href: `/tennis/${tour}/rankings` }}
+          tools={rankings.length > 0 && <ImageActions filename={`tennis-${tour}-top-10`} shareTitle={`${TOUR_LABEL[tour]} top 10`} width={640} card={<TennisRankingsExportCard tourLabel={TOUR_LABEL[tour]} title={`${TOUR_LABEL[tour]} top 10`} subtitle="Official world rankings" rankings={rankings} />} />}
+        >
+          {TOUR_LABEL[tour]} rankings
+        </SectionHeader>
         <div className="card overflow-hidden">
           {rankings.map((r) => (
             <Link key={r.player_espn_id} href={`/tennis/${tour}/players/${r.slug}`} className="table-row flex items-center gap-3 px-4 py-2 text-sm first:border-t-0">

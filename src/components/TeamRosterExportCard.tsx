@@ -1,6 +1,7 @@
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportFooter } from "./ExportFooter";
+import { ExportMore, capRows } from "./ExportShell";
 import { LEAGUE_LABEL, type League, type RosterPlayer } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 
@@ -35,8 +36,8 @@ function RosterRow({ player }: { player: RosterPlayer }) {
   );
 }
 
-// The downloadable version of "Current roster" - every player on record for the team,
-// as a compact grid so a 53-man NFL roster still fits into one shareable image.
+// The downloadable version of "Current roster" as a compact grid. A 53-man NFL roster
+// stops at 25 players and says how many more there are.
 export function TeamRosterExportCard({
   league,
   teamName,
@@ -50,6 +51,7 @@ export function TeamRosterExportCard({
   teamColor: string | null;
   roster: RosterPlayer[];
 }) {
+  const { shown, hidden } = capRows(roster);
   return (
     <div style={{ background: CARD.surface, border: `1px solid ${CARD.border}`, borderRadius: 16, padding: 24 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -62,10 +64,11 @@ export function TeamRosterExportCard({
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 16 }}>
-        {roster.map((p) => (
+        {shown.map((p) => (
           <RosterRow key={p.espn_id} player={p} />
         ))}
       </div>
+      <ExportMore boxed count={hidden} noun={hidden === 1 ? "more player" : "more players"} />
       <ExportFooter context={`${teamDisplayName(teamName)} roster`} />
     </div>
   );

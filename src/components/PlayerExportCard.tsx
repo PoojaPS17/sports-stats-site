@@ -15,6 +15,7 @@ export function PlayerExportCard({
   teamColor,
   meta,
   stats,
+  context = "Career stats",
 }: {
   league: League;
   name: string;
@@ -23,6 +24,8 @@ export function PlayerExportCard({
   teamColor: string | null;
   meta: string[];
   stats: { label: string; value: string }[];
+  /** What the numbers cover, shown in the footer ("Career stats", "2025-26 stats"). */
+  context?: string;
 }) {
   return (
     <div style={{ background: CARD.surface, border: `1px solid ${CARD.border}`, borderRadius: 16, padding: 24 }}>
@@ -52,7 +55,7 @@ export function PlayerExportCard({
           ))}
         </div>
       )}
-      <ExportFooter context="Career stats" />
+      <ExportFooter context={context} />
     </div>
   );
 }

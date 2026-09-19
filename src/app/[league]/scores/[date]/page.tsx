@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getGamesByDate } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
+import { ImageActions } from "@/components/ImageActions";
+import { ScoreboardExportCard, scoreboardExportWidth } from "@/components/ScoreboardExportCard";
 import { AdSlot } from "@/components/AdSlot";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
@@ -55,10 +57,18 @@ export default async function ScoresByDatePage({
       {games.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Nothing was played on this date.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {games.map((g) => (
-            <GameCard key={g.espn_id} league={league} game={g} />
-          ))}
+        <div className="flex flex-col gap-3">
+          <ImageActions
+            filename={`${league}-scores-${date}`}
+            shareTitle={`${LEAGUE_LABEL[league]} scores, ${label}`}
+            width={scoreboardExportWidth(league)}
+            card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={label} games={games} />}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {games.map((g) => (
+              <GameCard key={g.espn_id} league={league} game={g} />
+            ))}
+          </div>
         </div>
       )}
     </div>

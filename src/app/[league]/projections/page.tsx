@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
 import { LocalTime } from "@/components/LocalTime";
+import { ImageActions } from "@/components/ImageActions";
+import { ProjectionTableExportCard, UpcomingProbabilityExportCard } from "@/components/ProjectionsExportCards";
 
 export const revalidate = 1800;
 
@@ -68,7 +70,12 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
 
       {proj.upcoming.length > 0 && (
         <section>
-          <SectionHeader description="Model win probability for games in the next seven days">This week</SectionHeader>
+          <SectionHeader
+            description="Model win probability for games in the next seven days"
+            tools={<ImageActions filename={`${league}-win-probabilities`} shareTitle={`${label} win probabilities this week`} width={820} card={<UpcomingProbabilityExportCard league={league} proj={proj} title={`${label} win probabilities this week`} />} />}
+          >
+            This week
+          </SectionHeader>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => (
               <Link key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
@@ -103,7 +110,17 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
       )}
 
       <section className="flex flex-col gap-6">
-        <SectionHeader description={`Chance of each outcome, from ${proj.simulations.toLocaleString()} simulated seasons. Sorted by projected finish.`}>
+        <SectionHeader
+          description={`Chance of each outcome, from ${proj.simulations.toLocaleString()} simulated seasons. Sorted by projected finish.`}
+          tools={
+            <ImageActions
+              filename={`${league}-season-projections`}
+              shareTitle={`${label} season projections`}
+              width={1100}
+              card={<ProjectionTableExportCard league={league} proj={proj} title={`${label} projected ${soccer ? "table" : "standings"}`} subtitle={`${formatSeasonLabel(league, proj.season)} season. Chance of each outcome from ${proj.simulations.toLocaleString()} simulated seasons.`} />}
+            />
+          }
+        >
           Projected {soccer ? "table" : "standings"}
         </SectionHeader>
         {groups.map((groupKey) => {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, formatSeasonLabel, type GameRow } from "@/lib/queries";
 import { getHeadToHead, isSoccer } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
 import { h2hPath } from "@/lib/h2h";
@@ -10,6 +10,9 @@ import { AdSlot } from "@/components/AdSlot";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GameCard } from "@/components/GameCard";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { HeadToHeadExportCard } from "@/components/HeadToHeadExportCard";
+import { ScoreboardExportCard, scoreboardExportWidth } from "@/components/ScoreboardExportCard";
 import { TeamLogo } from "@/components/TeamLogo";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getMostFacedOpponents } from "@/lib/related";
@@ -84,6 +87,11 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
           : `The last ${h2h.streak.length} meetings were drawn`
       : null;
 
+  const pairTitle = `${teamDisplayName(teamA.name)} vs ${teamDisplayName(teamB.name)}`;
+  const gamesTools = (name: string, title: string, games: GameRow[]) => (
+    <ImageActions filename={`${league}-${teamA.slug}-vs-${teamB.slug}-${name}`} shareTitle={`${pairTitle}: ${title.toLowerCase()}`} width={scoreboardExportWidth(league)} card={<ScoreboardExportCard league={league} title={`${pairTitle}: ${title.toLowerCase()}`} subtitle={`${LEAGUE_LABEL[league]} head-to-head`} games={games} withDate />} />
+  );
+
   return (
     <div className="flex flex-col gap-8">
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Head-to-head" }, { label: `${teamDisplayName(teamA.name)} vs ${teamDisplayName(teamB.name)}` }]} />
@@ -97,48 +105,56 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         </p>
       </div>
 
-      <section className="card overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-6 sm:px-8">
-          <Link href={`/${league}/teams/${teamA.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-            <TeamLogo name={teamDisplayName(teamA.name)} logoUrl={teamA.logo_url} color={teamA.color} size={64} />
-            <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamA.name)}</span>
-          </Link>
-          <div className="flex flex-col items-center">
-            <span className="text-3xl font-extrabold tabular-nums tracking-tight sm:text-4xl">
-              {h2h.winsA}
-              <span className="mx-2 text-[var(--text-faint)]">–</span>
-              {h2h.winsB}
-            </span>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Wins</span>
-            {soccer && <span className="mt-1 text-xs text-[var(--text-muted)]">{h2h.draws} draws</span>}
-          </div>
-          <Link href={`/${league}/teams/${teamB.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-            <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} />
-            <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamB.name)}</span>
-          </Link>
-        </div>
-        {h2h.meetings > 0 && (
-          <div className="px-4 pb-4 sm:px-8">
-            <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
-              <span className="h-full" style={{ width: `${pctA}%`, background: teamA.color ?? "var(--accent)" }} />
-              <span className="h-full bg-[var(--draw)]" style={{ width: `${pctD}%` }} />
-              <span className="h-full flex-1" style={{ background: teamB.color ?? "var(--accent-2)" }} />
+      <div className="flex flex-col gap-3">
+        <ImageActions
+          filename={`${league}-${teamA.slug}-vs-${teamB.slug}`}
+          shareTitle={`${pairTitle} head-to-head`}
+          width={720}
+          card={<HeadToHeadExportCard league={league} h2h={h2h} title={pairTitle} streakText={streakText} />}
+        />
+        <section className="card overflow-hidden">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-6 sm:px-8">
+            <Link href={`/${league}/teams/${teamA.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
+              <TeamLogo name={teamDisplayName(teamA.name)} logoUrl={teamA.logo_url} color={teamA.color} size={64} />
+              <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamA.name)}</span>
+            </Link>
+            <div className="flex flex-col items-center">
+              <span className="text-3xl font-extrabold tabular-nums tracking-tight sm:text-4xl">
+                {h2h.winsA}
+                <span className="mx-2 text-[var(--text-faint)]">–</span>
+                {h2h.winsB}
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Wins</span>
+              {soccer && <span className="mt-1 text-xs text-[var(--text-muted)]">{h2h.draws} draws</span>}
             </div>
+            <Link href={`/${league}/teams/${teamB.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
+              <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} />
+              <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamB.name)}</span>
+            </Link>
           </div>
-        )}
-        <div className="grid grid-cols-2 divide-x divide-[var(--border)] border-t border-[var(--border)] sm:grid-cols-4">
-          <Stat label="Meetings" value={h2h.meetings} sub={h2h.firstSeason ? `since ${formatSeasonLabel(league, h2h.firstSeason)}` : undefined} />
-          <Stat label={`${scoreWord} for ${teamA.abbreviation ?? teamDisplayName(teamA.name)}`} value={h2h.goalsA} sub={h2h.meetings ? `${(h2h.goalsA / total).toFixed(1)} per game` : undefined} />
-          <Stat label={`${scoreWord} for ${teamB.abbreviation ?? teamDisplayName(teamB.name)}`} value={h2h.goalsB} sub={h2h.meetings ? `${(h2h.goalsB / total).toFixed(1)} per game` : undefined} />
-          <Stat label="Current run" value={h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—"} sub={streakText ?? undefined} />
-        </div>
-      </section>
+          {h2h.meetings > 0 && (
+            <div className="px-4 pb-4 sm:px-8">
+              <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
+                <span className="h-full" style={{ width: `${pctA}%`, background: teamA.color ?? "var(--accent)" }} />
+                <span className="h-full bg-[var(--draw)]" style={{ width: `${pctD}%` }} />
+                <span className="h-full flex-1" style={{ background: teamB.color ?? "var(--accent-2)" }} />
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 divide-x divide-[var(--border)] border-t border-[var(--border)] sm:grid-cols-4">
+            <Stat label="Meetings" value={h2h.meetings} sub={h2h.firstSeason ? `since ${formatSeasonLabel(league, h2h.firstSeason)}` : undefined} />
+            <Stat label={`${scoreWord} for ${teamA.abbreviation ?? teamDisplayName(teamA.name)}`} value={h2h.goalsA} sub={h2h.meetings ? `${(h2h.goalsA / total).toFixed(1)} per game` : undefined} />
+            <Stat label={`${scoreWord} for ${teamB.abbreviation ?? teamDisplayName(teamB.name)}`} value={h2h.goalsB} sub={h2h.meetings ? `${(h2h.goalsB / total).toFixed(1)} per game` : undefined} />
+            <Stat label="Current run" value={h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—"} sub={streakText ?? undefined} />
+          </div>
+        </section>
+      </div>
 
       <AdSlot label="Head-to-head top" />
 
       {h2h.upcoming && (
         <section>
-          <SectionHeader>Next meeting</SectionHeader>
+          <SectionHeader tools={gamesTools("next-meeting", "Next meeting", [h2h.upcoming])}>Next meeting</SectionHeader>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <GameCard league={league} game={h2h.upcoming} />
           </div>
@@ -147,7 +163,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
 
       {(h2h.biggestWinA || h2h.biggestWinB) && (
         <section>
-          <SectionHeader>Biggest wins</SectionHeader>
+          <SectionHeader tools={gamesTools("biggest-wins", "Biggest wins", [h2h.biggestWinA, h2h.biggestWinB].filter((g): g is GameRow => g !== null))}>Biggest wins</SectionHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             {h2h.biggestWinA && (
               <div>
@@ -166,7 +182,9 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
       )}
 
       <section>
-        <SectionHeader description={`Every ${LEAGUE_LABEL[league]} meeting on record, most recent first`}>All meetings</SectionHeader>
+        <SectionHeader description={`Every ${LEAGUE_LABEL[league]} meeting on record, most recent first`} tools={h2h.games.length > 0 ? gamesTools("all-meetings", "All meetings", h2h.games) : undefined}>
+          All meetings
+        </SectionHeader>
         {h2h.games.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">These two teams haven&apos;t met in our archive yet.</p>
         ) : (

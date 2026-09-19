@@ -8,6 +8,8 @@ import { TennisDayStrip, TennisDayView, formatDayLabel } from "@/components/Tenn
 import { getTennisDay, getTennisDaysAround } from "@/lib/tennis";
 import { overlayLiveTennis } from "@/lib/tennisLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { ImageActions } from "@/components/ImageActions";
+import { TennisScoresExportCard } from "@/components/TennisExportCards";
 
 export const revalidate = 15;
 
@@ -39,6 +41,9 @@ export default async function TennisDayPage({ params }: { params: Promise<{ date
       </PageHeader>
       <AdSlot label="Tennis day top" />
       <TennisDayStrip day={date} daysWithPlay={days} />
+      {matches.length > 0 && (
+        <ImageActions filename={`tennis-scores-${date}`} shareTitle={`Tennis scores, ${formatDayLabel(date)}`} width={820} card={<TennisScoresExportCard title="Tennis scores" subtitle={formatDayLabel(date)} matches={matches} />} />
+      )}
       <TennisDayView matches={matches} emptyText="No matches on file for this day. Coverage is tour-level and Challenger events from 2016 onward." />
     </div>
   );

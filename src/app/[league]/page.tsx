@@ -9,6 +9,8 @@ import { pageMeta } from "@/lib/metadata";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { ScoreboardExportCard, scoreboardExportWidth } from "@/components/ScoreboardExportCard";
 import { PageHeader } from "@/components/PageHeader";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 import { CalendarButton } from "@/components/CalendarButton";
@@ -104,7 +106,18 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
       {[...groups.entries()].map(([day, dayGames]) => (
         <section key={day}>
-          <SectionHeader>{day}</SectionHeader>
+          <SectionHeader
+            tools={
+              <ImageActions
+                filename={`${league}-scores-${new Date(dayGames[0].date).toISOString().slice(0, 10)}`}
+                shareTitle={`${LEAGUE_LABEL[league]} scores, ${day}`}
+                width={scoreboardExportWidth(league)}
+                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${new Date(dayGames[0].date).getFullYear()}`} games={dayGames} />}
+              />
+            }
+          >
+            {day}
+          </SectionHeader>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {dayGames.map((g) => (
               <GameCard key={g.espn_id} league={league} game={g} />

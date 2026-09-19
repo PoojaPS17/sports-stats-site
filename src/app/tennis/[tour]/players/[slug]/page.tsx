@@ -5,6 +5,9 @@ import { pageMeta } from "@/lib/metadata";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { TennisPlayerMatchesExportCard, TennisRivalsExportCard, TennisSeasonRecordExportCard } from "@/components/TennisExportCards";
+
 import { Flag, TennisMatchLine } from "@/components/TennisScores";
 import { TeamLogo } from "@/components/TeamLogo";
 import {
@@ -96,7 +99,12 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
       {records.length > 0 && (
         <section className="grid gap-6 lg:grid-cols-2">
           <div>
-            <SectionHeader description="Singles win–loss by season, from every match on file">Season record</SectionHeader>
+            <SectionHeader
+              description="Singles win–loss by season, from every match on file"
+              tools={<ImageActions filename={`tennis-${slug}-season-record`} shareTitle={`${player.name} season record`} width={640} card={<TennisSeasonRecordExportCard tourLabel={TOUR_LABEL[tour]} title={`${player.name}: season record`} subtitle="Singles win–loss by season, from every match on file" records={records} />} />}
+            >
+              Season record
+            </SectionHeader>
             <div className="card overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -124,7 +132,12 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
           </div>
           {rivals.length > 0 && (
             <div>
-              <SectionHeader description="Most-played singles opponents on file">Head-to-head</SectionHeader>
+              <SectionHeader
+                description="Most-played singles opponents on file"
+                tools={<ImageActions filename={`tennis-${slug}-head-to-head`} shareTitle={`${player.name} head-to-head`} width={640} card={<TennisRivalsExportCard tourLabel={TOUR_LABEL[tour]} title={`${player.name}: head-to-head`} subtitle="Most-played singles opponents on file" rivals={rivals} />} />}
+              >
+                Head-to-head
+              </SectionHeader>
               <div className="card overflow-hidden">
                 {rivals.map((r) => (
                   <Link key={r.espn_id} href={`/tennis/${tour}/players/${r.slug}`} className="table-row flex items-center gap-3 px-4 py-2 text-sm first:border-t-0">
@@ -143,7 +156,12 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
       )}
 
       <section>
-        <SectionHeader description="Singles and doubles, newest first">Matches</SectionHeader>
+        <SectionHeader
+          description="Singles and doubles, newest first"
+          tools={matches.length > 0 && <ImageActions filename={`tennis-${slug}-matches`} shareTitle={`${player.name} recent matches`} width={820} card={<TennisPlayerMatchesExportCard title={`${player.name}: recent matches`} subtitle="Singles and doubles, newest first" matches={matches} />} />}
+        >
+          Matches
+        </SectionHeader>
         {groups.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No matches recorded yet.</p>
         ) : (

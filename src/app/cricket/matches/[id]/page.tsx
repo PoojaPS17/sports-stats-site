@@ -10,6 +10,11 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { LocalTime } from "@/components/LocalTime";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { CricketScorecards } from "@/components/CricketScorecard";
+import { ImageActions } from "@/components/ImageActions";
+import { CricketScorecardExportCard } from "@/components/CricketScorecardExportCard";
+import { ExportTeamLine } from "@/components/ExportTeamLine";
+import { ExportLabel } from "@/components/ExportShell";
+import { CARD } from "@/lib/exportTheme";
 import { extractGameDetails } from "@/lib/matchDetail";
 import { getCricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
 import { fetchCricketSummaryLive } from "@/lib/cricketLive";
@@ -57,11 +62,14 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const matchName = [sideName(home, stored?.home ?? null), sideName(away, stored?.away ?? null)].filter(Boolean).join(" v ");
   const potm = (comp?.status?.featuredAthletes ?? []).find((a: any) => a.name === "playerOfTheMatch")?.athlete?.displayName ?? null;
 
-  const sideRow = (c: any, fallback: SeriesSide | null) => {
-    const name = teamDisplayName(c?.team?.displayName ?? c?.team?.name ?? fallback?.name ?? "");
-    const score = typeof c?.score === "string" && c.score ? c.score : fallback?.score ?? "";
-    const winner = c ? c.winner === true : fallback?.winner === true;
-    const logo = c?.team?.logo ?? fallback?.logo ?? (c?.team?.id ? `https://a.espncdn.com/i/teamlogos/cricket/500/${c.team.id}.png` : null);
+  const sideData = (c: any, fallback: SeriesSide | null) => ({
+    name: teamDisplayName(c?.team?.displayName ?? c?.team?.name ?? fallback?.name ?? ""),
+    score: typeof c?.score === "string" && c.score ? c.score : fallback?.score ?? "",
+    winner: c ? c.winner === true : fallback?.winner === true,
+    logo: (c?.team?.logo ?? fallback?.logo ?? (c?.team?.id ? `https://a.espncdn.com/i/teamlogos/cricket/500/${c.team.id}.png` : null)) as string | null,
+  });
+  const sides = [sideData(home, stored?.home ?? null), sideData(away, stored?.away ?? null)];
+  const sideRow = ({ name, score, winner, logo }: (typeof sides)[number]) => {
     return (
       <div className="flex items-center gap-3">
         <TeamLogo name={name} logoUrl={logo} size={40} />
@@ -98,8 +106,8 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
           </span>
           {date && <LocalTime iso={date} format="datetime" className="text-[var(--text-muted)]" />}
         </div>
-        {sideRow(home, stored?.home ?? null)}
-        {sideRow(away, stored?.away ?? null)}
+        {sideRow(sides[0])}
+        {sideRow(sides[1])}
         {summaryText && <p className="text-sm font-medium">{teamDisplayName(summaryText)}</p>}
         {potm && <p className="text-xs text-[var(--text-muted)]">Player of the Match: {potm}</p>}
         {details?.venue && <p className="text-xs text-[var(--text-muted)]">{details.city ? `${details.venue}, ${details.city}` : details.venue}</p>}
@@ -109,7 +117,35 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
 
       {details && details.scorecard.length > 0 ? (
         <section className="flex flex-col gap-4">
-          <SectionHeader description={live ? "Updating while the match is in play" : undefined}>Scorecard</SectionHeader>
+          <SectionHeader
+            description={live ? "Updating while the match is in play" : undefined}
+            tools={
+              <ImageActions
+                filename={`${id}-scorecard-cricket`}
+                width={860}
+                shareTitle={`${matchName} scorecard`}
+                card={
+                  <CricketScorecardExportCard
+                    context={`${matchName} · Scorecard`}
+                    scorecard={details.scorecard}
+                    header={
+                      <div>
+                        <ExportLabel>{["Cricket", description, seriesName].filter(Boolean).join(" · ")}</ExportLabel>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+                          {sides.map((s) => (
+                            <ExportTeamLine key={s.name} name={s.name} logo={s.logo} color={null} score={null} scoreDisplay={s.score || null} completed={state === "post"} won={s.winner} showScore={state === "post" || live} />
+                          ))}
+                        </div>
+                        {summaryText && <div style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: CARD.accent }}>{teamDisplayName(summaryText)}</div>}
+                      </div>
+                    }
+                  />
+                }
+              />
+            }
+          >
+            Scorecard
+          </SectionHeader>
           <CricketScorecards league="odi" scorecard={details.scorecard} playerSlugs={new Map()} />
         </section>
       ) : (

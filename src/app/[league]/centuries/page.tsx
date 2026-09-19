@@ -6,6 +6,8 @@ import Link from "next/link";
 import { isLeague, isCricketLeague, getCricketCenturies, LEAGUE_LABEL } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
+import { ImageActions } from "@/components/ImageActions";
+import { CenturiesExportCard } from "@/components/CenturiesExportCard";
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
@@ -39,65 +41,80 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
       {centuries.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No centuries on record yet.</p>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="table-head text-left">
-                <th className="py-2 pl-4 font-medium">Player</th>
-                <th className="px-2 py-2 font-medium">Team</th>
-                <th className="px-2 py-2 text-right font-medium">Runs</th>
-                <th className="px-2 py-2 text-right font-medium">Balls</th>
-                <th className="px-2 py-2 text-right font-medium">4s</th>
-                <th className="px-2 py-2 text-right font-medium">6s</th>
-                <th className="px-2 py-2 text-right font-medium">SR</th>
-                <th className="px-2 py-2 font-medium">Opponent</th>
-                <th className="px-2 py-2 font-medium">Venue</th>
-                <th className="py-2 pr-4 text-right font-medium">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {centuries.map((c, i) => (
-                <tr key={`${c.player_espn_id}-${c.date}-${i}`} className="table-row">
-                  <td className="py-2 pl-4">
-                    <Link href={`/${league}/players/${c.player_slug}`} className="flex items-center gap-2 font-medium hover:underline">
-                      {c.headshot_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={c.headshot_url} alt="" className="h-6 w-6 rounded-full object-cover" />
-                      ) : (
-                        <span className="h-6 w-6 shrink-0 rounded-full bg-[var(--surface-muted)]" />
-                      )}
-                      {c.player_name}
-                    </Link>
-                  </td>
-                  <td className="px-2 py-2">
-                    <Link href={`/${league}/teams/${c.team_slug}`} className="flex items-center gap-1.5 text-[var(--text-muted)] hover:underline">
-                      <TeamLogo name={teamDisplayName(c.team_name)} logoUrl={c.team_logo} color={c.team_color} size={18} />
-                      <span className="hidden sm:inline">{teamDisplayName(c.team_name)}</span>
-                    </Link>
-                  </td>
-                  <td className="px-2 py-2 text-right font-bold tabular-nums">
-                    {c.runs}
-                    {c.not_out ? "*" : ""}
-                  </td>
-                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.balls_faced ?? "-"}</td>
-                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.fours ?? "-"}</td>
-                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.sixes ?? "-"}</td>
-                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
-                    {c.balls_faced ? ((c.runs / c.balls_faced) * 100).toFixed(1) : "-"}
-                  </td>
-                  <td className="px-2 py-2">
-                    <Link href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">
-                      vs {teamDisplayName(c.opponent_name)}
-                    </Link>
-                  </td>
-                  <td className="px-2 py-2 text-[var(--text-muted)]">{c.venue ?? "-"}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums text-[var(--text-muted)]">
-                    {new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </td>
+        <div className="flex flex-col gap-3">
+          <ImageActions
+            filename={`${league}-centuries`}
+            shareTitle={`${LEAGUE_LABEL[league]} centuries`}
+            width={1120}
+            card={
+              <CenturiesExportCard
+                league={league}
+                centuries={centuries}
+                title={`${league === "test" ? "Test" : LEAGUE_LABEL[league]} centuries`}
+                subtitle={league === "test" ? `All ${centuries.length} Test centuries since the start of 2015, newest first` : `All ${centuries.length} centuries scored in the ${LEAGUE_LABEL[league]}, newest first`}
+              />
+            }
+          />
+          <div className="card overflow-hidden">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="table-head text-left">
+                  <th className="py-2 pl-4 font-medium">Player</th>
+                  <th className="px-2 py-2 font-medium">Team</th>
+                  <th className="px-2 py-2 text-right font-medium">Runs</th>
+                  <th className="px-2 py-2 text-right font-medium">Balls</th>
+                  <th className="px-2 py-2 text-right font-medium">4s</th>
+                  <th className="px-2 py-2 text-right font-medium">6s</th>
+                  <th className="px-2 py-2 text-right font-medium">SR</th>
+                  <th className="px-2 py-2 font-medium">Opponent</th>
+                  <th className="px-2 py-2 font-medium">Venue</th>
+                  <th className="py-2 pr-4 text-right font-medium">Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {centuries.map((c, i) => (
+                  <tr key={`${c.player_espn_id}-${c.date}-${i}`} className="table-row">
+                    <td className="py-2 pl-4">
+                      <Link href={`/${league}/players/${c.player_slug}`} className="flex items-center gap-2 font-medium hover:underline">
+                        {c.headshot_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.headshot_url} alt="" className="h-6 w-6 rounded-full object-cover" />
+                        ) : (
+                          <span className="h-6 w-6 shrink-0 rounded-full bg-[var(--surface-muted)]" />
+                        )}
+                        {c.player_name}
+                      </Link>
+                    </td>
+                    <td className="px-2 py-2">
+                      <Link href={`/${league}/teams/${c.team_slug}`} className="flex items-center gap-1.5 text-[var(--text-muted)] hover:underline">
+                        <TeamLogo name={teamDisplayName(c.team_name)} logoUrl={c.team_logo} color={c.team_color} size={18} />
+                        <span className="hidden sm:inline">{teamDisplayName(c.team_name)}</span>
+                      </Link>
+                    </td>
+                    <td className="px-2 py-2 text-right font-bold tabular-nums">
+                      {c.runs}
+                      {c.not_out ? "*" : ""}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.balls_faced ?? "-"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.fours ?? "-"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.sixes ?? "-"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
+                      {c.balls_faced ? ((c.runs / c.balls_faced) * 100).toFixed(1) : "-"}
+                    </td>
+                    <td className="px-2 py-2">
+                      <Link href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">
+                        vs {teamDisplayName(c.opponent_name)}
+                      </Link>
+                    </td>
+                    <td className="px-2 py-2 text-[var(--text-muted)]">{c.venue ?? "-"}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-[var(--text-muted)]">
+                      {new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

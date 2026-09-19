@@ -15,7 +15,7 @@ interface Zone {
 // eight straight to the round of 16, ninth to 24th into the playoffs, the rest out)
 // or a four-team group from the old format (top two through, third to the Europa
 // League). Any other shape gets no zones rather than a guess.
-function zoneRules(league: League, total: number): ((position: number) => Zone | null) | null {
+export function zoneRules(league: League, total: number): ((position: number) => Zone | null) | null {
   if (league === "ucl") {
     if (total === 36) return (p) => (p <= 8 ? { cls: "zone-1", label: "Round of 16" } : p <= 24 ? { cls: "zone-2", label: "Knockout playoffs" } : { cls: "zone-3", label: "Eliminated" });
     if (total === 4) return (p) => (p <= 2 ? { cls: "zone-1", label: "Round of 16" } : p === 3 ? { cls: "zone-2", label: "Europa League" } : { cls: "zone-3", label: "Eliminated" });
@@ -29,7 +29,7 @@ function zoneRules(league: League, total: number): ((position: number) => Zone |
   return (p) => (p <= 4 ? { cls: "zone-1", label: "Champions League" } : p === 5 ? { cls: "zone-2", label: "Europa League" } : p >= 18 ? { cls: "zone-3", label: "Relegation" } : null);
 }
 
-function legendFor(league: League, total: number): Zone[] {
+export function legendFor(league: League, total: number): Zone[] {
   const rules = zoneRules(league, total);
   if (!rules) return [];
   const seen = new Map<string, Zone>();
@@ -47,7 +47,9 @@ function StreakCell({ streak }: { streak: string | null }) {
   return <span className={`font-semibold ${color}`}>{streak}</span>;
 }
 
-export function StandingsTable({ league, standings }: { league: League; standings: StandingRow[] }) {
+// How a standings list is split into tables, shared by the live page and its image:
+// the NFL by division, everything else by conference (or as one table).
+export function groupStandings(league: League, standings: StandingRow[]) {
   const mode = isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "default";
   // The NFL table is conventionally shown by division; everything else by
   // conference (or as one table). Divisions are only stored for the NFL.
@@ -62,6 +64,11 @@ export function StandingsTable({ league, standings }: { league: League; standing
   // Divisions read in the conventional order (AFC East, North, South, West, then NFC),
   // which is also alphabetical.
   const sections = useDivisions ? [...byConference.entries()].sort((a, b) => a[0].localeCompare(b[0])) : [...byConference.entries()];
+  return { mode, useDivisions, sections } as const;
+}
+
+export function StandingsTable({ league, standings }: { league: League; standings: StandingRow[] }) {
+  const { mode, useDivisions, sections } = groupStandings(league, standings);
 
   if (standings.length === 0) {
     return <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No standings found for this season.</p>;
@@ -75,7 +82,7 @@ export function StandingsTable({ league, standings }: { league: League; standing
 
   return (
     <div className="flex flex-col gap-4">
-      <div className={`grid gap-6 ${byConference.size > 1 ? "lg:grid-cols-2" : ""}`} style={useDivisions ? { gridAutoFlow: "row dense" } : undefined}>
+      <div className={`grid gap-6 ${sections.length > 1 ? "lg:grid-cols-2" : ""}`} style={useDivisions ? { gridAutoFlow: "row dense" } : undefined}>
         {sections.map(([conference, rows]) => (
           <section key={conference} className="card overflow-hidden">
             <h2 className="table-head border-b border-[var(--border)] px-4 py-2.5">{conference}</h2>

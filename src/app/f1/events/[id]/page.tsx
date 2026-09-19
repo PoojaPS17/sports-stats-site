@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getF1Event, getF1EventResults } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { F1SessionExportCard } from "@/components/F1ExportCards";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
@@ -74,7 +76,20 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
           const first = sessionResults[0];
           return (
             <section key={first.session_espn_id}>
-              <SectionHeader>{SESSION_LABEL[first.session_type] ?? first.session_type}</SectionHeader>
+              <SectionHeader
+                tools={
+                  first.completed && (
+                    <ImageActions
+                      filename={`f1-${event.espn_id}-${first.session_type.toLowerCase()}`}
+                      shareTitle={`${event.name}: ${SESSION_LABEL[first.session_type] ?? first.session_type}`}
+                      width={640}
+                      card={<F1SessionExportCard event={{ name: event.name, date: event.date, circuit: event.circuit_name }} sessionLabel={SESSION_LABEL[first.session_type] ?? first.session_type} results={sessionResults} />}
+                    />
+                  )
+                }
+              >
+                {SESSION_LABEL[first.session_type] ?? first.session_type}
+              </SectionHeader>
               {!first.completed ? (
                 <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
                   {first.status_detail ?? "Not yet run."}

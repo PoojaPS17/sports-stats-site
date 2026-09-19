@@ -7,6 +7,9 @@ import { pageMeta } from "@/lib/metadata";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { PlayerHeader } from "@/components/PlayerHeader";
+import { ImageActions } from "@/components/ImageActions";
+import { PlayerExportCard } from "@/components/PlayerExportCard";
+import { careerStripStats } from "@/components/PlayerStatsShared";
 import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -88,7 +91,18 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
       {profile && profile.games > 0 && (
         <>
           <section>
-            <SectionHeader description={`${label} figures from every game on record.`}>{label} in numbers</SectionHeader>
+            <SectionHeader
+              description={`${label} figures from every game on record.`}
+              tools={
+                <ImageActions
+                  filename={`${slug}-${season}-${league}`}
+                  shareTitle={`${player.name} ${label} stats`}
+                  card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={player.team_name} teamColor={player.team_color} meta={playerMeta(sport, player)} stats={careerStripStats(profile)} context={`${label} stats`} />}
+                />
+              }
+            >
+              {label} in numbers
+            </SectionHeader>
             <PlayerCareerStrip league={league} profile={profile} />
           </section>
 

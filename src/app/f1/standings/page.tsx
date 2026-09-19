@@ -4,6 +4,8 @@ import { getF1DriverStandings, getF1ConstructorStandings, getF1Seasons } from "@
 import { AdSlot } from "@/components/AdSlot";
 import { F1SeasonSelect } from "@/components/F1SeasonSelect";
 import { TeamLogo } from "@/components/TeamLogo";
+import { ImageActions } from "@/components/ImageActions";
+import { F1ConstructorStandingsExportCard, F1DriverStandingsExportCard } from "@/components/F1ExportCards";
 
 export const metadata = pageMeta("F1 Standings", "Formula 1 drivers' and constructors' championship standings.", "/f1/standings");
 
@@ -65,65 +67,71 @@ export default async function F1StandingsPage({
         drivers.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No {activeSeason} driver standings on record.</p>
         ) : (
-          <div className="card overflow-hidden">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="table-head text-left">
-                  <th className="py-2 pl-4 font-medium">#</th>
-                  <th className="py-2 font-medium">Driver</th>
-                  <th className="py-2 font-medium">Team</th>
-                  <th className="py-2 text-right font-medium">Wins</th>
-                  <th className="py-2 pr-4 text-right font-medium">Points</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drivers.map((d) => (
-                  <tr key={d.driver_espn_id} className="table-row">
-                    <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{d.position ?? "—"}</td>
-                    <td className="py-2">
-                      <Link href={`/f1/drivers/${d.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
-                        <TeamLogo name={d.name} logoUrl={d.headshot_url} size={24} />
-                        {d.name}
-                      </Link>
-                    </td>
-                    <td className="py-2 text-[var(--text-muted)]">{d.constructor_name ?? "—"}</td>
-                    <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{d.wins ?? 0}</td>
-                    <td className="py-2 pr-4 text-right font-bold tabular-nums">{d.points ?? 0}</td>
+          <div className="flex flex-col gap-3">
+            <ImageActions filename={`f1-drivers-standings-${activeSeason}`} shareTitle={`F1 drivers' standings ${activeSeason}`} width={720} card={<F1DriverStandingsExportCard season={activeSeason} drivers={drivers} />} />
+            <div className="card overflow-hidden">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="table-head text-left">
+                    <th className="py-2 pl-4 font-medium">#</th>
+                    <th className="py-2 font-medium">Driver</th>
+                    <th className="py-2 font-medium">Team</th>
+                    <th className="py-2 text-right font-medium">Wins</th>
+                    <th className="py-2 pr-4 text-right font-medium">Points</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {drivers.map((d) => (
+                    <tr key={d.driver_espn_id} className="table-row">
+                      <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{d.position ?? "—"}</td>
+                      <td className="py-2">
+                        <Link href={`/f1/drivers/${d.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
+                          <TeamLogo name={d.name} logoUrl={d.headshot_url} size={24} />
+                          {d.name}
+                        </Link>
+                      </td>
+                      <td className="py-2 text-[var(--text-muted)]">{d.constructor_name ?? "—"}</td>
+                      <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{d.wins ?? 0}</td>
+                      <td className="py-2 pr-4 text-right font-bold tabular-nums">{d.points ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )
       ) : constructors.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No {activeSeason} constructor standings on record.</p>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="table-head text-left">
-                <th className="py-2 pl-4 font-medium">#</th>
-                <th className="py-2 font-medium">Constructor</th>
-                <th className="py-2 text-right font-medium">Wins</th>
-                <th className="py-2 pr-4 text-right font-medium">Points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {constructors.map((c) => (
-                <tr key={c.team_espn_id} className="table-row">
-                  <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{c.position ?? "—"}</td>
-                  <td className="py-2">
-                    <Link href={`/f1/teams/${c.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
-                      <TeamLogo name={c.name} logoUrl={c.logo_url} color={c.color} size={24} />
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{c.wins ?? 0}</td>
-                  <td className="py-2 pr-4 text-right font-bold tabular-nums">{c.points ?? 0}</td>
+        <div className="flex flex-col gap-3">
+          <ImageActions filename={`f1-constructors-standings-${activeSeason}`} shareTitle={`F1 constructors' standings ${activeSeason}`} width={640} card={<F1ConstructorStandingsExportCard season={activeSeason} constructors={constructors} />} />
+          <div className="card overflow-hidden">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="table-head text-left">
+                  <th className="py-2 pl-4 font-medium">#</th>
+                  <th className="py-2 font-medium">Constructor</th>
+                  <th className="py-2 text-right font-medium">Wins</th>
+                  <th className="py-2 pr-4 text-right font-medium">Points</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {constructors.map((c) => (
+                  <tr key={c.team_espn_id} className="table-row">
+                    <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{c.position ?? "—"}</td>
+                    <td className="py-2">
+                      <Link href={`/f1/teams/${c.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
+                        <TeamLogo name={c.name} logoUrl={c.logo_url} color={c.color} size={24} />
+                        {c.name}
+                      </Link>
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{c.wins ?? 0}</td>
+                    <td className="py-2 pr-4 text-right font-bold tabular-nums">{c.points ?? 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
