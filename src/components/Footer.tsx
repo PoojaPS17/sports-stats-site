@@ -89,6 +89,7 @@ export function Footer() {
               { label: "F1 Standings", href: "/f1/standings" },
               { label: "Top Games", href: "/top-games" },
               { label: "Search", href: "/search" },
+              { label: "Contact", href: "/contact" },
               { label: "Privacy Policy", href: "/privacy" },
               { label: "Terms of Use", href: "/terms" },
             ]}
@@ -104,7 +105,8 @@ export function Footer() {
           <p>
             Data is compiled from public sources and refreshed automatically; it may contain errors and is not an official record. Projections are
             statistical estimates, not forecasts, and nothing here is betting advice. <Link href="/privacy" className="hover:text-[var(--accent)]">Privacy</Link> ·{" "}
-            <Link href="/terms" className="hover:text-[var(--accent)]">Terms</Link>
+            <Link href="/terms" className="hover:text-[var(--accent)]">Terms</Link> ·{" "}
+            <Link href="/contact" className="hover:text-[var(--accent)]">Contact</Link>
           </p>
           <p>
             ODI and T20 international results and scorecards are derived from ball-by-ball data published by{" "}

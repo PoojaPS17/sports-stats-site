@@ -1,7 +1,7 @@
 import { isSoccerLeague } from "./leagues";
 // schema.org builders for the structured data blocks on key pages.
 import { LEAGUE_LABEL, type GameRow, type League } from "./queries";
-import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
+import { CONTACT_EMAIL, SITE_NAME, SITE_URL, absoluteUrl } from "./site";
 
 export function websiteSchema() {
   return {
@@ -24,6 +24,8 @@ export function organizationSchema() {
     name: SITE_NAME,
     url: SITE_URL,
     logo: absoluteUrl("/icon.png"),
+    email: CONTACT_EMAIL,
+    contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: CONTACT_EMAIL, url: absoluteUrl("/contact") },
   };
 }
 

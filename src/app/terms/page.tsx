@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
-import { SITE_NAME } from "@/lib/site";
+import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { LegalPage } from "@/components/LegalPage";
 
 export const metadata = pageMeta("Terms of Use", `The terms that apply to using ${SITE_NAME}: what the site is, what it is not, where its data comes from, and the limits of its accuracy.`, "/terms");
 
 const UPDATED = "September 17, 2026";
-const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 
 export default function TermsPage() {
   return (
@@ -57,8 +56,8 @@ export default function TermsPage() {
       <h2>5. Requests from rights holders</h2>
       <p>
         We respect intellectual property. If you are a rights holder, or act for one, and believe that material on this
-        site infringes your rights or is displayed without appropriate permission, contact us with the page address and a
-        description of the material. We will review the request promptly and remove or alter the material where
+        site infringes your rights or is displayed without appropriate permission, write to{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> with the page address and a description of the material. We will review the request promptly and remove or alter the material where
         appropriate. We aim to respond to such requests within a few business days.
       </p>
 
@@ -138,13 +137,8 @@ export default function TermsPage() {
 
       <h2>15. Contact</h2>
       <p>
-        {CONTACT ? (
-          <>
-            Questions about these terms, and requests under section 5, can be sent to <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
-          </>
-        ) : (
-          <>Questions about these terms, and requests under section 5, can be raised through the contact details published on this site.</>
-        )}
+        Questions about these terms, and requests under section 5, can be sent to{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. The <Link href="/contact">Contact page</Link> lists what to include.
       </p>
     </LegalPage>
   );

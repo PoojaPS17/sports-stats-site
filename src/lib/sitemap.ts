@@ -39,6 +39,7 @@ async function core(): Promise<Entry[]> {
     entry("/top-games", "daily", 0.5),
     entry("/f1", "daily", 0.7),
     entry("/f1/standings", "daily", 0.6),
+    entry("/contact", "yearly", 0.2),
     entry("/privacy", "yearly", 0.2),
     entry("/terms", "yearly", 0.2),
   ];

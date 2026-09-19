@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
-import { SITE_NAME } from "@/lib/site";
+import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { LegalPage } from "@/components/LegalPage";
 import { CookieSettingsButton } from "@/components/CookieSettingsButton";
 import { GA_ID } from "@/lib/consent";
@@ -8,7 +8,6 @@ import { GA_ID } from "@/lib/consent";
 export const metadata = pageMeta("Privacy Policy", `How ${SITE_NAME} handles visitor data: what is collected, why, how long it is kept, and your choices.`, "/privacy");
 
 const UPDATED = "September 19, 2026";
-const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 
 export default function PrivacyPage() {
   return (
@@ -84,9 +83,15 @@ export default function PrivacyPage() {
         Text you type into the site search is used only to return results for that request. It is not stored against
         any visitor profile.
       </p>
+      <h3>Email you send us</h3>
+      <p>
+        If you write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, we receive your email address and whatever
+        you put in the message. We use it only to reply and to deal with what you raised, do not add it to any mailing
+        list, and delete the correspondence once the matter is closed unless the law requires us to keep it.
+      </p>
       <h3>What we do not collect</h3>
       <ul>
-        <li>No names, email addresses, passwords or payment details. The site has no accounts and sells nothing.</li>
+        <li>No names, email addresses, passwords or payment details through the site itself. It has no accounts and sells nothing.</li>
         <li>{GA_ID ? "No advertising cookies and no cross-site tracking. The only cookies are the Google Analytics ones described above." : "No advertising or analytics cookies set by us, and no cross-site tracking."}</li>
         <li>No precise location. {GA_ID ? "Country-level geography from the hosting provider, and the approximate city or country Google Analytics reports." : "Country-level geography only, from the hosting provider."}</li>
       </ul>
@@ -130,8 +135,8 @@ export default function PrivacyPage() {
       <p>
         Depending on where you live, you may have rights under laws such as the EU and UK General Data Protection
         Regulation, the California Consumer Privacy Act or India&apos;s Digital Personal Data Protection Act to access,
-        correct or delete personal data, or to object to its processing. Because this site holds no data that identifies
-        you, there is normally nothing to retrieve or delete.{GA_ID && " You can withdraw consent to analytics cookies at any time with the button above, and clearing your browser's cookies removes them."} If you believe otherwise, contact us and we will look into it
+        correct or delete personal data, or to object to its processing. Unless you have emailed us, this site holds no data that
+        identifies you, so there is normally nothing to retrieve or delete.{GA_ID && " You can withdraw consent to analytics cookies at any time with the button above, and clearing your browser's cookies removes them."} If you believe otherwise, contact us and we will look into it
         promptly.
       </p>
 
@@ -149,14 +154,8 @@ export default function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        {CONTACT ? (
-          <>
-            Questions about this policy can be sent to <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
-          </>
-        ) : (
-          <>Questions about this policy can be raised through the contact details published on this site.</>
-        )}{" "}
-        See also the <Link href="/terms">Terms of Use</Link>.
+        Questions about this policy can be sent to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. See also the{" "}
+        <Link href="/contact">Contact page</Link> and the <Link href="/terms">Terms of Use</Link>.
       </p>
     </LegalPage>
   );
