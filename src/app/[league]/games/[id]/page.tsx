@@ -14,6 +14,8 @@ import { MatchHeader } from "@/components/MatchHeader";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamStatsComparison } from "@/components/TeamStatsComparison";
+import { DownloadCard } from "@/components/DownloadCard";
+import { TeamStatsExportCard } from "@/components/TeamStatsExportCard";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
 import { CricketScorecards } from "@/components/CricketScorecard";
 import { ViewTracker } from "@/components/ViewTracker";
@@ -222,7 +224,10 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
       {awayStats && homeStats && (
         <section>
-          <SectionHeader>{notYetStarted ? "Season Comparison" : "Team Stats"}</SectionHeader>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <SectionHeader>{notYetStarted ? "Season Comparison" : "Team Stats"}</SectionHeader>
+            <DownloadCard compact filename={`${id}-team-stats-${league}`} card={<TeamStatsExportCard league={league} away={awayStats} home={homeStats} />} />
+          </div>
           {notYetStarted && (
             <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
               Season averages coming into this game. It hasn&apos;t been played yet.

@@ -327,6 +327,15 @@ export function formatStat(spec: StatSpec, v: number | null | undefined): string
   return Number.isInteger(v) ? v.toLocaleString("en-US") : v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+/** The headline numbers on the career strip (and the downloadable player card): up to
+ * three specs flagged `headline`, labelled "per game" for NBA per-game averages. */
+export function headlineCareerStats(profile: PlayerProfile): { label: string; value: string }[] {
+  const avg = profile.sport === "nba";
+  return profile.profile.specs
+    .filter((s) => s.headline)
+    .map((s) => ({ label: avg && s.agg === "avg" ? `${s.title} per game` : s.title, value: formatStat(s, profile.career[s.key]) }));
+}
+
 export function record(rows: PlayerLogRow[]): Record3 {
   const r: Record3 = { w: 0, d: 0, l: 0 };
   for (const row of rows) {

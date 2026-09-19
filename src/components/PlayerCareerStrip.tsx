@@ -2,25 +2,23 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, LEAGUE_LABEL, type League } from "@/lib/queries";
-import { formatStat, type PlayerProfile } from "@/lib/playerProfile";
+import { headlineCareerStats, type PlayerProfile } from "@/lib/playerProfile";
 import { recordText } from "./PlayerStatsShared";
 
 // The numbers a reader came for, in one row: appearances and record on record,
 // then the sport's headline figures — all summed from the game log below.
 export function PlayerCareerStrip({ league, profile }: { league: League; profile: PlayerProfile }) {
   const soccer = profile.sport === "soccer";
-  const headline = profile.profile.specs.filter((s) => s.headline);
   const from = profile.seasons[profile.seasons.length - 1]?.season ?? null;
   const to = profile.seasons[0]?.season ?? null;
   const span = from && to ? (from === to ? formatSeasonLabel(league, from) : `${formatSeasonLabel(league, from)} to ${formatSeasonLabel(league, to)}`) : null;
-  const avg = profile.sport === "nba";
   return (
     <div className="card px-4 py-4">
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         <Stat label={profile.profile.gamesLabel} value={String(profile.games)} />
         <Stat label={soccer ? "W-D-L" : "W-L"} value={recordText(profile.record, soccer)} />
-        {headline.map((s) => (
-          <Stat key={s.key} label={avg && s.agg === "avg" ? `${s.title} per game` : s.title} value={formatStat(s, profile.career[s.key])} />
+        {headlineCareerStats(profile).map((s) => (
+          <Stat key={s.label} label={s.label} value={s.value} />
         ))}
       </div>
       <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">

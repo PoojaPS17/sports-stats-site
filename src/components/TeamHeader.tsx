@@ -3,6 +3,8 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { FollowButton } from "./FollowButton";
 import { ShareButton } from "./ShareButton";
+import { DownloadCard } from "./DownloadCard";
+import { TeamExportCard } from "./TeamExportCard";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 
 export function TeamHeader({
@@ -46,6 +48,7 @@ export function TeamHeader({
       <div className="flex shrink-0 items-center gap-2">
         <FollowButton compact item={{ kind: "team", league, refId: slug, label: teamDisplayName(name), sublabel: LEAGUE_LABEL[league], href: path }} />
         <ShareButton compact path={path} title={`${teamDisplayName(name)} — ${LEAGUE_LABEL[league]}`} />
+        <DownloadCard compact filename={`${slug}-${league}`} card={<TeamExportCard league={league} name={name} logoUrl={logoUrl} color={color} meta={meta} />} />
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { FollowButton } from "./FollowButton";
 import { ShareButton } from "./ShareButton";
+import { DownloadCard } from "./DownloadCard";
+import { MatchExportCard } from "./MatchExportCard";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { finishedLabel } from "@/lib/stage";
 
@@ -61,6 +63,7 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
               item={{ kind: "game", league, refId: game.espn_id, label: matchLabel, sublabel: LEAGUE_LABEL[league], href: path }}
             />
             <ShareButton compact path={path} title={`${matchLabel} — ${LEAGUE_LABEL[league]}`} />
+            <DownloadCard compact filename={`${game.espn_id}-${league}`} card={<MatchExportCard league={league} game={game} />} />
           </div>
         </div>
       </div>

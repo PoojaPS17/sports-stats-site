@@ -18,6 +18,8 @@ import { teamNotFound } from "@/lib/legacySlug";
 import { summarizeTeamSeason } from "@/lib/teamSummary";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { DownloadCard } from "@/components/DownloadCard";
+import { TeamRosterExportCard } from "@/components/TeamRosterExportCard";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getMostFacedOpponents, getTeamTopPlayers } from "@/lib/related";
 import { TeamSeasonGames } from "@/components/TeamSeasonGames";
@@ -158,6 +160,9 @@ export default async function TeamPage({
         seasons={seasons}
         activeSeason={activeSeason}
         basePath={`/${league}/teams/${slug}`}
+        teamName={team.name}
+        teamLogo={team.logo_url}
+        teamColor={team.color}
       />
 
       {hasInjuryFeed && realInjuries.length > 0 && (
@@ -178,7 +183,17 @@ export default async function TeamPage({
       )}
 
       <section>
-        <SectionHeader>Current roster</SectionHeader>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <SectionHeader>Current roster</SectionHeader>
+          {roster.length > 0 && (
+            <DownloadCard
+              compact
+              filename={`${slug}-roster-${league}`}
+              width={860}
+              card={<TeamRosterExportCard league={league} teamName={team.name} teamLogo={team.logo_url} teamColor={team.color} roster={roster} />}
+            />
+          )}
+        </div>
         {roster.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No roster data yet.</p>
         ) : (

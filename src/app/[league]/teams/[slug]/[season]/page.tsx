@@ -68,6 +68,9 @@ export default async function TeamSeasonPage({
         seasons={seasons}
         activeSeason={season}
         basePath={`/${league}/teams/${slug}`}
+        teamName={team.name}
+        teamLogo={team.logo_url}
+        teamColor={team.color}
       />
 
       <RelatedLinks

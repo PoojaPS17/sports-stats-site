@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
+    "html-to-image": "^1.11.11",
     "next": "16.3.5",
     "pg": "^8.23.0",
     "react": "19.2.8",

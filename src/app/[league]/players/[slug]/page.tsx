@@ -30,7 +30,7 @@ import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
-import { buildProfile, goalBands, formatStat, playerMeta, playerSport, positionLabel, type PlayerProfile } from "@/lib/playerProfile";
+import { buildProfile, goalBands, formatStat, headlineCareerStats, playerMeta, playerSport, positionLabel, type PlayerProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
 import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
@@ -116,7 +116,9 @@ export default async function PlayerPage({
   const headerTeamSlug = onRoster ? player.team_slug : null;
   const lastClub = !onRoster && player.team_name ? [`Last on record with ${teamDisplayName(player.team_name)}`] : [];
 
-  const header = (meta: string[], description?: string) => (
+  // stats feeds the downloadable card (PlayerHeader -> PlayerExportCard) with the same
+  // headline numbers PlayerCareerStrip shows on the page, so the two never drift apart.
+  const header = (meta: string[], description?: string, stats?: { label: string; value: string }[]) => (
     <>
       <Breadcrumbs
         items={[
@@ -126,7 +128,18 @@ export default async function PlayerPage({
         ]}
       />
       <JsonLd data={athleteSchema(league, player, { position: positionLabel(sport, player.position), description })} />
-      <PlayerHeader league={league} slug={slug} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamSlug={headerTeamSlug} teamColor={player.team_color} meta={[...meta, ...lastClub]} photoCredit={player.photo_credit ? { credit: player.photo_credit, license: player.photo_license ?? "see source", sourceUrl: player.photo_source_url ?? "https://commons.wikimedia.org" } : null} />
+      <PlayerHeader
+        league={league}
+        slug={slug}
+        name={player.name}
+        headshotUrl={player.headshot_url}
+        teamName={headerTeam}
+        teamSlug={headerTeamSlug}
+        teamColor={player.team_color}
+        meta={[...meta, ...lastClub]}
+        photoCredit={player.photo_credit ? { credit: player.photo_credit, license: player.photo_license ?? "see source", sourceUrl: player.photo_source_url ?? "https://commons.wikimedia.org" } : null}
+        stats={stats}
+      />
       <Link href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
         Compare {player.name} with another player →
       </Link>
@@ -183,7 +196,7 @@ export default async function PlayerPage({
 
   return (
     <div className="flex flex-col gap-6">
-      {header(playerMeta(sport, player), summary)}
+      {header(playerMeta(sport, player), summary, profile.games > 0 ? headlineCareerStats(profile) : undefined)}
 
       {profile.games === 0 ? (
         <>
