@@ -13,7 +13,7 @@ export default function ComingSoonPage() {
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Live scores and the record books</p>
       <h1 className="max-w-xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{SITE_NAME} is on its way</h1>
       <p className="max-w-md text-[var(--text-muted)]">
-        Live scores, standings and more than a decade of results across football, the NFL, NBA, cricket, tennis and Formula 1.
+        Live scores, standings and results going back to 2015 across football, the NFL, NBA, cricket, tennis and Formula 1.
         Opening soon.
       </p>
     </div>

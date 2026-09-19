@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${team.name} Schedule, Results & Roster`, `${team.name} ${label} fixtures, results, current roster, injuries and ten seasons of history.`, `/${league}/teams/${slug}`, { ownImage: true });
+  return pageMeta(`${team.name} Schedule, Results & Roster`, `${team.name} ${label} fixtures, results, current roster, injuries and season-by-season history.`, `/${league}/teams/${slug}`, { ownImage: true });
 }
 
 export default async function TeamPage({

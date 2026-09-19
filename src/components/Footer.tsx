@@ -41,8 +41,8 @@ export function Footer() {
             SportsDB
           </Link>
           <p className="max-w-lg text-sm leading-relaxed text-[var(--text-muted)]">
-            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years of history for every team
-            and player.
+            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with season-by-season history for every
+            team and player.
           </p>
         </div>
         {/* Seven columns of similar depth, so no one sport runs the page long. */}

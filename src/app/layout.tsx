@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     template: "%s | SportsDB",
   },
   description:
-    "Live scores, standings, schedules and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years of history.",
+    "Live scores, standings, schedules and player stats for football, the NFL, NBA, cricket, tennis and F1, with results going back to 2015.",
   // Ownership proof for Google Search Console and Bing Webmaster Tools. Each tool
   // hands out a token when the site is added; set it in Vercel and redeploy.
   verification: {
