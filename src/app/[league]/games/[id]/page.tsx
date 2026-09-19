@@ -78,7 +78,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   return pageMeta(
     `${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`,
     `${LEAGUE_LABEL[league]}: ${teamDisplayName(first)} ${awayFirst ? "at" : "v"} ${teamDisplayName(second)}${where}, ${date}.${extras}`,
-    `/${league}/games/${id}`
+    `/${league}/games/${id}`,
+    { ownImage: true }
   );
 }
 

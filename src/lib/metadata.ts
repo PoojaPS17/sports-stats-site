@@ -7,17 +7,17 @@ import { SITE_NAME, absoluteUrl } from "./site";
 // variants of compare pages) so search engines index one copy.
 // Setting `openGraph` here replaces the root layout's, share image included, so the
 // default image is named again. Routes with their own opengraph-image file (teams,
-// games) still win: file-based metadata overrides what this returns.
+// games) pass `ownImage`, because images named here would replace the file's.
 const SHARE_IMAGE = { url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: `${SITE_NAME}: live scores, standings and stats` };
 
-export function pageMeta(title: string, description: string, path?: string, options: { noindex?: boolean } = {}): Metadata {
+export function pageMeta(title: string, description: string, path?: string, options: { noindex?: boolean; ownImage?: boolean } = {}): Metadata {
   const canonical = path ? absoluteUrl(path) : undefined;
   return {
     title,
     description,
     alternates: canonical ? { canonical } : undefined,
     robots: options.noindex ? { index: false, follow: true } : undefined,
-    openGraph: { title, description, siteName: SITE_NAME, type: "website", url: canonical, images: [SHARE_IMAGE] },
-    twitter: { card: "summary_large_image", title, description, images: [SHARE_IMAGE.url] },
+    openGraph: { title, description, siteName: SITE_NAME, type: "website", url: canonical, ...(options.ownImage ? {} : { images: [SHARE_IMAGE] }) },
+    twitter: { card: "summary_large_image", title, description, ...(options.ownImage ? {} : { images: [SHARE_IMAGE.url] }) },
   };
 }
