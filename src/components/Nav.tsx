@@ -48,6 +48,18 @@ export function Nav() {
               <path d="M20 20l-3.5-3.5" />
             </svg>
           </Link>
+          <a
+            href="https://x.com/sportsdblive"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Follow SportsDB on X"
+            title="Follow us on X"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--header-text)] transition hover:bg-[var(--header-hover-bg)]"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+            </svg>
+          </a>
           <ThemeToggle />
           <MobileMenu />
         </div>
