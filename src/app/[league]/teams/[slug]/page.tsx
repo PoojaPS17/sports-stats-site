@@ -98,7 +98,7 @@ export default async function TeamPage({
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Teams", href: `/${league}/teams` }, { label: teamDisplayName(team.name) }]} />
 
       <JsonLd data={teamSchema(league, team)} />
-      <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={meta} />
+      <TeamHeader league={league} slug={slug} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={meta} />
 
       {(summary.form.length > 0 || next) && (
         <div className="grid gap-3 sm:grid-cols-2">

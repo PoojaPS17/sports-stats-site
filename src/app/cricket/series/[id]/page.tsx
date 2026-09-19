@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
+import { FollowButton } from "@/components/FollowButton";
+import { ShareButton } from "@/components/ShareButton";
 import { SeriesCard, SeriesMatchList, formatSeriesDates } from "@/components/CricketSeries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesMatches, getCricketSeriesSeasons, SERIES_KIND_LABEL } from "@/lib/cricketSeries";
@@ -88,6 +90,8 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
             {LEAGUE_LABEL[s.league]} hub →
           </Link>
         )}
+        <FollowButton item={{ kind: "series", league: s.league ?? "cricket", refId: s.espn_id, label: s.name, sublabel: "Cricket", href: `/cricket/series/${s.espn_id}` }} />
+        <ShareButton path={`/cricket/series/${s.espn_id}`} title={s.name} />
       </PageHeader>
 
       <AdSlot label="Cricket series detail top" />

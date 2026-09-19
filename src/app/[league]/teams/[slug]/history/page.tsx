@@ -54,7 +54,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
         ]}
       />
 
-      <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={played.length ? [`${played.length} seasons on record`] : undefined} />
+      <TeamHeader league={league} slug={slug} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={played.length ? [`${played.length} seasons on record`] : undefined} />
 
       <TeamPageNav basePath={`/${league}/teams/${slug}`} active="history" />
 

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
 import { PageHeader } from "@/components/PageHeader";
 import { AdSlot } from "@/components/AdSlot";
+import { FollowButton } from "@/components/FollowButton";
+import { ShareButton } from "@/components/ShareButton";
 import { TournamentCalendar } from "@/components/TennisCalendar";
 import { TennisDrawSection, formatDateRange, groupMatches } from "@/components/TennisScores";
 import { COMPETITION_LABEL, getTennisTournament, getTennisTournamentEditions, getTennisTournamentMatches, getTennisTournamentSeasons, getTennisTournaments } from "@/lib/tennis";
@@ -55,6 +57,8 @@ export default async function TennisTournamentPage({ params }: { params: Promise
         <Link href="/tennis/tournaments" className="nav-pill">
           Calendar
         </Link>
+        <FollowButton item={{ kind: "tournament", league: "tennis", refId: t.espn_id, label: `${t.name} ${t.season}`, sublabel: tourLabel, href: `/tennis/tournaments/${t.espn_id}` }} />
+        <ShareButton path={`/tennis/tournaments/${t.espn_id}`} title={`${t.name} ${t.season}`} />
       </PageHeader>
 
       <AdSlot label="Tennis tournament top" />

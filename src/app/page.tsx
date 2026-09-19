@@ -7,6 +7,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
 import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
+import { MyFollows } from "@/components/MyFollows";
 import { getHomeData, type HomeSection } from "@/lib/homeData";
 
 // Regenerated every 10 seconds so in-play scores stay current; the stored data
@@ -104,6 +105,8 @@ export default async function HomePage() {
       </section>
 
       <HomeLive data={home} />
+
+      <MyFollows />
 
       <AdSlot label="Homepage" />
 

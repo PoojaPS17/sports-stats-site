@@ -56,7 +56,7 @@ export default async function TeamSeasonPage({
         ]}
       />
 
-      <TeamHeader league={league} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={[`${formatSeasonLabel(league, season)} season`]} />
+      <TeamHeader league={league} slug={slug} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={[`${formatSeasonLabel(league, season)} season`]} />
 
       <TeamPageNav basePath={`/${league}/teams/${slug}`} active="overview" />
 

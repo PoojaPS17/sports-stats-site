@@ -79,7 +79,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
         ]}
       />
 
-      <PlayerHeader league={league} name={player.name} headshotUrl={player.headshot_url} teamName={player.team_name} teamSlug={player.team_slug} teamColor={player.team_color} meta={playerMeta(sport, player)} photoCredit={player.photo_credit ? { credit: player.photo_credit, license: player.photo_license ?? "see source", sourceUrl: player.photo_source_url ?? "https://commons.wikimedia.org" } : null} />
+      <PlayerHeader league={league} slug={slug} name={player.name} headshotUrl={player.headshot_url} teamName={player.team_name} teamSlug={player.team_slug} teamColor={player.team_color} meta={playerMeta(sport, player)} photoCredit={player.photo_credit ? { credit: player.photo_credit, license: player.photo_license ?? "see source", sourceUrl: player.photo_source_url ?? "https://commons.wikimedia.org" } : null} />
 
       <SeasonTabs league={league} basePath={basePath} seasons={seasons} activeSeason={season} />
 
