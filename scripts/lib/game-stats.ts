@@ -1,3 +1,6 @@
+        // Some box scores carry a name-only row (no athlete id, dashes for stats);
+        // it cannot be stored as a player and would fail the whole game.
+        if (!row.athlete?.id) continue;
 // Per-game player box scores from ESPN's match summary, shared by the recurring
 // scraper (recent games) and the historical backfill (every completed game).
 import { pool } from "./db";
@@ -42,6 +45,7 @@ function extractSoccer(data: any): PlayerStats {
     const teamId: string = teamRoster.team.id;
     for (const item of teamRoster.roster ?? []) {
       if (!item.active) continue;
+      if (!item.athlete?.id) continue;
       const values: Record<string, string> = {};
       for (const stat of item.stats ?? []) {
         values[stat.shortDisplayName ?? stat.name] = stat.displayValue;
