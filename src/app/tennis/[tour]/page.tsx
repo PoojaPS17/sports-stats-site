@@ -32,7 +32,7 @@ export default async function TennisTourPage({ params }: { params: Promise<{ tou
   return (
     <div className="flex flex-col gap-8">
       <LiveRefresh active={live} />
-      <PageHeader title={`${TOUR_LABEL[tour]} Scores`} subtitle={`${TOUR_LABEL[tour]} matches day by day, from every tournament ESPN lists, with set scores, seeds and courts.`}>
+      <PageHeader title={`${TOUR_LABEL[tour]} Scores`} subtitle={`${TOUR_LABEL[tour]} matches day by day, from every tournament on file, with set scores, seeds and courts.`}>
         <Link href="/tennis" className="nav-pill">
           All tennis
         </Link>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
-import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetails, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
+import { isLeague, isCricketLeague, isFirstClassCricket, LEAGUE_LABEL, getGameByEspnId, getGameDetails, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
@@ -75,6 +75,18 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const where = details?.venue ? ` at ${details.venue}` : "";
   const covers = isCricketLeague(league) ? "Scorecard and head-to-head." : isSoccerLeague(league) ? "Line-ups, timeline, team stats, box score and head-to-head." : "Scoring summary, win probability, team stats, box score and head-to-head.";
   const extras = game.completed ? `${scorersLine(details)} ${covers}` : isCricketLeague(league) ? " Head-to-head record and recent form." : " Team form, head-to-head record and pre-match win probability.";
+  // A Test's two-innings score line ("254 & 258 (95.2 ov, target 271)") is too long
+  // for a title; the month names the match and the description carries the result.
+  if (isFirstClassCricket(league)) {
+    const month = new Date(game.date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const result = game.completed && game.status_summary ? ` ${teamDisplayName(game.status_summary)}.` : "";
+    return pageMeta(
+      `${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`,
+      `${teamDisplayName(first)} v ${teamDisplayName(second)}${where}, ${date}.${result} Full scorecard of all four innings and head-to-head.`,
+      `/${league}/games/${id}`,
+      { ownImage: true }
+    );
+  }
   return pageMeta(
     `${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`,
     `${LEAGUE_LABEL[league]}: ${teamDisplayName(first)} ${awayFirst ? "at" : "v"} ${teamDisplayName(second)}${where}, ${date}.${extras}`,

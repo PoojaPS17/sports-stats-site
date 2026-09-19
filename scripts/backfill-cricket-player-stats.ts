@@ -6,7 +6,7 @@
 // double-counted).
 import { pool } from "./lib/db";
 import { fetchSummary, type League } from "./lib/espn";
-import { extractCricketMatchStats } from "./lib/cricket-career";
+import { CARD_VERSION, extractCricketMatchStats } from "./lib/cricket-career";
 import { uniqueSlugFor } from "./lib/players";
 
 const REQUEST_DELAY_MS = 100;
@@ -59,7 +59,7 @@ async function backfillLeague(league: League, missingOnly: boolean) {
            values ($1, $2, $3, $4, $5, now())
            on conflict (league, game_espn_id, player_espn_id) do update set
              team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()`,
-          [league, espn_id, p.athleteId, p.teamId, JSON.stringify({ batting: p.batting, bowling: p.bowling, catches: p.catches })]
+          [league, espn_id, p.athleteId, p.teamId, JSON.stringify({ batting: p.batting, bowling: p.bowling, catches: p.catches, innings: p.innings, v: CARD_VERSION })]
         );
         playerRows++;
       }

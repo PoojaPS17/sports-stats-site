@@ -84,7 +84,7 @@ export default async function CricketSeriesPage() {
       <LiveRefresh active={liveAll.length > 0} />
       <PageHeader
         title="Cricket Series"
-        subtitle="Internationals, the World Cups, the IPL and the other big T20 leagues, men's and women's. Every other series and tournament ESPN lists is a search away."
+        subtitle="Internationals, the World Cups, the IPL and the other big T20 leagues, men's and women's. Every other series and tournament is a search away."
       >
         <Link href="/cricket/series/archive" className="nav-pill">
           Past seasons

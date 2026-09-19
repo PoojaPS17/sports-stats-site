@@ -27,7 +27,7 @@ const LEAGUE_BY_SERIES: Record<string, string> = {
   "8584": "wcwc",
   "8634": "wt20wc",
 };
-const LEAGUE_BY_CLASS: Record<string, string> = { "2": "odi", "3": "t20i", "9": "wodi", "10": "wt20i" };
+const LEAGUE_BY_CLASS: Record<string, string> = { "1": "test", "2": "odi", "3": "t20i", "9": "wodi", "10": "wt20i" };
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

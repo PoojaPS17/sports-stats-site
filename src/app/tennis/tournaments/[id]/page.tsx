@@ -110,7 +110,7 @@ export default async function TennisTournamentPage({ params }: { params: Promise
       )}
 
       <p className="text-xs text-[var(--text-muted)]">
-        {t.completed_count} of {t.match_count} matches on file completed. Results from ESPN&apos;s tennis feed.
+        {t.completed_count} of {t.match_count} matches on file completed.
       </p>
     </div>
   );

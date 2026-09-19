@@ -111,7 +111,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
       )}
 
-      <p className="text-xs text-[var(--text-muted)]">Live scores and scorecard from ESPN, refreshed every 10 seconds while in play.</p>
+      <p className="text-xs text-[var(--text-muted)]">Live scores and scorecard, refreshed every 10 seconds while in play.</p>
     </div>
   );
 }

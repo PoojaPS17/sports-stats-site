@@ -143,7 +143,7 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
       )}
 
       <section>
-        <SectionHeader description="Singles and doubles, newest first, from ESPN's day-by-day tennis feed">Matches</SectionHeader>
+        <SectionHeader description="Singles and doubles, newest first">Matches</SectionHeader>
         {groups.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No matches recorded yet.</p>
         ) : (

@@ -11,7 +11,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Centuries`, `Every century scored in the ${label}, most recent first.`);
+  if (league === "test") return pageMeta("Test Centuries", "Every Test century since 2015, most recent first, with balls faced, boundaries, opponent and ground.", "/test/centuries");
+  return pageMeta(`${label} Centuries`, `Every century scored in the ${label}, most recent first.`, `/${league}/centuries`);
 }
 
 export const revalidate = 3600;
@@ -25,9 +26,11 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="page-title">{LEAGUE_LABEL[league]} Centuries</h1>
+        <h1 className="page-title">{league === "test" ? "Test" : LEAGUE_LABEL[league]} Centuries</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          All {centuries.length} centuries scored in the {LEAGUE_LABEL[league]}, newest first.
+          {league === "test"
+            ? `All ${centuries.length} Test centuries since the start of 2015, newest first.`
+            : `All ${centuries.length} centuries scored in the ${LEAGUE_LABEL[league]}, newest first.`}
         </p>
       </div>
 
@@ -76,11 +79,11 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                     {c.runs}
                     {c.not_out ? "*" : ""}
                   </td>
-                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.balls_faced}</td>
-                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.fours}</td>
-                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.sixes}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.balls_faced ?? "-"}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.fours ?? "-"}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.sixes ?? "-"}</td>
                   <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
-                    {c.balls_faced > 0 ? ((c.runs / c.balls_faced) * 100).toFixed(1) : "-"}
+                    {c.balls_faced ? ((c.runs / c.balls_faced) * 100).toFixed(1) : "-"}
                   </td>
                   <td className="px-2 py-2">
                     <Link href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">

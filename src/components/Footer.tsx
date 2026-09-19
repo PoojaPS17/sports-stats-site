@@ -58,6 +58,7 @@ export function Footer() {
               { label: "Big Bash", href: "/bbl" },
               { label: "World Cup", href: "/cwc" },
               { label: "T20 World Cup", href: "/t20wc" },
+              { label: "Tests", href: "/test" },
               { label: "ODIs", href: "/odi" },
               { label: "T20Is", href: "/t20i" },
             ]}

@@ -6,7 +6,7 @@ import { ALL_LEAGUES } from "./leagues";
 import { type F1EventRow } from "./f1";
 
 // Which competitions lead the upcoming list when fixtures fall on the same day.
-const LEAGUE_PRIORITY: League[] = ["ucl", "nfl", "nba", "epl", "cwc", "t20wc", "wcwc", "wt20wc", "ipl", "odi", "laliga", "bundesliga", "seriea", "t20i", "wodi", "wt20i", "bbl", "wpl", "wbbl"];
+const LEAGUE_PRIORITY: League[] = ["ucl", "nfl", "nba", "epl", "cwc", "t20wc", "wcwc", "wt20wc", "ipl", "test", "odi", "laliga", "bundesliga", "seriea", "t20i", "wodi", "wt20i", "bbl", "wpl", "wbbl"];
 
 // pg hands `date` back as a Date object; compare on the timestamp.
 const at = (g: GameRow) => new Date(g.date).getTime();

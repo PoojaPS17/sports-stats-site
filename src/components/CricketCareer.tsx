@@ -32,10 +32,12 @@ export function CricketCareer({
       <section>
         <SectionHeader>{LEAGUE_LABEL[league]} Career</SectionHeader>
         <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
-          {league === "wodi" || league === "wt20i"
-            ? `From every women's ${league === "wodi" ? "ODI" : "T20 international"} in ESPN's scorecards (2009 onward, World Cups included). Matches counts a game only when the player batted, bowled or took a catch in it.`
+          {league === "test"
+            ? "From every men's Test since the start of 2015. Tests before 2015 are not included, so this is not a full career record for anyone who played earlier. Average, highest score, hundreds and five-wicket hauls are counted per innings. Matches counts a Test only when the player batted, bowled or took a catch in it."
+            : league === "wodi" || league === "wt20i"
+            ? `From every women's ${league === "wodi" ? "ODI" : "T20 international"} on record (2009 onward, World Cups included). Matches counts a game only when the player batted, bowled or took a catch in it.`
             : isInternationalCricket(league)
-            ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} on record (${league === "odi" ? "2002" : "2005"} onward, World Cups included): Cricsheet's ball-by-ball archive, with the matches it does not carry (those involving Afghanistan, and the newest results) filled from ESPN's scorecards. Matches counts a game only when the player batted, bowled or took a catch in it.`
+            ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} on record (${league === "odi" ? "2002" : "2005"} onward, World Cups included). Matches counts a game only when the player batted, bowled or took a catch in it.`
             : `From every ${LEAGUE_LABEL[league]} match on record. ${LEAGUE_LABEL[league]} only: other competitions and formats are not counted.`}
         </p>
         <div className="flex flex-col gap-4">
@@ -43,7 +45,9 @@ export function CricketCareer({
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Batting</p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               <Stat label="Matches" value={String(career.matches)} />
+              <Stat label="Innings" value={String(career.inningsBatted)} />
               <Stat label="Runs" value={String(career.runs)} />
+              <Stat label="Highest" value={career.highestScore === null ? "-" : String(career.highestScore)} />
               <Stat label="Average" value={fmt(career.average)} />
               <Stat label="Strike Rate" value={fmt(career.strikeRate, 1)} />
               <Stat label="100s" value={String(career.hundreds)} />
@@ -57,7 +61,9 @@ export function CricketCareer({
                 <Stat label="Innings" value={String(career.inningsBowled)} />
                 <Stat label="Overs" value={fmt(career.overs, 1)} />
                 <Stat label="Wickets" value={String(career.wickets)} />
+                <Stat label="Average" value={fmt(career.wickets > 0 ? career.runsConceded / career.wickets : null)} />
                 <Stat label="Economy" value={fmt(career.economy, 2)} />
+                <Stat label="5w" value={String(career.fiveWicketHauls)} />
               </div>
             </div>
           )}

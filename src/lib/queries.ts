@@ -6,7 +6,7 @@ import type { GameDetails } from "./matchDetail";
 import type { PlayerLogRow } from "./playerProfile";
 
 export type { League } from "./leagues";
-export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
+export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, isFirstClassCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
 
 export interface GameRow {
   league: League;
@@ -488,6 +488,7 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
   bbl: [],
   cwc: [],
   t20wc: [],
+  test: [],
   odi: [],
   t20i: [],
   wpl: [],
@@ -883,34 +884,42 @@ export interface CricketCareerStats {
   runsConceded: number;
   wickets: number;
   economy: number | null;
+  fiveWicketHauls: number;
   catches: number;
 }
+
+// One row per innings a player batted or bowled in. A Test stores its innings as a
+// list beside the match totals; a limited-overs match is its own single innings.
+const CRICKET_INNINGS = `cross join lateral jsonb_array_elements(coalesce(pgs.stats->'innings', jsonb_build_array(pgs.stats))) as inn`;
 
 // Computed fresh from every backfilled match's per-player figures (see
 // backfill-cricket-player-stats.ts) rather than a maintained running total — always
 // correct, and re-running the backfill can never double-count. Only covers whichever
 // cricket competitions we've backfilled (IPL, Big Bash, World Cups, and every men's
-// ODI/T20I from Cricsheet plus ESPN) — no Test data, so this is real but partial for any player who
-// also plays international cricket outside those tournaments.
+// ODI/T20I from Cricsheet plus ESPN, and men's Tests since 2015 from ESPN). Figures are per
+// competition: a player's Test, ODI and T20I careers are separate pages.
 export async function getPlayerCricketCareer(league: League, playerEspnId: string): Promise<CricketCareerStats | null> {
   if (!isCricketLeague(league)) return null;
   const { rows } = await pool.query(
     `select
-       count(distinct game_espn_id) as matches,
-       count(*) filter (where stats->'batting' is not null) as innings_batted,
-       coalesce(sum((stats->'batting'->>'runs')::int), 0) as runs,
-       coalesce(sum((stats->'batting'->>'ballsFaced')::int), 0) as balls_faced,
-       count(*) filter (where (stats->'batting'->>'notOut')::boolean is true) as not_outs,
-       count(*) filter (where (stats->'batting'->>'runs')::int >= 100) as hundreds,
-       count(*) filter (where (stats->'batting'->>'runs')::int >= 50 and (stats->'batting'->>'runs')::int < 100) as fifties,
-       max((stats->'batting'->>'runs')::int) as highest_score,
-       count(*) filter (where stats->'bowling' is not null) as innings_bowled,
-       coalesce(sum((stats->'bowling'->>'overs')::numeric), 0) as overs,
-       coalesce(sum((stats->'bowling'->>'conceded')::int), 0) as runs_conceded,
-       coalesce(sum((stats->'bowling'->>'wickets')::int), 0) as wickets,
-       coalesce(sum((stats->>'catches')::int), 0) as catches
-     from player_game_stats
-     where league = $1 and player_espn_id = $2`,
+       count(distinct pgs.game_espn_id) as matches,
+       count(*) filter (where inn->'batting' is not null) as innings_batted,
+       coalesce(sum((inn->'batting'->>'runs')::int), 0) as runs,
+       coalesce(sum((inn->'batting'->>'ballsFaced')::int), 0) as balls_faced,
+       coalesce(sum((inn->'batting'->>'runs')::int) filter (where inn->'batting'->>'ballsFaced' is not null), 0) as runs_with_balls,
+       count(*) filter (where (inn->'batting'->>'notOut')::boolean is true) as not_outs,
+       count(*) filter (where (inn->'batting'->>'runs')::int >= 100) as hundreds,
+       count(*) filter (where (inn->'batting'->>'runs')::int >= 50 and (inn->'batting'->>'runs')::int < 100) as fifties,
+       max((inn->'batting'->>'runs')::int) as highest_score,
+       count(*) filter (where inn->'bowling' is not null) as innings_bowled,
+       coalesce(sum(floor((inn->'bowling'->>'overs')::numeric) * coalesce((inn->'bowling'->>'bpo')::int, 6) + round(((inn->'bowling'->>'overs')::numeric % 1) * 10)), 0) as balls_bowled,
+       coalesce(sum((inn->'bowling'->>'conceded')::int), 0) as runs_conceded,
+       coalesce(sum((inn->'bowling'->>'wickets')::int), 0) as wickets,
+       count(*) filter (where (inn->'bowling'->>'wickets')::int >= 5) as five_fors,
+       (select coalesce(sum((c.stats->>'catches')::int), 0) from player_game_stats c where c.league = $1 and c.player_espn_id = $2) as catches
+     from player_game_stats pgs
+     ${CRICKET_INNINGS}
+     where pgs.league = $1 and pgs.player_espn_id = $2`,
     [league, playerEspnId]
   );
   const r = rows[0];
@@ -920,7 +929,9 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
   const notOuts = Number(r.not_outs);
   const runs = Number(r.runs);
   const ballsFaced = Number(r.balls_faced);
-  const overs = Number(r.overs);
+  // Written the cricket way: 12.3 is twelve overs and three balls.
+  const ballsBowled = Number(r.balls_bowled);
+  const overs = Number(`${Math.floor(ballsBowled / 6)}.${ballsBowled % 6}`);
   const runsConceded = Number(r.runs_conceded);
   const dismissals = inningsBatted - notOuts;
 
@@ -934,12 +945,14 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
     fifties: Number(r.fifties),
     highestScore: r.highest_score === null ? null : Number(r.highest_score),
     average: dismissals > 0 ? runs / dismissals : null,
-    strikeRate: ballsFaced > 0 ? (runs / ballsFaced) * 100 : null,
+    // Only over the innings whose balls faced were recorded; older scorecards have none.
+    strikeRate: ballsFaced > 0 ? (Number(r.runs_with_balls) / ballsFaced) * 100 : null,
     inningsBowled: Number(r.innings_bowled),
     overs,
     runsConceded,
     wickets: Number(r.wickets),
-    economy: overs > 0 ? runsConceded / overs : null,
+    economy: ballsBowled > 0 ? (runsConceded / ballsBowled) * 6 : null,
+    fiveWicketHauls: Number(r.five_fors),
     catches: Number(r.catches),
   };
 }
@@ -1013,9 +1026,10 @@ export interface CenturyRow {
   opponent_name: string;
   opponent_slug: string;
   runs: number;
-  balls_faced: number;
-  fours: number;
-  sixes: number;
+  /** Null where the scorecard did not record them (most matches before the 1990s). */
+  balls_faced: number | null;
+  fours: number | null;
+  sixes: number | null;
   not_out: boolean;
   date: string;
   venue: string | null;
@@ -1031,20 +1045,21 @@ export async function getCricketCenturies(league: League): Promise<CenturyRow[]>
     `select p.espn_id as player_espn_id, p.name as player_name, p.slug as player_slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
             t.name as team_name, t.slug as team_slug, t.logo_url as team_logo, t.color as team_color,
             ot.name as opponent_name, ot.slug as opponent_slug,
-            (pgs.stats->'batting'->>'runs')::int as runs,
-            (pgs.stats->'batting'->>'ballsFaced')::int as balls_faced,
-            (pgs.stats->'batting'->>'fours')::int as fours,
-            (pgs.stats->'batting'->>'sixes')::int as sixes,
-            coalesce((pgs.stats->'batting'->>'notOut')::boolean, false) as not_out,
+            (inn->'batting'->>'runs')::int as runs,
+            (inn->'batting'->>'ballsFaced')::int as balls_faced,
+            (inn->'batting'->>'fours')::int as fours,
+            (inn->'batting'->>'sixes')::int as sixes,
+            coalesce((inn->'batting'->>'notOut')::boolean, false) as not_out,
             g.date, g.venue, g.round, g.status_summary
      from player_game_stats pgs
+     ${CRICKET_INNINGS}
      join players p on p.league = $1 and p.espn_id = pgs.player_espn_id
      join teams t on t.league = $1 and t.espn_id = pgs.team_espn_id
      join games g on g.league = $1 and g.espn_id = pgs.game_espn_id
      join teams ot on ot.league = $1
        and ot.espn_id = (case when pgs.team_espn_id = g.home_team_espn_id then g.away_team_espn_id else g.home_team_espn_id end)
-     where pgs.league = $1 and (pgs.stats->'batting'->>'runs')::int >= 100
-     order by g.date desc`,
+     where pgs.league = $1 and (inn->'batting'->>'runs')::int >= 100
+     order by g.date desc, runs desc`,
     [league]
   );
   return rows;

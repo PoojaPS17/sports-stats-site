@@ -31,6 +31,9 @@ export function HomeCricket({ live, next }: { live: number; next: CricketSeriesM
         <Link href="/ipl" className="text-[var(--accent)] hover:underline">
           IPL
         </Link>
+        <Link href="/test" className="text-[var(--accent)] hover:underline">
+          Tests
+        </Link>
         <Link href="/odi" className="text-[var(--accent)] hover:underline">
           ODIs
         </Link>

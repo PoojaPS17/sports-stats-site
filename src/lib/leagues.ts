@@ -15,6 +15,7 @@ export type League =
   | "bundesliga"
   | "seriea"
   | "ucl"
+  | "test"
   | "odi"
   | "t20i"
   | "wpl"
@@ -29,16 +30,21 @@ export type League =
 // the World Cups) are reachable via the Cricket/Soccer dropdowns instead, so they
 // don't clutter the homepage with empty "no games scheduled" sections most of the year.
 export const LEAGUES: League[] = ["epl", "nfl", "nba", "ipl"];
-export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i"];
+export const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "test", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i"];
 // The women's game: the WPL and WBBL, both World Cups, and the bilateral formats.
 export const WOMENS_CRICKET: League[] = ["wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i"];
 // Bilateral internationals come from Cricsheet's archive (scripts/import-cricsheet.ts)
 // and ESPN's daily listing (scripts/import-cricket-espn.ts) rather than a competition
 // feed: completed matches with full scorecards, but no fixtures, standings or news,
-// and nothing live.
-export const INTERNATIONAL_CRICKET: League[] = ["odi", "t20i", "wodi", "wt20i"];
+// and nothing live. Tests are ESPN's alone; the archive starts in 2015 like the rest of the site.
+export const INTERNATIONAL_CRICKET: League[] = ["test", "odi", "t20i", "wodi", "wt20i"];
+
+// A first-class match: two innings a side, no overs limit, and a draw is a result.
+export function isFirstClassCricket(league: League): boolean {
+  return league === "test";
+}
 export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl"];
-export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i", "laliga", "bundesliga", "seriea", "ucl"];
+export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "test", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i", "laliga", "bundesliga", "seriea", "ucl"];
 export const LEAGUE_LABEL: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
@@ -47,6 +53,7 @@ export const LEAGUE_LABEL: Record<League, string> = {
   bbl: "Big Bash League",
   cwc: "Cricket World Cup",
   t20wc: "T20 World Cup",
+  test: "Test Cricket",
   odi: "ODI Internationals",
   t20i: "T20 Internationals",
   wpl: "Women's Premier League",

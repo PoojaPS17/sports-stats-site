@@ -39,7 +39,7 @@ export default async function TennisDayPage({ params }: { params: Promise<{ date
       </PageHeader>
       <AdSlot label="Tennis day top" />
       <TennisDayStrip day={date} daysWithPlay={days} />
-      <TennisDayView matches={matches} emptyText="No matches on file for this day. ESPN's listing covers tour-level and Challenger events from 2016 onward." />
+      <TennisDayView matches={matches} emptyText="No matches on file for this day. Coverage is tour-level and Challenger events from 2016 onward." />
     </div>
   );
 }

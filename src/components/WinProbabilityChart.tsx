@@ -53,7 +53,7 @@ export function WinProbabilityChart({ game, points }: { game: GameRow; points: W
         <circle cx={x(points.length - 1)} cy={y(last.home)} r="3.5" fill="var(--accent)" />
       </svg>
       <p className="mt-1 text-[11px] text-[var(--text-faint)]">
-        Home win probability play by play, from ESPN&apos;s model. Final: {homeAbbr} {last.home}%, {awayAbbr} {(100 - last.home).toFixed(1)}%.
+        Home win probability play by play, from the data provider&apos;s model. Final: {homeAbbr} {last.home}%, {awayAbbr} {(100 - last.home).toFixed(1)}%.
       </p>
     </div>
   );
