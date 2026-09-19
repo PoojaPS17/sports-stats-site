@@ -2,7 +2,7 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import type { League } from "@/lib/queries";
-import type { PlayerLogRow, Record3 } from "@/lib/playerProfile";
+import { headlineCareerStats, type PlayerLogRow, type PlayerProfile, type Record3 } from "@/lib/playerProfile";
 
 export function fmtDate(date: string): string {
   return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -10,6 +10,17 @@ export function fmtDate(date: string): string {
 
 export function recordText(r: Record3, soccer: boolean): string {
   return soccer ? `${r.w}-${r.d}-${r.l}` : `${r.w}-${r.l}`;
+}
+
+// Every number in the career strip, in order - shared by the live strip and the downloadable
+// card so the two can never drift apart.
+export function careerStripStats(profile: PlayerProfile): { label: string; value: string }[] {
+  const soccer = profile.sport === "soccer";
+  return [
+    { label: profile.profile.gamesLabel, value: String(profile.games) },
+    { label: soccer ? "W-D-L" : "W-L", value: recordText(profile.record, soccer) },
+    ...headlineCareerStats(profile),
+  ];
 }
 
 const RESULT_CLASS: Record<string, string> = {

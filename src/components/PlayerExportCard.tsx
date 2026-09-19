@@ -39,7 +39,7 @@ export function PlayerExportCard({
             {teamName ? ` · ${teamDisplayName(teamName)}` : ""}
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: CARD.text, lineHeight: 1.15 }}>{name}</div>
-          {meta.length > 0 && <div style={{ marginTop: 4, fontSize: 14, color: CARD.textMuted }}>{meta.join("   ")}</div>}
+          {meta.length > 0 && <div style={{ marginTop: 4, fontSize: 14, color: CARD.textMuted }}>{meta.join("  ·  ")}</div>}
         </div>
       </div>
       {stats.length > 0 && (
@@ -52,7 +52,7 @@ export function PlayerExportCard({
           ))}
         </div>
       )}
-      <ExportFooter context={`${LEAGUE_LABEL[league]} player card`} />
+      <ExportFooter context="Career stats" />
     </div>
   );
 }

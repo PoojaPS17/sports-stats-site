@@ -3,9 +3,6 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { FollowButton } from "./FollowButton";
-import { ShareButton } from "./ShareButton";
-import { DownloadCard } from "./DownloadCard";
-import { MatchExportCard } from "./MatchExportCard";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { finishedLabel } from "@/lib/stage";
 
@@ -57,14 +54,7 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
           <span className="text-xs text-[var(--text-muted)]">
             {new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
           </span>
-          <div className="flex items-center gap-2">
-            <FollowButton
-              compact
-              item={{ kind: "game", league, refId: game.espn_id, label: matchLabel, sublabel: LEAGUE_LABEL[league], href: path }}
-            />
-            <ShareButton compact path={path} title={`${matchLabel} — ${LEAGUE_LABEL[league]}`} />
-            <DownloadCard compact filename={`${game.espn_id}-${league}`} card={<MatchExportCard league={league} game={game} />} />
-          </div>
+          <FollowButton item={{ kind: "game", league, refId: game.espn_id, label: matchLabel, sublabel: LEAGUE_LABEL[league], href: path }} />
         </div>
       </div>
       <div className="flex flex-col gap-3">

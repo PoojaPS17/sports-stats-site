@@ -18,7 +18,7 @@ import { teamNotFound } from "@/lib/legacySlug";
 import { summarizeTeamSeason } from "@/lib/teamSummary";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
-import { DownloadCard } from "@/components/DownloadCard";
+import { ImageActions } from "@/components/ImageActions";
 import { TeamRosterExportCard } from "@/components/TeamRosterExportCard";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getMostFacedOpponents, getTeamTopPlayers } from "@/lib/related";
@@ -183,17 +183,20 @@ export default async function TeamPage({
       )}
 
       <section>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <SectionHeader>Current roster</SectionHeader>
-          {roster.length > 0 && (
-            <DownloadCard
-              compact
-              filename={`${slug}-roster-${league}`}
-              width={860}
-              card={<TeamRosterExportCard league={league} teamName={team.name} teamLogo={team.logo_url} teamColor={team.color} roster={roster} />}
-            />
-          )}
-        </div>
+        <SectionHeader
+          tools={
+            roster.length > 0 && (
+              <ImageActions
+                filename={`${slug}-roster-${league}`}
+                width={860}
+                shareTitle={`${teamDisplayName(team.name)} roster`}
+                card={<TeamRosterExportCard league={league} teamName={team.name} teamLogo={team.logo_url} teamColor={team.color} roster={roster} />}
+              />
+            )
+          }
+        >
+          Current roster
+        </SectionHeader>
         {roster.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No roster data yet.</p>
         ) : (

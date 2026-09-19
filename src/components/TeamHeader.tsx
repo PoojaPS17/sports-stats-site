@@ -2,9 +2,6 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { FollowButton } from "./FollowButton";
-import { ShareButton } from "./ShareButton";
-import { DownloadCard } from "./DownloadCard";
-import { TeamExportCard } from "./TeamExportCard";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 
 export function TeamHeader({
@@ -26,7 +23,7 @@ export function TeamHeader({
 }) {
   const path = `/${league}/teams/${slug}`;
   return (
-    <div className="card flex items-start justify-between gap-4 overflow-hidden px-5 py-5" style={{ borderLeft: `4px solid ${color ?? "var(--accent)"}` }}>
+    <div className="card flex flex-col gap-4 overflow-hidden px-5 py-5 sm:flex-row sm:items-start sm:justify-between" style={{ borderLeft: `4px solid ${color ?? "var(--accent)"}` }}>
       <div className="flex min-w-0 items-center gap-4">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-muted)]">
           <TeamLogo name={name} logoUrl={logoUrl} color={color} size={48} />
@@ -45,10 +42,8 @@ export function TeamHeader({
           )}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <FollowButton compact item={{ kind: "team", league, refId: slug, label: teamDisplayName(name), sublabel: LEAGUE_LABEL[league], href: path }} />
-        <ShareButton compact path={path} title={`${teamDisplayName(name)} — ${LEAGUE_LABEL[league]}`} />
-        <DownloadCard compact filename={`${slug}-${league}`} card={<TeamExportCard league={league} name={name} logoUrl={logoUrl} color={color} meta={meta} />} />
+      <div className="shrink-0">
+        <FollowButton item={{ kind: "team", league, refId: slug, label: teamDisplayName(name), sublabel: LEAGUE_LABEL[league], href: path }} />
       </div>
     </div>
   );

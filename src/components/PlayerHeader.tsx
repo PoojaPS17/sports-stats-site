@@ -2,9 +2,6 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { FollowButton } from "./FollowButton";
-import { ShareButton } from "./ShareButton";
-import { DownloadCard } from "./DownloadCard";
-import { PlayerExportCard } from "./PlayerExportCard";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 
 export function PlayerHeader({
@@ -17,7 +14,6 @@ export function PlayerHeader({
   teamColor,
   meta,
   photoCredit,
-  stats = [],
 }: {
   league: League;
   /** The player page's own slug, for the follow/share links. */
@@ -31,12 +27,10 @@ export function PlayerHeader({
   meta?: string[];
   /** Attribution for a Wikimedia Commons photo (ESPN had no headshot); shown under the facts. */
   photoCredit?: { credit: string; license: string; sourceUrl: string } | null;
-  /** Career headline numbers (PPG/RPG/APG, ...), baked into the downloadable card. */
-  stats?: { label: string; value: string }[];
 }) {
   const path = `/${league}/players/${slug}`;
   return (
-    <div className="card flex items-start justify-between gap-4 overflow-hidden px-5 py-5" style={{ borderLeft: `4px solid ${teamColor ?? "var(--accent)"}` }}>
+    <div className="card flex flex-col gap-4 overflow-hidden px-5 py-5 sm:flex-row sm:items-start sm:justify-between" style={{ borderLeft: `4px solid ${teamColor ?? "var(--accent)"}` }}>
       <div className="flex min-w-0 items-center gap-4">
         {headshotUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -87,14 +81,8 @@ export function PlayerHeader({
           )}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2" data-capture-exclude="true">
-        <FollowButton compact item={{ kind: "player", league, refId: slug, label: name, sublabel: LEAGUE_LABEL[league], href: path }} />
-        <ShareButton compact path={path} title={`${name} — ${LEAGUE_LABEL[league]}`} />
-        <DownloadCard
-          compact
-          filename={`${slug}-${league}`}
-          card={<PlayerExportCard league={league} name={name} headshotUrl={headshotUrl} teamName={teamName} teamColor={teamColor} meta={meta ?? []} stats={stats} />}
-        />
+      <div className="shrink-0">
+        <FollowButton item={{ kind: "player", league, refId: slug, label: name, sublabel: LEAGUE_LABEL[league], href: path }} />
       </div>
     </div>
   );

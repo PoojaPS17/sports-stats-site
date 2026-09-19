@@ -2,7 +2,7 @@ import { TeamLogo } from "./TeamLogo";
 import { teamDisplayName } from "@/lib/teamName";
 import { CARD } from "@/lib/exportTheme";
 
-// A team + score row shared by MatchExportCard and TeamScheduleExportCard - the
+// A team + score row shared by TeamStatsExportCard and TeamScheduleExportCard - the
 // live-page equivalents (GameCard, MatchHeader) truncate long names to fit a
 // responsive column; a downloadable card has no such constraint, so full names.
 export function ExportTeamLine({

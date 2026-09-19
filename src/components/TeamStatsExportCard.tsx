@@ -1,26 +1,50 @@
 import type { TeamStatGroup } from "@/lib/matchDetail";
 import { formatStat } from "@/lib/statGlossary";
+import { teamDisplayName } from "@/lib/teamName";
 import { ExportFooter } from "./ExportFooter";
-import { LEAGUE_LABEL, type League } from "@/lib/queries";
+import { ExportTeamLine } from "./ExportTeamLine";
+import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 
-// The downloadable version of TeamStatsComparison: same stat-by-stat split bars, on
+const AWAY_COLOR = "#d97706";
+
+// The downloadable version of TeamStatsComparison. It opens with the scoreline so the
+// image says who played and how it ended, then the same stat-by-stat split bars, all on
 // the fixed light card so it reads the same shared into a group chat as it does live.
-export function TeamStatsExportCard({ league, away, home }: { league: League; away: TeamStatGroup; home: TeamStatGroup }) {
+export function TeamStatsExportCard({ league, game, away, home, title }: { league: League; game: GameRow; away: TeamStatGroup; home: TeamStatGroup; title: string }) {
   const rows = away.stats.map((stat, i) => ({
     label: stat.label,
     awayValue: formatStat(stat.label, stat.value),
     homeValue: formatStat(stat.label, home.stats[i]?.value ?? "-"),
   }));
+  const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
+  const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
+  const when = new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
   return (
     <div style={{ background: CARD.surface, border: `1px solid ${CARD.border}`, borderRadius: 16, padding: 24 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>{LEAGUE_LABEL[league]} · Team Stats</div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4, fontSize: 15, fontWeight: 800, color: CARD.text }}>
-        <span>{away.teamName}</span>
-        <span>{home.teamName}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>
+        <span>{LEAGUE_LABEL[league]}</span>
+        <span>{game.completed ? `Final · ${when}` : when}</span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+        <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
+        <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
+      </div>
+      {game.completed && game.status_summary && <div style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: CARD.accent }}>{game.status_summary}</div>}
+
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${CARD.border}`, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>{title}</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6, fontSize: 14, fontWeight: 800, color: CARD.text }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: AWAY_COLOR }} />
+          {teamDisplayName(away.teamName)}
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          {teamDisplayName(home.teamName)}
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: CARD.accent }} />
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 14 }}>
         {rows.map((row, i) => {
           const a = Number(String(row.awayValue).replace(/[^0-9.-]/g, ""));
           const h = Number(String(row.homeValue).replace(/[^0-9.-]/g, ""));
@@ -28,20 +52,20 @@ export function TeamStatsExportCard({ league, away, home }: { league: League; aw
           const awayPct = total > 0 ? (Math.abs(a) / total) * 100 : 50;
           return (
             <div key={`${row.label}-${i}`} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, fontSize: 14 }}>
                 <span style={{ fontWeight: 700, color: CARD.text }}>{row.awayValue}</span>
-                <span style={{ fontSize: 12, color: CARD.textMuted }}>{row.label}</span>
+                <span style={{ fontSize: 12, color: CARD.textMuted, textAlign: "center" }}>{row.label}</span>
                 <span style={{ fontWeight: 700, color: CARD.text }}>{row.homeValue}</span>
               </div>
               <div style={{ display: "flex", height: 6, overflow: "hidden", borderRadius: 999, background: CARD.bg }}>
-                <span style={{ display: "block", height: "100%", width: `${awayPct}%`, background: "#d97706" }} />
+                <span style={{ display: "block", height: "100%", width: `${awayPct}%`, background: AWAY_COLOR }} />
                 <span style={{ display: "block", height: "100%", flex: 1, background: CARD.accent }} />
               </div>
             </div>
           );
         })}
       </div>
-      <ExportFooter context={`${away.teamName} vs ${home.teamName}`} />
+      <ExportFooter context={`${teamDisplayName(away.teamName)} vs ${teamDisplayName(home.teamName)}`} />
     </div>
   );
 }
