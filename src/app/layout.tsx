@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
-import { teamDisplayName } from "@/lib/teamName";
 import Script from "next/script";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { Ticker, type TickerItem } from "@/components/Ticker";
-import { getTickerGames, getLastUpdated, LEAGUE_LABEL, isCricketLeague } from "@/lib/queries";
+import { Ticker } from "@/components/Ticker";
 import { SITE_URL } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 import { organizationSchema, websiteSchema } from "@/lib/structuredData";
 
-export const revalidate = 60;
+// No `revalidate` here, and no data fetching: a value set on the root layout would cap
+// every page on the site at that interval. Each page sets its own.
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,40 +45,7 @@ export const metadata: Metadata = {
   },
 };
 
-function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): TickerItem {
-  const league = LEAGUE_LABEL[g.league];
-  if (g.completed) {
-    // Cricsheet-sourced cricket rows carry no winner flag; the summary names the winner.
-    const summaryWinner = g.status_summary && isCricketLeague(g.league) ? (g.status_summary.startsWith(g.home_name) ? true : g.status_summary.startsWith(g.away_name) ? false : null) : null;
-    const homeWon = g.home_winner ?? summaryWinner ?? (g.home_score ?? 0) > (g.away_score ?? 0);
-    const winner = teamDisplayName(homeWon ? g.home_name : g.away_name);
-    const loser = teamDisplayName(homeWon ? g.away_name : g.home_name);
-    const winScore = homeWon ? g.home_score_display ?? g.home_score : g.away_score_display ?? g.away_score;
-    const loseScore = homeWon ? g.away_score_display ?? g.away_score : g.home_score_display ?? g.home_score;
-    // A cricket result is a margin ("won by 7 wickets"), never a scoreline; a tie or
-    // no-result has no winner to name, so the feed's own summary stands.
-    const margin = g.status_summary
-      ?.match(/\bwon by (.+?)(?: \(.*\))?$/i)?.[1]
-      .replace(/\bwkts?\b/i, (w) => (w.toLowerCase() === "wkt" ? "wicket" : "wickets"));
-    const noWinner = g.home_winner === false && g.away_winner === false;
-    const label = isCricketLeague(g.league)
-      ? noWinner || !margin
-        ? `${league} · ${teamDisplayName(g.status_summary ?? `${g.home_name} v ${g.away_name}`)}`
-        : `${league} · ${winner} beat ${loser} by ${margin}`
-      : `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`;
-    return { href: `/${g.league}/games/${g.espn_id}`, label };
-  }
-  const date = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return {
-    href: `/${g.league}/games/${g.espn_id}`,
-    label: `${league} · ${teamDisplayName(g.away_name)} at ${teamDisplayName(g.home_name)}, ${date}`,
-  };
-}
-
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const [tickerGames, lastUpdated] = await Promise.all([getTickerGames(10), getLastUpdated()]);
-  const tickerItems = tickerGames.map(tickerLabel);
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
@@ -108,7 +74,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd data={websiteSchema()} />
         <JsonLd data={organizationSchema()} />
         <Nav />
-        <Ticker items={tickerItems} updatedAt={lastUpdated} />
+        <Ticker />
         <main id="main" className="container-x flex-1 pb-12 pt-6">
           {children}
         </main>

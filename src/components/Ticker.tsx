@@ -1,13 +1,37 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { LastUpdated } from "./LastUpdated";
+import type { TickerItem } from "@/lib/ticker";
 
-export interface TickerItem {
-  href: string;
-  label: string;
-}
+const REFRESH_MS = 120_000;
 
-export function Ticker({ items, updatedAt }: { items: TickerItem[]; updatedAt: string | null }) {
-  if (items.length === 0 && !updatedAt) return null;
+// Fetched in the browser (see src/lib/ticker.ts for why). The bar keeps its height
+// while the first fetch is in flight, so nothing below it moves.
+export function Ticker() {
+  const [data, setData] = useState<{ items: TickerItem[]; updatedAt: string | null }>({ items: [], updatedAt: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      fetch("/api/ticker")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && !cancelled) setData(d);
+        })
+        .catch(() => {});
+    };
+    load();
+    // Background tabs don't keep polling.
+    const id = window.setInterval(() => document.visibilityState === "visible" && load(), REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const { items, updatedAt } = data;
   const doubled = [...items, ...items];
 
   return (
