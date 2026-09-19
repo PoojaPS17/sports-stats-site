@@ -1,6 +1,3 @@
-        // Some box scores carry a name-only row (no athlete id, dashes for stats);
-        // it cannot be stored as a player and would fail the whole game.
-        if (!row.athlete?.id) continue;
 // Per-game player box scores from ESPN's match summary, shared by the recurring
 // scraper (recent games) and the historical backfill (every completed game).
 import { pool } from "./db";
@@ -22,6 +19,9 @@ function extractAmericanSports(data: any): PlayerStats {
       for (const row of category.athletes ?? []) {
         // NBA: players who did not play still appear (with empty stats and a reason).
         if (row.didNotPlay || !row.stats?.length) continue;
+        // Some box scores carry a name-only row (no athlete id, dashes for stats);
+        // it cannot be stored as a player and would fail the whole game.
+        if (!row.athlete?.id) continue;
         const key = row.athlete.id;
         if (!perPlayer.has(key)) perPlayer.set(key, { athlete: row.athlete, teamId, stats: {} });
         const values: Record<string, string> = {};
