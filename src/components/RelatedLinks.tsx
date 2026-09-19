@@ -10,7 +10,7 @@ export interface RelatedGroup {
 
 // The link mesh at the foot of player, team, match and head-to-head pages: a few
 // short lists that lead to the next page a reader (or a crawler) would want.
-export function RelatedLinks({ groups, title = "Explore more", description }: { groups: RelatedGroup[]; title?: string; description?: string }) {
+export function RelatedLinks({ groups, title = "Related pages", description }: { groups: RelatedGroup[]; title?: string; description?: string }) {
   const shown = groups.filter((g) => g.links.length > 0);
   if (shown.length === 0) return null;
   return (

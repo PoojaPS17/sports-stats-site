@@ -24,7 +24,7 @@ export default async function ScoresByDatePage({
   return (
     <div className="flex flex-col gap-6">
       <h1 className="page-title">
-        {LEAGUE_LABEL[league]} Scores — {label}
+        {LEAGUE_LABEL[league]} Scores, {label}
       </h1>
       <AdSlot label="Scores-by-date top" />
       {games.length === 0 ? (

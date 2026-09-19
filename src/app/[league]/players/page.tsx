@@ -28,7 +28,7 @@ export default async function PlayersIndexPage({ params }: { params: Promise<{ l
       <AdSlot label="Players index top" />
       {players.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
-          No player stats recorded yet — check back after games are played.
+          No player stats yet. They appear once the first games of the season are in.
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

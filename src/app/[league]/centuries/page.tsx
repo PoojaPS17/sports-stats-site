@@ -27,7 +27,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
       <div>
         <h1 className="page-title">{LEAGUE_LABEL[league]} Centuries</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          Every century scored in the {LEAGUE_LABEL[league]} on record ({centuries.length} total) — most recent first.
+          All {centuries.length} centuries scored in the {LEAGUE_LABEL[league]}, newest first.
         </p>
       </div>
 

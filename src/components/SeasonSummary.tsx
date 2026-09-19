@@ -23,7 +23,7 @@ function PlayoffSummary({ league, results }: { league: League; results: PlayoffR
               <Link href={`/${league}/teams/${r.loserSlug}`} className="hover:underline">
                 {r.loserName}
               </Link>
-              <span className="text-[var(--text-muted)]"> — {r.resultText}</span>
+              <span className="text-[var(--text-muted)]">, {r.resultText}</span>
             </span>
           </div>
         ))}

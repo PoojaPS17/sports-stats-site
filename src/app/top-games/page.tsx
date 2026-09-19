@@ -71,8 +71,8 @@ export default async function TopGamesPage({
       <div>
         <h1 className="page-title">Top Sports Games</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          Ranked by real visits to each match page on SportsDB — across Premier League, NFL, NBA and IPL. Country and
-          device come from real visitors, the same way an app store chart is built from actual usage.
+          The match pages people are opening most on SportsDB, across the Premier League, NFL, NBA and IPL. The country and
+          device filters use where those visits came from.
         </p>
       </div>
 
@@ -108,8 +108,7 @@ export default async function TopGamesPage({
 
       {games.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
-          No tracked views for this filter yet — this chart fills in from real visits to match pages as the site gets
-          traffic, the same way an app store chart is built from real downloads rather than a guess.
+          Nobody has opened a match page under this filter yet. The chart counts visits, so it fills in as people read.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -132,8 +131,8 @@ export default async function TopGamesPage({
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">Trending Beyond SportsDB</h2>
             <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-              Real external signals — Apple App Store Sports app rankings and Wikipedia pageview spikes —
-              cross-checked against the players and teams we track.
+              What the wider internet is looking at: the App Store&apos;s sports chart and the players and teams whose Wikipedia
+              pages are suddenly busy.
             </p>
           </div>
           <TrendingCountrySelect countries={TRENDING_COUNTRIES} />

@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   title: {
-    default: "SportsDB — Live scores, standings and stats for football, NFL, NBA, cricket, tennis and F1",
+    default: "SportsDB: Live Scores, Standings and Player Stats",
     template: "%s | SportsDB",
   },
   description:
@@ -65,7 +65,7 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
   const date = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return {
     href: `/${g.league}/games/${g.espn_id}`,
-    label: `${league} · ${teamDisplayName(g.away_name)} at ${teamDisplayName(g.home_name)} — ${date}`,
+    label: `${league} · ${teamDisplayName(g.away_name)} at ${teamDisplayName(g.home_name)}, ${date}`,
   };
 }
 

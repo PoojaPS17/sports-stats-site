@@ -67,7 +67,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
       <AdSlot label={`${LEAGUE_LABEL[league]} leaders top`} />
 
       {boards.length === 0 || boards.every((b) => b.rows.length === 0) ? (
-        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No season stats yet. Check back once more games have been played.</p>
+        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No season stats yet. They fill in as games are played.</p>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           {boards.map((board) => (

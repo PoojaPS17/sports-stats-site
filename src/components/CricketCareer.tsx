@@ -36,7 +36,7 @@ export function CricketCareer({
             ? `From every women's ${league === "wodi" ? "ODI" : "T20 international"} in ESPN's scorecards (2009 onward, World Cups included). Matches counts a game only when the player batted, bowled or took a catch in it.`
             : isInternationalCricket(league)
             ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} on record (${league === "odi" ? "2002" : "2005"} onward, World Cups included): Cricsheet's ball-by-ball archive, with the matches it does not carry (those involving Afghanistan, and the newest results) filled from ESPN's scorecards. Matches counts a game only when the player batted, bowled or took a catch in it.`
-            : `From every ${LEAGUE_LABEL[league]} match on record — this covers ${LEAGUE_LABEL[league]} only, not a player's other competitions or formats.`}
+            : `From every ${LEAGUE_LABEL[league]} match on record. ${LEAGUE_LABEL[league]} only: other competitions and formats are not counted.`}
         </p>
         <div className="flex flex-col gap-4">
           <div>

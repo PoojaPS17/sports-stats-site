@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { isCricketLeague, scheduleWords } from "@/lib/leagues";
 import { isLeague, isInternationalCricket, LEAGUE_LABEL, leagueNameWithArticle, getRecentAndUpcoming, getLatestResults, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
 import { getCurrentSeasonTeams } from "@/lib/related";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -20,7 +21,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Scores & Fixtures`, `Latest ${label} results and upcoming fixtures with kickoff times, box scores and match stats.`, `/${league}`);
+  const words = scheduleWords(league);
+  if (isInternationalCricket(league)) return pageMeta(`${label} Results`, `Latest ${label} results with full scorecards.`, `/${league}`);
+  return pageMeta(`${label} Scores & ${words.heading}`, `Latest ${label} results and upcoming ${words.upcoming} with ${words.start}, ${isCricketLeague(league) ? "scorecards" : "box scores"} and match stats.`, `/${league}`);
 }
 
 function groupByDay(games: Awaited<ReturnType<typeof getRecentAndUpcoming>>) {
@@ -55,7 +58,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={`${LEAGUE_LABEL[league]} Scores`} subtitle={international ? "Latest completed matches, with full scorecards" : "Results from the last two days and fixtures for the week ahead"}>
+      <PageHeader title={`${LEAGUE_LABEL[league]} Scores`} subtitle={international ? "Latest completed matches, with full scorecards" : `Results from the last two days and ${scheduleWords(league).upcoming} for the week ahead`}>
         {supportsMatchweeks(league) && (
           <Link href={weekIndexPath(league)} className="nav-pill nav-pill-active">
             Browse by {weekNoun(league).toLowerCase()} →

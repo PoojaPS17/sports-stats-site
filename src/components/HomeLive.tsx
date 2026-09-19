@@ -73,7 +73,7 @@ export function HomeLive({ data }: { data: HomeData }) {
       </section>
 
       <section>
-        <SectionHeader description="The biggest fixtures of the next seven days, across every sport">
+        <SectionHeader description="The pick of the next seven days">
           Coming up
         </SectionHeader>
         {upcomingGames.length + nextCricket.length + nextTennis.length === 0 && !f1 ? (

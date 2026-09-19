@@ -198,7 +198,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           <SectionHeader>{notYetStarted ? "Season Comparison" : "Team Stats"}</SectionHeader>
           {notYetStarted && (
             <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
-              Season averages entering this matchup — the game hasn&apos;t been played yet.
+              Season averages coming into this game. It hasn&apos;t been played yet.
             </p>
           )}
           <TeamStatsComparison away={awayStats} home={homeStats} />

@@ -84,7 +84,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
       {profile && profile.games > 0 && (
         <>
           <section>
-            <SectionHeader description={`${label} figures from every game on record.`}>{label} at a glance</SectionHeader>
+            <SectionHeader description={`${label} figures from every game on record.`}>{label} in numbers</SectionHeader>
             <PlayerCareerStrip league={league} profile={profile} />
           </section>
 

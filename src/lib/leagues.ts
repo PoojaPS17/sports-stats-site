@@ -94,6 +94,16 @@ export function hasNewsFeed(league: League): boolean {
   return !isInternationalCricket(league);
 }
 
+// Each sport's own words for what is coming up: football and cricket have fixtures,
+// the NFL and NBA have a schedule of games; a football match kicks off, an NBA game
+// tips off, a cricket match simply starts.
+export function scheduleWords(league: League): { upcoming: string; heading: string; start: string } {
+  if (league === "nba") return { upcoming: "games", heading: "Schedule", start: "tip-off times" };
+  if (league === "nfl") return { upcoming: "games", heading: "Schedule", start: "kickoff times" };
+  if ((CRICKET_LEAGUES as string[]).includes(league)) return { upcoming: "fixtures", heading: "Fixtures", start: "start times" };
+  return { upcoming: "fixtures", heading: "Fixtures", start: "kick-off times" };
+}
+
 export function isSoccerLeague(league: League): boolean {
   return (SOCCER_LEAGUES as string[]).includes(league);
 }

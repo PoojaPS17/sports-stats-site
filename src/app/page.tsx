@@ -74,13 +74,13 @@ export default async function HomePage() {
       <section className="grid gap-6 lg:grid-cols-5 lg:items-center">
         <div className="flex flex-col gap-5 lg:col-span-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Scores · Tables · Stats · History</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Live scores and the record books</p>
             <h1 className="mt-2 max-w-2xl text-3xl font-bold leading-[1.1] tracking-tight text-[var(--text)] sm:text-4xl lg:text-[2.75rem]">
-              Every score, table and stat line, across the sports you follow
+              Tonight&apos;s scores, and every result behind them
             </h1>
             <p className="mt-3 max-w-xl text-[var(--text-muted)]">
-              Football, the NFL, NBA, cricket, tennis and Formula 1, with box scores, player game logs and more than a decade of
-              results. Refreshed automatically, all day.
+              Football, the NFL, NBA, cricket, tennis and Formula 1. Open any match for the box score, any player for their game
+              log, any club for ten seasons of results.
             </p>
           </div>
           <ul className="flex flex-wrap gap-2" aria-label="Browse by competition">
