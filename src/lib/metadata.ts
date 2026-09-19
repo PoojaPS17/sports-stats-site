@@ -5,6 +5,11 @@ import { SITE_NAME, absoluteUrl } from "./site";
 // template appends " | SportsDB"). Pass `path` to emit a canonical URL, which matters
 // for pages reachable under more than one address (the /week rewrite, query-string
 // variants of compare pages) so search engines index one copy.
+// Setting `openGraph` here replaces the root layout's, share image included, so the
+// default image is named again. Routes with their own opengraph-image file (teams,
+// games) still win: file-based metadata overrides what this returns.
+const SHARE_IMAGE = { url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: `${SITE_NAME}: live scores, standings and stats` };
+
 export function pageMeta(title: string, description: string, path?: string, options: { noindex?: boolean } = {}): Metadata {
   const canonical = path ? absoluteUrl(path) : undefined;
   return {
@@ -12,7 +17,7 @@ export function pageMeta(title: string, description: string, path?: string, opti
     description,
     alternates: canonical ? { canonical } : undefined,
     robots: options.noindex ? { index: false, follow: true } : undefined,
-    openGraph: { title, description, siteName: SITE_NAME, type: "website", url: canonical },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: { title, description, siteName: SITE_NAME, type: "website", url: canonical, images: [SHARE_IMAGE] },
+    twitter: { card: "summary_large_image", title, description, images: [SHARE_IMAGE.url] },
   };
 }

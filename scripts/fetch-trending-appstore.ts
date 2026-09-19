@@ -4,9 +4,12 @@
 // so this covers iOS only — see fetch-trending-google.ts / fetch-trending-wikipedia.ts
 // for the other two trending sources, which don't have that gap.
 import { pool } from "./lib/db";
+import { isBettingApp } from "../src/lib/betting";
 
 const COUNTRIES = ["US", "GB", "IN", "AU", "ES", "BR"];
 const SPORTS_GENRE_ID = "6004";
+// Fetch well past the 15 we keep: in some countries half the chart is sportsbooks.
+const FETCH_LIMIT = 50;
 const LIMIT = 15;
 
 interface AppEntry {
@@ -28,7 +31,7 @@ function storeLink(entry: any): string {
 }
 
 async function fetchTopApps(country: string): Promise<AppEntry[]> {
-  const url = `https://itunes.apple.com/${country.toLowerCase()}/rss/topfreeapplications/limit=${LIMIT}/genre=${SPORTS_GENRE_ID}/json`;
+  const url = `https://itunes.apple.com/${country.toLowerCase()}/rss/topfreeapplications/limit=${FETCH_LIMIT}/genre=${SPORTS_GENRE_ID}/json`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Apple RSS request failed (${res.status}) for ${country}`);
   const data = await res.json();
@@ -42,7 +45,9 @@ async function fetchTopApps(country: string): Promise<AppEntry[]> {
 }
 
 async function processCountry(country: string) {
-  const apps = await fetchTopApps(country);
+  // No betting content on the site: sportsbook and casino apps are dropped and the
+  // rest ranked among themselves.
+  const apps = (await fetchTopApps(country)).filter((a) => a.storeUrl && !isBettingApp(a.name, a.artist)).slice(0, LIMIT);
 
   await pool.query("delete from trending_topics where source = 'app_store_ios' and country = $1", [country]);
   for (let i = 0; i < apps.length; i++) {

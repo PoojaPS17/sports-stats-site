@@ -4,8 +4,26 @@ import { getF1DriverBySlug, getF1DriverResults } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema } from "@/lib/structuredData";
+import { pageMeta } from "@/lib/metadata";
+import type { Metadata } from "next";
 
 export const revalidate = 300;
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const driver = await getF1DriverBySlug(slug);
+  if (!driver) return pageMeta("F1 Driver", "Formula 1 driver results.", undefined, { noindex: true });
+  const results = await getF1DriverResults(driver.espn_id);
+  const team = results.find((r) => r.constructor_name)?.constructor_name;
+  return pageMeta(
+    `${driver.name} F1 Race Results`,
+    `${driver.name}'s Formula 1 results, race by race: finishing position, team and date for ${team ? `the ${team} driver's` : "their"} most recent Grands Prix.`,
+    `/f1/drivers/${driver.slug}`,
+    { noindex: results.length === 0 }
+  );
+}
 
 export default async function F1DriverPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -16,6 +34,7 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="flex flex-col gap-6">
+      <JsonLd data={breadcrumbSchema([{ label: "Formula 1", href: "/f1" }, { label: "Standings", href: "/f1/standings" }, { label: driver.name }])} />
       <div className="flex items-center gap-3">
         <TeamLogo name={driver.name} logoUrl={driver.headshot_url} size={56} />
         <div>

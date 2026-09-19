@@ -5,7 +5,7 @@ import { LegalPage } from "@/components/LegalPage";
 
 export const metadata = pageMeta("Privacy Policy", `How ${SITE_NAME} handles visitor data: what is collected, why, how long it is kept, and your choices.`, "/privacy");
 
-const UPDATED = "September 17, 2026";
+const UPDATED = "September 19, 2026";
 const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 
 export default function PrivacyPage() {
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         {SITE_NAME} is an independent sports statistics website. This policy explains what information the site collects
         when you visit, what it is used for, and the choices you have. The short version: there are no accounts, no
         sign-ups, no tracking cookies set by us, and we do not sell or share personal data. The only measurement we do is
-        an anonymous count of which match pages are viewed.
+        anonymous and cookie-free: a count of which pages are viewed.
       </p>
 
       <h2>Who operates this site</h2>
@@ -34,6 +34,14 @@ export default function PrivacyPage() {
         device type (phone, tablet or desktop) derived from the browser&apos;s user-agent string. The network address
         itself is not stored by us, and the record contains no identifier that links views together or to a person. These
         counts power the &ldquo;Top Games&rdquo; page, which ranks matches by how often they are viewed.
+      </p>
+      <h3>Visitor statistics</h3>
+      <p>
+        To see which pages are read and where visitors arrive from, the site uses Vercel Web Analytics, run by our hosting
+        provider. It sets no cookies and builds no visitor profile. For each page view it records the page address, the
+        referring site, the country, and the browser, operating system and device type. Visits are told apart by a
+        scrambled value that is discarded after 24 hours, so nobody can be followed from one day to the next or from
+        this site to another.
       </p>
       <h3>Preferences stored in your browser</h3>
       <p>
@@ -111,7 +119,7 @@ export default function PrivacyPage() {
       <h2>Changes to this policy</h2>
       <p>
         If the way the site handles data changes, this page will be updated and the date at the top revised. Material
-        changes, such as introducing advertising or analytics, will be noted here before they take effect.
+        changes, such as introducing advertising or a different analytics tool, will be noted here before they take effect.
       </p>
 
       <h2>Contact</h2>

@@ -131,8 +131,8 @@ export default async function TopGamesPage({
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">Trending Beyond SportsDB</h2>
             <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-              What the wider internet is looking at: the App Store&apos;s sports chart and the players and teams whose Wikipedia
-              pages are suddenly busy.
+              What the wider internet is looking at: the App Store&apos;s sports chart, with betting and casino apps left out,
+              and the players and teams whose Wikipedia pages are suddenly busy.
             </p>
           </div>
           <TrendingCountrySelect countries={TRENDING_COUNTRIES} />

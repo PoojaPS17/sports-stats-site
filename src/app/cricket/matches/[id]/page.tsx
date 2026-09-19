@@ -48,6 +48,8 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const description = normalizeStage(comp?.description ?? stored?.description ?? null);
   const seriesName = stored?.series_name ?? summary?.header?.league?.name ?? null;
   const date = comp?.date ?? stored?.date ?? null;
+  const sideName = (c: any, fallback: SeriesSide | null) => teamDisplayName(c?.team?.displayName ?? c?.team?.name ?? fallback?.name ?? "");
+  const matchName = [sideName(home, stored?.home ?? null), sideName(away, stored?.away ?? null)].filter(Boolean).join(" v ");
   const potm = (comp?.status?.featuredAthletes ?? []).find((a: any) => a.name === "playerOfTheMatch")?.athlete?.displayName ?? null;
 
   const sideRow = (c: any, fallback: SeriesSide | null) => {
@@ -87,7 +89,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="flex items-center gap-2">
             {live ? <span className="pill pill-live">Live</span> : state === "post" ? <span className="pill pill-final">Result</span> : <span className="pill pill-upcoming">Upcoming</span>}
-            <span className="font-semibold text-[var(--text-muted)]">{[description, seriesName].filter(Boolean).join(" · ")}</span>
+            <h1 className="font-semibold text-[var(--text-muted)]">{[matchName, description, seriesName].filter(Boolean).join(" · ")}</h1>
           </span>
           {date && <LocalTime iso={date} format="datetime" className="text-[var(--text-muted)]" />}
         </div>

@@ -4,8 +4,28 @@ import { getF1ConstructorBySlug, getF1ConstructorDrivers, getF1ConstructorResult
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema } from "@/lib/structuredData";
+import { pageMeta } from "@/lib/metadata";
+import type { Metadata } from "next";
 
 export const revalidate = 300;
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const team = await getF1ConstructorBySlug(slug);
+  if (!team) return pageMeta("F1 Team", "Formula 1 constructor results.", undefined, { noindex: true });
+  const drivers = await getF1ConstructorDrivers(team.name);
+  const names = drivers.map((d) => d.name);
+  const lineup = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
+  return pageMeta(
+    `${team.name} F1 Team: Drivers and Race Results`,
+    lineup && names.length <= 4
+      ? `${team.name} in Formula 1: ${lineup} in the cars, and where each finished in the team's most recent Grands Prix.`
+      : `${team.name} in Formula 1: the current drivers and where each finished in the team's most recent Grands Prix.`,
+    `/f1/teams/${team.slug}`
+  );
+}
 
 export default async function F1ConstructorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -16,6 +36,7 @@ export default async function F1ConstructorPage({ params }: { params: Promise<{ 
 
   return (
     <div className="flex flex-col gap-6">
+      <JsonLd data={breadcrumbSchema([{ label: "Formula 1", href: "/f1" }, { label: "Standings", href: "/f1/standings" }, { label: team.name }])} />
       <div className="flex items-center gap-3">
         <TeamLogo name={team.name} logoUrl={team.logo_url} color={team.color} size={56} />
         <div>

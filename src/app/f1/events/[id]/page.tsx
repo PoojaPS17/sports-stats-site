@@ -3,8 +3,24 @@ import Link from "next/link";
 import { getF1Event, getF1EventResults } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema } from "@/lib/structuredData";
+import { pageMeta } from "@/lib/metadata";
+import type { Metadata } from "next";
 
 export const revalidate = 300;
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const event = await getF1Event(id);
+  if (!event) return pageMeta("F1 Grand Prix", "Formula 1 race weekend results.", undefined, { noindex: true });
+  const year = event.season_year ?? new Date(event.date).getUTCFullYear();
+  const where = event.circuit_name ? ` at ${event.circuit_name}` : "";
+  const description = event.winner_name
+    ? `${event.winner_name} won the ${year} ${event.name}${where}. Classifications for the race, qualifying and practice.`
+    : `The ${year} ${event.name}${where}: practice, qualifying and race classifications, added as each session finishes.`;
+  return pageMeta(`${event.name} ${year}: Results`, description, `/f1/events/${event.espn_id}`);
+}
 
 const SESSION_LABEL: Record<string, string> = {
   FP1: "Free Practice 1",
@@ -36,6 +52,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex flex-col gap-6">
+      <JsonLd data={breadcrumbSchema([{ label: "Formula 1", href: "/f1" }, { label: event.name }])} />
       <div>
         <Link href="/f1" className="text-sm text-[var(--text-muted)] hover:underline">
           ← F1 Calendar

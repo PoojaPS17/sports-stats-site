@@ -64,17 +64,20 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const game = await getGameByEspnId(league, id);
   if (!game) return {};
   const date = new Date(game.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const score =
-    game.completed && game.away_score != null && game.home_score != null
-      ? ` ${game.away_score_display ?? game.away_score}-${game.home_score_display ?? game.home_score}`
-      : "";
+  // The NFL and NBA name the visitors first ("Chiefs at Bills"); football and cricket
+  // name the home side first.
+  const awayFirst = league === "nfl" || league === "nba";
+  const [first, second] = awayFirst ? ([game.away_name, game.home_name] as const) : ([game.home_name, game.away_name] as const);
+  const awayScore = game.away_score_display ?? game.away_score;
+  const homeScore = game.home_score_display ?? game.home_score;
+  const score = game.completed && game.away_score != null && game.home_score != null ? (awayFirst ? ` ${awayScore}-${homeScore}` : ` ${homeScore}-${awayScore}`) : "";
   const details = game.completed ? await getGameDetails(league, id) : null;
   const where = details?.venue ? ` at ${details.venue}` : "";
   const covers = isCricketLeague(league) ? "Scorecard and head-to-head." : isSoccerLeague(league) ? "Line-ups, timeline, team stats, box score and head-to-head." : "Scoring summary, win probability, team stats, box score and head-to-head.";
   const extras = game.completed ? `${scorersLine(details)} ${covers}` : isCricketLeague(league) ? " Head-to-head record and recent form." : " Team form, head-to-head record and pre-match win probability.";
   return pageMeta(
-    `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}${score}`,
-    `${LEAGUE_LABEL[league]}: ${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}${where}, ${date}.${extras}`,
+    `${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`,
+    `${LEAGUE_LABEL[league]}: ${teamDisplayName(first)} ${awayFirst ? "at" : "v"} ${teamDisplayName(second)}${where}, ${date}.${extras}`,
     `/${league}/games/${id}`
   );
 }
@@ -126,6 +129,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const winProb = details?.win_probability ?? [];
   const leaders = details?.leaders ?? [];
 
+  const awayFirst = league === "nfl" || league === "nba";
+  const matchName = awayFirst ? `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}` : `${teamDisplayName(game.home_name)} vs ${teamDisplayName(game.away_name)}`;
+
   return (
     <div className="flex flex-col gap-6">
       <ViewTracker league={league} gameId={id} />
@@ -134,10 +140,15 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },
           ...(context?.week ? [{ label: context.week.label, href: context.week.href }] : [{ label: "Scores", href: `/${league}` }]),
-          { label: `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}` },
+          { label: matchName },
         ]}
       />
       <LiveRefresh active={game.status_state === "in"} />
+      {/* The scoreboard card below is the visual heading; this names the page for screen readers and crawlers. */}
+      <h1 className="sr-only">
+        {matchName}, {LEAGUE_LABEL[league]},{" "}
+        {new Date(game.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+      </h1>
       <MatchHeader league={league} game={game} />
       {details && <MatchFacts league={league} game={game} details={details} />}
 

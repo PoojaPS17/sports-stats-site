@@ -47,14 +47,20 @@ export const revalidate = 300;
 
 // "Cody Gakpo Premier League stats: 89 apps, 21 goals, 12 assists for Liverpool since
 // 2022-23." — the figures are the description, so the snippet answers the search.
-function profileSummary(league: League, player: PlayerRow, profile: PlayerProfile | null): string {
+// The page shows the long form; the meta description gets the short one, since search
+// results cut a description off at about 155 characters.
+function profileSummary(league: League, player: PlayerRow, profile: PlayerProfile | null, short = false): string {
   if (!profile || profile.games === 0) return `${player.name} ${LEAGUE_LABEL[league]} stats, season by season, with a game-by-game log.`;
   const headline = profile.profile.specs.filter((s) => s.headline).slice(0, 3);
-  const figures = headline.map((s) => `${formatStat(s, profile.career[s.key])} ${s.title.toLowerCase()}${profile.sport === "nba" && s.agg === "avg" ? " per game" : ""}`);
+  const perGame = profile.sport === "nba" && headline.every((s) => s.agg === "avg");
+  const figures = headline.map((s) => `${formatStat(s, profile.career[s.key])} ${s.title.toLowerCase()}${!perGame && profile.sport === "nba" && s.agg === "avg" ? " per game" : ""}`);
   const teams = profile.teams.map((t) => t.name);
   const since = profile.seasons[profile.seasons.length - 1]?.season;
   const games = `${profile.games} ${profile.profile.gamesLabel === "Apps" ? "appearances" : "games"}`;
-  return `${player.name} ${LEAGUE_LABEL[league]} stats: ${games}, ${figures.join(", ")} for ${teams.join(" and ")}${since ? ` since ${formatSeasonLabel(league, since)}` : ""}. Season-by-season totals, full game log, home and away and opponent splits, best games and milestones.`;
+  const lead = `${player.name} ${LEAGUE_LABEL[league]} stats: ${games}, ${figures.join(", ")}${perGame ? " per game" : ""} for ${teams.join(" and ")}${since ? ` since ${formatSeasonLabel(league, since)}` : ""}.`;
+  if (!short) return `${lead} Season-by-season totals, full game log, home and away and opponent splits, best games and milestones.`;
+  const tail = " Game log, splits and best games.";
+  return lead.length + tail.length <= 160 ? lead + tail : lead;
 }
 
 // generateMetadata and the page both need the player and the log; React's request
@@ -80,7 +86,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const profile = await loadProfile(league, player);
   const seasons = profile?.games ? [] : await getPlayerSeasons(league, player.espn_id);
   const empty = !profile?.games && seasons.length === 0;
-  return pageMeta(`${player.name} Stats, Game Log & Career`, profileSummary(league, player, profile), `/${league}/players/${slug}`, { noindex: empty });
+  return pageMeta(`${player.name} Stats, Game Log & Career`, profileSummary(league, player, profile, true), `/${league}/players/${slug}`, { noindex: empty });
 }
 
 function isSplitDimension(value: string | undefined): value is CricketSplitDimension {

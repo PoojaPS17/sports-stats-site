@@ -86,6 +86,15 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
     <div className="flex flex-col gap-8">
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Head-to-head" }, { label: `${teamDisplayName(teamA.name)} vs ${teamDisplayName(teamB.name)}` }]} />
 
+      <div>
+        <h1 className="page-title">
+          {teamDisplayName(teamA.name)} vs {teamDisplayName(teamB.name)}: head-to-head record
+        </h1>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          {h2h.meetings} {LEAGUE_LABEL[league]} {h2h.meetings === 1 ? "meeting" : "meetings"} on record
+        </p>
+      </div>
+
       <section className="card overflow-hidden">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-6 sm:px-8">
           <Link href={`/${league}/teams/${teamA.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">

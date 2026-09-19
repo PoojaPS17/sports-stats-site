@@ -195,20 +195,26 @@ export async function getF1ConstructorBySlug(slug: string): Promise<F1Constructo
   return rows[0] ?? null;
 }
 
-// Current drivers for a constructor — same "most recent race" signal as
-// getF1DriverStandings, just inverted: every driver whose latest race was for this
-// team.
+// Current drivers for a constructor: everyone whose most recent race was for this team,
+// provided that race was in the latest season with a completed race. Races only, and
+// the season check, keep out Friday-practice stand-ins and drivers who retired with
+// the team years ago.
 export async function getF1ConstructorDrivers(constructorName: string): Promise<F1Driver[]> {
   const { rows } = await pool.query(
     `select p.espn_id, p.name, p.slug, p.headshot_url
      from players p
-     where p.league = 'f1'
-       and (
-         select r.constructor_name from f1_session_results r
-         join f1_sessions s on s.espn_id = r.session_espn_id
-         where r.driver_espn_id = p.espn_id and r.constructor_name is not null
-         order by s.date desc limit 1
-       ) = $1
+     join lateral (
+       select r.constructor_name, e.season_year from f1_session_results r
+       join f1_sessions s on s.espn_id = r.session_espn_id
+       join f1_events e on e.espn_id = s.event_espn_id
+       where r.driver_espn_id = p.espn_id and r.constructor_name is not null and s.session_type = 'Race'
+       order by s.date desc limit 1
+     ) last on true
+     where p.league = 'f1' and last.constructor_name = $1
+       and last.season_year = (
+         select max(e2.season_year) from f1_sessions s2 join f1_events e2 on e2.espn_id = s2.event_espn_id
+         where s2.session_type = 'Race' and s2.completed
+       )
      order by p.name`,
     [constructorName]
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
@@ -37,6 +38,12 @@ export const metadata: Metadata = {
   },
   description:
     "Live scores, standings, schedules and player stats for football, the NFL, NBA, cricket, tennis and F1, with ten years of history.",
+  // Ownership proof for Google Search Console and Bing Webmaster Tools. Each tool
+  // hands out a token when the site is added; set it in Vercel and redeploy.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
+  },
 };
 
 function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): TickerItem {
@@ -106,6 +113,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer />
+        {/* Cookieless visitor counts from the host; see the privacy policy. */}
+        <Analytics />
       </body>
     </html>
   );

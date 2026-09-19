@@ -1,3 +1,4 @@
+import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
@@ -443,8 +444,10 @@ export interface NewsArticle {
 export async function getNews(league: League, limit = 8): Promise<NewsArticle[]> {
   const { rows } = await pool.query(
     `select article_id, headline, description, image_url, link, published
-     from news_articles where league = $1 order by published desc nulls last limit $2`,
-    [league, limit]
+     from news_articles
+     where league = $1 and headline !~* $3 and coalesce(description, '') !~* $3
+     order by published desc nulls last limit $2`,
+    [league, limit, BETTING_TEXT_PG]
   );
   return rows;
 }
@@ -854,7 +857,9 @@ export async function getTrendingTopics(source: TrendingSource, country: string)
      order by t.rank asc`,
     [source, effectiveCountry]
   );
-  return rows;
+  if (source !== "app_store_ios") return rows;
+  // Sportsbook and casino apps are left out, and the rest renumbered; the page says so.
+  return (rows as TrendingTopic[]).filter((t) => !isBettingApp(t.label, t.detail)).map((t, i) => ({ ...t, rank: i + 1 }));
 }
 
 export function matchedTopicHref(topic: TrendingTopic): string | null {

@@ -9,11 +9,18 @@ import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSe
 import { supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
 import { h2hPath } from "./h2h";
 import { supportsProjections } from "./simulator";
+import { playerSport } from "./playerProfile";
 
 type Entry = MetadataRoute.Sitemap[number];
 
+// Leagues whose players have season-by-season pages (the ones with game logs).
+const SEASON_PAGE_LEAGUES = ALL_LEAGUES.filter((l) => playerSport(l) !== null);
+
 export const SITEMAP_IDS: string[] = [
   "core",
+  "f1",
+  "tennis",
+  ...SEASON_PAGE_LEAGUES.map((l) => `pseasons-${l}`),
   ...ALL_LEAGUES.flatMap((l) => [`teams-${l}`, `players-${l}`, `games-${l}`]),
   ...LEAGUES.filter((l) => supportsMatchweeks(l)).map((l) => `weeks-${l}`),
   ...ALL_LEAGUES.filter((l) => supportsScoreAnalytics(l)).map((l) => `h2h-${l}`),
@@ -36,8 +43,13 @@ async function core(): Promise<Entry[]> {
     entry("/terms", "yearly", 0.2),
   ];
   out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7), entry("/cricket/series", "hourly", 0.8));
-  const { rows: cricketSeries } = await pool.query(`select espn_id, end_date from cricket_series where end_date >= now() - interval '400 days' order by start_date desc`);
-  for (const { espn_id, end_date } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, "daily", 0.5, end_date));
+  // Every series with at least one match on record; a finished one no longer changes.
+  const { rows: cricketSeries } = await pool.query(
+    `select s.espn_id, s.end_date, (s.end_date >= now() - interval '30 days') as recent from cricket_series s
+     where exists (select 1 from cricket_series_matches m where m.series_espn_id = s.espn_id)
+     order by s.start_date desc`
+  );
+  for (const { espn_id, end_date, recent } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, recent ? "daily" : "yearly", recent ? 0.5 : 0.3, end_date));
   // Matches outside the archived competitions live at /cricket/matches; the archived
   // ones are in their league's games sitemap.
   const { rows: seriesMatches } = await pool.query(
@@ -79,7 +91,58 @@ async function teams(league: League): Promise<Entry[]> {
     out.push(entry(`/${league}/teams/${slug}`, "daily", 0.8), entry(`/${league}/teams/${slug}/about`, "monthly", 0.3));
     if (supportsScoreAnalytics(league)) out.push(entry(`/${league}/teams/${slug}/history`, "monthly", 0.5));
   }
+  // One results page per team per season played.
+  const { rows: seasons } = await pool.query(
+    `select distinct t.slug, g.season_year from games g
+     join teams t on t.league = g.league and t.espn_id in (g.home_team_espn_id, g.away_team_espn_id)
+     where g.league = $1 and g.season_year is not null
+     order by t.slug, g.season_year desc`,
+    [league]
+  );
+  for (const { slug, season_year } of seasons) out.push(entry(`/${league}/teams/${slug}/${season_year}`, "yearly", 0.3));
   return out;
+}
+
+// A player's page for each season they have a game log in.
+async function playerSeasons(league: League): Promise<Entry[]> {
+  const { rows } = await pool.query(
+    `select distinct p.slug, g.season_year from player_game_stats s
+     join games g on g.league = s.league and g.espn_id = s.game_espn_id
+     join players p on p.league = s.league and p.espn_id = s.player_espn_id
+     where s.league = $1 and g.season_year is not null
+     order by p.slug, g.season_year desc`,
+    [league]
+  );
+  return rows.map(({ slug, season_year }) => entry(`/${league}/players/${slug}/${season_year}`, "yearly", 0.3));
+}
+
+// Race weekends, plus every driver and constructor with a result on record.
+async function f1(): Promise<Entry[]> {
+  const out: Entry[] = [];
+  const { rows: events } = await pool.query(`select espn_id, date, (date >= now() - interval '14 days') as recent from f1_events order by date desc`);
+  for (const e of events) out.push(entry(`/f1/events/${e.espn_id}`, e.recent ? "daily" : "yearly", e.recent ? 0.6 : 0.4, e.recent ? null : e.date));
+  const { rows: drivers } = await pool.query(
+    `select p.slug from players p where p.league = 'f1' and exists (select 1 from f1_session_results r where r.driver_espn_id = p.espn_id) order by p.slug`
+  );
+  for (const { slug } of drivers) out.push(entry(`/f1/drivers/${slug}`, "weekly", 0.5));
+  const { rows: constructors } = await pool.query(`select slug from teams where league = 'f1' order by slug`);
+  for (const { slug } of constructors) out.push(entry(`/f1/teams/${slug}`, "weekly", 0.5));
+  return out;
+}
+
+// Tennis players who have played a match on record.
+async function tennisPlayers(): Promise<Entry[]> {
+  const { rows } = await pool.query(
+    `with played as (
+       select tour, player1_espn_id as espn_id from tennis_matches
+       union
+       select tour, player2_espn_id from tennis_matches
+     )
+     select p.league as tour, p.slug from players p
+     join played x on x.tour = p.league and x.espn_id = p.espn_id
+     order by p.league, p.slug`
+  );
+  return rows.map(({ tour, slug }) => entry(`/tennis/${tour}/players/${slug}`, "weekly", 0.5));
 }
 
 // Only players with something on the page: a game on record or a season stat line.
@@ -135,10 +198,13 @@ async function h2h(league: League): Promise<Entry[]> {
 
 export async function sitemapEntries(id: string): Promise<Entry[]> {
   if (id === "core") return core();
+  if (id === "f1") return f1();
+  if (id === "tennis") return tennisPlayers();
   const [kind, league] = id.split("-") as [string, League];
   if (!ALL_LEAGUES.includes(league)) return [];
   if (kind === "teams") return teams(league);
   if (kind === "players") return players(league);
+  if (kind === "pseasons") return playerSport(league) ? playerSeasons(league) : [];
   if (kind === "games") return games(league);
   if (kind === "weeks") return supportsMatchweeks(league) ? weeks(league) : [];
   if (kind === "h2h") return supportsScoreAnalytics(league) ? h2h(league) : [];
