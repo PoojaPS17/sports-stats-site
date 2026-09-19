@@ -45,7 +45,7 @@ export function TournamentCalendar({ season, seasons, tournaments }: { season: n
         months.map((m) => (
           <section key={m.month}>
             <h2 className="mb-3 text-base font-bold tracking-tight sm:text-lg">{m.month}</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {m.items.map((t) => (
                 <TournamentCard key={t.espn_id} t={t} today={today} />
               ))}

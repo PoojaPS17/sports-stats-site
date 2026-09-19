@@ -112,7 +112,7 @@ export default async function TopGamesPage({
           traffic, the same way an app store chart is built from real downloads rather than a guess.
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {games.map((g, i) => (
             <div key={`${g.league}-${g.espn_id}`} className="relative">
               <span className="absolute -left-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-[var(--accent-foreground)]">

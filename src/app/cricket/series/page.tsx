@@ -50,7 +50,7 @@ function ByKind({ series, now }: { series: CricketSeries[]; now: number }) {
         return (
           <div key={kind}>
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{SERIES_KIND_LABEL[kind]}</p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((s) => (
                 <SeriesCard key={s.espn_id} s={s} now={now} />
               ))}

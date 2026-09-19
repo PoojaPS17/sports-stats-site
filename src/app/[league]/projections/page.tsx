@@ -69,7 +69,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
       {proj.upcoming.length > 0 && (
         <section>
           <SectionHeader description="Model win probability for games in the next seven days">This week</SectionHeader>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => (
               <Link key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
                 <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">

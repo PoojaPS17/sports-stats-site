@@ -231,7 +231,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
       {context && context.week && context.weekGames.length > 0 && (
         <section>
           <SectionHeader action={{ label: `All of ${context.week.label}`, href: context.week.href }}>More from {context.week.label}</SectionHeader>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {context.weekGames.slice(0, 9).map((g) => (
               <GameCard key={g.espn_id} league={league} game={g} />
             ))}

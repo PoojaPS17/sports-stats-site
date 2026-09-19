@@ -63,7 +63,7 @@ export default async function TennisHubPage() {
       {tournaments.length > 0 && (
         <section>
           <SectionHeader action={{ label: "Full calendar", href: "/tennis/tournaments" }}>This week&apos;s tournaments</SectionHeader>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {tournaments.map((t) => (
               <TournamentCard key={t.espn_id} t={t} today={today} />
             ))}

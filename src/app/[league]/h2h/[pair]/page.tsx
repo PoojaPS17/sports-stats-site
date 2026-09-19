@@ -128,7 +128,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
       {h2h.upcoming && (
         <section>
           <SectionHeader>Next meeting</SectionHeader>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <GameCard league={league} game={h2h.upcoming} />
           </div>
         </section>
@@ -159,7 +159,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         {h2h.games.length === 0 ? (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">These two teams haven&apos;t met in our archive yet.</p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {h2h.games.map((g) => (
               <GameCard key={g.espn_id} league={league} game={g} />
             ))}

@@ -16,7 +16,7 @@ export function RelatedLinks({ groups, title = "Explore more", description }: { 
   return (
     <section>
       <SectionHeader description={description}>{title}</SectionHeader>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((g) => (
           <div key={g.title} className="card px-4 py-3">
             <h3 className="mb-2 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{g.title}</h3>

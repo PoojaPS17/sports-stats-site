@@ -14,7 +14,7 @@ export function PageHeader({
         <h1 className="page-title">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-[var(--text-muted)]">{subtitle}</p>}
       </div>
-      {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}
+      {children && <div className="flex max-w-full flex-wrap items-center gap-2">{children}</div>}
     </div>
   );
 }

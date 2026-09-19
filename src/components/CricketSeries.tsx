@@ -80,7 +80,7 @@ export function SeriesMatchRow({ m, showSeries = false }: { m: CricketSeriesMatc
 export function SeriesMatchList({ matches, showSeries = false }: { matches: CricketSeriesMatch[]; showSeries?: boolean }) {
   if (matches.length === 0) return null;
   return (
-    <div className="card grid divide-y divide-[var(--border)] overflow-hidden md:grid-cols-2 md:divide-y-0 md:[&>*:nth-child(n+3)]:border-t md:[&>*:nth-child(odd)]:border-r md:[&>*]:border-[var(--border)]">
+    <div className="card grid grid-cols-1 divide-y divide-[var(--border)] overflow-hidden md:grid-cols-2 md:divide-y-0 md:[&>*:nth-child(n+3)]:border-t md:[&>*:nth-child(odd)]:border-r md:[&>*]:border-[var(--border)]">
       {matches.map((m) => (
         <SeriesMatchRow key={m.espn_id} m={m} showSeries={showSeries} />
       ))}

@@ -28,7 +28,7 @@ export default async function NewsPage({ params }: { params: Promise<{ league: s
       {news.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No articles yet.</p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {news.map((a) => (
             <NewsCard key={a.article_id} article={a} />
           ))}

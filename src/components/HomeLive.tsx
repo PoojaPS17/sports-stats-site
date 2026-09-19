@@ -45,7 +45,7 @@ export function HomeLive({ data }: { data: HomeData }) {
         ) : (
           <div className="flex flex-col gap-3">
             {liveGames.length > 0 && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {liveGames.map((g) => (
                   <GameCard key={`${g.league}-${g.espn_id}`} league={g.league} game={g} />
                 ))}
@@ -81,7 +81,7 @@ export function HomeLive({ data }: { data: HomeData }) {
         ) : (
           <div className="flex flex-col gap-3">
             {(upcomingGames.length > 0 || f1) && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {upcomingGames.map((g) => (
                   <GameCard key={`${g.league}-${g.espn_id}`} league={g.league} game={g} />
                 ))}

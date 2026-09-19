@@ -203,6 +203,16 @@ table {
 /* ---------------------------------------------------------------------------
    Layout helpers
 --------------------------------------------------------------------------- */
+/* A grid item's automatic minimum width is its content's, so one long unbreakable
+   line (a nowrap score, a truncated name) widens a single-column grid past the
+   phone screen and the browser zooms the whole page out. Items may always shrink;
+   a utility (min-w-*) still wins, being in a later layer. */
+@layer base {
+  .grid > * {
+    min-width: 0;
+  }
+}
+
 .container-x {
   margin-inline: auto;
   width: 100%;

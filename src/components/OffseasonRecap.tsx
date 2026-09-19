@@ -51,7 +51,7 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
       {recap.closingGames.length > 0 && (
         <section>
           <SectionHeader action={{ label: `${noun === "season" ? "Season" : "Tournament"} summary`, href: `/${league}/standings/${recap.season}` }}>{closingTitle}</SectionHeader>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {recap.closingGames.map((g) => (
               <GameCard key={g.espn_id} league={league} game={g} />
             ))}
