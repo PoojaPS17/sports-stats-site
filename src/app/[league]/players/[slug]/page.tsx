@@ -81,12 +81,14 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!player) return {};
   if (isCricketLeague(league)) {
     const team = player.team_name ? ` (${player.team_name})` : "";
-    return pageMeta(`${player.name} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`, `/${league}/players/${slug}`);
+    return pageMeta(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`, `/${league}/players/${slug}`);
   }
   const profile = await loadProfile(league, player);
   const seasons = profile?.games ? [] : await getPlayerSeasons(league, player.espn_id);
   const empty = !profile?.games && seasons.length === 0;
-  return pageMeta(`${player.name} Stats, Game Log & Career`, profileSummary(league, player, profile, true), `/${league}/players/${slug}`, { noindex: empty });
+  // The competition is named because a player has a page in each one he plays in.
+  const longTitle = `${player.name} ${LEAGUE_LABEL[league]} Stats, Game Log & Career`;
+  return pageMeta(longTitle.length <= 60 ? longTitle : `${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player, profile, true), `/${league}/players/${slug}`, { noindex: empty });
 }
 
 function isSplitDimension(value: string | undefined): value is CricketSplitDimension {

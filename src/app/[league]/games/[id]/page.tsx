@@ -68,8 +68,11 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // name the home side first.
   const awayFirst = league === "nfl" || league === "nba";
   const [first, second] = awayFirst ? ([game.away_name, game.home_name] as const) : ([game.home_name, game.away_name] as const);
-  const awayScore = game.away_score_display ?? game.away_score;
-  const homeScore = game.home_score_display ?? game.home_score;
+  // A cricket score carries its overs and target ("151/1 (15.3/20 ov, target 148)");
+  // the title keeps runs and wickets only.
+  const bare = (v: string | number | null) => (typeof v === "string" ? v.replace(/\s*\([^)]*\)/g, "").trim() : v);
+  const awayScore = bare(game.away_score_display ?? game.away_score);
+  const homeScore = bare(game.home_score_display ?? game.home_score);
   const score = game.completed && game.away_score != null && game.home_score != null ? (awayFirst ? ` ${awayScore}-${homeScore}` : ` ${homeScore}-${awayScore}`) : "";
   const details = game.completed ? await getGameDetails(league, id) : null;
   const where = details?.venue ? ` at ${details.venue}` : "";

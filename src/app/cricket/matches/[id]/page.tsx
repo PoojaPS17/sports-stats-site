@@ -25,7 +25,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const m = await getCricketSeriesMatch(id);
   if (!m) return {};
-  return pageMeta(`${m.name}${m.description ? `, ${m.description}` : ""} | ${m.series_name}`, `${m.name} live score and scorecard, ${m.series_name}${m.status_summary ? `: ${m.status_summary}` : ""}.`, `/cricket/matches/${id}`);
+  // Name, stage and series when they fit a search result's title; otherwise the month
+  // stands in for the series, which the description still names.
+  const stage = m.description ? `, ${m.description}` : "";
+  const full = `${m.name}${stage} | ${m.series_name}`;
+  const month = m.date ? `, ${new Date(m.date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}` : "";
+  return pageMeta(full.length <= 60 ? full : `${m.name}${stage}${month}`, `${m.name} live score and scorecard, ${m.series_name}${m.status_summary ? `: ${m.status_summary}` : ""}.`, `/cricket/matches/${id}`);
 }
 
 export default async function CricketLiveMatchPage({ params }: { params: Promise<{ id: string }> }) {

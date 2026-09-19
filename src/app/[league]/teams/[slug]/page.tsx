@@ -40,7 +40,12 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${team.name} Schedule, Results & Roster`, `${team.name} ${label} fixtures, results, current roster, injuries and season-by-season history.`, `/${league}/teams/${slug}`, { ownImage: true });
+  // The competition is part of the title: the same side has a page in each one it plays
+  // in (India in Tests, ODIs and T20Is; a club in its league and the Champions League).
+  const cricket = isCricketLeague(league);
+  return pageMeta(
+    `${team.name} ${label} ${cricket ? "Results, Fixtures & Squad" : "Schedule, Results & Roster"}`,
+    cricket ? `${team.name} ${label} results and fixtures, the current squad, and every result year by year.` : `${team.name} ${label} fixtures, results, current roster, injuries and season-by-season history.`, `/${league}/teams/${slug}`, { ownImage: true });
 }
 
 export default async function TeamPage({

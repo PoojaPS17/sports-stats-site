@@ -10,7 +10,21 @@ import { SITE_NAME, absoluteUrl } from "./site";
 // games) pass `ownImage`, because images named here would replace the file's.
 const SHARE_IMAGE = { url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: `${SITE_NAME}: live scores, standings and stats` };
 
-export function pageMeta(title: string, description: string, path?: string, options: { noindex?: boolean; ownImage?: boolean } = {}): Metadata {
+// Search results show about 160 characters of a description. A longer one is cut back
+// to its last whole sentence or clause that fits, or failing that its last whole word.
+const DESCRIPTION_LIMIT = 160;
+export function clampDescription(text: string): string {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (t.length <= DESCRIPTION_LIMIT) return t;
+  const head = t.slice(0, DESCRIPTION_LIMIT + 1);
+  const sentence = Math.max(head.lastIndexOf(". "), head.lastIndexOf("; "));
+  if (sentence >= 120) return `${head.slice(0, sentence)}.`;
+  const word = t.slice(0, DESCRIPTION_LIMIT - 1).lastIndexOf(" ");
+  return `${t.slice(0, word).replace(/[,;:(\s]+$/, "")}…`;
+}
+
+export function pageMeta(title: string, rawDescription: string, path?: string, options: { noindex?: boolean; ownImage?: boolean } = {}): Metadata {
+  const description = clampDescription(rawDescription);
   const canonical = path ? absoluteUrl(path) : undefined;
   return {
     title,

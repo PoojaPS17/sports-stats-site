@@ -34,15 +34,19 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const seasonLabel = formatSeasonLabel(league, Number(season)) ?? season;
   const sport = playerSport(league);
   let figures = "";
+  let empty = false;
   if (sport) {
     const rows = (await cachedLog(league, player.espn_id)).filter((r) => r.season_year === Number(season));
     const p = buildProfile(sport, rows);
     if (p.games > 0) {
       const headline = p.profile.specs.filter((s) => s.headline).slice(0, 3);
       figures = ` ${p.games} ${p.profile.gamesLabel === "Apps" ? "appearances" : "games"}, ${headline.map((s) => `${formatStat(s, p.career[s.key])} ${s.title.toLowerCase()}`).join(", ")} for ${p.teams.map((t) => t.name).join(" and ")}.`;
+    } else {
+      // Named in a squad but never used that season: nothing here worth indexing.
+      empty = !(await getPlayerSeasonStatsBySeason(league, player.espn_id, Number(season)));
     }
   }
-  return pageMeta(`${player.name} ${seasonLabel} Stats`, `${player.name} ${LEAGUE_LABEL[league]} statistics for the ${seasonLabel} season.${figures} Game-by-game log, splits and best games.`, `/${league}/players/${slug}/${season}`);
+  return pageMeta(`${player.name} ${seasonLabel} ${LEAGUE_LABEL[league]} Stats`, `${player.name} ${LEAGUE_LABEL[league]} statistics for the ${seasonLabel} season.${figures} Game-by-game log, splits and best games.`, `/${league}/players/${slug}/${season}`, { noindex: empty });
 }
 
 export default async function PlayerSeasonPage({ params }: { params: Promise<{ league: string; slug: string; season: string }> }) {

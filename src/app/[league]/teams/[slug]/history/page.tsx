@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
-  return pageMeta(`${team.name} Season History`, `${team.name} ${LEAGUE_LABEL[league]} finishes, records and points for every season on record.`, `/${league}/teams/${slug}/history`);
+  return pageMeta(`${team.name} ${LEAGUE_LABEL[league]} Season History`, `${team.name} ${LEAGUE_LABEL[league]} finishes, records and points for every season on record.`, `/${league}/teams/${slug}/history`);
 }
 
 function ordinal(n: number): string {

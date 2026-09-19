@@ -113,11 +113,31 @@ export function fetchScoreboardBySeason(league: League, season: number, options:
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/scoreboard?season=${season}${bust}`);
 }
 
-// The earliest season ESPN serves for competitions we load further back than the
-// default window: IPL from 2008, the Big Bash from 2011-12, the ODI World Cup from
-// the first edition in 1975 and the T20 World Cup from 2007. Years without an
-// edition simply return no matches.
-export const HISTORY_START: Partial<Record<League, number>> = { ipl: 2008, bbl: 2011, cwc: 1975, t20wc: 2007, wpl: 2023, wbbl: 2015, wcwc: 1973, wt20wc: 2009 };
+// The earliest season to load per league. Most competitions we load further back
+// than the default `currentYear - YEARS_BACK` window: IPL from 2008, the Big Bash
+// from 2011-12, the ODI World Cup from the first edition in 1975 and the T20 World
+// Cup from 2007 (years without an edition simply return no matches). The major
+// team leagues are pinned to 2015 rather than left on the relative window, which
+// would otherwise silently drop the oldest season every time the current year
+// advances — 2015-16 (Leicester City's title) fell out of standings backfills this
+// way once, though `games` already covers it independently of this constant.
+export const HISTORY_START: Partial<Record<League, number>> = {
+  ipl: 2008,
+  bbl: 2011,
+  cwc: 1975,
+  t20wc: 2007,
+  wpl: 2023,
+  wbbl: 2015,
+  wcwc: 1973,
+  wt20wc: 2009,
+  epl: 2015,
+  laliga: 2015,
+  bundesliga: 2015,
+  seriea: 2015,
+  ucl: 2015,
+  nba: 2015,
+  nfl: 2015,
+};
 
 // `level=3` asks for the division-level groups (conference → division → teams) that
 // the NFL table is conventionally shown in; the default response stops at conferences.

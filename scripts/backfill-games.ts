@@ -8,7 +8,7 @@
 // per season instead of per team x season).
 // Safe to re-run/resume — all writes are upserts.
 import { pool } from "./lib/db";
-import { HISTORY_START, fetchScoreboardBySeason, fetchTeamSchedule, isCupCompetition, type League } from "./lib/espn";
+import { HISTORY_START, fetchScoreboardBySeason, fetchTeamSchedule, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
 
 const YEARS_BACK = 10;
@@ -41,11 +41,11 @@ async function backfillViaTeamSchedules(league: League) {
   // already includes its own playoff stage within the one request).
   const seasonTypes = league === "nba" || league === "nfl" ? [undefined, 3] : [undefined];
 
-  // A cup's entrants change every season, and only the current edition's clubs are
-  // seeded. Each game upserts both its clubs, so after one pass the table also holds
-  // the opponents met along the way; those are scanned in a further pass (and so on)
-  // until no unscanned club remains, which catches games between two clubs that are
-  // both absent from the current edition.
+  // A competition's clubs change every season (cup entrants, promotion and relegation),
+  // and only the current edition's clubs are seeded. Each game upserts both its clubs,
+  // so after one pass the table also holds the opponents met along the way; those are
+  // scanned in a further pass (and so on) until no unscanned club remains, which catches
+  // games between two clubs that are both absent from the current edition.
   for (;;) {
   const { rows: teams } = await pool.query(`select espn_id from teams where league = $1 order by espn_id`, [league]);
   const pending = teams.map((t) => t.espn_id as string).filter((id) => !scanned.has(id));
@@ -73,7 +73,6 @@ async function backfillViaTeamSchedules(league: League) {
       }
     }
   }
-  if (!isCupCompetition(league)) break;
   }
   console.log(`[backfill-games] ${league}: scanned ${scanned.size} teams x ${seasons.length} seasons, upserted ${gameCount} games`);
 }

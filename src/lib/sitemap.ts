@@ -104,26 +104,41 @@ async function teams(league: League): Promise<Entry[]> {
   return out;
 }
 
-// A player's page for each season they have a game log in.
+// SQL twin of each sport's `played` test in playerProfile.ts: a row for an unused
+// substitute is not an appearance, and a page with none renders noindex, so such
+// players and seasons stay out of the sitemap.
+const statNumber = (category: string, label: string) => `coalesce(nullif(substring(s.stats->'${category}'->>'${label}' from '^[0-9]+'), '')::int, 0)`;
+function playedSql(league: League): string {
+  const sport = playerSport(league);
+  if (sport === "soccer") return `${statNumber("match", "APP")} = 1`;
+  if (sport === "nba") return `(${statNumber("box", "MIN")} > 0 or ${statNumber("box", "PTS")} > 0)`;
+  return "true";
+}
+
+// A player's page for each season they played a game in.
 async function playerSeasons(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
     `select distinct p.slug, g.season_year from player_game_stats s
      join games g on g.league = s.league and g.espn_id = s.game_espn_id
      join players p on p.league = s.league and p.espn_id = s.player_espn_id
-     where s.league = $1 and g.season_year is not null
+     where s.league = $1 and g.season_year is not null and g.completed and ${playedSql(league)}
      order by p.slug, g.season_year desc`,
     [league]
   );
   return rows.map(({ slug, season_year }) => entry(`/${league}/players/${slug}/${season_year}`, "yearly", 0.3));
 }
 
-// Race weekends, plus every driver and constructor with a result on record.
+// Race weekends, plus every constructor and every driver with a race result on record
+// (a driver page with practice sessions only renders noindex).
 async function f1(): Promise<Entry[]> {
   const out: Entry[] = [];
   const { rows: events } = await pool.query(`select espn_id, date, (date >= now() - interval '14 days') as recent from f1_events order by date desc`);
   for (const e of events) out.push(entry(`/f1/events/${e.espn_id}`, e.recent ? "daily" : "yearly", e.recent ? 0.6 : 0.4, e.recent ? null : e.date));
   const { rows: drivers } = await pool.query(
-    `select p.slug from players p where p.league = 'f1' and exists (select 1 from f1_session_results r where r.driver_espn_id = p.espn_id) order by p.slug`
+    `select p.slug from players p where p.league = 'f1'
+       and exists (select 1 from f1_session_results r join f1_sessions s on s.espn_id = r.session_espn_id
+                   where r.driver_espn_id = p.espn_id and s.session_type = 'Race')
+     order by p.slug`
   );
   for (const { slug } of drivers) out.push(entry(`/f1/drivers/${slug}`, "weekly", 0.5));
   const { rows: constructors } = await pool.query(`select slug from teams where league = 'f1' order by slug`);
@@ -152,7 +167,8 @@ async function players(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
     `select p.slug from players p
      where p.league = $1
-       and (exists (select 1 from player_game_stats s where s.league = p.league and s.player_espn_id = p.espn_id)
+       and (exists (select 1 from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
+                    where s.league = p.league and s.player_espn_id = p.espn_id and g.completed and ${playedSql(league)})
             or exists (select 1 from player_season_stats s where s.league = p.league and s.player_espn_id = p.espn_id))
      order by p.slug`,
     [league]

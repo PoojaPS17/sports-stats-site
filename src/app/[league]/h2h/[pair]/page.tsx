@@ -33,8 +33,10 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const h2h = await getHeadToHead(league, slugs[0], slugs[1]);
   if (!h2h) return {};
   const record = `${h2h.winsA}-${h2h.draws}-${h2h.winsB}`;
+  // Two clubs can meet in more than one competition (a domestic league and the
+  // Champions League), which would otherwise give two pages the same bare title.
   return pageMeta(
-    `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head`,
+    `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_LABEL[league]})`,
     `${h2h.teamA.name} vs ${h2h.teamB.name} all-time ${LEAGUE_LABEL[league]} record (${record} in ${h2h.meetings} meetings), recent results and biggest wins.`,
     h2hPath(league, slugs[0], slugs[1])
   );
