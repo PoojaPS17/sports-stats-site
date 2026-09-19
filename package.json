@@ -44,7 +44,6 @@
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1",
     "dotenv": "^17.4.2",
     "next": "16.3.5",
     "pg": "^8.23.0",

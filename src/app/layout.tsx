@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import Script from "next/script";
-import { Analytics } from "@vercel/analytics/next";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
@@ -113,8 +113,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer />
-        {/* Cookieless visitor counts from the host; see the privacy policy. */}
-        <Analytics />
+        {/* Loads only once NEXT_PUBLIC_GA_ID is set; asks first where consent is required. */}
+        <GoogleAnalytics />
       </body>
     </html>
   );

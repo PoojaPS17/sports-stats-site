@@ -2,6 +2,8 @@ import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
 import { SITE_NAME } from "@/lib/site";
 import { LegalPage } from "@/components/LegalPage";
+import { CookieSettingsButton } from "@/components/CookieSettingsButton";
+import { GA_ID } from "@/lib/consent";
 
 export const metadata = pageMeta("Privacy Policy", `How ${SITE_NAME} handles visitor data: what is collected, why, how long it is kept, and your choices.`, "/privacy");
 
@@ -14,8 +16,10 @@ export default function PrivacyPage() {
       <p>
         {SITE_NAME} is an independent sports statistics website. This policy explains what information the site collects
         when you visit, what it is used for, and the choices you have. The short version: there are no accounts, no
-        sign-ups, no tracking cookies set by us, and we do not sell or share personal data. The only measurement we do is
-        anonymous and cookie-free: a count of which pages are viewed.
+        sign-ups, no advertising cookies, and we do not sell or share personal data.{" "}
+        {GA_ID
+          ? "We count match-page views anonymously, and we use Google Analytics to measure visits, asking first wherever the law requires consent."
+          : "The only measurement we do is an anonymous count of which match pages are viewed."}
       </p>
 
       <h2>Who operates this site</h2>
@@ -35,14 +39,35 @@ export default function PrivacyPage() {
         itself is not stored by us, and the record contains no identifier that links views together or to a person. These
         counts power the &ldquo;Top Games&rdquo; page, which ranks matches by how often they are viewed.
       </p>
-      <h3>Visitor statistics</h3>
-      <p>
-        To see which pages are read and where visitors arrive from, the site uses Vercel Web Analytics, run by our hosting
-        provider. It sets no cookies and builds no visitor profile. For each page view it records the page address, the
-        referring site, the country, and the browser, operating system and device type. Visits are told apart by a
-        scrambled value that is discarded after 24 hours, so nobody can be followed from one day to the next or from
-        this site to another.
-      </p>
+      {GA_ID && (
+        <>
+          <h3>Visitor statistics (Google Analytics)</h3>
+          <p>
+            To count visits and see which pages are read, the site uses Google Analytics, a service of Google. It sets
+            first-party cookies in your browser (named <code>_ga</code> and <code>_ga_</code> followed by an id, kept for
+            up to two years) that tell one browser from another. Through them Google receives, on our behalf, the pages
+            you open, the site you arrived from, your approximate location (city or country, worked out from your network
+            address, which Google Analytics does not keep), and your browser, operating system and device type. We see
+            this only as totals and cannot identify you from it. Advertising features and ad personalisation are switched
+            off.
+          </p>
+          <p>
+            If you are in the European Economic Area, the United Kingdom or Switzerland, these cookies are set only after
+            you choose &ldquo;Allow analytics&rdquo; on the banner. Elsewhere they are set when you arrive. Wherever you
+            are, you can change your choice here at any time, and the site works the same either way.
+          </p>
+          <p>
+            <CookieSettingsButton />
+          </p>
+          <p>
+            Google&apos;s own account of how it handles this data is at{" "}
+            <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">
+              policies.google.com/technologies/partner-sites
+            </a>
+            , and Google offers a browser add-on that blocks Analytics on every site.
+          </p>
+        </>
+      )}
       <h3>Preferences stored in your browser</h3>
       <p>
         Choosing light or dark mode saves that preference in your browser&apos;s local storage. It never leaves your
@@ -62,8 +87,8 @@ export default function PrivacyPage() {
       <h3>What we do not collect</h3>
       <ul>
         <li>No names, email addresses, passwords or payment details. The site has no accounts and sells nothing.</li>
-        <li>No advertising or analytics cookies set by us, and no cross-site tracking.</li>
-        <li>No precise location. Country-level geography only, from the hosting provider.</li>
+        <li>{GA_ID ? "No advertising cookies and no cross-site tracking. The only cookies are the Google Analytics ones described above." : "No advertising or analytics cookies set by us, and no cross-site tracking."}</li>
+        <li>No precise location. {GA_ID ? "Country-level geography from the hosting provider, and the approximate city or country Google Analytics reports." : "Country-level geography only, from the hosting provider."}</li>
       </ul>
 
       <h2>Calendar feeds</h2>
@@ -91,13 +116,13 @@ export default function PrivacyPage() {
       <h2>Children</h2>
       <p>
         The site is general-audience sports information. It does not knowingly collect personal information from
-        anyone, including children, because it does not collect personal information at all.
+        anyone, including children, and asks for no names, contact details or accounts.
       </p>
 
       <h2>Data retention</h2>
       <p>
         Anonymous page-view counts are kept indefinitely as aggregate statistics; because they contain no personal
-        identifier, they cannot be traced back to an individual. Hosting logs are retained by the provider for a short
+        identifier, they cannot be traced back to an individual.{GA_ID && " Google Analytics keeps visit-level data for no more than 14 months; totals are kept longer."} Hosting logs are retained by the provider for a short
         period under its own retention rules.
       </p>
 
@@ -106,7 +131,7 @@ export default function PrivacyPage() {
         Depending on where you live, you may have rights under laws such as the EU and UK General Data Protection
         Regulation, the California Consumer Privacy Act or India&apos;s Digital Personal Data Protection Act to access,
         correct or delete personal data, or to object to its processing. Because this site holds no data that identifies
-        you, there is normally nothing to retrieve or delete. If you believe otherwise, contact us and we will look into it
+        you, there is normally nothing to retrieve or delete.{GA_ID && " You can withdraw consent to analytics cookies at any time with the button above, and clearing your browser's cookies removes them."} If you believe otherwise, contact us and we will look into it
         promptly.
       </p>
 
