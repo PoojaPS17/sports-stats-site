@@ -13,12 +13,14 @@ import { SearchBar } from "@/components/SearchBar";
 // template can't express all three, so this maps each case explicitly instead of
 // guessing — the earlier version's guess produced 404s for every tennis result.
 function resultHref(r: SearchResult): string {
+  if (r.type === "series") return `/cricket/series/${r.slug}`;
   if (r.league === "f1") return r.type === "team" ? `/f1/teams/${r.slug}` : `/f1/drivers/${r.slug}`;
   if (isTour(r.league)) return `/tennis/${r.league}/players/${r.slug}`;
   return r.type === "team" ? `/${r.league}/teams/${r.slug}` : `/${r.league}/players/${r.slug}`;
 }
 
 function resultLeagueLabel(r: SearchResult): string {
+  if (r.type === "series") return "Cricket";
   if (r.league === "f1") return "F1";
   if (isTour(r.league)) return TOUR_LABEL[r.league];
   if (isLeague(r.league)) return LEAGUE_LABEL[r.league];
@@ -45,7 +47,7 @@ export default async function SearchPage({
       </div>
 
       {q.trim() === "" ? (
-        <p className="text-sm text-[var(--text-muted)]">Search for any team, driver, or player we track.</p>
+        <p className="text-sm text-[var(--text-muted)]">Search for any team, driver, player or cricket series we track.</p>
       ) : results.length === 0 ? (
         <p className="text-sm text-[var(--text-muted)]">No results for &ldquo;{q}&rdquo;.</p>
       ) : (
@@ -60,7 +62,7 @@ export default async function SearchPage({
               <div className="flex flex-col">
                 <span className="font-medium">{teamDisplayName(r.name)}</span>
                 <span className="text-xs text-[var(--text-muted)]">
-                  {resultLeagueLabel(r)} {r.type === "player" ? "player" : "team"}
+                  {resultLeagueLabel(r)} {r.type === "player" ? "player" : r.type === "series" ? "series" : "team"}
                   {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}
                 </span>
               </div>

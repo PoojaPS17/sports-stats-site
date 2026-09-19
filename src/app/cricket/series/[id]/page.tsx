@@ -14,7 +14,9 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 15;
 
-const SEASON_RE = /^\d{4}$/;
+// A season archive is a calendar year. ESPN's older series ids are four digits too
+// (8048 IPL, 8050 Ranji Trophy, 8679 PSL), and must reach the series page.
+const SEASON_RE = /^(19|20)\d{2}$/;
 
 // Wall-clock read kept out of the render body (the purity lint), as a plain call.
 function clock(): number {

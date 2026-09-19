@@ -30,7 +30,7 @@ export function Nav() {
                 </Link>
               );
             }
-            return <NavDropdown key={item.label} label={item.label} items={item.children ?? []} active={active} />;
+            return <NavDropdown key={item.label} label={item.label} items={item.children ?? []} picker={item.picker} active={active} />;
           })}
         </nav>
 

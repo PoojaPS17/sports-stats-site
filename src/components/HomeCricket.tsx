@@ -3,15 +3,16 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { SeriesMatchList } from "@/components/CricketSeries";
 import type { CricketSeriesMatch } from "@/lib/cricketSeries";
 
-// The homepage's cricket block: not one competition but the whole sport, the way
-// the Series directory sees it. Matches in play sit in Live now and the headline
-// fixtures in Coming up; this block carries the rest of the week's fixtures.
+// The homepage's cricket block: not one competition but the sport's headline
+// cricket (internationals, World Cups, the IPL and the other big franchise leagues,
+// see cricketFeatured.ts). Matches in play sit in Live now and the biggest fixtures
+// in Coming up; this block carries the rest of the week's fixtures.
 export function HomeCricket({ live, next }: { live: number; next: CricketSeriesMatch[] }) {
   return (
     <section className="sm:col-span-2">
       <SectionHeader
         action={{ label: "All series", href: "/cricket/series" }}
-        description={live > 0 ? `${live} match${live === 1 ? "" : "es"} in play, listed under Live now above` : "Every series, league and tournament, men's and women's"}
+        description={live > 0 ? `${live} match${live === 1 ? "" : "es"} in play, listed under Live now above` : "Internationals, World Cups and the big T20 leagues, men's and women's"}
       >
         Cricket
       </SectionHeader>
@@ -25,7 +26,7 @@ export function HomeCricket({ live, next }: { live: number; next: CricketSeriesM
       )}
       <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold">
         <Link href="/cricket/series" className="text-[var(--accent)] hover:underline">
-          Series &amp; tournaments
+          All series &amp; tournaments
         </Link>
         <Link href="/ipl" className="text-[var(--accent)] hover:underline">
           IPL

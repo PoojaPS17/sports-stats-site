@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS, isNavItemActive, isPathActive } from "@/lib/nav";
 import { SearchBar } from "./SearchBar";
+import { CricketSeriesPicker } from "./CricketSeriesPicker";
 
 // Hamburger button + full-width drawer for small screens. Groups with children render
 // as an always-open section (a two-level accordion adds taps for very little gain
@@ -84,6 +85,11 @@ export function MobileMenu() {
                 return (
                   <div key={item.label} className="col-span-2 flex flex-col gap-1">
                     <p className="px-1 text-xs font-bold uppercase tracking-wider text-[var(--text-faint)]">{item.label}</p>
+                    {item.picker === "cricket-series" && (
+                      <div className="px-1 pb-1">
+                        <CricketSeriesPicker />
+                      </div>
+                    )}
                     <ul className="flex flex-col">
                       {(item.children ?? []).map((c) => {
                         const active = isPathActive(pathname, c.href);

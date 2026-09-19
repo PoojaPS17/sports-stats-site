@@ -5,7 +5,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { SeriesCard, SeriesMatchList } from "@/components/CricketSeries";
+import { CricketSeriesPicker } from "@/components/CricketSeriesPicker";
 import { byPriority, getCricketSeriesWindow, getLiveCricketMatches, SERIES_KIND_LABEL, type CricketSeries, type SeriesKind } from "@/lib/cricketSeries";
+import { isFeaturedCricket } from "@/lib/cricketFeatured";
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
 
@@ -13,7 +15,7 @@ export const revalidate = 15;
 
 export const metadata: Metadata = pageMeta(
   "Cricket Series",
-  "All current and upcoming cricket series, domestic leagues and international tournaments, men's and women's, with live scores, fixtures and results.",
+  "Live scores, fixtures and results for international cricket, the World Cups, the IPL and the other big T20 leagues, men's and women's, plus every other series and tournament by search.",
   "/cricket/series"
 );
 
@@ -64,19 +66,34 @@ export default async function CricketSeriesPage() {
   const [series, storedLive] = await Promise.all([getCricketSeriesWindow(14, 60), getLiveCricketMatches()]);
   // ESPN's current state over the stored rows: a match that started since the last
   // scrape appears, a stale score is replaced, a finished one drops off.
-  const live = (await overlayLiveCricket(storedLive)).filter((m) => m.status_state === "in").sort(byPriority);
-  const liveSeries = new Set(live.map((m) => m.series_espn_id));
+  const liveAll = (await overlayLiveCricket(storedLive)).filter((m) => m.status_state === "in").sort(byPriority);
+  // Headline cricket only in the lists (see lib/cricketFeatured.ts); the rest of the
+  // sport sits under "Other competitions" and behind the picker.
+  const live = liveAll.filter(isFeaturedCricket);
+  const otherLive = liveAll.length - live.length;
+  const liveSeries = new Set(liveAll.map((m) => m.series_espn_id));
   const now = clock();
-  const { inProgress, upcoming, finished } = split(series.map((s) => (liveSeries.has(s.espn_id) ? { ...s, live_count: Math.max(s.live_count, 1) } : s)));
+  const withLive = series.map((s) => (liveSeries.has(s.espn_id) ? { ...s, live_count: Math.max(s.live_count, 1) } : s));
+  const { inProgress, upcoming, finished } = split(withLive.filter((s) => s.featured));
+  const other = withLive.filter((s) => !s.featured);
+  // Anything in play first, then by kind and start date as the cards are grouped.
+  const otherOrdered = [...split(other).inProgress, ...split(other).upcoming, ...split(other).finished];
 
   return (
     <div className="flex flex-col gap-8">
-      <LiveRefresh active={live.length > 0} />
-      <PageHeader title="Cricket Series" subtitle="All current and upcoming cricket series, domestic leagues and international tournaments, men's and women's, from ESPN's daily listing.">
+      <LiveRefresh active={liveAll.length > 0} />
+      <PageHeader
+        title="Cricket Series"
+        subtitle="Internationals, the World Cups, the IPL and the other big T20 leagues, men's and women's. Every other series and tournament ESPN lists is a search away."
+      >
         <Link href="/cricket/series/archive" className="nav-pill">
           Past seasons
         </Link>
       </PageHeader>
+
+      <div className="max-w-2xl">
+        <CricketSeriesPicker large />
+      </div>
 
       <AdSlot label="Cricket series top" />
 
@@ -85,6 +102,16 @@ export default async function CricketSeriesPage() {
           <SectionHeader description="Scores refresh every 10 seconds">Live now</SectionHeader>
           <SeriesMatchList matches={live} showSeries />
         </section>
+      )}
+      {otherLive > 0 && (
+        <p className={`text-sm text-[var(--text-muted)] ${live.length > 0 ? "-mt-5" : ""}`}>
+          {live.length === 0 ? "No headline cricket in play right now. " : ""}
+          {otherLive} more match{otherLive === 1 ? "" : "es"} in play in{" "}
+          <a href="#other-competitions" className="font-semibold text-[var(--accent)] hover:underline">
+            other competitions
+          </a>
+          .
+        </p>
       )}
 
       <section>
@@ -101,6 +128,25 @@ export default async function CricketSeriesPage() {
         <section>
           <SectionHeader description="Finished in the last two weeks">Recently completed</SectionHeader>
           <ByKind series={finished} now={now} />
+        </section>
+      )}
+
+      {other.length > 0 && (
+        <section id="other-competitions">
+          <SectionHeader description="Domestic first-class and one-day cups, club T20s, youth and A-team tours: stored in full, shown on request">
+            Other competitions
+          </SectionHeader>
+          <details className="card group px-4 py-3">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent)] marker:hidden [&::-webkit-details-marker]:hidden">
+              <span className="group-open:hidden">
+                Show {other.length} series in progress, upcoming or just finished{otherLive > 0 ? `, ${otherLive} match${otherLive === 1 ? "" : "es"} live` : ""} →
+              </span>
+              <span className="hidden group-open:inline">Hide other competitions</span>
+            </summary>
+            <div className="mt-4">
+              <ByKind series={otherOrdered} now={now} />
+            </div>
+          </details>
         </section>
       )}
     </div>

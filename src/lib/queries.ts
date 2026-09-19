@@ -1051,7 +1051,8 @@ export async function getLastUpdated(): Promise<string | null> {
 }
 
 export interface SearchResult {
-  type: "team" | "player";
+  /** A cricket series result carries league "cricket" and the series' ESPN id as its slug. */
+  type: "team" | "player" | "series";
   // Not actually always a `League` — the underlying query has no league filter, so
   // this also returns tennis tours ('atp'/'wta') and F1 ('f1'), neither of which are
   // `League` values. Widened to string so callers don't get a false sense of safety
@@ -1072,6 +1073,15 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
      select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image
      from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      where p.name ilike $1
+     union all
+     -- Every cricket series and tournament in the database, current or past (Ranji Trophy, PSL, a bilateral tour).
+     select 'series' as type, 'cricket' as league, s.name, s.espn_id as slug,
+            nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
+                                                 when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
+                                    to_char(s.start_date, 'YYYY')), '') as subtitle,
+            null as image
+     from cricket_series s
+     where s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1
      limit $2`,
     [like, limit]
   );

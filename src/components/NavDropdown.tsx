@@ -2,11 +2,13 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import type { NavChild } from "@/lib/nav";
+import type { NavChild, NavItem } from "@/lib/nav";
+import { CricketSeriesPicker } from "./CricketSeriesPicker";
 
 // Desktop dropdown for a sport group (Football → Premier League / La Liga, ...).
 // Opens on hover or click, closes on outside click, Escape, or choosing an entry.
-export function NavDropdown({ label, items, active }: { label: string; items: NavChild[]; active: boolean }) {
+// A group may carry a search box above its links (Cricket → the series picker).
+export function NavDropdown({ label, items, picker, active }: { label: string; items: NavChild[]; picker?: NavItem["picker"]; active: boolean }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | null>(null);
@@ -37,6 +39,8 @@ export function NavDropdown({ label, items, active }: { label: string; items: Na
 
   function scheduleClose() {
     cancelClose();
+    // Someone typing in the picker has not left the menu, wherever the pointer went.
+    if (rootRef.current?.querySelector("input:focus")) return;
     closeTimer.current = window.setTimeout(() => setOpen(false), 120);
   }
 
@@ -67,8 +71,13 @@ export function NavDropdown({ label, items, active }: { label: string; items: Na
         <div
           id={menuId}
           role="menu"
-          className="absolute left-0 top-full z-30 mt-1 flex min-w-[190px] flex-col gap-0.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-pop)]"
+          className={`absolute left-0 top-full z-30 mt-1 flex flex-col gap-0.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-pop)] ${picker ? "w-[300px]" : "min-w-[190px]"}`}
         >
+          {picker === "cricket-series" && (
+            <div className="mb-1 px-1 pt-1">
+              <CricketSeriesPicker onNavigate={() => setOpen(false)} />
+            </div>
+          )}
           {items.map((item) => (
             <Link
               key={item.href}

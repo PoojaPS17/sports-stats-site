@@ -77,6 +77,7 @@ export async function fetchLiveCricketFromEspn(): Promise<CricketSeriesMatch[]> 
             short_name: ev.shortName ?? null,
             description: null,
             class_card: ev.class?.generalClassCard ?? null,
+            international_class_id: String(ev.class?.internationalClassId ?? "0"),
             status_state: "in",
             status_summary: ev.fullStatus?.longSummary ?? ev.summary ?? null,
             home: side((ev.competitors ?? []).find((c: any) => c.homeAway === "home") ?? ev.competitors?.[0]),

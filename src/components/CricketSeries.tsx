@@ -3,19 +3,11 @@ import { teamDisplayName } from "@/lib/teamName";
 import { LocalTime } from "@/components/LocalTime";
 import { TeamLogo } from "@/components/TeamLogo";
 import { LEAGUE_LABEL } from "@/lib/leagues";
-import { SERIES_KIND_LABEL, type CricketSeries, type CricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
+import { formatSeriesDates, SERIES_KIND_LABEL, type CricketSeries, type CricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
 import { normalizeStage } from "@/lib/stage";
 
-export function formatSeriesDates(start: string | null, end: string | null): string | null {
-  if (!start) return null;
-  const s = new Date(start);
-  const e = end ? new Date(end) : s;
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
-  const sameMonth = s.getUTCMonth() === e.getUTCMonth() && s.getUTCFullYear() === e.getUTCFullYear();
-  const sameDay = s.toISOString().slice(0, 10) === e.toISOString().slice(0, 10);
-  if (sameDay) return s.toLocaleDateString("en-US", { ...opts, year: "numeric" });
-  return `${s.toLocaleDateString("en-US", opts)} – ${sameMonth ? e.getUTCDate() : e.toLocaleDateString("en-US", opts)}, ${e.getUTCFullYear()}`;
-}
+// The date formatter moved to the library (the picker's API route needs it); older importers still find it here.
+export { formatSeriesDates };
 
 /** Where a match's scorecard lives: SportsDB's own page when the competition is archived, else the live page. */
 export function matchHref(m: CricketSeriesMatch): string {

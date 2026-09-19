@@ -15,6 +15,8 @@ export interface NavItem {
   /** Direct link for simple items; omitted for dropdown groups. */
   href?: string;
   children?: NavChild[];
+  /** A search box at the top of the group: the cricket series picker (every competition in the database, not only the links below). */
+  picker?: "cricket-series";
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -26,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "NBA", href: "/nba" },
   {
     label: "Cricket",
+    picker: "cricket-series",
     children: [{ label: "All series & live", href: "/cricket/series" }, ...CRICKET_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))],
   },
   {

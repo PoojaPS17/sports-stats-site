@@ -7,6 +7,7 @@ import { getTennisDay, type TennisMatch } from "@/lib/tennis";
 import { easternDay } from "@/lib/tennisFeed";
 import { overlayLiveGames } from "@/lib/gamesLive";
 import { overlayLiveCricket } from "@/lib/cricketLive";
+import { isFeaturedCricket, isFeaturedSeriesId } from "@/lib/cricketFeatured";
 import { overlayLiveTennis } from "@/lib/tennisLive";
 import type { F1EventRow } from "@/lib/f1";
 
@@ -29,7 +30,7 @@ export const SECTION_LEAGUES: League[] = LEAGUES.filter((l) => l !== "ipl");
 
 const readLiveLists = unstable_cache(
   async () => {
-    const [games, cricket] = await Promise.all([getLiveGames(), getLiveCricketMatches()]);
+    const [games, cricket] = await Promise.all([getLiveGames(), getLiveCricketMatches(true)]);
     return { games, cricket };
   },
   ["home-live-lists"],
@@ -42,7 +43,7 @@ const readFixtures = unstable_cache(
   async () => {
     const [upcoming, cricketUpcoming, featured, sections] = await Promise.all([
       getUpcomingGames(6, 2),
-      getUpcomingCricketMatches(16, 7),
+      getUpcomingCricketMatches(16, 7, true),
       Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3))).then((x) => x.flat()),
       Promise.all(SECTION_LEAGUES.map(async (league) => ({ league, games: (await getRecentAndUpcoming(league, 2, 5)).slice(0, 8) }))),
     ]);
@@ -71,18 +72,17 @@ const readSeasonFacts = unstable_cache(
   { revalidate: TIER.SEASON }
 );
 
-// Cricket beyond the archived competitions counts as headline cricket when it is
-// international; domestic first-class and youth cricket stays in the Cricket block.
-export function importantCricket(m: CricketSeriesMatch): boolean {
-  return m.scorecard_league !== null || m.series_kind === "international" || m.series_kind === "womens-international";
-}
+// Only headline cricket (the featured competitions and official internationals, see
+// cricketFeatured.ts) reaches the homepage; the stored lists are already filtered,
+// this catches what the ESPN live overlay adds from other competitions.
+export const importantCricket = isFeaturedCricket;
 
 const FULL_MEMBERS = /^(India|Australia|England|Pakistan|South Africa|New Zealand|Sri Lanka|West Indies|Bangladesh|Afghanistan|Zimbabwe|Ireland)( Women)?$/;
 
-// Full-member internationals before associate fixtures; the archived competitions
-// (IPL, World Cups) rank with them.
+// Full-member internationals before associate fixtures; the featured competitions
+// (IPL, World Cups, the big franchise leagues) rank with them.
 function cricketWeight(m: CricketSeriesMatch): number {
-  if (m.scorecard_league) return 0;
+  if (m.scorecard_league || isFeaturedSeriesId(m.series_espn_id)) return 0;
   const full = [m.home, m.away].filter((s) => s && FULL_MEMBERS.test(s.name)).length;
   return 2 - full;
 }
@@ -140,7 +140,7 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
   const liveGames = refresh(liveLists.games).filter((g) => g.status_state === "in");
   const liveGameIds = new Set(liveGames.map((g) => g.espn_id));
   // A live IPL or World Cup match is a league game above; the series feed carries the rest.
-  const liveCricket = cricketLiveAll.filter((m) => m.status_state === "in" && !liveGameIds.has(m.espn_id)).sort(byCricketImportance);
+  const liveCricket = cricketLiveAll.filter((m) => m.status_state === "in" && importantCricket(m) && !liveGameIds.has(m.espn_id)).sort(byCricketImportance);
   const liveTennis = tennis.matches
     .filter((m) => m.status_state === "in")
     .sort((a, b) => Number(b.major) - Number(a.major) || (b.round_number ?? 0) - (a.round_number ?? 0))
@@ -152,7 +152,7 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
   const liveCricketIds = new Set(liveCricket.map((m) => m.espn_id));
   const upcomingIds = new Set(upcomingGames.map((g) => g.espn_id));
   const cricketPool = fixtures.cricketUpcoming.filter((m) => !upcomingIds.has(m.espn_id) && !liveGameIds.has(m.espn_id) && !liveCricketIds.has(m.espn_id));
-  const nextCricket = cricketPool.filter(importantCricket).sort(byCricketImportance).slice(0, 3);
+  const nextCricket = cricketPool.sort(byCricketImportance).slice(0, 3);
   const nextCricketIds = new Set(nextCricket.map((m) => m.espn_id));
   const moreCricket = cricketPool
     .filter((m) => !nextCricketIds.has(m.espn_id))
