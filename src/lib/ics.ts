@@ -3,7 +3,8 @@
 import { pool } from "./db";
 import { GAME_SELECT, LEAGUE_LABEL, type GameRow } from "./queries";
 import { isCricketLeague, type League } from "./leagues";
-import { getF1Calendar, getF1Seasons } from "./f1";
+import { getF1Calendar, getF1Seasons, type F1EventRow } from "./f1";
+import { f1EventStatus } from "./f1Status";
 import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
 import { gameCalledOffLabel } from "./gameStatus";
@@ -223,6 +224,31 @@ export async function buildLeagueFeed(league: League): Promise<Feed | null> {
   };
 }
 
+/** One Formula 1 race weekend as an all-day event; a Grand Prix ESPN cancelled is a cancelled event, not a confirmed weekend. */
+export function f1WeekendEvent(e: F1EventRow): IcsEvent {
+  const start = new Date(e.date);
+  // Race weekends run Friday to Sunday; the feed stores the race day, so the
+  // event spans the two days leading up to it.
+  const weekendStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() - 2));
+  const end = e.end_date ? new Date(e.end_date) : start;
+  const endExclusive = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1));
+  const where = [e.circuit_name, e.circuit_city, e.circuit_country].filter(Boolean).join(", ");
+  const off = f1EventStatus(e);
+  const reason = off.kind === "called-off" ? off.label : null;
+  return {
+    uid: `f1-${e.espn_id}@sportsdb`,
+    start: weekendStart,
+    end: endExclusive,
+    allDay: true,
+    summary: e.winner_name ? `${e.name} · Winner: ${e.winner_name}` : reason ? `${e.name} (${reason})` : e.name,
+    description: [reason, where, `Event page: ${SITE}/f1/events/${e.espn_id}`].filter(Boolean).join("\n"),
+    location: where || undefined,
+    url: `${SITE}/f1/events/${e.espn_id}`,
+    sequence: e.winner_name || reason ? 1 : 0,
+    ...(reason ? { status: "CANCELLED" as const } : {}),
+  };
+}
+
 /** Formula 1 race weekends as all-day events. */
 export async function buildF1Feed(): Promise<Feed | null> {
   const seasons = await getF1Seasons();
@@ -231,29 +257,6 @@ export async function buildF1Feed(): Promise<Feed | null> {
   const events = await getF1Calendar(season);
   return {
     filename: `f1-${season}.ics`,
-    ics: buildIcs(
-      `Formula 1 ${season}`,
-      "Formula 1 race weekends from SportsDB.",
-      events.map((e) => {
-        const start = new Date(e.date);
-        // Race weekends run Friday to Sunday; the feed stores the race day, so the
-        // event spans the two days leading up to it.
-        const weekendStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() - 2));
-        const end = e.end_date ? new Date(e.end_date) : start;
-        const endExclusive = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1));
-        const where = [e.circuit_name, e.circuit_city, e.circuit_country].filter(Boolean).join(", ");
-        return {
-          uid: `f1-${e.espn_id}@sportsdb`,
-          start: weekendStart,
-          end: endExclusive,
-          allDay: true,
-          summary: e.winner_name ? `${e.name} · Winner: ${e.winner_name}` : e.name,
-          description: [where, `Event page: ${SITE}/f1/events/${e.espn_id}`].filter(Boolean).join("\n"),
-          location: where || undefined,
-          url: `${SITE}/f1/events/${e.espn_id}`,
-          sequence: e.winner_name ? 1 : 0,
-        } satisfies IcsEvent;
-      })
-    ),
+    ics: buildIcs(`Formula 1 ${season}`, "Formula 1 race weekends from SportsDB.", events.map(f1WeekendEvent)),
   };
 }

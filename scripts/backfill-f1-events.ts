@@ -13,6 +13,7 @@
 import { pool } from "./lib/db";
 import { fetchF1SeasonEventRefs, fetchByRef } from "./lib/f1";
 import { uniqueSlugFor } from "./lib/players";
+import { f1BackfillSessionStatus } from "../src/lib/f1Status";
 
 const YEARS_BACK = 10;
 const CONCURRENCY = 6;
@@ -67,12 +68,18 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
     // it's marked final outright rather than fetching yet another $ref just to
     // confirm what's already true (this was the actual bug: without this, every
     // backfilled session sat at completed=false despite having real results).
+    // The exception is a session with no competitors: a Grand Prix ESPN cancelled
+    // (2026 Bahrain and Saudi Arabia) lists every session with an empty field and
+    // STATUS_CANCELED, which "final" would hide, so only those read their status.
+    const noField = (comp.competitors ?? []).length === 0;
+    const status = noField && comp.status?.["$ref"] ? await fetchByRef<any>(comp.status["$ref"]).catch(() => null) : null;
+    const session = f1BackfillSessionStatus(status);
     await pool.query(
       `insert into f1_sessions (espn_id, event_espn_id, session_type, date, status_state, status_detail, completed, updated_at)
-       values ($1,$2,$3,$4,'post','Final',true, now())
+       values ($1,$2,$3,$4,$5,$6,$7, now())
        on conflict (espn_id) do update set
-         status_state = 'post', status_detail = 'Final', completed = true, updated_at = now()`,
-      [comp.id, event.id, comp.type?.abbreviation ?? null, comp.date]
+         status_state = excluded.status_state, status_detail = excluded.status_detail, completed = excluded.completed, updated_at = now()`,
+      [comp.id, event.id, comp.type?.abbreviation ?? null, comp.date, session.state, session.detail, session.completed]
     );
 
     for (const c of comp.competitors ?? []) {

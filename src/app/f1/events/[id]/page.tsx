@@ -8,6 +8,7 @@ import { F1SessionExportCard } from "@/components/F1ExportCards";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
+import { f1EventDescription, f1EventStatus } from "@/lib/f1Status";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -18,9 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!event) return pageMeta("F1 Grand Prix", "Formula 1 race weekend results.", undefined, { noindex: true });
   const year = event.season_year ?? new Date(event.date).getUTCFullYear();
   const where = event.circuit_name ? ` at ${event.circuit_name}` : "";
-  const description = event.winner_name
-    ? `${event.winner_name} won the ${year} ${event.name}${where}. Classifications for the race, qualifying and practice.`
-    : `The ${year} ${event.name}${where}: practice, qualifying and race classifications, added as each session finishes.`;
+  const description = f1EventDescription(event, year, where);
   return pageMeta(`${event.name} ${year}: Results`, description, `/f1/events/${event.espn_id}`);
 }
 
@@ -39,6 +38,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
   if (!event) notFound();
 
   const results = await getF1EventResults(id);
+  const status = f1EventStatus(event);
   const bySession = new Map<string, typeof results>();
   for (const r of results) {
     if (!bySession.has(r.session_espn_id)) bySession.set(r.session_espn_id, []);
@@ -70,7 +70,9 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
       <AdSlot label="F1 event top" />
 
       {sessions.length === 0 ? (
-        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No session results on record for this weekend yet.</p>
+        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
+          {status.kind === "called-off" ? `This race weekend was ${status.label?.toLowerCase()}.` : "No session results on record for this weekend yet."}
+        </p>
       ) : (
         sessions.map((sessionResults) => {
           const first = sessionResults[0];

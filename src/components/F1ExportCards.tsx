@@ -2,6 +2,7 @@ import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportTitle, ExportTable, ExportList, EXPORT_ROW_LIMIT } from "./ExportShell";
 import type { getF1Calendar, getF1ConstructorResults, getF1ConstructorStandings, getF1DriverResults, getF1DriverStandings, getF1EventResults } from "@/lib/f1";
 import { CARD } from "@/lib/exportTheme";
+import { f1EventStatus } from "@/lib/f1Status";
 
 type Awaited1<T extends (...a: never[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
 
@@ -115,7 +116,7 @@ export function F1CalendarExportCard({ season, calendar }: { season: number; cal
             rank: "",
             title: ev.name,
             sub: [new Date(ev.date).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), ev.circuit_name, ev.circuit_city && ev.circuit_country ? `${ev.circuit_city}, ${ev.circuit_country}` : null].filter(Boolean).join(" · "),
-            value: <span style={{ fontSize: 14, color: ev.winner_name ? CARD.text : CARD.textFaint }}>{ev.winner_name ?? "Upcoming"}</span>,
+            value: <span style={{ fontSize: 14, color: ev.winner_name ? CARD.text : CARD.textFaint }}>{ev.winner_name ?? f1EventStatus(ev).label ?? "Upcoming"}</span>,
           }))}
         />
       </div>

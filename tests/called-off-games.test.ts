@@ -15,6 +15,7 @@ let gamesLive: typeof import("../src/lib/gamesLive");
 let ics: typeof import("../src/lib/ics");
 let cricketSeries: typeof import("../src/lib/cricketSeries");
 let tennis: typeof import("../src/lib/tennis");
+let f1: typeof import("../src/lib/f1");
 let pickSpotlight: typeof import("../src/components/SpotlightCard").pickSpotlight;
 
 before(async () => {
@@ -26,6 +27,7 @@ before(async () => {
   ics = await import("../src/lib/ics");
   cricketSeries = await import("../src/lib/cricketSeries");
   tennis = await import("../src/lib/tennis");
+  f1 = await import("../src/lib/f1");
   pickSpotlight = (await import("../src/components/SpotlightCard")).pickSpotlight;
 });
 after(async () => {
@@ -37,6 +39,8 @@ beforeEach(async () => {
   await db.pool.query(`delete from cricket_series_matches`);
   await db.pool.query(`delete from cricket_series`);
   await db.pool.query(`delete from tennis_matches`);
+  await db.pool.query(`delete from f1_sessions`);
+  await db.pool.query(`delete from f1_events`);
   await db.pool.query(`delete from players where league = 'atp'`);
 });
 
@@ -354,4 +358,69 @@ test("a postponed tennis match is not counted as a played match or a loss in a p
     rivals.map((r) => [r.espn_id, r.matches, r.wins]),
     [["2", 2, 1]]
   );
+});
+
+/* ------------------------------------------------------------------------ */
+/* Formula 1                                                                 */
+/* ------------------------------------------------------------------------ */
+
+// ESPN keeps a cancelled Grand Prix on the calendar: every session STATUS_CANCELED, state post, completed false.
+async function seedF1(events: { id: string; date: string; race: { state: string; detail: string; completed: boolean } | null }[]) {
+  for (const e of events) {
+    await db.pool.query(`insert into f1_events (espn_id, name, date, end_date, season_year) values ($1, $1, $2, $2, 2026)`, [e.id, e.date]);
+    if (e.race) {
+      for (const type of ["FP1", "Qual", "Race"]) {
+        await db.pool.query(`insert into f1_sessions (espn_id, event_espn_id, session_type, date, status_state, status_detail, completed) values ($1, $2, $3, $4, $5, $6, $7)`, [
+          `${e.id}-${type}`,
+          e.id,
+          type,
+          e.date,
+          e.race.state,
+          e.race.detail,
+          e.race.completed,
+        ]);
+      }
+    }
+  }
+}
+
+test("the F1 calendar carries each event's race status, so a cancelled Grand Prix is not 'Upcoming'", async () => {
+  await seedF1([
+    { id: "cancelled", date: at(-24 * 30), race: { state: "post", detail: "Canceled", completed: false } },
+    { id: "next", date: at(24 * 30), race: { state: "pre", detail: "Sat, September 26th at 7:00 AM EDT", completed: false } },
+    { id: "bare", date: at(24 * 60), race: null },
+  ]);
+  const cal = await f1.getF1Calendar(2026);
+  const by = Object.fromEntries(cal.map((e) => [e.espn_id, e]));
+  assert.equal(by.cancelled.race_status_detail, "Canceled");
+  assert.equal(by.cancelled.race_completed, false);
+  assert.equal(by.next.race_status_detail, "Sat, September 26th at 7:00 AM EDT");
+  assert.equal(by.bare.race_status_detail, null);
+});
+
+test("the homepage's next race weekend is not a cancelled one", async () => {
+  await seedF1([
+    { id: "cancelled", date: at(24 * 2), race: { state: "post", detail: "Canceled", completed: false } },
+    { id: "next", date: at(24 * 4), race: { state: "pre", detail: "Sat, September 26th at 7:00 AM EDT", completed: false } },
+  ]);
+  const next = await homeFeed.getNextF1Event(7);
+  assert.equal(next?.espn_id, "next");
+  await db.pool.query(`delete from f1_sessions where event_espn_id = 'next'`);
+  await db.pool.query(`delete from f1_events where espn_id = 'next'`);
+  assert.equal(await homeFeed.getNextF1Event(7), null);
+});
+
+test("the F1 calendar feed marks a cancelled Grand Prix cancelled, not a confirmed weekend", async () => {
+  await seedF1([
+    { id: "cancelled", date: at(-24 * 30), race: { state: "post", detail: "Canceled", completed: false } },
+    { id: "next", date: at(24 * 30), race: { state: "pre", detail: "Sat, September 26th at 7:00 AM EDT", completed: false } },
+  ]);
+  const feed = await ics.buildF1Feed();
+  const events = feed!.ics.split("BEGIN:VEVENT").slice(1);
+  const cancelled = events.find((e) => e.includes("UID:f1-cancelled@sportsdb"))!;
+  const next = events.find((e) => e.includes("UID:f1-next@sportsdb"))!;
+  assert.match(cancelled, /STATUS:CANCELLED/);
+  assert.match(cancelled, /SUMMARY:cancelled \(Cancelled\)/);
+  assert.match(next, /STATUS:CONFIRMED/);
+  assert.match(next, /SUMMARY:next\r/);
 });

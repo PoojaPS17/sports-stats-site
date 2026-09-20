@@ -6,6 +6,7 @@ import { F1SeasonSelect } from "@/components/F1SeasonSelect";
 import { CalendarButton } from "@/components/CalendarButton";
 import { ImageActions } from "@/components/ImageActions";
 import { F1CalendarExportCard } from "@/components/F1ExportCards";
+import { f1EventStatus } from "@/lib/f1Status";
 
 export const metadata = pageMeta("F1 Calendar", "Formula 1 race calendar with circuits, dates and winners.", "/f1");
 
@@ -40,6 +41,8 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
           <div className="card divide-y divide-[var(--border)]">
             {calendar.map((ev) => {
               const date = new Date(ev.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              // A Grand Prix ESPN cancelled has no winner, but it is not upcoming either.
+              const status = f1EventStatus(ev);
               return (
                 <Link
                   key={ev.espn_id}
@@ -59,6 +62,8 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
                       <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Winner </span>
                       <span className="font-semibold">{ev.winner_name}</span>
                     </span>
+                  ) : status.kind === "called-off" ? (
+                    <span className="pill pill-final shrink-0">{status.label}</span>
                   ) : (
                     <span className="pill pill-upcoming shrink-0">Upcoming</span>
                   )}
