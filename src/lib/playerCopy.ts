@@ -14,7 +14,7 @@ export const NFL_PLAYOFFS_NOTE = "Playoff games only; ESPN lists these separatel
 
 /** Added to an NBA section description when its GP includes games with no box score (marked † in the tables). */
 export const NBA_NO_BOX_SCORE_NOTE =
-  "ESPN published no box score for some of this player's games. Those games count toward GP (ESPN's own figure where it is stored) but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons.";
+  "ESPN published no box score for some of this player's games. Those games count toward GP (ESPN's own figure where it is stored) but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons. Any season averages ESPN publishes are shown as ESPN reports them.";
 
 /** The same note for a Playoffs or Play-In table, where GP is always counted from the rosters (ESPN's stored figure is regular season only). */
 export const NBA_NO_BOX_SCORE_STAGE_NOTE =

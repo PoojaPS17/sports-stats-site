@@ -9,7 +9,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
 import { fetchMatchSummary, extractGameDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
 import { getMatchContext } from "@/lib/matchContext";
-import { gameDescription, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
+import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -147,7 +147,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const events = details?.events ?? [];
   const lineups = show.lineups ? (details?.lineups ?? []) : [];
   const winProb = show.winProbability ? (details?.win_probability ?? []) : [];
-  const leaders = show.leaders ? (details?.leaders ?? []) : [];
+  const leaders = gameLeadersShown(show, noBoxScore, details?.leaders);
 
   const awayFirst = league === "nfl" || league === "nba";
   const matchName = awayFirst ? `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}` : `${teamDisplayName(game.home_name)} vs ${teamDisplayName(game.away_name)}`;

@@ -31,7 +31,7 @@ import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
-import { buildStagedProfile, goalBands, formatStat, noBoxScoreGames, playerMeta, playerSport, positionLabel, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, goalBands, formatStat, noBoxScoreGames, playerMeta, playerSport, positionLabel, unlistedGameCount, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { ImageActions } from "@/components/ImageActions";
 import { PlayerExportCard } from "@/components/PlayerExportCard";
@@ -197,7 +197,8 @@ export default async function PlayerPage({
   const regularNoBoxScore = noBoxScoreGames(sport, profile.games, profile.recorded);
   const playoffsNoBoxScore = staged.playoffs ? noBoxScoreGames(sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
   const playinNoBoxScore = staged.playin ? noBoxScoreGames(sport, staged.playin.games, staged.playin.recorded) : 0;
-  const unlisted = staged.counted.unrecorded > 0 ? unlistedGamesNote(staged.counted.unrecorded) : null;
+  const unlistedCount = unlistedGameCount(staged);
+  const unlisted = unlistedCount > 0 ? unlistedGamesNote(unlistedCount) : null;
   const bands = goals ? goalBands(goals.clocks) : [];
   const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
 

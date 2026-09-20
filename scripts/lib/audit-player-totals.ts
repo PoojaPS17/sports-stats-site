@@ -95,7 +95,8 @@ export interface CompareOptions {
  *                       at least the site's recorded points less tol, and at most those points plus the best
  *                       recorded game for each game without a box score plus tol (tol = 0.05 games, ESPN
  *                       publishes ppg to one decimal). Outside that it is a MISMATCH; a season with nothing
- *                       missing must match.
+ *                       missing must match. A season with no recorded game at all (the page shows no
+ *                       average) has its ppg difference explained outright, the games checks still applying.
  *   nothing to compare  neither side has anything for the season
  * Only `match` is a match. */
 export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, options: CompareOptions = {}): Comparison {
@@ -116,7 +117,7 @@ export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, o
     const s = site.figures[field] ?? null;
     const e = espn.figures[field] ?? null;
     if (!differs(field, s, e)) continue;
-    if (noBox && field === "ppg" && espn.games !== null && ppgExplained(noBox, espn.games, e ?? 0)) explained = { field, site: s, espn: e };
+    if (noBox && field === "ppg" && espn.games !== null && ppgExplained(noBox, espn.games, e ?? 0, s)) explained = { field, site: s, espn: e };
     else figureDifferences.push({ field, site: s, espn: e });
   }
 
@@ -142,10 +143,13 @@ export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, o
 /** Whether a differing ppg is what games without a box score explain. ESPN's ppg covers all `espnGames`, the
  * site's average only the `recorded` ones, so ESPN's total (ppg x games) is the recorded points plus what
  * the missing games scored: at least the recorded points (less `tol`, for ESPN's one-decimal rounding), and
- * at most the best recorded game for each missing game (plus `tol`). Nothing missing explains nothing. */
-function ppgExplained(noBox: NonNullable<SeasonFigures["noBoxScore"]>, espnGames: number, espnPpg: number): boolean {
+ * at most the best recorded game for each missing game (plus `tol`). Nothing missing explains nothing.
+ * A season with nothing recorded has no best game to bound by, and the page shows no average for it
+ * (`sitePpg` null), so whatever ESPN publishes is not a figure the site contradicts. */
+function ppgExplained(noBox: NonNullable<SeasonFigures["noBoxScore"]>, espnGames: number, espnPpg: number, sitePpg: number | null): boolean {
   const missingGames = espnGames - noBox.recorded;
   if (missingGames <= 0) return false;
+  if (noBox.recorded === 0 && sitePpg === null) return true;
   const tol = 0.05 * espnGames;
   const missingPoints = espnPpg * espnGames - noBox.points;
   return missingPoints >= -tol && missingPoints <= noBox.bestGame * missingGames + tol;

@@ -669,6 +669,14 @@ export function buildStagedProfile(sport: PlayerSport, allRows: PlayerLogRow[], 
   };
 }
 
+/** The games the player pages say ESPN published no box score for, in one figure: the same `games - recorded`
+ * the † and the section notes use, summed over the regular season, playoffs and play-in, so the game log's
+ * "not listed" line never prints a different number from the tables (the rows without a box score can be
+ * fewer than ESPN's games played, and a stale ESPN figure below the log hides them). NBA only. */
+export function unlistedGameCount(staged: StagedProfile): number {
+  return [staged.regular, staged.playoffs, staged.playin].reduce((n, p) => n + (p ? noBoxScoreGames(p.sport, p.games, p.recorded) : 0), 0);
+}
+
 /** Goal minutes grouped into 15-minute bands (soccer), from stored match reports. */
 export interface GoalBand {
   label: string;

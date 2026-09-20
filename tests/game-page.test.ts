@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gameDescription, gameSides, gameSections, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE, NO_BOX_SCORE_NOTE, playerBoxIsBlank, teamStatsFraming } from "../src/lib/gamePage";
+import { gameDescription, gameLeadersShown, gameSides, gameSections, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE, NO_BOX_SCORE_NOTE, playerBoxIsBlank, teamStatsFraming } from "../src/lib/gamePage";
 
 const game = (over: Record<string, unknown> = {}) => ({
   completed: false,
@@ -320,4 +320,14 @@ test("gameDescription: a called-off game says so whatever the box score; first-c
 test("the page note carries the visitor-facing sentence and says the score is unaffected", () => {
   assert.ok(NO_BOX_SCORE_NOTE.startsWith(NO_BOX_SCORE.slice(0, -1) + ","));
   assert.match(NO_BOX_SCORE_NOTE, /The final score above is unaffected\.$/);
+});
+
+test("gameLeadersShown: a game with no box score shows no leaders, since a leader line would be an invented statistic", () => {
+  const leaders = [{ athlete_id: "1", value: "0" }, { athlete_id: "2", value: "0" }];
+  assert.deepEqual(gameLeadersShown({ leaders: true }, true, leaders), []);
+  // Any other game keeps the leaders ESPN sent, and none when the section is off or ESPN sent none.
+  assert.deepEqual(gameLeadersShown({ leaders: true }, false, leaders), leaders);
+  assert.deepEqual(gameLeadersShown({ leaders: false }, false, leaders), []);
+  assert.deepEqual(gameLeadersShown({ leaders: true }, false, undefined), []);
+  assert.deepEqual(gameLeadersShown({ leaders: true }, true, undefined), []);
 });

@@ -110,6 +110,12 @@ export function hasNoBoxScore(game: { completed: boolean }, playerBox: PlayerBox
   return game.completed && playerBoxIsBlank(playerBox);
 }
 
+/** The game leaders the page shows: none for a game with no box score (a leader line there would be an
+ * invented statistic, whatever ESPN's payload carries), else ESPN's leaders when the section is on. */
+export function gameLeadersShown<T>(show: { leaders: boolean }, noBoxScore: boolean, leaders: readonly T[] | undefined): T[] {
+  return show.leaders && !noBoxScore ? [...(leaders ?? [])] : [];
+}
+
 /** True when there is something to compare: a team-stats section over two empty lists is a heading with nothing under it. */
 export function hasTeamStats(away: { stats: unknown[] } | undefined, home: { stats: unknown[] } | undefined): boolean {
   return !!away && !!home && (away.stats.length > 0 || home.stats.length > 0);

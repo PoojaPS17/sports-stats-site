@@ -14,7 +14,7 @@ import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SeasonTabs } from "@/components/SeasonTabs";
-import { buildStagedProfile, formatStat, noBoxScoreGames, playerMeta, playerSport, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, formatStat, noBoxScoreGames, playerMeta, playerSport, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
 import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
@@ -94,7 +94,8 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
   const regularNoBoxScore = staged && profile ? noBoxScoreGames(staged.regular.sport, profile.games, profile.recorded) : 0;
   const playoffsNoBoxScore = staged?.playoffs ? noBoxScoreGames(staged.playoffs.sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
   const playinNoBoxScore = staged?.playin ? noBoxScoreGames(staged.playin.sport, staged.playin.games, staged.playin.recorded) : 0;
-  const unlisted = staged && staged.counted.unrecorded > 0 ? unlistedGamesNote(staged.counted.unrecorded) : null;
+  const unlistedCount = staged ? unlistedGameCount(staged) : 0;
+  const unlisted = unlistedCount > 0 ? unlistedGamesNote(unlistedCount) : null;
 
   return (
     <div className="flex flex-col gap-6">

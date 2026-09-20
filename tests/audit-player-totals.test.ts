@@ -231,6 +231,7 @@ test("NBA no box score: the upper bound is the best recorded game times the miss
   // 40 games, 39 recorded for 20 points with a best game of 1, tol 2: ESPN's total may be at most 20 + 1 x 1 + 2 = 23.
   const site = siteNoBox(40, 0.51, noBox(40, 39, 20, 1));
   assert.equal(compareSeason(site, nbaEspn(40, 0.5), nba).verdict, "match"); // 20
+  assert.equal(compareSeason(site, nbaEspn(40, 0.55), nba).verdict, "explained (no box score)"); // 22, inside the bound
   assert.equal(compareSeason(site, nbaEspn(40, 0.6), nba).verdict, "MISMATCH"); // 24
 });
 
@@ -289,10 +290,31 @@ test("NBA no box score: a season ESPN has no row for is 'no ESPN row', whatever 
   assert.equal(compareSeason(siteNoBox(6, null, noBox(6, 0, 0, 0)), null, { league: "nba", requireEspnRow: true }).verdict, "MISMATCH");
 });
 
-test("NBA no box score: a season with no recorded game has no best game, so no missing game can hold a point", () => {
-  // Nothing recorded: bestGame 0, so no missing game can hold a point; an ESPN average above tol fails.
-  assert.equal(compareSeason(siteNoBox(6, null, noBox(6, 0, 0, 0)), nbaEspn(6, 12.0), nba).verdict, "MISMATCH");
-  assert.equal(compareSeason(siteNoBox(6, null, noBox(6, 0, 0, 0)), nbaEspn(6, 0), nba).verdict, "match");
+test("NBA no box score: an all-blank season (nothing recorded, the page shows no average) is explained whatever ESPN's average, once the games agree", () => {
+  const blankSeason = siteNoBox(6, null, noBox(6, 0, 0, 0));
+  const r = compareSeason(blankSeason, nbaEspn(6, 15.3), nba);
+  assert.equal(r.verdict, "explained (no box score)");
+  assert.deepEqual(r.differences, [{ field: "ppg", site: null, espn: 15.3 }]);
+  // ESPN's average is zero too: the two agree, nothing to explain.
+  assert.equal(compareSeason(blankSeason, nbaEspn(6, 0), nba).verdict, "match");
+});
+
+test("NBA no box score: an all-blank season still fails on the games figures", () => {
+  // Shown games off by 3 (a stale stored figure): a games MISMATCH, the ppg is not listed.
+  const off = compareSeason(siteNoBox(3, null, noBox(6, 0, 0, 0)), nbaEspn(6, 15.3), nba);
+  assert.equal(off.verdict, "MISMATCH");
+  assert.deepEqual(off.differences, [{ field: "games", site: 3, espn: 6 }]);
+  // Games shown match, but our listed count is 3 from ESPN's: the drift check runs before the ppg is explained.
+  const drift = compareSeason(siteNoBox(6, null, noBox(9, 0, 0, 0)), nbaEspn(6, 15.3), nba);
+  assert.equal(drift.verdict, "MISMATCH");
+  assert.deepEqual(drift.differences, [{ field: "games (listed)", site: 9, espn: 6 }]);
+});
+
+test("NBA no box score: nothing recorded but the page shows an average is not explained by the all-blank rule", () => {
+  // A site ppg that is not null contradicts 'nothing recorded': bestGame 0 leaves no room for ESPN's points.
+  const r = compareSeason(siteNoBox(6, 4.2, noBox(6, 0, 0, 0)), nbaEspn(6, 12.0), nba);
+  assert.equal(r.verdict, "MISMATCH");
+  assert.deepEqual(r.differences, [{ field: "ppg", site: 4.2, espn: 12.0 }]);
 });
 
 // -- reading ESPN's payload ---------------------------------------------------------------------

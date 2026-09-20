@@ -26,7 +26,7 @@ before(async () => {
 
 const box = (min: string | null, pts: string) => ({ box: { ...(min === null ? {} : { MIN: min }), PTS: pts, REB: "0", AST: "0" } });
 
-/** Six games (blank, min, pts, zeros, own, solo) in each of nba and nfl; p1 is in every one, teammates carry the stat lines. */
+/** Seven games (blank, min, pts, zeros, decimal, own, solo) in each of nba and nfl; p1 is in every one, teammates carry the stat lines. */
 async function seedGames() {
   const games: { id: string; stats: Record<string, object> }[] = [
     // Nobody has a minutes line or points: ESPN published no box score.
@@ -37,6 +37,8 @@ async function seedGames() {
     { id: "pts", stats: { p1: box("--", "0"), p2: box(null, "7") } },
     // Points that are zero or a dash do not count.
     { id: "zeros", stats: { p1: box("--", "0"), p2: box("--", "--"), p3: box(null, "0") } },
+    // A teammate's minutes cell has a decimal: still a numeric MIN, the same reading as `cell()` in playerProfile.ts.
+    { id: "decimal", stats: { p1: box("--", "0"), p2: box("12.5", "0") } },
     // p1 himself has the line.
     { id: "own", stats: { p1: box("31", "12") } },
     // p1 alone in the game, blank.
@@ -89,11 +91,11 @@ test("fetchReportedGames returns an empty map for a league that is neither the N
 test("fetchPlayerLog flags an NBA row in a game where nobody has a numeric MIN or PTS above zero", async () => {
   const log = await fetchPlayerLog(db.pool, "nba", "p1");
   const flag = Object.fromEntries(log.map((r) => [r.game_espn_id, r.no_box_score]));
-  assert.deepEqual(flag, { blank: true, min: false, pts: false, zeros: true, own: false, solo: true });
+  assert.deepEqual(flag, { blank: true, min: false, pts: false, zeros: true, decimal: false, own: false, solo: true });
 });
 
 test("fetchPlayerLog never flags a row of another league, even in a game with no stat lines", async () => {
   const log = await fetchPlayerLog(db.pool, "nfl", "p1");
-  assert.equal(log.length, 6);
+  assert.equal(log.length, 7);
   assert.ok(log.every((r) => r.no_box_score === false));
 });

@@ -14,7 +14,7 @@ import {
 test("the section note names what the games count toward and what they leave out", () => {
   assert.equal(
     NBA_NO_BOX_SCORE_NOTE,
-    "ESPN published no box score for some of this player's games. Those games count toward GP (ESPN's own figure where it is stored) but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons."
+    "ESPN published no box score for some of this player's games. Those games count toward GP (ESPN's own figure where it is stored) but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons. Any season averages ESPN publishes are shown as ESPN reports them."
   );
 });
 

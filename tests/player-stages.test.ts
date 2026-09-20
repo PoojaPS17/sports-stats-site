@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildProfile, buildStagedProfile, noBoxScoreGames, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
+import { buildProfile, buildStagedProfile, noBoxScoreGames, unlistedGameCount, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import { noBoxScoreGamesTitle } from "../src/lib/playerCopy";
 import type { GameStage } from "../src/lib/gameStage";
 import { careerStripStats, recordText } from "../src/components/PlayerStatsShared";
@@ -681,6 +681,31 @@ test("recorded: the NFL's ESPN figure above the log does not read as games with 
   assert.equal(noBoxScoreGames("nba", 5, 3), 2);
   assert.equal(noBoxScoreGames("nba", 3, 3), 0);
   assert.equal(noBoxScoreGames("nba", 2, 3), 0);
+});
+
+test("unlistedGameCount: the games behind the daggers, games minus recorded, summed over the regular season, playoffs and play-in", () => {
+  // Listed only: the rows without a box score are the count (2).
+  assert.equal(unlistedGameCount(buildStagedProfile("nba", MIXED)), 2);
+  // ESPN's stored figure (6) counts three games with no box score, where the rows list two: the count is the dagger's.
+  const staged = buildStagedProfile("nba", MIXED, new Map([[2026, 6]]));
+  assert.equal(staged.counted.unrecorded, 2);
+  assert.equal(unlistedGameCount(staged), staged.regular.games - staged.regular.recorded);
+  assert.equal(unlistedGameCount(staged), 3);
+  // Playoffs and play-in add their own games minus recorded.
+  const rows = [
+    ...MIXED,
+    played("p1", "2026-04-20", 12, { stage: "playoffs", season_type: 3 }),
+    blank("pu1", "2026-04-22", { stage: "playoffs", season_type: 3 }),
+    blank("piu", "2026-04-15", { stage: "playin", season_type: 5 }),
+  ];
+  const all = buildStagedProfile("nba", rows, new Map([[2026, 6]]));
+  assert.equal(unlistedGameCount(all), 3 + 1 + 1);
+  // A stale figure below the logged games leaves no games without a box score, as the dagger says.
+  assert.equal(unlistedGameCount(buildStagedProfile("nba", MIXED, new Map([[2026, 2]]))), 0);
+  // Nothing missing, and the other sports: none.
+  assert.equal(unlistedGameCount(buildStagedProfile("nba", NBA_ROWS)), 0);
+  assert.equal(unlistedGameCount(buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 17], [2025, 16]]))), 0);
+  assert.equal(unlistedGameCount(buildStagedProfile("soccer", NBA_ROWS)), 0);
 });
 
 test("profile teams include a team the player only has games with no box score for", () => {
