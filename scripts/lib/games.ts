@@ -59,6 +59,20 @@ function parseWeather(ev: any): { display: string | null; temperature: number | 
   };
 }
 
+// ESPN's season type sits in a different field per feed: the scoreboard's `season.type`, the team
+// schedule's `seasonType.type` (1 preseason, 2 regular, 3 post, 5 play-in). Soccer leagues put a
+// large competition-specific id there instead, so the value is only meaningful (and only stored)
+// for the NBA and NFL. The competition abbreviation (STD, ALLSTAR, CC, playoff rounds) is on both.
+export function parseStageFields(league: League, ev: any): { seasonType: number | null; competitionType: string | null } {
+  if (league !== "nba" && league !== "nfl") return { seasonType: null, competitionType: null };
+  const raw = ev.seasonType?.type ?? ev.season?.type;
+  const abbreviation = ev.competitions?.[0]?.type?.abbreviation;
+  return {
+    seasonType: typeof raw === "number" && Number.isInteger(raw) ? raw : null,
+    competitionType: typeof abbreviation === "string" && abbreviation ? abbreviation : null,
+  };
+}
+
 // Every completed match previously showed a generic "Final" status pill regardless of
 // stage — correct broadcast shorthand for an ordinary NBA/NFL/EPL game, but misleading
 // once real stages exist (IPL playoffs, NBA/NFL postseason rounds), and uninformative
@@ -84,8 +98,10 @@ function parseRound(league: League, ev: any): string | null {
   // the regular-season standings and aren't a playoff round, so a notes headline alone
   // isn't a safe signal. `seasonType.type === 3` is: it's ESPN's own authoritative
   // regular-season/postseason classification for the event, independent of how or why
-  // it carries a notes tag.
-  if (ev.seasonType?.type !== 3) return null;
+  // it carries a notes tag. The scoreboard feed carries the same fact as `season.type`, and the
+  // Pro Bowl is tagged postseason but is not a playoff round.
+  const { seasonType, competitionType } = parseStageFields(league, ev);
+  if (seasonType !== 3 || competitionType === "ALLSTAR") return null;
   const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
   return typeof headline === "string" ? normalizeStage(headline) : null;
 }
@@ -158,6 +174,13 @@ export async function upsertEvent(league: League, ev: any) {
     console.log(`[upsertEvent] ${league} event ${ev.id}: sides not yet known, skipped`);
     return;
   }
+  // The All-Star Game and the Pro Bowl are exhibitions between made-up sides: not part of any
+  // season's record, and their "teams" would be added to the teams table.
+  const stageFields = parseStageFields(league, ev);
+  if (stageFields.competitionType === "ALLSTAR") {
+    console.log(`[upsertEvent] ${league} event ${ev.id}: all-star exhibition, skipped`);
+    return;
+  }
   const status = comp.status;
   const homeScore = parseScore(home?.score);
   const awayScore = parseScore(away?.score);
@@ -181,15 +204,17 @@ export async function upsertEvent(league: League, ev: any) {
        home_score_display, away_score_display, home_winner, away_winner, season_year,
        status_state, status_detail, status_summary, round, period, clock, completed,
        odds_details, odds_spread, odds_over_under, odds_provider, broadcast_network,
-       weather_display, weather_temperature, week, first_seen_date, updated_at
-     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$3, now())
+       weather_display, weather_temperature, week, first_seen_date, updated_at,
+       season_type, competition_type
+     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$3, now(),
+       $30,$31)
      on conflict (league, espn_id) do update set
        date = excluded.date, home_score = excluded.home_score, away_score = excluded.away_score,
        home_score_display = excluded.home_score_display, away_score_display = excluded.away_score_display,
        home_winner = excluded.home_winner, away_winner = excluded.away_winner,
        season_year = coalesce(excluded.season_year, games.season_year),
        status_state = excluded.status_state, status_detail = excluded.status_detail,
-       status_summary = excluded.status_summary, round = excluded.round,
+       status_summary = excluded.status_summary, round = coalesce(excluded.round, games.round),
        period = excluded.period, clock = excluded.clock, completed = excluded.completed,
        odds_details = coalesce(excluded.odds_details, games.odds_details),
        odds_spread = coalesce(excluded.odds_spread, games.odds_spread),
@@ -199,6 +224,8 @@ export async function upsertEvent(league: League, ev: any) {
        weather_display = coalesce(excluded.weather_display, games.weather_display),
        weather_temperature = coalesce(excluded.weather_temperature, games.weather_temperature),
        week = coalesce(excluded.week, games.week),
+       season_type = coalesce(excluded.season_type, games.season_type),
+       competition_type = coalesce(excluded.competition_type, games.competition_type),
        first_seen_date = coalesce(games.first_seen_date, excluded.first_seen_date),
        updated_at = now()`,
     [
@@ -233,6 +260,8 @@ export async function upsertEvent(league: League, ev: any) {
       weather.display,
       weather.temperature,
       parseWeek(ev),
+      stageFields.seasonType,
+      stageFields.competitionType,
     ]
   );
 }
