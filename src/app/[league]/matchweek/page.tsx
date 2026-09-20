@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL } from "@/lib/queries";
 import { weekIndexPath, weekNoun } from "@/lib/matchweeks";
-import { loadWeeks } from "@/lib/matchweekPage";
+import { hasWeeks, loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 import { WeekIndex } from "@/components/WeekHub";
 
@@ -21,6 +21,6 @@ export default async function MatchweekRootPage({ params }: { params: Promise<{ 
   const { league } = await params;
   if (!isLeague(league)) notFound();
   const ctx = await loadWeeks(league);
-  if (!ctx || ctx.weeks.length === 0) notFound();
+  if (!hasWeeks(ctx)) notFound();
   return <WeekIndex league={league} season={ctx.season} weeks={ctx.weeks} seasons={ctx.seasons} isCurrentSeason={ctx.isCurrentSeason} />;
 }

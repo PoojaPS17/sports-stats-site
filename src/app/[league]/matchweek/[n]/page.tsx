@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
 import { canonicalWeekIndexPath, getSeasonsWithGames, weekDateRange, weekNoun, weekPath } from "@/lib/matchweeks";
-import { isSeasonSegment, loadWeeks } from "@/lib/matchweekPage";
+import { hasWeeks, isSeasonSegment, loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 import { WeekHub, WeekIndex } from "@/components/WeekHub";
 
@@ -34,7 +34,8 @@ export default async function MatchweekPage({ params }: { params: Promise<{ leag
   // /epl/matchweek/2025 → season overview
   if (isSeasonSegment(n)) {
     const ctx = await loadWeeks(league, n);
-    if (!ctx) notFound();
+    // No rounds is a 404 (as at the hub), so no 200 page canonicals to a missing one and the sitemap can mirror it.
+    if (!hasWeeks(ctx)) notFound();
     return <WeekIndex league={league} season={ctx.season} weeks={ctx.weeks} seasons={ctx.seasons} isCurrentSeason={ctx.isCurrentSeason} />;
   }
 

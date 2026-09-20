@@ -19,7 +19,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   return pageMeta(
     `${label} ${week.label} ${formatSeasonLabel(league, ctx.season)} Results`,
     `${label} ${week.label} of the ${formatSeasonLabel(league, ctx.season)} season (${weekDateRange(week)}): every result, the table after the round, and the top performers.`,
-    weekPath(league, week.index, ctx.season)
+    // The current season's rounds are also served without the year (/epl/matchweek/5), the form the
+    // sitemap lists and the hub links to; the long form names it as canonical.
+    weekPath(league, week.index, ctx.isCurrentSeason ? null : ctx.season)
   );
 }
 
