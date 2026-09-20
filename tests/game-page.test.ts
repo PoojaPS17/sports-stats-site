@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gameDescription, gameSides, gameSections, hasTeamStats, matchContextView, teamStatsFraming } from "../src/lib/gamePage";
+import { gameDescription, gameLeadersShown, gameSides, gameSections, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE, NO_BOX_SCORE_NOTE, playerBoxIsBlank, teamStatsFraming } from "../src/lib/gamePage";
 
 const game = (over: Record<string, unknown> = {}) => ({
   completed: false,
@@ -253,4 +253,81 @@ test("nouns: the US leagues say game, football and cricket say match", () => {
   assert.match(teamStatsFraming("nba", calledOff("Postponed")).description ?? "", /This game was postponed\./);
   assert.match(teamStatsFraming("ipl", calledOff("Postponed")).description ?? "", /This match was postponed\./);
   assert.match(gameDescription("seriea", calledOff("Postponed"), D, ""), /This match was postponed\./);
+});
+
+/* ---- a game with no box score ------------------------------------------- */
+
+// ESPN's NBA box score for a game it published no player statistics for: every player who played has minutes "--"
+// and all-zero statistics, and a player who did not play has dashes.
+const ZERO_ROW = ["--", "0", "0-0", "0-0", "0-0", "0", "0", "0", "0", "0", "0", "0", "0", "0"];
+const DNP_ROW = ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"];
+const team = (rows: string[][]) => ({ categories: [{ rows: rows.map((stats) => ({ stats })) }] });
+const BLANK_BOX = [team([ZERO_ROW, DNP_ROW]), team([ZERO_ROW, ZERO_ROW])];
+const withCell = (index: number, cell: string) => [team([ZERO_ROW, ZERO_ROW.map((c, i) => (i === index ? cell : c))]), team([DNP_ROW])];
+
+test("playerBoxIsBlank: a box of minutes \"--\", zeros and dashes is blank", () => {
+  assert.equal(playerBoxIsBlank(BLANK_BOX), true);
+});
+
+test("playerBoxIsBlank: any real figure makes the box real", () => {
+  assert.equal(playerBoxIsBlank(withCell(0, "34")), false);
+  assert.equal(playerBoxIsBlank(withCell(1, "-3")), false); // a real minus, not a dash
+  assert.equal(playerBoxIsBlank(withCell(2, "1-2")), false);
+  assert.equal(playerBoxIsBlank(withCell(3, "12.5")), false);
+});
+
+test("playerBoxIsBlank: a zero is blank in each of the box score's forms", () => {
+  assert.equal(playerBoxIsBlank(withCell(0, "0.0")), true);
+  assert.equal(playerBoxIsBlank(withCell(2, "0/0")), true);
+  assert.equal(playerBoxIsBlank(withCell(3, "")), true);
+  assert.equal(playerBoxIsBlank(withCell(4, "–")), true);
+});
+
+test("playerBoxIsBlank: with no player rows listed there is nothing to call blank", () => {
+  assert.equal(playerBoxIsBlank([]), false);
+  assert.equal(playerBoxIsBlank([{ categories: [] }]), false);
+  assert.equal(playerBoxIsBlank([{ categories: [{ rows: [] }] }, { categories: [] }]), false);
+});
+
+test("hasNoBoxScore: only a finished game can lack a box score", () => {
+  assert.equal(hasNoBoxScore({ completed: true }, BLANK_BOX), true);
+  // A live game legitimately starts with zeros.
+  assert.equal(hasNoBoxScore({ completed: false }, BLANK_BOX), false);
+  assert.equal(hasNoBoxScore({ completed: true }, withCell(0, "34")), false);
+});
+
+test("gameDescription: a finished game with no box score says so instead of listing a box score", () => {
+  const d = gameDescription("nba", finished({ home_name: "Chicago Bulls", away_name: "Cleveland Cavaliers" }), "Oct 28, 2015", " at United Center", "", false);
+  assert.equal(d, "NBA: Cleveland Cavaliers at Chicago Bulls at United Center, Oct 28, 2015. ESPN has no box score for this game. Head-to-head record.");
+  assert.ok(d.includes(NO_BOX_SCORE));
+  assert.doesNotMatch(d, /box score and|team stats/i);
+});
+
+test("gameDescription: the box score parameter defaults to true and changes nothing when true", () => {
+  const g = finished();
+  assert.equal(gameDescription("nba", g, D, "", "", true), gameDescription("nba", g, D, ""));
+  assert.equal(gameDescription("nba", g, D, ""), "NBA: Chelsea at Arsenal, Sep 20, 2026. Scoring summary, win probability, team stats, box score and head-to-head.");
+});
+
+test("gameDescription: a called-off game says so whatever the box score; first-class cricket ignores the parameter", () => {
+  assert.equal(gameDescription("nba", calledOff("Postponed"), D, "", "", false), "NBA: Chelsea at Arsenal, Sep 20, 2026. This game was postponed. Team form and head-to-head record.");
+  const test = finished({ status_summary: "Chelsea won by 10 wickets" });
+  assert.equal(gameDescription("test", test, D, "", "", false), gameDescription("test", test, D, ""));
+  // A game not yet finished is never "no box score" either.
+  assert.equal(gameDescription("nba", game(), D, "", "", false), gameDescription("nba", game(), D, ""));
+});
+
+test("the page note carries the visitor-facing sentence and says the score is unaffected", () => {
+  assert.ok(NO_BOX_SCORE_NOTE.startsWith(NO_BOX_SCORE.slice(0, -1) + ","));
+  assert.match(NO_BOX_SCORE_NOTE, /The final score above is unaffected\.$/);
+});
+
+test("gameLeadersShown: a game with no box score shows no leaders, since a leader line would be an invented statistic", () => {
+  const leaders = [{ athlete_id: "1", value: "0" }, { athlete_id: "2", value: "0" }];
+  assert.deepEqual(gameLeadersShown({ leaders: true }, true, leaders), []);
+  // Any other game keeps the leaders ESPN sent, and none when the section is off or ESPN sent none.
+  assert.deepEqual(gameLeadersShown({ leaders: true }, false, leaders), leaders);
+  assert.deepEqual(gameLeadersShown({ leaders: false }, false, leaders), []);
+  assert.deepEqual(gameLeadersShown({ leaders: true }, false, undefined), []);
+  assert.deepEqual(gameLeadersShown({ leaders: true }, true, undefined), []);
 });

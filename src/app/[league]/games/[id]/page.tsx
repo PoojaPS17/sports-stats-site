@@ -9,7 +9,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
 import { fetchMatchSummary, extractGameDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
 import { getMatchContext } from "@/lib/matchContext";
-import { gameDescription, gameSections, gameSides, hasTeamStats, matchContextView, teamStatsFraming } from "@/lib/gamePage";
+import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -84,7 +84,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const score = game.completed && game.away_score != null && game.home_score != null ? (awayFirst ? ` ${awayScore}-${homeScore}` : ` ${homeScore}-${awayScore}`) : "";
   const details = game.completed ? await getGameDetails(league, id) : null;
   const where = details?.venue ? ` at ${details.venue}` : "";
-  const description = gameDescription(league, game, date, where, game.completed ? scorersLine(details) : "");
+  // A finished game ESPN published no player statistics for says so rather than promising a box score.
+  const boxScore = !(details && !isCricketLeague(league) && hasNoBoxScore(game, details.player_box));
+  const description = gameDescription(league, game, date, where, game.completed ? scorersLine(details) : "", boxScore);
   // A Test's two-innings score line ("254 & 258 (95.2 ov, target 271)") is too long
   // for a title; the month names the match and the description carries the result.
   if (isFirstClassCricket(league)) {
@@ -114,6 +116,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   // kickoff — it's just the squad list, so categories comes back empty rather than the
   // array itself. playerBox.length alone can't tell "no stats yet" from "has stats".
   const hasPlayerStats = playerBox.some((team) => team.categories.length > 0);
+  // A finished game whose box lists every player with minutes "--" and zeros: ESPN published no statistics.
+  const noBoxScore = !isCricket && hasNoBoxScore(game, playerBox);
 
   const athleteIds = new Set<string>();
   for (const team of playerBox) for (const cat of team.categories) for (const row of cat.rows) athleteIds.add(row.athleteId);
@@ -143,7 +147,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const events = details?.events ?? [];
   const lineups = show.lineups ? (details?.lineups ?? []) : [];
   const winProb = show.winProbability ? (details?.win_probability ?? []) : [];
-  const leaders = show.leaders ? (details?.leaders ?? []) : [];
+  const leaders = gameLeadersShown(show, noBoxScore, details?.leaders);
 
   const awayFirst = league === "nfl" || league === "nba";
   const matchName = awayFirst ? `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}` : `${teamDisplayName(game.home_name)} vs ${teamDisplayName(game.away_name)}`;
@@ -272,7 +276,14 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         </section>
       )}
 
-      {!isCricket && show.playerStats && hasPlayerStats && (
+      {noBoxScore && show.playerStats && (
+        <section>
+          <SectionHeader>Player Stats</SectionHeader>
+          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{NO_BOX_SCORE_NOTE}</p>
+        </section>
+      )}
+
+      {!isCricket && !noBoxScore && show.playerStats && hasPlayerStats && (
         <section className="flex flex-col gap-4">
           <SectionHeader tools={<ImageActions filename={`${id}-box-score-${league}`} width={900} shareTitle={`${matchName} box score`} card={<PlayerBoxScoreExportCard league={league} game={game} playerBox={playerBox} />} />}>Player Stats</SectionHeader>
           {playerBox.map((team) => (
