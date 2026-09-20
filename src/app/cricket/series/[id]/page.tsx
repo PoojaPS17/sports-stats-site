@@ -18,6 +18,14 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 15;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 // A season archive is a calendar year. ESPN's older series ids are four digits too
 // (8048 IPL, 8050 Ranji Trophy, 8679 PSL), and must reach the series page.
 const SEASON_RE = /^(19|20)\d{2}$/;

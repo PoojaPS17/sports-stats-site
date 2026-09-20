@@ -19,6 +19,7 @@ import {
   getPlayerCricketSplits,
   CRICKET_SPLIT_DIMENSIONS,
   type CricketSplitDimension,
+  type CricketSplitRow,
   type League,
   type PlayerRow,
 } from "@/lib/queries";
@@ -50,6 +51,14 @@ import { h2hPath } from "@/lib/h2h";
 import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NBA_NO_BOX_SCORE_NOTE, NBA_REGULAR_SEASON_FOOTNOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withMilestonesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
+
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
 
 // "Cody Gakpo Premier League stats: 89 apps, 21 goals, 12 assists for Liverpool since
 // 2022-23." — the figures are the description, so the snippet answers the search.
@@ -109,16 +118,10 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   return pageMeta(longTitle.length <= 60 ? longTitle : `${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player, profile, true), `/${league}/players/${slug}`, { noindex: empty });
 }
 
-function isSplitDimension(value: string | undefined): value is CricketSplitDimension {
-  return CRICKET_SPLIT_DIMENSIONS.some((d) => d.key === value);
-}
-
 export default async function PlayerPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ league: string; slug: string }>;
-  searchParams: Promise<{ split?: string }>;
 }) {
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
@@ -163,14 +166,18 @@ export default async function PlayerPage({
   );
 
   if (isCricketLeague(league) || !sport) {
-    const { split: splitParam } = await searchParams;
-    const activeSplit: CricketSplitDimension = isSplitDimension(splitParam) ? splitParam : "team";
-    const [career, splits] = await Promise.all([getPlayerCricketCareer(league, player.espn_id), getPlayerCricketSplits(league, player.espn_id, activeSplit)]);
+    // Every split at once: they are tabs in the page now, so the player has one address and the
+    // page renders the same for everyone (which is what lets it be cached).
+    const [career, splitRows] = await Promise.all([
+      getPlayerCricketCareer(league, player.espn_id),
+      Promise.all(CRICKET_SPLIT_DIMENSIONS.map((d) => getPlayerCricketSplits(league, player.espn_id, d.key))),
+    ]);
+    const splits = Object.fromEntries(CRICKET_SPLIT_DIMENSIONS.map((d, i) => [d.key, splitRows[i]])) as Record<CricketSplitDimension, CricketSplitRow[]>;
     return (
       <div className="flex flex-col gap-6">
         {header(playerMeta(null, player))}
         {career ? (
-          <CricketCareer league={league} career={career} splits={splits} activeSplit={activeSplit} basePath={basePath} />
+          <CricketCareer league={league} career={career} splits={splits} />
         ) : (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No matches on record yet.</p>
         )}

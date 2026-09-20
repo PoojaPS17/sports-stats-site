@@ -13,6 +13,14 @@ import type { Metadata } from "next";
 
 export const revalidate = 15;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 function dayLabel(date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }

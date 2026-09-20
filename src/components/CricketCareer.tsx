@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SectionHeader } from "./SectionHeader";
+import { CricketSplitTabs } from "./CricketSplitTabs";
 import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL, isInternationalCricket } from "@/lib/queries";
 import type { League, CricketCareerStats, CricketSplitDimension, CricketSplitRow } from "@/lib/queries";
 
@@ -14,18 +15,50 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 const fmt = (n: number | null, digits = 2) => (n === null ? "-" : n.toFixed(digits));
 
+function SplitTable({ label, rows, league }: { label: string; rows: CricketSplitRow[]; league: League }) {
+  if (rows.length === 0) return <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No data yet.</p>;
+  return (
+    <div className="card overflow-hidden">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="table-head text-left">
+            <th className="py-2 pl-4 font-medium">{label}</th>
+            <th className="px-2 py-2 text-right font-medium">M</th>
+            <th className="px-2 py-2 text-right font-medium">Runs</th>
+            <th className="py-2 pr-4 text-right font-medium">Wkts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key} className="border-t border-[var(--border)]">
+              <td className="py-2 pl-4 font-medium">
+                {row.slug ? (
+                  <Link href={`/${league}/teams/${row.slug}`} className="hover:underline">
+                    {row.label}
+                  </Link>
+                ) : (
+                  row.label
+                )}
+              </td>
+              <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{row.matches}</td>
+              <td className="px-2 py-2 text-right tabular-nums">{row.runs}</td>
+              <td className="py-2 pr-4 text-right tabular-nums">{row.wickets}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function CricketCareer({
   league,
   career,
   splits,
-  activeSplit,
-  basePath,
 }: {
   league: League;
   career: CricketCareerStats;
-  splits: CricketSplitRow[];
-  activeSplit: CricketSplitDimension;
-  basePath: string;
+  splits: Record<CricketSplitDimension, CricketSplitRow[]>;
 }) {
   return (
     <>
@@ -80,51 +113,13 @@ export function CricketCareer({
 
       <section>
         <SectionHeader>Career Splits</SectionHeader>
-        <div className="mb-3 flex gap-1.5">
-          {CRICKET_SPLIT_DIMENSIONS.map((d) => (
-            <Link
-              key={d.key}
-              href={d.key === "team" ? basePath : `${basePath}?split=${d.key}`}
-              className={`nav-pill text-sm ${activeSplit === d.key ? "nav-pill-active" : "text-[var(--text-muted)]"}`}
-            >
-              {d.label}
-            </Link>
-          ))}
-        </div>
-        {splits.length === 0 ? (
-          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No data yet.</p>
-        ) : (
-          <div className="card overflow-hidden">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="table-head text-left">
-                  <th className="py-2 pl-4 font-medium">{CRICKET_SPLIT_DIMENSIONS.find((d) => d.key === activeSplit)?.label}</th>
-                  <th className="px-2 py-2 text-right font-medium">M</th>
-                  <th className="px-2 py-2 text-right font-medium">Runs</th>
-                  <th className="py-2 pr-4 text-right font-medium">Wkts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {splits.map((row) => (
-                  <tr key={row.key} className="border-t border-[var(--border)]">
-                    <td className="py-2 pl-4 font-medium">
-                      {row.slug ? (
-                        <Link href={`/${league}/teams/${row.slug}`} className="hover:underline">
-                          {row.label}
-                        </Link>
-                      ) : (
-                        row.label
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{row.matches}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{row.runs}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums">{row.wickets}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <CricketSplitTabs
+          tabs={CRICKET_SPLIT_DIMENSIONS.map((d) => ({
+            key: d.key,
+            label: d.label,
+            panel: <SplitTable label={d.label} rows={splits[d.key]} league={league} />,
+          }))}
+        />
       </section>
     </>
   );

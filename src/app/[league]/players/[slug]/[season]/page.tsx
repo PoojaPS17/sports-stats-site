@@ -29,6 +29,14 @@ import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeaso
 // this can be cached far longer than the live current-season player page.
 export const revalidate = 86400;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(league, slug));
 const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
 const cachedReportedGames = cache((league: League, espnId: string) => getPlayerReportedGames(league, espnId));

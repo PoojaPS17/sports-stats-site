@@ -19,6 +19,14 @@ import { ComputedStandingsExportCard, StandingsExportCard, standingsExportWidth 
 // this route but are live data, so they get the shorter window via the check below.
 export const revalidate = 300;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 const SCOPES: TableScope[] = ["home", "away", "form"];
 const SCOPE_TITLE: Record<TableScope, string> = { overall: "Standings", home: "Home Table", away: "Away Table", form: "Form Table" };
 const SCOPE_DESC: Record<TableScope, string> = {

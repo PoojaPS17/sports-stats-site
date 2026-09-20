@@ -17,6 +17,14 @@ import { TeamHistoryExportCard } from "@/components/TeamHistoryExportCard";
 
 export const revalidate = 3600;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ league: string; slug: string }> }): Promise<Metadata> {
   const { league, slug } = await params;
   if (!isLeague(league)) return {};

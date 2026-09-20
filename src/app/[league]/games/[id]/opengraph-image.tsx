@@ -9,6 +9,14 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const revalidate = 300;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 function Side({ name, logo, score, muted }: { name: string; logo: string | null; score: string | null; muted: boolean }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, width: 380 }}>
