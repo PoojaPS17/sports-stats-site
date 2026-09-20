@@ -9,7 +9,7 @@ before(async () => {
   hb = await import("../scripts/lib/heartbeat");
 });
 after(async () => {
-  await db.stop();
+  await db?.stop();
 });
 beforeEach(async () => {
   await db.pool.query("delete from scrape_runs");
@@ -38,6 +38,14 @@ test("a run older than its limit is stale", async () => {
   assert.equal(stale.length, 1);
   assert.equal(stale[0].scraper, "job-a");
   assert.ok((stale[0].ageMinutes ?? 0) >= 239);
+});
+
+test("a fresh run clears a stale scraper (last_ok_at refreshes on every run)", async () => {
+  await hb.recordRun(db.pool, "job-a");
+  await db.pool.query(`update scrape_runs set last_ok_at = now() - interval '4 hours' where scraper = 'job-a'`);
+  assert.equal((await hb.findStale(db.pool, { "job-a": 180 })).length, 1);
+  await hb.recordRun(db.pool, "job-a");
+  assert.deepEqual(await hb.findStale(db.pool, { "job-a": 180 }), []);
 });
 
 test("last_changed_at moves only when changed is true", async () => {
