@@ -6,6 +6,10 @@ on:
     - cron: "17 8 * * *"
   workflow_dispatch: {}
 
+concurrency:
+  group: scrape-rosters
+  cancel-in-progress: false
+
 jobs:
   scrape-rosters:
     runs-on: ubuntu-latest

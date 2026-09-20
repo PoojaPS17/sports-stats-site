@@ -7,6 +7,10 @@ on:
     - cron: "41 5 * * 1"
   workflow_dispatch: {}
 
+concurrency:
+  group: scrape-cricsheet
+  cancel-in-progress: false
+
 jobs:
   import-cricsheet:
     runs-on: ubuntu-latest
