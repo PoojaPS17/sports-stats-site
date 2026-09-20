@@ -15,7 +15,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SeasonTabs } from "@/components/SeasonTabs";
 import type { EspnSeasonTotals } from "@/lib/espnSeason";
-import { buildStagedProfile, formatStat, metaFigures, noBoxScoreGames, playerMeta, playerSport, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, formatStat, metaFigures, noBoxScoreGames, playerMeta, playerSport, reportedForSeason, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
 import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   let empty = false;
   if (sport) {
     const [log, reportedGames, espnSeasons] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id), cachedEspnSeasons(league, player.espn_id)]);
-    const staged = buildStagedProfile(sport, log.filter((r) => r.season_year === Number(season)), reportedGames, espnSeasons);
+    const staged = buildStagedProfile(sport, log.filter((r) => r.season_year === Number(season)), reportedForSeason(reportedGames, Number(season)), espnSeasons);
     const p = staged.regular;
     if (p.games > 0) {
       const headline = p.profile.specs.filter((s) => s.headline).slice(0, 3);
@@ -83,7 +83,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
     sport ? cachedEspnSeasons(league, player.espn_id) : new Map<number, EspnSeasonTotals>(),
     getPlayerSeasons(league, player.espn_id),
   ]);
-  const staged = sport ? buildStagedProfile(sport, log.filter((r) => r.season_year === season), reportedGames, espnSeasons) : null;
+  const staged = sport ? buildStagedProfile(sport, log.filter((r) => r.season_year === season), reportedForSeason(reportedGames, season), espnSeasons) : null;
   // Regular season (for soccer, every appearance) drives the strip and the splits; best games read
   // every counted game.
   const profile = staged?.regular ?? null;

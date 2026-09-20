@@ -522,6 +522,34 @@ test("siteSeasons carries each NFL season's gamesSource: ESPN's stored figure, o
   assert.equal(compareSeason(seasons.get(2025)!, { ...espn, figures: { ...espn.figures, rushYds: 40 } }, { league: "nfl" }).verdict, "match");
 });
 
+test("NFL: a season ESPN counts games for that has no box-score row is the stored games and zero figures, compared like any other season", () => {
+  const line: Stats = { rushing: { CAR: "5", YDS: "20", TD: "0" } };
+  const rows = [row("a", "2024-09-08", "regular", 2024, line)];
+  // 2025: ESPN counts 7 games, the database has no row for the player (no stat line); 2024 has its row and a stored figure.
+  const seasons = siteSeasons("nfl", buildStagedProfile("nfl", rows, new Map([[2024, 3], [2025, 7]])).regular);
+  assert.deepEqual(seasons.get(2025), { games: 7, gamesSource: "espn", figures: { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 0, recTd: 0 } });
+  const site = seasons.get(2025)!;
+  const espn = (games: number | null, figures: Record<string, number | null>): SeasonFigures => ({ games, figures });
+  const zeros = { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 0, recTd: 0 };
+  // ESPN's games and zeros (or no figure at all, which is the same number): a match, not a coverage gap.
+  assert.equal(compareSeason(site, espn(7, zeros), { league: "nfl" }).verdict, "match");
+  assert.equal(compareSeason(site, espn(7, {}), { league: "nfl" }).verdict, "match");
+  // A non-zero ESPN stat is a MISMATCH, and so is a games difference.
+  const stat = compareSeason(site, espn(7, { ...zeros, rushYds: 12 }), { league: "nfl" });
+  assert.equal(stat.verdict, "MISMATCH");
+  assert.deepEqual(stat.differences, [{ field: "rushYds", site: 0, espn: 12 }]);
+  const games = compareSeason(site, espn(9, zeros), { league: "nfl" });
+  assert.equal(games.verdict, "MISMATCH");
+  assert.deepEqual(games.differences, [{ field: "games", site: 7, espn: 9 }]);
+});
+
+test("NFL: a season ESPN has with neither a box-score row nor a stored games figure is still a coverage gap", () => {
+  const rows = [row("a", "2024-09-08", "regular", 2024, { rushing: { CAR: "5", YDS: "20", TD: "0" } })];
+  const seasons = siteSeasons("nfl", buildStagedProfile("nfl", rows, new Map([[2024, 3]])).regular);
+  const espn: SeasonFigures = { games: 7, figures: { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 0, recTd: 0 } };
+  assert.equal(compareSeason(siteSeasonOrEmpty(seasons, 2025), espn, { league: "nfl" }).verdict, "no box scores");
+});
+
 test("siteSeasons leaves an NBA season's gamesSource out", () => {
   const seasons = siteSeasons("nba", buildStagedProfile("nba", [row("a", "2025-01-01", "regular", 2025, { box: { MIN: "30", PTS: "20" } })]).regular);
   assert.ok(!("gamesSource" in seasons.get(2025)!));

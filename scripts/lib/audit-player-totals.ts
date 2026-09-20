@@ -86,7 +86,9 @@ export interface CompareOptions {
 /** Compares the site's regular-season line for one season with ESPN's headline line.
  *   match               both sides agree (games and every figure)
  *   MISMATCH            games or a figure differ (differences carry both values)
- *   no box scores       ESPN has the season, the site has no regular-season game: a coverage gap
+ *   no box scores       ESPN has the season, the site has no regular-season game: a coverage gap. For the NFL that
+ *                       is a season with neither box-score rows nor a stored games figure: with a stored figure
+ *                       and no rows the page shows ESPN's games and zero figures, and it is compared like any other season
  *   no ESPN row         the site has regular-season games, ESPN has nothing (a MISMATCH under requireEspnRow)
  *   games not verified  every figure agrees but ESPN's games played is absent, so games are unchecked
  *   games short (no stat line)  NFL: site games below ESPN's GP, every figure equal, and the page shows
@@ -285,7 +287,8 @@ export function gamesPlayedFromPayload(categories: EspnCategory[], minYear: numb
  * none) also carries `noBoxScore`, summed from the same rows with the cell reader the page uses (a blank PTS is 0). The NFL
  * totals are summed from the same rows with the same cell reader the page's columns use, so they are the
  * page's numbers even for a category the page hides because it is a small part of the player's game (a
- * receiver's one carry). */
+ * receiver's one carry). An NFL season the profile lists from ESPN's stored games figure alone (no box-score row) has
+ * those games and every figure 0, so ESPN's own non-zero stat for it is a difference. */
 export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<number, SeasonFigures> {
   const out = new Map<number, SeasonFigures>();
   for (const season of regular.seasons) {

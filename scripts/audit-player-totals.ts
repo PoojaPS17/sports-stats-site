@@ -23,7 +23,8 @@
 //           ESPN's side). Never runs unless asked; honours --limit.
 // Exits 1 when any season is a MISMATCH (or a live read failed; with --gamelog, a game log that is a MISMATCH
 // or could not be read, or every game log checked being empty), 2 on bad arguments. Listed but not
-// failing: coverage gaps (ESPN has the season, no regular-season box scores), "no ESPN row" (stored
+// failing: coverage gaps (ESPN has the season, the database has neither regular-season box scores nor a stored
+// games figure for it), "no ESPN row" (stored
 // mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
 // gives no games played), NFL "games short (no stat line)" (the page shows the logged count, with a
 // `*`, because no ESPN games figure is stored for the season; site games below ESPN's, every figure
@@ -42,7 +43,9 @@
 // ESPN side is the loader's figure, not the first-stint category GP: player_season_stats.games_played
 // (stored mode) or seasonGamesPlayed on the payload (live mode), the categories' GP only as a fallback.
 // A page showing a stored ESPN figure that is below ESPN's is a MISMATCH (stale or wrong), as is any
-// page figure above ESPN's. NBA: the site side is built the same way (ESPN's stored games played for a
+// page figure above ESPN's. A season with a stored figure and no box-score row at all (a player with no stat line
+// in ESPN's box scores) is on the page with that figure and zero for every stat, and is compared like any other
+// season: ESPN's own non-zero stat for it is a MISMATCH, not a coverage gap. NBA: the site side is built the same way (ESPN's stored games played for a
 // season with games that have no box score, else the games listed); see compareSeason for the bounds.
 //
 // `select` only. The database is imported after the arguments are validated, so a usage error never
@@ -289,7 +292,7 @@ async function main() {
   console.log(`  compared:                   ${compared} player-seasons (site and ESPN both have the season)`);
   console.log(`  matched:                    ${matched}`);
   console.log(`  mismatched:                 ${mismatches.length}   (fails the run)`);
-  console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the database has no regular-season box scores; never a match)`);
+  console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the database has neither regular-season box scores nor a stored games figure for it; never a match)`);
   console.log(`  no ESPN row:                ${noEspn.length}   (the site has regular-season games, ESPN has no row; ${args.live ? "outside the loader's window only, inside it is a mismatch" : "stored rows exist only for current-roster players"})`);
   console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  games short (no stat line): ${short.length}   (NFL: the page shows the logged count because no ESPN games figure is stored for the season; every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
@@ -319,7 +322,7 @@ async function main() {
     }
   }
 
-  section("coverage gaps (box scores not backfilled for that season yet?)", "players", gaps, () => 1, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}`);
+  section("coverage gaps (no box scores and no stored games figure: not backfilled for that season yet?)", "players", gaps, () => 1, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}`);
   section("no ESPN row", "site games", noEspn, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
   section("games not verified (ESPN gives no games played)", "site games", unverified, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
   section("games short (no stat line)", "games short", short, gapOf, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: site ${f.differences[0]?.site} / ESPN ${f.differences[0]?.espn} games, ${gapOf(f)} short${note(f)}`);
