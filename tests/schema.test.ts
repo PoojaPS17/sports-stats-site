@@ -9,7 +9,7 @@ before(async () => {
   db = await startTestDb();
 });
 after(async () => {
-  await db.stop();
+  await db?.stop();
 });
 
 test("schema applies and creates the core tables", async () => {

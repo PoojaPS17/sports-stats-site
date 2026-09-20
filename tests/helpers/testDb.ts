@@ -25,30 +25,49 @@ export interface TestDb {
 /** Throwaway Postgres with db/schema.sql applied. Sets DATABASE_URL so scripts/lib/db.ts points at it. */
 export async function startTestDb(): Promise<TestDb> {
   const dir = mkdtempSync(join(tmpdir(), "sportsdb-test-"));
-  const port = await freePort();
-  const server = new EmbeddedPostgres({
-    databaseDir: dir,
-    port,
-    user: "postgres",
-    password: "password",
-    persistent: false,
-    onLog: () => {},
-    onError: () => {},
-  });
-  await server.initialise();
-  await server.start();
-  await server.createDatabase("t");
-  const url = `postgres://postgres:password@localhost:${port}/t`;
-  process.env.DATABASE_URL = url;
-  const pool = new Pool({ connectionString: url });
-  await pool.query(readFileSync(resolve(process.cwd(), "db/schema.sql"), "utf8"));
-  return {
-    pool,
-    url,
-    async stop() {
-      await pool.end();
-      await server.stop();
-      rmSync(dir, { recursive: true, force: true });
-    },
-  };
+  const previousUrl = process.env.DATABASE_URL;
+  let server: EmbeddedPostgres | undefined;
+  let started = false;
+  let pool: Pool | undefined;
+  try {
+    const port = await freePort();
+    server = new EmbeddedPostgres({
+      databaseDir: dir,
+      port,
+      user: "postgres",
+      password: "password",
+      persistent: false,
+      onLog: () => {},
+      onError: () => {},
+    });
+    await server.initialise();
+    await server.start();
+    started = true;
+    await server.createDatabase("t");
+    const url = `postgres://postgres:password@localhost:${port}/t`;
+    process.env.DATABASE_URL = url;
+    pool = new Pool({ connectionString: url });
+    await pool.query(readFileSync(resolve(process.cwd(), "db/schema.sql"), "utf8"));
+    const livePool = pool;
+    const liveServer = server;
+    return {
+      pool: livePool,
+      url,
+      async stop() {
+        if (previousUrl === undefined) delete process.env.DATABASE_URL;
+        else process.env.DATABASE_URL = previousUrl;
+        await livePool.end();
+        await liveServer.stop();
+        rmSync(dir, { recursive: true, force: true });
+      },
+    };
+  } catch (err) {
+    // Tear down whatever was set up so a failed start does not leak a server, a pool or the temp dir.
+    if (previousUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previousUrl;
+    await pool?.end().catch(() => {});
+    if (started) await server?.stop().catch(() => {});
+    rmSync(dir, { recursive: true, force: true });
+    throw err;
+  }
 }
