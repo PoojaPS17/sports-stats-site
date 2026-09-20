@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { SiteLinks } from "@/components/SiteLinks";
 
 // Rendered inside the root layout, so the header and footer are the site's own. Next answers
-// with a 404 status and a noindex robots tag for any request that lands here.
-export const metadata: Metadata = { title: "Page not found" };
+// with a 404 status and injects its own noindex tag for any request that lands here. Metadata
+// from segments is merged shallowly, so without a robots value of its own this page would also
+// inherit the root layout's index, follow and googleBot directives and ship two contradictory
+// robots tags. Setting robots here replaces the whole inherited object, googleBot included.
+export const metadata: Metadata = { title: "Page not found", robots: { index: false, follow: true } };
 
 export default function NotFound() {
   return (
