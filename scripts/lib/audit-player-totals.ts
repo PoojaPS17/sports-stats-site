@@ -12,7 +12,7 @@ export interface SeasonFigures {
   games: number | null;
   /** The site's side, NFL only: where the page's games figure comes from, ESPN's stored games played or
    * the logged count (shown with a `*`, because no ESPN figure is stored for that season). */
-  gamesSource?: "espn" | "logged";
+  gamesSource?: "espn" | "logged" | "listed";
   figures: Record<string, number | null>;
 }
 
