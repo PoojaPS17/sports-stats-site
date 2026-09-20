@@ -1,6 +1,6 @@
 import { LocalTime } from "./LocalTime";
 import { normalizeStage } from "@/lib/stage";
-import { CALLED_OFF } from "@/lib/gameStatus";
+import { calledOffLabel } from "@/lib/gameStatus";
 
 export function StatusPill({
   statusState,
@@ -40,9 +40,8 @@ export function StatusPill({
 
   // A game the feed closed without playing ("Postponed", "Canceled") is neither
   // upcoming nor final; showing its old date as a fixture would be wrong.
-  const called = CALLED_OFF.exec(statusDetail ?? "");
-  if (called) {
-    const label = /cancel/i.test(called[0]) ? "Cancelled" : /abandon/i.test(called[0]) ? "Abandoned" : /suspend/i.test(called[0]) ? "Suspended" : "Postponed";
+  const label = calledOffLabel(statusDetail);
+  if (label) {
     return <span className="pill pill-final">{round ? `${round} · ${label}` : label}</span>;
   }
 
