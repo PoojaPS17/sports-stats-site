@@ -66,6 +66,40 @@ test("NBA matchweeks leave out play-in and excluded games and keep playoff round
   assert.deepEqual(playoffWeeks.map((w) => w.games.map((g) => g.espn_id)), [["po"]]);
 });
 
+test("a playoff game with no round yet still gets a playoff week and does not crash", () => {
+  // ESPN season type 3 with no notes headline (a scheduled postseason game): stage is playoffs, round is null.
+  const games = [
+    game("r1", "2025-10-22T00:00:00Z", { stage: "regular" }),
+    game("po", "2026-04-25T00:00:00Z", { stage: "playoffs", round: null }),
+  ];
+  const weeks = buildMatchweeks("nba", games);
+  assert.deepEqual(weeks.filter((w) => !w.playoff).map((w) => w.games.map((g) => g.espn_id)), [["r1"]]);
+  const playoffWeeks = weeks.filter((w) => w.playoff);
+  assert.equal(playoffWeeks.length, 1);
+  assert.equal(playoffWeeks[0].label, "Playoffs");
+  assert.deepEqual(playoffWeeks[0].games.map((g) => g.espn_id), ["po"]);
+});
+
+test("a game of stage other that carries a round still lands in a playoff week", () => {
+  // ipl reaches the non-soccer path, where stage "other" plus a round used to read as a playoff row.
+  const weeks = buildMatchweeks("ipl", [
+    game("m1", "2026-04-01T00:00:00Z", { league: "ipl", stage: "regular" }),
+    game("q", "2026-05-20T00:00:00Z", { league: "ipl", stage: "other", round: "Some Stage" }),
+  ]);
+  const playoffWeeks = weeks.filter((w) => w.playoff);
+  assert.deepEqual(playoffWeeks.map((w) => [w.label, w.games.map((g) => g.espn_id)]), [["Some Stage", ["q"]]]);
+});
+
+test("play-in and excluded games with a round stay out of every matchweek", () => {
+  const weeks = buildMatchweeks("nba", [
+    game("r1", "2025-10-22T00:00:00Z", { stage: "regular" }),
+    game("pi", "2026-04-15T00:00:00Z", { stage: "playin", round: "Play-In" }),
+    game("ex", "2025-10-05T00:00:00Z", { stage: "excluded", round: "x" }),
+  ]);
+  assert.deepEqual(weeks.flatMap((w) => w.games.map((g) => g.espn_id)), ["r1"]);
+  assert.equal(weeks.filter((w) => w.playoff).length, 0);
+});
+
 test("matchweeks fall back to round when a row has no stage", () => {
   const weeks = buildMatchweeks("nba", [
     game("r1", "2025-10-22T00:00:00Z"),

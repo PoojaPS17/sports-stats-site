@@ -113,7 +113,8 @@ function finish(groups: { label: string; shortLabel: string; games: GameRow[]; p
 function playoffGroups(playoffs: GameRow[]): { label: string; shortLabel: string; games: GameRow[]; playoff: boolean }[] {
   const byRound = new Map<string, GameRow[]>();
   for (const g of playoffs) {
-    const label = playoffRoundLabel(g.round!);
+    // A scheduled postseason game can have no round yet (stage is playoffs, the notes headline is missing).
+    const label = playoffRoundLabel(g.round ?? "Playoffs");
     if (!byRound.has(label)) byRound.set(label, []);
     byRound.get(label)!.push(g);
   }
@@ -266,7 +267,9 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
   // Week buckets for the regular season, then playoff rounds in date order.
   // The play-in, preseason and other games that do not count belong to neither.
   const regular = sorted.filter(isRegularSeasonGame);
-  const playoffs = sorted.filter((g) => (g.stage ? g.stage === "playoffs" : Boolean(g.round)));
+  // A row typed "other" (or with no stage) that carries a round is a playoff row, as it was before
+  // stages existed; regular, play-in and excluded rows never are.
+  const playoffs = sorted.filter((g) => g.stage === "playoffs" || ((!g.stage || g.stage === "other") && Boolean(g.round)));
   const groups: { label: string; shortLabel: string; games: GameRow[]; playoff: boolean }[] = [];
 
   if (regular.length && regular.every((g) => g.week != null)) {

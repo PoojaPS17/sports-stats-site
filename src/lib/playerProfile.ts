@@ -308,6 +308,10 @@ export function aggregate(rows: PlayerLogRow[], specs: StatSpec[]): Line {
   for (const spec of specs) {
     if (spec.rate) continue;
     let total = 0;
+    // n counts rows with a value for THIS stat, so an average divides by it. The GP the page shows is
+    // the profile's `played` count instead (NBA: a numeric MIN, even a sub-minute "0"). The two differ
+    // only for a sub-minute row whose other cells are all "--": it counts as a game played but adds
+    // nothing to (or divides into) an average. The page shows `played` for GP, `n` for the averages.
     let n = 0;
     let max: number | null = null;
     for (const r of rows) {
