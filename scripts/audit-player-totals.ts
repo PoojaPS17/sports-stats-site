@@ -61,13 +61,13 @@ import {
   type StoredCategories,
 } from "./lib/audit-player-totals";
 import { classifyGamelog, gamelogRegularSeason, type GamelogSeason } from "./lib/espn-gamelog";
+import { getJson } from "./lib/espn";
 import { seasonRow, seasonWindowStart } from "./lib/season-row";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
 import { buildStagedProfile, playerSport } from "../src/lib/playerProfile";
 
 const LIVE_PAUSE_MS = 150;
 const GAMELOG_PAUSE_MS = 150;
-const GAMELOG_TIMEOUT_MS = 20_000;
 const MISMATCHES_SHOWN = 50;
 const GAPS_SHOWN = 20;
 
@@ -102,15 +102,12 @@ const TRADED_NOTE = "traded: stored row is one stint";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const fmt = (v: number | null) => (v === null ? "none" : String(v));
 
-/** ESPN's athlete game log for one NBA season (season year = the ending year, as everywhere else here). Throws on
- * any failed request (a 403, a 5xx, a timeout, a body that is not JSON): the caller reports it, never counts it as
- * confirmed. The headers are those of the other ESPN fetches (scripts/lib/espn.ts): JSON accepted, the runtime's
- * own User-Agent. */
-async function fetchGamelog(playerEspnId: string, season: number): Promise<unknown> {
-  const url = `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${encodeURIComponent(playerEspnId)}/gamelog?season=${season}`;
-  const res = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(GAMELOG_TIMEOUT_MS) });
-  if (!res.ok) throw new Error(`ESPN game log request failed (${res.status}): ${url}`);
-  return res.json();
+/** ESPN's athlete game log for one NBA season (season year = the ending year, as everywhere else here), through the
+ * same request helper as every other ESPN fetch (scripts/lib/espn.ts: JSON accepted, the runtime's own User-Agent,
+ * a 20 s timeout, and a body that parses is trusted even under ESPN's odd 502). Throws on any failed request (a 403,
+ * a 5xx with no JSON body, a timeout): the caller reports it, never counts it as confirmed. */
+function fetchGamelog(playerEspnId: string, season: number): Promise<unknown> {
+  return getJson<unknown>(`https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${encodeURIComponent(playerEspnId)}/gamelog?season=${season}`);
 }
 
 function sample<T>(items: T[], n: number): T[] {

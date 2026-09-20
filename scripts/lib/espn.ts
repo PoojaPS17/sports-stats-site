@@ -65,7 +65,7 @@ const REQUEST_TIMEOUT_MS = 20_000;
 // Without an explicit timeout, a request ESPN accepts but never responds to (observed
 // in practice — a scheduled run once hung for 8+ minutes on a single stuck request)
 // blocks the whole script indefinitely, since native fetch() has no default timeout.
-async function getJson<T>(url: string): Promise<T> {
+export async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (!res.ok) {
     // Some individual events consistently (not transiently — confirmed by retrying)
