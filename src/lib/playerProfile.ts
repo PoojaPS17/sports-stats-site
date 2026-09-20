@@ -456,7 +456,8 @@ export interface PlayerProfile {
   /** True when at least one listed season's `games` is ESPN's figure. */
   gamesFromEspn: boolean;
   /** NBA figure (for NFL the field is not used): seasons with games beyond the recorded ones whose line is
-   * still built from the box-score rows, because ESPN's season row was missing or failed a guard. */
+   * still built from the box-score rows, because ESPN's season row was missing or failed a guard; plus one when a
+   * listed game has no season year (it is in `games` but in no season line). */
   boxOnlyShort: number;
   career: Line;
   seasons: SeasonLine[];
@@ -697,7 +698,8 @@ export function buildProfile(
     // A game with no box score and no season year is in no season, but the W-L still cannot cover it.
     record: seasons.some((s) => s.record === null) || unrecordedRows.some((r) => r.season_year === null) ? null : record(rows),
     gamesFromEspn: seasons.some((s) => s.gamesSource === "espn"),
-    boxOnlyShort: seasons.filter((s) => s.games > s.recorded && s.lineSource === "box").length,
+    // A listed game with no season year is in `games` but in no season line, so it is a box-only shortfall of its own.
+    boxOnlyShort: seasons.filter((s) => s.games > s.recorded && s.lineSource === "box").length + (unrecordedRows.some((r) => r.season_year === null) ? 1 : 0),
     // A season that shows ESPN's line is in the career as ESPN's totals over ESPN's games, not as its rows.
     career: aggregateWithEspn(rows.filter((r) => r.season_year === null || !espnUsed.has(r.season_year)), [...espnUsed.values()], specs),
     seasons,

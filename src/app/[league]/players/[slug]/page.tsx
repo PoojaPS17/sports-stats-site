@@ -47,7 +47,7 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
-import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NBA_NO_BOX_SCORE_NOTE, nbaEspnLineFootnote, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
+import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NBA_NO_BOX_SCORE_NOTE, NBA_REGULAR_SEASON_FOOTNOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withMilestonesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -206,7 +206,6 @@ export default async function PlayerPage({
   // the ones that read every counted game (best games, recent form) by all of them.
   const regularRowsNote = regularNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
   const countedRowsNote = unlistedCount > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
-  const espnLineShown = profile.seasons.some((s) => s.lineSource === "espn");
   const bands = goals ? goalBands(goals.clocks) : [];
   const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
 
@@ -257,7 +256,7 @@ export default async function PlayerPage({
               </section>
 
               <section>
-                <SectionHeader description={profile.sport === "nba" ? withNoBoxScoreNote("Per-game averages; shooting as made over attempted for the season.", regularNoBoxScore, "regular") : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <SectionHeader description={profile.sport === "nba" ? withNoBoxScoreNote("Per-game averages; shooting as made over attempted for the season.", regularNoBoxScore, "table") : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
                 <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
               </section>
             </>
@@ -330,7 +329,7 @@ export default async function PlayerPage({
 
               {profile.milestones.length > 0 && (
                 <section>
-                  <SectionHeader description={withBoxRowsNote("Landmarks within the games on record, pinned to the game they came in.", regularNoBoxScore)}>Milestones</SectionHeader>
+                  <SectionHeader description={withMilestonesNote("Landmarks within the games on record, pinned to the game they came in.", regularNoBoxScore)}>Milestones</SectionHeader>
                   <PlayerMilestones league={league} profile={profile} />
                 </section>
               )}
@@ -367,17 +366,7 @@ export default async function PlayerPage({
                   {since ? ` since ${since}` : ""}.{" "}
                 </>
               )}
-              {regularNoBoxScore > 0 && espnLineShown && (
-                <>
-                  {nbaEspnLineFootnote(profile.boxOnlyShort)}{" "}
-                </>
-              )}
-              {regularNoBoxScore > 0 && !espnLineShown && profile.recorded > 0 && (
-                <>
-                  Regular-season per-game averages are over the {profile.recorded} {LEAGUE_LABEL[league]} regular-season games with a box score here
-                  {since ? ` since ${since}` : ""}.{" "}
-                </>
-              )}
+              {regularNoBoxScore > 0 && <>{NBA_REGULAR_SEASON_FOOTNOTE} </>}
               {sport === "nfl"
                 ? "Playoff games are shown separately; preseason and Pro Bowl games are listed in the game log but not counted, matching ESPN."
                 : "Playoff and play-in games are shown separately; preseason, All-Star and NBA Cup final games are listed in the game log but not counted, matching ESPN."}

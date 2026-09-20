@@ -466,3 +466,24 @@ test("metaFigures: NFL and soccer keep quoting whenever a game is recorded", () 
   assert.equal(metaFigures(nfl, "120 yards"), "120 yards");
   assert.equal(metaFigures(buildProfile("nfl", []), "0 yards"), null);
 });
+
+// ---------------------------------------------------------------------------
+// A game with no box score and no season year sits in no season line but is in the games.
+// ---------------------------------------------------------------------------
+test("boxOnlyShort counts a listed game with no season year, so a description does not quote averages beside its games", () => {
+  const orphan: PlayerLogRow = { ...listed(1, { prefix: "x" })[0], season_year: null };
+  const rows = [...games(7, 6), orphan];
+  const p = buildProfile("nba", rows);
+  assert.equal(p.seasons.length, 1);
+  assert.equal(p.seasons[0].games, p.seasons[0].recorded);
+  assert.equal(p.games, 8);
+  assert.equal(p.recorded, 7);
+  assert.equal(p.boxOnlyShort, 1);
+  assert.equal(metaFigures(p, "6.0 points"), null);
+  // Without the orphan the same career is complete.
+  const complete = buildProfile("nba", games(7, 6));
+  assert.equal(complete.boxOnlyShort, 0);
+  assert.equal(metaFigures(complete, "6.0 points"), "6.0 points");
+  // It adds one however many such games there are.
+  assert.equal(buildProfile("nba", [...games(7, 6), orphan, { ...orphan, game_espn_id: "x9" }]).boxOnlyShort, 1);
+});

@@ -5,21 +5,38 @@ import {
   BOX_ROWS_ONLY_NOTE,
   gamesAndFigures,
   nbaCardNote,
-  nbaEspnLineFootnote,
   nbaGamesStartedTitle,
+  NBA_MILESTONES_NOTE,
   NBA_NO_BOX_SCORE_NOTE,
+  NBA_NO_BOX_SCORE_SEASON_NOTE,
   NBA_NO_BOX_SCORE_STAGE_NOTE,
+  NBA_NO_BOX_SCORE_TABLE_NOTE,
+  NBA_REGULAR_SEASON_FOOTNOTE,
   noBoxScoreGamesTitle,
+  seasonFiguresText,
   unlistedGamesNote,
   withBoxRowsNote,
+  withMilestonesNote,
   withNoBoxScoreNote,
 } from "../src/lib/playerCopy";
 
 test("the section note names what the games count toward and what they leave out", () => {
   assert.equal(
     NBA_NO_BOX_SCORE_NOTE,
-    "† ESPN's box scores have no stat line for some of this player's games. For those seasons the games, per-game averages and percentages are ESPN's own season figures where ESPN stores them (W-L is left blank). The game log, best games, splits and milestones below count only games with a box score."
+    "† ESPN's box scores have no stat line for some of this player's games. For those seasons the games, per-game averages and percentages are ESPN's own season figures where the site can use ESPN's row for the season, and otherwise cover only games with a box score (W-L is left blank). The game log, best games, splits and milestones below count only games with a box score."
   );
+});
+
+test("the season page's note is the same without milestones, which that page does not have", () => {
+  assert.equal(
+    NBA_NO_BOX_SCORE_SEASON_NOTE,
+    "† ESPN's box scores have no stat line for some of this player's games. For those seasons the games, per-game averages and percentages are ESPN's own season figures where the site can use ESPN's row for the season, and otherwise cover only games with a box score (W-L is left blank). The game log, best games and splits below count only games with a box score."
+  );
+  assert.equal(NBA_NO_BOX_SCORE_SEASON_NOTE.includes("milestones"), false);
+});
+
+test("the short pointer above the main page's season table", () => {
+  assert.equal(NBA_NO_BOX_SCORE_TABLE_NOTE, "† marks seasons with games that have no box score; see the note above.");
 });
 
 test("noBoxScoreGamesTitle: ESPN's own figure", () => {
@@ -53,6 +70,10 @@ test("withNoBoxScoreNote appends the note for the stage, and only when some game
   assert.equal(withNoBoxScoreNote("Text.", 0, "other"), "Text.");
   assert.equal(withNoBoxScoreNote("Text.", 3, "regular"), `Text. ${NBA_NO_BOX_SCORE_NOTE}`);
   assert.equal(withNoBoxScoreNote("Text.", 1, "other"), `Text. ${NBA_NO_BOX_SCORE_STAGE_NOTE}`);
+  assert.equal(withNoBoxScoreNote("Text.", 2, "season"), `Text. ${NBA_NO_BOX_SCORE_SEASON_NOTE}`);
+  assert.equal(withNoBoxScoreNote("Text.", 2, "table"), `Text. ${NBA_NO_BOX_SCORE_TABLE_NOTE}`);
+  assert.equal(withNoBoxScoreNote("Text.", 0, "season"), "Text.");
+  assert.equal(withNoBoxScoreNote("Text.", 0, "table"), "Text.");
 });
 
 test("gamesAndFigures quotes the figures, or only the games when there are none", () => {
@@ -74,10 +95,26 @@ test("the export card's footnote for the dagger says ESPN's figures when every s
   assert.equal(nbaCardNote(3), nbaCardNote(1));
 });
 
-test("the page footnote for seasons shown from ESPN's line; a box-only season keeps its own sentence", () => {
-  const base = "Seasons where ESPN's box scores lack some games show ESPN's own season figures. The game log, best games, splits and milestones count only games with a box score.";
-  assert.equal(nbaEspnLineFootnote(0), base);
-  assert.equal(nbaEspnLineFootnote(2), `${base} Where ESPN's season figures are not stored, per-game averages count only games with a box score.`);
+test("the milestones note: game numbers count every game, the counts only games with a box score", () => {
+  assert.equal(NBA_MILESTONES_NOTE, "Game numbers count every game played; the counts of 30-point games, double-doubles and so on cover only games with a box score.");
+  assert.equal(withMilestonesNote("Text.", 0), "Text.");
+  assert.equal(withMilestonesNote("Text.", 1), `Text. ${NBA_MILESTONES_NOTE}`);
+  // The generic note would be untrue here: "First game on record" and the "Nth game" ordinals include games without a box score.
+  assert.equal(NBA_MILESTONES_NOTE.includes(BOX_ROWS_ONLY_NOTE), false);
+});
+
+test("the page footnote is true whether or not the site could use ESPN's row for a season", () => {
+  assert.equal(
+    NBA_REGULAR_SEASON_FOOTNOTE,
+    "Where the site can use ESPN's row for a season, that season's figures are ESPN's own; otherwise they cover only games with a box score. The game log, best games, splits and milestones count only games with a box score."
+  );
+});
+
+test("the season page's description: every game on record, or the games on record when some have no box score", () => {
+  assert.equal(seasonFiguresText("2025-26", true, 0), "2025-26 regular-season figures from every game on record.");
+  assert.equal(seasonFiguresText("2025-26", false, 0), "2025-26 figures from every game on record.");
+  assert.equal(seasonFiguresText("2025-26", true, 3), "2025-26 regular-season figures from the games on record.");
+  assert.equal(seasonFiguresText("2025-26", false, 1), "2025-26 figures from the games on record.");
 });
 
 test("the GS header tooltip: ESPN's count for an ESPN season, else box-score games only", () => {
