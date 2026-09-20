@@ -5,6 +5,7 @@ import {
   classifyGap,
   compareSeason,
   espnFigures,
+  hasPostseasonGap,
   gamesPlayedFromPayload,
   MAX_LISTED_DRIFT,
   parseArgs,
@@ -558,14 +559,30 @@ test("NFL: a season ESPN has that the page does not list is still a coverage gap
   assert.equal(compareSeason(siteSeasonOrEmpty(withStats, 2025), espn, { league: "nfl" }).verdict, "no box scores");
 });
 
-test("classifyGap says whether a gap season's ESPN stats are a postseason game's in its regular-season row", () => {
+test("classifyGap says whether an NFL gap season's ESPN stats are likely a postseason game's in its regular-season row", () => {
   const stats: StoredCategories = { receiving: { labels: ["GP", "REC", "YDS", "TD"], values: ["1", "1", "6", "0"] } };
   const none: StoredCategories = { defensive: { labels: ["GP", "TOT"], values: ["4", "0"] } };
-  assert.match(classifyGap(stats, 1)!, /1 playoff row that season: ESPN's postseason stats sit in its regular-season row/);
-  assert.match(classifyGap(stats, 2)!, /2 playoff rows/);
-  assert.equal(classifyGap(stats, 0), "ESPN's row has stats and the player has no rows that season");
-  assert.equal(classifyGap(none, 3), null);
-  assert.equal(classifyGap(undefined, 3), null);
+  assert.match(classifyGap("nfl", stats, 1)!, /1 playoff row that season: likely ESPN's postseason stats in its regular-season row/);
+  assert.match(classifyGap("nfl", stats, 2)!, /2 playoff rows/);
+  assert.equal(classifyGap("nfl", stats, 0), "ESPN's row has stats and the player has no rows that season");
+  assert.equal(classifyGap("nfl", none, 3), null);
+  assert.equal(classifyGap("nfl", undefined, 3), null);
+});
+
+test("an NBA gap season with playoff rows and non-zero stored averages is not explained as ESPN's postseason stats, and the closing note is not due for it", () => {
+  const averages: StoredCategories = { averages: { labels: ["GP", "MIN", "PTS", "REB", "AST"], values: ["70", "34.0", "27.1", "6.0", "5.0"] } };
+  // The site has no regular-season game for the season while ESPN has 70: a real coverage gap (not backfilled).
+  const gap = compareSeason({ games: 0, figures: { ppg: null } }, espnFigures("nba", averages), { league: "nba" });
+  assert.equal(gap.verdict, "no box scores");
+  for (const playoffRows of [0, 1, 6]) assert.equal(classifyGap("nba", averages, playoffRows), null);
+  assert.equal(hasPostseasonGap([classifyGap("nba", averages, 6)]), false);
+  // The NFL Kinnard-like case still gets it, and it is what makes the closing note due.
+  const receiving: StoredCategories = { receiving: { labels: ["GP", "REC", "YDS", "TD"], values: ["1", "1", "6", "0"] } };
+  const note = classifyGap("nfl", receiving, 1);
+  assert.match(note!, /likely ESPN's postseason stats in its regular-season row/);
+  assert.equal(hasPostseasonGap([note]), true);
+  // One NBA gap beside no NFL one, and an unexplained NFL gap: no note.
+  assert.equal(hasPostseasonGap([classifyGap("nba", averages, 6), classifyGap("nfl", receiving, 0), null, undefined]), false);
 });
 
 test("siteSeasons leaves an NBA season's gamesSource out", () => {

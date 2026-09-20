@@ -445,10 +445,10 @@ test("database: a player whose stored row has stats and no regular-season rows (
   const playoffRows = log.filter((r) => r.stage === "playoffs" && r.season_year === 2025).length;
   assert.equal(playoffRows, 1);
   assert.equal(compareSeason({ games: 0, figures: {} }, espn, { league: "nfl" }).verdict, "no box scores");
-  assert.match(classifyGap(receiving as StoredCategories, playoffRows)!, /postseason stats sit in its regular-season row/);
-  assert.match(classifyGap(receiving as StoredCategories, 0)!, /no rows that season/);
-  assert.equal(classifyGap(nothing(3) as StoredCategories, 0), null);
-  assert.equal(classifyGap(undefined, 0), null);
+  assert.match(classifyGap("nfl", receiving as StoredCategories, playoffRows)!, /likely ESPN's postseason stats in its regular-season row/);
+  assert.match(classifyGap("nfl", receiving as StoredCategories, 0)!, /no rows that season/);
+  assert.equal(classifyGap("nfl", nothing(3) as StoredCategories, 0), null);
+  assert.equal(classifyGap("nfl", undefined, 0), null);
 });
 
 test("database: a stored row with tackles or yard totals only, and no rows, is not listed", async () => {

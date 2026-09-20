@@ -334,16 +334,26 @@ export function siteSeasonOrEmpty(seasons: Map<number, SeasonFigures>, season: n
   return seasons.get(season) ?? { games: 0, figures: {} };
 }
 
-/** Why a coverage gap is a gap, for the run's listing: ESPN's stored row carries stats but the site lists no regular
- * season for it. With playoff rows for the same season the stats are ESPN's postseason game(s) sitting in its
+/** The wording that marks a gap explained as ESPN's postseason stats in its regular-season row. */
+export const POSTSEASON_GAP_MARK = "likely ESPN's postseason stats in its regular-season row";
+
+/** Why an NFL coverage gap is a gap, for the run's listing: ESPN's stored row carries stats but the site lists no regular
+ * season for it. With playoff rows for the same season the stats are likely ESPN's postseason game(s) sitting in its
  * regular-season row (ESPN lists no regular-season game for the player that year); the site has them in its Playoffs
- * table, and listing them as a regular season would repeat ESPN's inconsistency. Null when the row has no stats (the
- * gap is only the missing games figure). */
-export function classifyGap(categories: StoredCategories | undefined, playoffRows: number): string | null {
-  if (!categories || !storedRowHasStats(categories)) return null;
+ * table, and listing them as a regular season would repeat ESPN's inconsistency. It is a presence heuristic: the figures
+ * are not checked against the playoff rows' totals. Null when the row has no stats (the gap is only the missing games
+ * figure), and always null outside the NFL: the quirk is an NFL one, and an NBA season with no regular-season rows is a
+ * real coverage gap (not backfilled), never explained by this. */
+export function classifyGap(league: AuditLeague, categories: StoredCategories | undefined, playoffRows: number): string | null {
+  if (league !== "nfl" || !categories || !storedRowHasStats(categories)) return null;
   return playoffRows > 0
-    ? `ESPN's row has stats and the player has ${playoffRows} playoff ${playoffRows === 1 ? "row" : "rows"} that season: ESPN's postseason stats sit in its regular-season row`
+    ? `ESPN's row has stats and the player has ${playoffRows} playoff ${playoffRows === 1 ? "row" : "rows"} that season: ${POSTSEASON_GAP_MARK}`
     : "ESPN's row has stats and the player has no rows that season";
+}
+
+/** Whether the closing note about ESPN's postseason stats is due: at least one listed gap was explained that way. */
+export function hasPostseasonGap(notes: (string | null | undefined)[]): boolean {
+  return notes.some((note) => note?.includes(POSTSEASON_GAP_MARK));
 }
 
 /** The players the audit reads: everyone with a box-score row in the league, and (`includeStoredGames`) for the NFL in
