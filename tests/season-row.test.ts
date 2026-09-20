@@ -1,7 +1,7 @@
 // Which of ESPN's per-season rows the season-stats loader stores. Pure: no database, no network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isTotalsRow, seasonGamesPlayed, seasonRow } from "../scripts/lib/season-row";
+import { isTotalsRow, SEASON_YEARS_BACK, seasonGamesPlayed, seasonRow, seasonWindowStart } from "../scripts/lib/season-row";
 
 // Luka Doncic's 2025 in ESPN's athlete /stats: one row per team plus a whole-season "Totals" row.
 const luka = {
@@ -116,7 +116,7 @@ test("categories that disagree on one team's GP give the largest", () => {
   assert.equal(seasonGamesPlayed(categories, 2025), 16);
 });
 
-test("a traded player with a Totals row gets the Totals GP, not the sum, wherever the row sits", () => {
+test("a traded player with a Totals row gets the larger of the Totals GP and the sum, wherever the row sits", () => {
   const car = nflRow(2022, "carolina-panthers", "6");
   const sf = nflRow(2022, "san-francisco-49ers", "11");
   const totals = nflRow(2022, "2022 Totals", "17", "2022  Totals");
@@ -136,6 +136,55 @@ test("the Totals GP is the largest among the Totals rows, and a Totals row in on
   assert.equal(seasonGamesPlayed(both, 2022), 17);
   const onlyOne = [nflCategory("rushing", [car, sf]), nflCategory("receiving", [car, sf, nflRow(2022, "2022 Totals", "17", "2022  Totals")])];
   assert.equal(seasonGamesPlayed(onlyOne, 2022), 17);
+});
+
+// ESPN's Totals row `GP` is the first team's games only for a traded player (its other columns are
+// whole-season), so the Totals row is a floor and the sum over teams is the answer.
+test("Shiloh Keo 2016 (id 14122): Totals GP 3 is the first team's, the answer is 3 + 7", () => {
+  const defense = nflCategory("defensive", [
+    nflRow(2016, "denver-broncos", "3"),
+    nflRow(2016, "new-orleans-saints", "7"),
+    nflRow(2016, "2016 Totals", "3", "2016  Totals"),
+  ]);
+  assert.equal(seasonGamesPlayed([defense], 2016), 10);
+});
+
+test("a Totals GP above the sum over teams stays", () => {
+  const categories = [
+    nflCategory("rushing", [nflRow(2022, "team-a", "6"), nflRow(2022, "team-b", "10"), nflRow(2022, "2022 Totals", "17", "2022  Totals")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2022), 17);
+});
+
+test("a Totals GP equal to the sum over teams is that number", () => {
+  const car = nflRow(2022, "carolina-panthers", "6");
+  const sf = nflRow(2022, "san-francisco-49ers", "11");
+  const categories = [nflCategory("rushing", [car, sf, nflRow(2022, "2022 Totals", "17", "2022  Totals")])];
+  assert.equal(seasonGamesPlayed(categories, 2022), 17);
+});
+
+test("a Totals row in only one category with a smaller GP than the teams' sum gives the sum", () => {
+  const categories = [
+    nflCategory("rushing", [nflRow(2022, "team-a", "3"), nflRow(2022, "team-b", "7")]),
+    nflCategory("receiving", [nflRow(2022, "team-a", "3"), nflRow(2022, "team-b", "7")]),
+    nflCategory("defensive", [nflRow(2022, "team-a", "3"), nflRow(2022, "team-b", "7"), nflRow(2022, "2022 Totals", "3", "2022  Totals")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2022), 10);
+});
+
+test("a team in only some categories counts at its largest GP, summed, when the Totals row is smaller", () => {
+  const categories = [
+    nflCategory("rushing", [nflRow(2022, "team-a", "3"), nflRow(2022, "2022 Totals", "3", "2022  Totals")]),
+    nflCategory("receiving", [nflRow(2022, "team-a", "5"), nflRow(2022, "team-b", "4"), nflRow(2022, "2022 Totals", "5", "2022  Totals")]),
+    nflCategory("defensive", [nflRow(2022, "team-b", "6")]),
+  ];
+  // team-a 5 (largest across categories) + team-b 6 = 11, above the Totals GP of 5.
+  assert.equal(seasonGamesPlayed(categories, 2022), 11);
+});
+
+test("a Totals row with no team rows gives the Totals GP", () => {
+  const categories = [nflCategory("rushing", [nflRow(2022, "2022 Totals", "17", "2022  Totals")])];
+  assert.equal(seasonGamesPlayed(categories, 2022), 17);
 });
 
 test("a traded player with no Totals row gets the sum of the teams' GP", () => {
@@ -219,4 +268,24 @@ test("a comma-formatted GP parses", () => {
 
 test("a GP of 0 is returned as 0, for the loader to decide", () => {
   assert.equal(seasonGamesPlayed([nflCategory("passing", [nflRow(2025, "a", "0")])], 2025), 0);
+});
+
+// The season window is pinned to the games history (2015), not to today's date: every case passes the
+// current year, so nothing here depends on when the test runs. Every League has a HISTORY_START entry,
+// so the fallback (`currentYear - SEASON_YEARS_BACK`) is reached only through the Math.min, not by a
+// league without an entry; only the pinned leagues are tested.
+test("NBA, NFL and the pinned soccer leagues start at 2015 in any current year, so 2015 is never dropped", () => {
+  for (const league of ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl"] as const) {
+    for (const currentYear of [2026, 2027, 2035]) {
+      assert.equal(seasonWindowStart(league, currentYear), 2015, `${league} ${currentYear}`);
+    }
+  }
+});
+
+test("the window reaches further back than the pin when the relative window does", () => {
+  // Cricket's competitions are pinned earlier than 2015; the window is the earlier of the two.
+  assert.equal(seasonWindowStart("ipl", 2026), 2008);
+  assert.equal(seasonWindowStart("cwc", 2035), 1975);
+  // A pin later than the relative window does not shorten it: WPL is pinned to 2023, the window is 2015 in 2026.
+  assert.equal(seasonWindowStart("wpl", 2026), 2026 - SEASON_YEARS_BACK);
 });
