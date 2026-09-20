@@ -43,7 +43,7 @@ export function PlayerHeader({
             className={`h-[72px] w-[72px] shrink-0 rounded-full bg-[var(--surface-muted)] object-cover ${photoCredit ? "object-[50%_18%]" : ""}`}
           />
         ) : (
-          <TeamLogo name={name} logoUrl={null} color={teamColor} size={72} priority />
+          <TeamLogo name={name} logoUrl={null} color={teamColor} size={72} />
         )}
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">

@@ -258,12 +258,18 @@ test("season totals are fetched for real athletes only (a pseudo-athlete has no 
   assert.deepEqual([...gameStats.seasonStatTargets(perPlayer)].sort(), [["9001", "1"], ["9002", "1"]]);
 });
 
+// Source with comments removed, so a call that has been commented out (or is only mentioned in a note) does not count.
+const withoutComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
 test("scripts that read the players table for ESPN requests or audits skip pseudo-athletes through the shared code", () => {
-  // These are entry-point scripts (they run when imported), so their guard is checked in the source.
+  // These are entry-point scripts (they run when imported), so their guard is checked in the source, as a
+  // source-text test: the shared call has to sit inside the very statement that selects the players.
   const guards: [string, RegExp][] = [
-    ["scripts/backfill-player-stats.ts", /notPseudoAthleteSql\(/],
-    ["scripts/audit-player-totals.ts", /notPseudoAthleteSql\(/],
-    ["scripts/fetch-player-stats.ts", /seasonStatTargets\(/],
+    ["scripts/backfill-player-stats.ts", /pool\.query\(`select p\.espn_id, p\.team_espn_id from players p where p\.league = \$1 and \$\{notPseudoAthleteSql\(\)\}`/],
+    ["scripts/audit-player-totals.ts", /from player_game_stats pgs[^`]*where pgs\.league = \$1 and \$\{notPseudoAthleteSql\("pgs\.player_espn_id"\)\}/],
+    ["scripts/fetch-player-stats.ts", /for \(const \[id, teamId\] of seasonStatTargets\(perPlayer\)\) touched\.set\(id, teamId\);/],
   ];
-  for (const [file, guard] of guards) assert.match(readFileSync(file, "utf8"), guard, `${file} applies the shared predicate`);
+  for (const [file, guard] of guards) assert.match(withoutComments(readFileSync(file, "utf8")), guard, `${file} applies the shared predicate`);
+  // The guard itself must not be fooled by a commented-out call.
+  assert.doesNotMatch(withoutComments("// for (const [id, teamId] of seasonStatTargets(perPlayer)) touched.set(id, teamId);\n/* x ${notPseudoAthleteSql()} */"), /seasonStatTargets|notPseudoAthleteSql/);
 });

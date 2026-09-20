@@ -10,8 +10,9 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { ImageActions } from "@/components/ImageActions";
 import { InjuriesExportCard } from "@/components/InjuriesExportCard";
 
-// The filtered views read the query, so those renders are per request; a league with no injury
-// tracker 404s before that and is cached, so this window is held to the cap (next.config.ts).
+// Every render for a tracked league awaits searchParams after the notFound() check below, so it is
+// per request. Only the 404 path (a league with no injury tracker, which returns before searchParams
+// is read) is cached, and this window is held to the cap for it (next.config.ts).
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {

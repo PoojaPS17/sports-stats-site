@@ -14,11 +14,11 @@ import { TennisScoresExportCard } from "@/components/TennisExportCards";
 
 export const revalidate = 15;
 
-// Dynamic on purpose: no generateStaticParams here, so the day's scores is read on every request.
-// Measured (fix round 1): a cached copy is handed to the first visitor after a quiet spell with
-// no upper bound on its age, and a copy rendered before play started carries LiveRefresh
-// switched off, so that page would never catch up on its own. The window above still sets the
-// default for the cached fetches inside this render.
+// Dynamic on purpose: no generateStaticParams here, so the day's scores is read fresh each time.
+// It renders on every request and answers no-store: a cached render is up to 5 minutes old
+// (expireTime in next.config.ts), and a render made in the pre state ships no LiveRefresh timer,
+// so it would not catch up on its own. The window above still sets the default for the cached
+// fetches inside this render.
 
 export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
   const { date } = await params;

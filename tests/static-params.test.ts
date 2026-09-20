@@ -26,7 +26,7 @@ function expireTime(): number {
 // Reasons a route module under a dynamic segment is allowed to have no generateStaticParams.
 // Anything not listed here must have one.
 const DYNAMIC_ON_PURPOSE: Record<string, string> = {
-  "[league]/games/[id]/page.tsx": "live match state; a cached copy can be any age and ships no LiveRefresh timer",
+  "[league]/games/[id]/page.tsx": "live match state; a cached render is up to 5 minutes old and its pre-state render ships no LiveRefresh timer",
   "[league]/games/[id]/opengraph-image.tsx": "draws the live score",
   "[league]/scores/[date]/page.tsx": "today's scores are live",
   "cricket/matches/[id]/page.tsx": "live match state",
@@ -83,9 +83,16 @@ function code(file: string): string {
 }
 
 const hasStaticParams = (src: string) => /^export (?:async )?function generateStaticParams\b/m.test(src);
-const revalidateOf = (src: string) => {
-  const m = src.match(/^export const revalidate = (\d+);$/m);
-  return m ? Number(m[1]) : null;
+/**
+ * The route's `export const revalidate`, or null when it has none. An export that is not an integer literal
+ * (a constant, `false`, an expression) throws rather than reading as absent: this file could not check its window.
+ */
+const revalidateOf = (src: string, file: string) => {
+  const line = src.match(/^export const revalidate\b.*$/m);
+  if (!line) return null;
+  const m = line[0].match(/^export const revalidate = (\d+);$/);
+  if (!m) throw new Error(`${file}: revalidate must be an integer literal so static-params.test.ts can check it, got "${line[0]}"`);
+  return Number(m[1]);
 };
 /** The per-request inputs that force a dynamic render whatever else the module exports. */
 const requestInputs = (src: string) =>
@@ -146,7 +153,7 @@ function revalidateFiles(): { rel: string; revalidate: number }[] {
         continue;
       }
       if (!/\.tsx?$/.test(entry.name)) continue;
-      const revalidate = revalidateOf(code(path));
+      const revalidate = revalidateOf(code(path), relPath);
       if (revalidate !== null) out.push({ rel: relPath, revalidate });
     }
   };
@@ -200,13 +207,30 @@ test("no window anywhere in the app outlives the site-wide age cap", () => {
     assert.ok(found, `${rel} still exports a revalidate (the ABOVE_CAP list is stale otherwise)`);
     assert.ok(found.revalidate > cap, `${rel} is listed as long-lived but now sits at or under the cap: drop it from ABOVE_CAP`);
   }
+
+  // An entry allowed above the cap because "it reads the request" must still read it: if the read goes, the page
+  // becomes cacheable for as long as its window says, which is what the cap exists to prevent.
+  for (const [rel, reason] of Object.entries(ABOVE_CAP)) {
+    if (!reason.startsWith("reads ")) continue;
+    const mod = MODULES.find((m) => m.rel === rel);
+    assert.ok(mod, `${rel} is still a route module`);
+    assert.notDeepEqual(requestInputs(mod.src), [], `${rel} is above the cap because it reads the request, but no longer reads searchParams, headers() or cookies()`);
+  }
+});
+
+test("revalidateOf fails loudly on an export it cannot read", () => {
+  assert.equal(revalidateOf("export const revalidate = 300;\n", "a.tsx"), 300);
+  assert.equal(revalidateOf("const revalidate = 300;\n", "a.tsx"), null);
+  for (const bad of ["export const revalidate = false;", "export const revalidate = 60 * 5;", "export const revalidate = TTL;", "export const revalidate = 300"]) {
+    assert.throws(() => revalidateOf(bad, "x/page.tsx"), /x\/page\.tsx: revalidate must be an integer literal/, bad);
+  }
 });
 
 test("the cached routes and their windows are exactly the ones listed here", () => {
-  const cached = MODULES.filter((m) => hasStaticParams(m.src) && !LAYOUT_FILE.test(m.rel.split("/").pop()!));
+  const cached = MODULES.filter((m) => hasStaticParams(m.src));
   assert.deepEqual(cached.map((m) => m.rel).sort(), Object.keys(REVALIDATE).sort());
   for (const mod of cached) {
-    assert.equal(revalidateOf(mod.src), REVALIDATE[mod.rel], `${mod.rel} revalidate`);
+    assert.equal(revalidateOf(mod.src, mod.rel), REVALIDATE[mod.rel], `${mod.rel} revalidate`);
   }
 });
 

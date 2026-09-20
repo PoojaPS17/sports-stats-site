@@ -9,11 +9,10 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const revalidate = 300;
 
-// Dynamic on purpose: no generateStaticParams here, so the score on the share image is read on every request.
-// Measured (fix round 1): a cached copy is handed to the first visitor after a quiet spell with
-// no upper bound on its age, and a copy rendered before play started carries LiveRefresh
-// switched off, so that page would never catch up on its own. The window above still sets the
-// default for the cached fetches inside this render.
+// Dynamic on purpose: no generateStaticParams here, so the score on the share image is read fresh each time.
+// It renders on every request and answers no-store: a cached render is up to 5 minutes old
+// (expireTime in next.config.ts), which would show a stale score on the share image. The window
+// above still sets the default for the cached fetches inside this render.
 
 function Side({ name, logo, score, muted }: { name: string; logo: string | null; score: string | null; muted: boolean }) {
   return (

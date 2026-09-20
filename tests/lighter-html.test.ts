@@ -11,6 +11,8 @@ import { PlayerIndexLink } from "../src/components/PlayerIndexLink";
 import { PlayerIndexList } from "../src/components/PlayerIndexList";
 import { packPlayers } from "../src/lib/playerIndex";
 import { TeamHeader } from "../src/components/TeamHeader";
+import { MatchHeader } from "../src/components/MatchHeader";
+import type { GameRow } from "../src/lib/queries";
 import type { PlayerLogRow } from "../src/lib/playerProfile";
 
 // Every element of `type` reachable through `props.children`, without rendering function components.
@@ -189,14 +191,48 @@ test("a team page header loads its crest straight away; a crest further down the
   assert.doesNotMatch(head, /loading=/);
 });
 
-test("the players index page renders every player it is given", () => {
+test("a match page header loads both crests straight away", () => {
+  const game = {
+    espn_id: "401585123",
+    date: "2026-01-15T00:00:00.000Z",
+    home_name: "Boston Celtics",
+    away_name: "Los Angeles Lakers",
+    home_slug: "boston-celtics",
+    away_slug: "los-angeles-lakers",
+    home_logo: "https://a.espncdn.com/i/teamlogos/nba/500/bos.png",
+    away_logo: logo,
+    home_color: null,
+    away_color: null,
+    home_score: 101,
+    away_score: 99,
+    home_score_display: null,
+    away_score_display: null,
+    home_winner: true,
+    away_winner: false,
+    completed: true,
+    status_state: "post",
+    status_detail: "Final",
+    status_summary: null,
+    round: null,
+  } as unknown as GameRow;
+  const head = renderToStaticMarkup(createElement(MatchHeader, { league: "nba", game }));
+  assert.equal([...head.matchAll(/<img[^>]*>/g)].length, 2, "both crests are images");
+  assert.doesNotMatch(head, /loading="lazy"/);
+  assert.doesNotMatch(head, /decoding="async"/);
+});
+
+// Source-text guard, not a behaviour test: it only checks that the page hands the whole list to packPlayers
+// and does no per-row trimming or crests of its own. tests/lighter-html.test.ts above covers what it renders.
+test("guard: the players index page renders every player it is given", () => {
   const src = readFileSync(new URL("../src/app/[league]/players/page.tsx", import.meta.url), "utf8");
   assert.match(src, /packPlayers\(players\)/);
   assert.doesNotMatch(src, /\.slice\(|\.filter\(|\.length\s*>\s*\d{2,}/);
   assert.doesNotMatch(src, /TeamLogo/);
 });
 
-test("html-to-image is loaded on demand inside the click handler, not at the top of ImageActions", () => {
+// Source-text guard, not a behaviour test: a static import of html-to-image would put the library back into
+// every page's bundle, which nothing else here would notice.
+test("guard: html-to-image is loaded on demand inside the click handler, not at the top of ImageActions", () => {
   const src = readFileSync(new URL("../src/components/ImageActions.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(src, /^import[^\n]*html-to-image/m);
   assert.match(src, /await import\("html-to-image"\)/);
