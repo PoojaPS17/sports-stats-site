@@ -61,8 +61,10 @@ function statValue(stats: any[], name: string): number | null {
 // numeric id is pulled straight out of that URL rather than dereferencing it, since
 // the driver/constructor themselves are already upserted by fetch-f1-scores.ts /
 // backfill-f1-events.ts / seed-f1-teams.ts and this only needs their existing espn_id.
-export async function upsertF1StandingsForSeason(pool: import("pg").Pool, seasonYear: number): Promise<void> {
+export async function upsertF1StandingsForSeason(pool: import("pg").Pool, seasonYear: number): Promise<{ rows: number; failedGroups: number }> {
   const data = await fetchF1Standings(seasonYear);
+  let total = 0;
+  let failedGroups = 0;
   for (const item of data.items ?? []) {
     const groupRef = item["$ref"];
     try {
@@ -88,8 +90,11 @@ export async function upsertF1StandingsForSeason(pool: import("pg").Pool, season
         count++;
       }
       console.log(`[f1-standings] ${seasonYear} ${type}: ${count} rows`);
+      total += count;
     } catch (err) {
+      failedGroups++;
       console.error(`[f1-standings] ${seasonYear} group failed:`, err instanceof Error ? err.message : err);
     }
   }
+  return { rows: total, failedGroups };
 }

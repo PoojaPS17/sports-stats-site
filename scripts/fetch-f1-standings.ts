@@ -3,11 +3,14 @@
 // year, run on a schedule the same way fetch-f1-scores.ts is.
 import { pool } from "./lib/db";
 import { upsertF1StandingsForSeason } from "./lib/f1";
+import { recordRun } from "./lib/heartbeat";
 
 async function main() {
   const seasonYear = new Date().getUTCFullYear();
-  await upsertF1StandingsForSeason(pool, seasonYear);
+  const { failedGroups } = await upsertF1StandingsForSeason(pool, seasonYear);
+  if (failedGroups === 0) await recordRun(pool, "fetch-f1-standings");
   await pool.end();
+  if (failedGroups > 0) process.exit(1);
 }
 
 main().catch((err) => {
