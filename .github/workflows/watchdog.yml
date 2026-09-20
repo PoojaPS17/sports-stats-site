@@ -1,0 +1,36 @@
+# Independent alarm for the scrapers. The VM's own hourly job runs `npm run check:stale`, but if
+# the VM's systemd schedule stops (VM down, timers disabled, job hung) nothing running inside it
+# can notice. This workflow runs on GitHub instead and fails when any scraper heartbeat is missing
+# or too old (see MAX_AGE_MINUTES in scripts/lib/heartbeat.ts); GitHub then emails the repo owner.
+name: "Watchdog: scraper freshness"
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: watchdog
+  cancel-in-progress: false
+
+jobs:
+  check-stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fail if any scraper heartbeat is stale
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run check:stale
