@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   compareSeason,
   espnFigures,
+  gamesPlayedFromPayload,
   parseArgs,
   seasonsFromPayload,
   siteSeasonOrEmpty,
@@ -53,7 +54,8 @@ test("a games mismatch and a figure mismatch are both reported", () => {
   );
 });
 
-const nflSite = (games: number, figures: Record<string, number | null>): SeasonFigures => ({ games, figures });
+const nflSite = (games: number, figures: Record<string, number | null>, gamesSource?: "espn" | "logged"): SeasonFigures =>
+  gamesSource ? { games, gamesSource, figures } : { games, figures };
 
 test("NFL: equal yards and touchdowns match, a differing yard total is a MISMATCH", () => {
   const espn: SeasonFigures = { games: 17, figures: { passYds: 4183, passTd: 27, rushYds: 422, rushTd: 5, recYds: null, recTd: null } };
@@ -89,11 +91,55 @@ test("NFL: site games above ESPN's are a MISMATCH", () => {
   assert.deepEqual(r.differences, [{ field: "games", site: 17, espn: 15 }]);
 });
 
-test("NFL: fewer site games than ESPN with every figure equal is 'games short (no stat line)', with the gap", () => {
+test("NFL: fewer site games than ESPN with every figure equal is 'games short (no stat line)' when the page shows the logged count, with the gap", () => {
   const espn: SeasonFigures = { games: 17, figures: { rushYds: 900, rushTd: 6 } };
-  const r = compareSeason(nflSite(15, { rushYds: 900, rushTd: 6 }), espn, { league: "nfl" });
+  const r = compareSeason(nflSite(15, { rushYds: 900, rushTd: 6 }, "logged"), espn, { league: "nfl" });
   assert.equal(r.verdict, "games short (no stat line)");
   assert.deepEqual(r.differences, [{ field: "games", site: 15, espn: 17 }]);
+});
+
+// -- NFL games: the page shows ESPN's stored figure, or the logged count when none is stored ---------
+
+const rushing = { rushYds: 900, rushTd: 6 };
+const espn16: SeasonFigures = { games: 16, figures: rushing };
+
+test("NFL: the page's ESPN figure equal to ESPN's is a match", () => {
+  assert.equal(compareSeason(nflSite(16, rushing, "espn"), espn16, { league: "nfl" }).verdict, "match");
+});
+
+test("NFL: site 1 game (logged, no ESPN figure stored) against ESPN 16 is 'games short (no stat line)'", () => {
+  const r = compareSeason(nflSite(1, rushing, "logged"), espn16, { league: "nfl" });
+  assert.equal(r.verdict, "games short (no stat line)");
+  assert.deepEqual(r.differences, [{ field: "games", site: 1, espn: 16 }]);
+});
+
+test("NFL: site 15 with ESPN's stored figure (stale or wrong) against ESPN 16 is a MISMATCH", () => {
+  const r = compareSeason(nflSite(15, rushing, "espn"), espn16, { league: "nfl" });
+  assert.equal(r.verdict, "MISMATCH");
+  assert.deepEqual(r.differences, [{ field: "games", site: 15, espn: 16 }]);
+});
+
+test("NFL: fewer site games with no known source is a MISMATCH, not games short", () => {
+  assert.equal(compareSeason(nflSite(15, rushing), espn16, { league: "nfl" }).verdict, "MISMATCH");
+});
+
+test("NFL: site 17 against ESPN 16 is a MISMATCH whatever the source", () => {
+  for (const source of ["espn", "logged"] as const) {
+    const r = compareSeason(nflSite(17, rushing, source), espn16, { league: "nfl" });
+    assert.equal(r.verdict, "MISMATCH");
+    assert.deepEqual(r.differences, [{ field: "games", site: 17, espn: 16 }]);
+  }
+});
+
+test("NFL: a figure difference wins over games short, for a logged season too", () => {
+  const r = compareSeason(nflSite(1, { rushYds: 850, rushTd: 6 }, "logged"), espn16, { league: "nfl" });
+  assert.equal(r.verdict, "MISMATCH");
+  assert.deepEqual(r.differences.map((d) => d.field), ["games", "rushYds"]);
+});
+
+test("NBA: a games difference is a MISMATCH whatever gamesSource says", () => {
+  assert.equal(compareSeason({ games: 68, gamesSource: "logged", figures: { ppg: 27.0 } }, nbaEspn(70, 27.0), { league: "nba" }).verdict, "MISMATCH");
+  assert.equal(compareSeason({ games: 68, gamesSource: "espn", figures: { ppg: 27.0 } }, nbaEspn(70, 27.0), { league: "nba" }).verdict, "MISMATCH");
 });
 
 test("NFL: fewer site games and a differing yard total is a MISMATCH carrying both differences", () => {
@@ -152,6 +198,64 @@ test("espnFigures reads NFL yards and touchdowns per category and the largest GP
   });
 });
 
+test("espnFigures: for the NFL a games figure (the loader's) overrides the categories' GP, a null falls back to it", () => {
+  const stored = {
+    passing: { labels: ["GP", "YDS", "TD"], values: ["11", "3,000", "20"] },
+    rushing: { labels: ["GP", "YDS", "TD"], values: ["11", "100", "1"] },
+  };
+  assert.equal(espnFigures("nfl", stored, 17)?.games, 17);
+  assert.deepEqual(espnFigures("nfl", stored, 17)?.figures, { passYds: 3000, passTd: 20, rushYds: 100, rushTd: 1, recYds: null, recTd: null });
+  assert.equal(espnFigures("nfl", stored, null)?.games, 11);
+  assert.equal(espnFigures("nfl", stored, undefined)?.games, 11);
+  assert.equal(espnFigures("nfl", stored)?.games, 11);
+  // A row with no readable GP at all takes the loader's figure too.
+  assert.equal(espnFigures("nfl", { rushing: { labels: ["YDS"], values: ["100"] } }, 9)?.games, 9);
+});
+
+test("espnFigures: the NBA ignores a games figure", () => {
+  const stored = { averages: { labels: ["GP", "PTS"], values: ["50", "28.2"] } };
+  assert.deepEqual(espnFigures("nba", stored, 99), { games: 50, figures: { ppg: 28.2 } });
+});
+
+// Robinson-shaped: a traded player whose payload has a row per team and no Totals row (3 games, then 1).
+const tradedNoTotals = [
+  { name: "passing", labels: ["GP", "CMP", "YDS", "TD"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["3", "10", "100", "1"] }, { season: { year: 2025 }, teamSlug: "b", stats: ["1", "2", "20", "0"] }] },
+  { name: "rushing", labels: ["GP", "CAR", "YDS", "TD"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["3", "5", "30", "0"] }, { season: { year: 2025 }, teamSlug: "b", stats: ["1", "1", "4", "0"] }, { season: { year: 2024 }, teamSlug: "a", stats: ["17", "9", "60", "1"] }] },
+];
+
+test("gamesPlayedFromPayload gives the loader's games per year: a traded player without a Totals row sums the stints (3 + 1)", () => {
+  const games = gamesPlayedFromPayload(tradedNoTotals, 2016);
+  assert.deepEqual([...games.entries()].sort(), [[2024, 17], [2025, 4]]);
+  // The seasons the audit reads are the same years.
+  assert.deepEqual([...seasonsFromPayload(tradedNoTotals, seasonRow, 2016).keys()].sort(), [2024, 2025]);
+  // The first-stint category row alone would say 3: that is the figure the audit no longer uses.
+  assert.equal(espnFigures("nfl", seasonsFromPayload(tradedNoTotals, seasonRow, 2016).get(2025)!)?.games, 3);
+  assert.equal(espnFigures("nfl", seasonsFromPayload(tradedNoTotals, seasonRow, 2016).get(2025)!, games.get(2025))?.games, 4);
+});
+
+test("gamesPlayedFromPayload takes the Totals row's GP when the payload has one, and only years from minYear", () => {
+  const withTotals = [
+    {
+      name: "rushing",
+      labels: ["GP", "CAR", "YDS", "TD"],
+      statistics: [
+        { season: { year: 2009 }, teamSlug: "a", stats: ["16", "1", "1", "0"] },
+        { season: { year: 2022 }, teamSlug: "car", stats: ["6", "5", "30", "0"] },
+        { season: { year: 2022 }, teamSlug: "sf", stats: ["11", "9", "60", "1"] },
+        { season: { year: 2022 }, teamSlug: "2022 Totals", displayName: "2022  Totals", stats: ["17", "14", "90", "1"] },
+      ],
+    },
+  ];
+  assert.deepEqual([...gamesPlayedFromPayload(withTotals, 2016).entries()], [[2022, 17]]);
+});
+
+test("gamesPlayedFromPayload is null for a year with no readable GP, and for a GP of 0 (the loader stores neither)", () => {
+  const noGp = [{ name: "rushing", labels: ["YDS"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["50"] }] }];
+  assert.deepEqual([...gamesPlayedFromPayload(noGp, 2016).entries()], [[2025, null]]);
+  const zero = [{ name: "rushing", labels: ["GP", "YDS"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["0", "0"] }] }];
+  assert.deepEqual([...gamesPlayedFromPayload(zero, 2016).entries()], [[2025, null]]);
+});
+
 test("seasonsFromPayload reads every season in the window through the loader's seasonRow, a traded season from its Totals row", () => {
   const payload = [
     {
@@ -208,7 +312,31 @@ test("siteSeasons sums NFL yards and touchdowns for the season, including catego
     row("c", "2026-01-11", "playoffs", 2025, passer(400, 4)),
   ];
   const seasons = siteSeasons("nfl", buildStagedProfile("nfl", rows).regular);
-  assert.deepEqual(seasons.get(2025), { games: 2, figures: { passYds: 550, passTd: 3, rushYds: 10, rushTd: 0, recYds: 0, recTd: 0 } });
+  assert.deepEqual(seasons.get(2025), { games: 2, gamesSource: "logged", figures: { passYds: 550, passTd: 3, rushYds: 10, rushTd: 0, recYds: 0, recTd: 0 } });
+});
+
+test("siteSeasons carries each NFL season's gamesSource: ESPN's stored figure, or the logged count", () => {
+  const line: Stats = { rushing: { CAR: "5", YDS: "20", TD: "0" } };
+  const rows = [
+    row("a", "2024-09-08", "regular", 2024, line),
+    row("b", "2025-09-07", "regular", 2025, line),
+    row("c", "2025-09-14", "regular", 2025, line),
+  ];
+  // 2025 has a stored figure (16, above the 2 logged games); 2024 has none.
+  const seasons = siteSeasons("nfl", buildStagedProfile("nfl", rows, new Map([[2025, 16]])).regular);
+  assert.equal(seasons.get(2025)?.games, 16);
+  assert.equal(seasons.get(2025)?.gamesSource, "espn");
+  assert.equal(seasons.get(2024)?.games, 1);
+  assert.equal(seasons.get(2024)?.gamesSource, "logged");
+  // Through the comparison: 2024 is games short against ESPN's 16, 2025 matches.
+  const espn: SeasonFigures = { games: 16, figures: { passYds: 0, passTd: 0, rushYds: 20, rushTd: 0, recYds: 0, recTd: 0 } };
+  assert.equal(compareSeason(seasons.get(2024)!, { ...espn, figures: { ...espn.figures, rushYds: 20 } }, { league: "nfl" }).verdict, "games short (no stat line)");
+  assert.equal(compareSeason(seasons.get(2025)!, { ...espn, figures: { ...espn.figures, rushYds: 40 } }, { league: "nfl" }).verdict, "match");
+});
+
+test("siteSeasons leaves an NBA season's gamesSource out", () => {
+  const seasons = siteSeasons("nba", buildStagedProfile("nba", [row("a", "2025-01-01", "regular", 2025, { box: { MIN: "30", PTS: "20" } })]).regular);
+  assert.ok(!("gamesSource" in seasons.get(2025)!));
 });
 
 test("a season with only playoff box scores has no regular-season games: no box scores, not a match", () => {

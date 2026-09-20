@@ -2,7 +2,7 @@
 // same season on ESPN. Nothing here opens a database connection or calls ESPN, so the tests can
 // import it freely (the loader in season-stats.ts, which the CLI uses, opens the pool on import).
 import { cell, type PlayerProfile, type PlayerSport } from "../../src/lib/playerProfile";
-import type { SeasonStatRow } from "./season-row";
+import { seasonGamesPlayed, type SeasonStatRow } from "./season-row";
 
 export type AuditLeague = "nba" | "nfl";
 
@@ -10,6 +10,9 @@ export type AuditLeague = "nba" | "nfl";
  * NBA: `ppg`. NFL: passing, rushing and receiving yards and touchdowns. */
 export interface SeasonFigures {
   games: number | null;
+  /** The site's side, NFL only: where the page's games figure comes from, ESPN's stored games played or
+   * the logged count (shown with a `*`, because no ESPN figure is stored for that season). */
+  gamesSource?: "espn" | "logged";
   figures: Record<string, number | null>;
 }
 
@@ -51,8 +54,10 @@ function differs(field: string, site: number | null, espn: number | null): boole
 
 export interface CompareOptions {
   /** NFL only: fewer site games than ESPN with every figure equal is "games short (no stat line)",
-   * not a mismatch (a player who played without a line in the box score is in ESPN's GP and not on
-   * the site). Every other case, and every NBA games difference, stays a MISMATCH. */
+   * not a mismatch, when the page shows the logged count because no ESPN games figure is stored for
+   * the season (`site.gamesSource === "logged"`; a player who played without a line in the box score
+   * is in ESPN's GP and not in the log). Fewer games with a stored ESPN figure (`"espn"`, stale or
+   * wrong) is a MISMATCH, and so is every other case, and every NBA games difference. */
   league?: AuditLeague;
   /** ESPN is authoritative for this season (a live read inside the loader's window): a season where
    * the site has regular-season games and ESPN has no row is a MISMATCH, not a listed class. */
@@ -65,7 +70,8 @@ export interface CompareOptions {
  *   no box scores       ESPN has the season, the site has no regular-season game: a coverage gap
  *   no ESPN row         the site has regular-season games, ESPN has nothing (a MISMATCH under requireEspnRow)
  *   games not verified  every figure agrees but ESPN's games played is absent, so games are unchecked
- *   games short (no stat line)  NFL: site games below ESPN's GP, every figure equal
+ *   games short (no stat line)  NFL: site games below ESPN's GP, every figure equal, and the page shows
+ *                       the logged count because no ESPN games figure is stored for the season
  *   nothing to compare  neither side has anything for the season
  * Only `match` is a match. */
 export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, options: CompareOptions = {}): Comparison {
@@ -93,7 +99,7 @@ export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, o
     return figureDifferences.length > 0 ? { verdict: "MISMATCH", differences: figureDifferences } : { verdict: "match", differences: [] };
   }
   const games: Difference = { field: "games", site: site.games, espn: espn.games };
-  if (options.league === "nfl" && site.games < espn.games && figureDifferences.length === 0) {
+  if (options.league === "nfl" && site.games < espn.games && figureDifferences.length === 0 && site.gamesSource === "logged") {
     return { verdict: "games short (no stat line)", differences: [games] };
   }
   return { verdict: "MISMATCH", differences: [games, ...figureDifferences] };
@@ -129,9 +135,12 @@ const NFL_FIGURES: { field: string; category: string; label: string }[] = [
 ];
 
 /** ESPN's regular-season line for one season, read the way the loader reads it.
- * NBA: `averages` GP and PTS. NFL: GP (each category repeats the player's games played; the largest
- * is used), and passing, rushing and receiving YDS and TD. Null when the row has none of it. */
-export function espnFigures(league: AuditLeague, categories: StoredCategories): SeasonFigures | null {
+ * NBA: `averages` GP and PTS (`gamesPlayed` is ignored). NFL: passing, rushing and receiving YDS and TD,
+ * and games: the loader's own figure `gamesPlayed` (player_season_stats.games_played, or
+ * `seasonGamesPlayed` on a live payload) when there is one, else the largest GP the categories give
+ * (each category repeats the player's games played, but a traded player's first-stint row is one stint).
+ * Null when the row has none of it. */
+export function espnFigures(league: AuditLeague, categories: StoredCategories, gamesPlayed?: number | null): SeasonFigures | null {
   if (league === "nba") {
     const averages = categories.averages;
     if (!averages) return null;
@@ -142,7 +151,8 @@ export function espnFigures(league: AuditLeague, categories: StoredCategories): 
   const gps = cats.map((c) => figureAt(c, "GP")).filter((n): n is number => n !== null);
   const figures: Record<string, number | null> = {};
   for (const f of NFL_FIGURES) figures[f.field] = figureAt(categories[f.category], f.label);
-  return { games: gps.length > 0 ? Math.max(...gps) : null, figures };
+  const fromCategories = gps.length > 0 ? Math.max(...gps) : null;
+  return { games: typeof gamesPlayed === "number" ? gamesPlayed : fromCategories, figures };
 }
 
 export interface EspnCategory {
@@ -150,6 +160,17 @@ export interface EspnCategory {
   displayName?: string;
   labels?: string[];
   statistics?: SeasonStatRow[];
+}
+
+function payloadYears(categories: EspnCategory[], minYear: number): Set<number> {
+  const years = new Set<number>();
+  for (const category of categories) {
+    for (const row of category.statistics ?? []) {
+      const y = row.season?.year;
+      if (typeof y === "number" && y >= minYear) years.add(y);
+    }
+  }
+  return years;
 }
 
 /** Every season of a live athlete /stats payload (from `minYear` on) as the stored-categories shape,
@@ -161,13 +182,7 @@ export function seasonsFromPayload(
   readRow: (category: EspnCategory, year: number) => StoredCategory | null,
   minYear: number
 ): Map<number, StoredCategories> {
-  const years = new Set<number>();
-  for (const category of categories) {
-    for (const row of category.statistics ?? []) {
-      const y = row.season?.year;
-      if (typeof y === "number" && y >= minYear) years.add(y);
-    }
-  }
+  const years = payloadYears(categories, minYear);
   const out = new Map<number, StoredCategories>();
   for (const year of years) {
     const stored: StoredCategories = {};
@@ -180,12 +195,27 @@ export function seasonsFromPayload(
   return out;
 }
 
+/** The NFL games played the loader would store for each season of a live payload (from `minYear` on),
+ * for the same years `seasonsFromPayload` returns: `seasonGamesPlayed`, which takes a traded player's
+ * Totals row, or sums the teams when there is none. Null where the loader stores none (no readable GP,
+ * or a GP of 0, which it drops), so the caller falls back to the categories' GP. */
+export function gamesPlayedFromPayload(categories: EspnCategory[], minYear: number): Map<number, number | null> {
+  const out = new Map<number, number | null>();
+  for (const year of payloadYears(categories, minYear)) {
+    const games = seasonGamesPlayed(categories, year);
+    out.set(year, games !== null && games > 0 ? games : null);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // The site's side
 // ---------------------------------------------------------------------------
 /** The regular-season line per season that the player page shows. Games come from the profile's
  * season table (`regular` is regular-season games only; playoffs, play-in and excluded games are not
- * in it). NBA points per game is the table's own figure. The NFL totals are summed from the same
+ * in it); for the NFL the profile must be built with the same ESPN games map the page uses, and each
+ * season carries its `gamesSource` ("espn" when ESPN's stored figure is shown, "logged" when it is the
+ * logged count). NBA points per game is the table's own figure. The NFL totals are summed from the same
  * rows with the same cell reader the page's columns use, so they are the page's numbers even for a
  * category the page hides because it is a small part of the player's game (a receiver's one carry). */
 export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<number, SeasonFigures> {
@@ -199,7 +229,7 @@ export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<num
     const total = (category: string, label: string) => rows.reduce((sum, r) => sum + (cell(r.stats, category, label) ?? 0), 0);
     const figures: Record<string, number | null> = {};
     for (const f of NFL_FIGURES) figures[f.field] = total(f.category, f.label);
-    out.set(season.season, { games: season.games, figures });
+    out.set(season.season, { games: season.games, gamesSource: season.gamesSource, figures });
   }
   return out;
 }
@@ -225,7 +255,8 @@ export interface Args {
   live: number | null;
   /** Cap the number of players per league. */
   limit: number | null;
-  /** Also fail (exit 1) on "games not verified" and "games short (no stat line)". */
+  /** Also fail (exit 1) on "games not verified" and "games short (no stat line)" (the page shows the
+   * logged count because no ESPN games figure is stored for the season). */
   strict: boolean;
 }
 
@@ -234,7 +265,8 @@ export const MAX_COUNT = 100000;
 export const USAGE = [
   "usage: tsx scripts/audit-player-totals.ts [nba|nfl] [--live N] [--limit N] [--strict]   (N a whole number from 1 to 100000)",
   "  --live N --limit M samples the N random players from the first M players by ESPN id.",
-  "  --strict also exits 1 on 'games not verified' and NFL 'games short (no stat line)'.",
+  "  --strict also exits 1 on 'games not verified' and NFL 'games short (no stat line)'",
+  "  (the page shows the logged count because no ESPN games figure is stored for the season).",
 ].join("\n");
 
 export function parseArgs(argv: string[]): Args | { error: string } {

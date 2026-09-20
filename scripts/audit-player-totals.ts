@@ -12,14 +12,23 @@
 // Exits 1 when any season is a MISMATCH (or a live read failed), 2 on bad arguments. Listed but not
 // failing: coverage gaps (ESPN has the season, no regular-season box scores), "no ESPN row" (stored
 // mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
-// gives no games played), NFL "games short (no stat line)" (site games below ESPN's GP, every
-// figure equal). --strict makes the last two fail too.
+// gives no games played), NFL "games short (no stat line)" (the page shows the logged count, with a
+// `*`, because no ESPN games figure is stored for the season; site games below ESPN's, every figure
+// equal). --strict makes the last two fail too.
+//
+// NFL games: the site side is the page's own figure (the regular profile is built with the stored ESPN
+// games map, as the player page does: ESPN's games played where stored, else the logged count). The
+// ESPN side is the loader's figure, not the first-stint category GP: player_season_stats.games_played
+// (stored mode) or seasonGamesPlayed on the payload (live mode), the categories' GP only as a fallback.
+// A page showing a stored ESPN figure that is below ESPN's is a MISMATCH (stale or wrong), as is any
+// page figure above ESPN's.
 //
 // `select` only. The database is imported after the arguments are validated, so a usage error never
 // opens a connection. The live read uses the loader's own row selection (season-row.ts, pure).
 import {
   compareSeason,
   espnFigures,
+  gamesPlayedFromPayload,
   parseArgs,
   seasonsFromPayload,
   siteSeasonOrEmpty,
@@ -32,7 +41,7 @@ import {
   type StoredCategories,
 } from "./lib/audit-player-totals";
 import { seasonRow } from "./lib/season-row";
-import { fetchPlayerLog } from "../src/lib/playerLog";
+import { fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
 import { buildStagedProfile, playerSport } from "../src/lib/playerProfile";
 
 const LIVE_PAUSE_MS = 150;
@@ -108,27 +117,33 @@ async function main() {
       for (const player of players) {
         try {
           const log = await fetchPlayerLog(pool, league, player.id);
-          const regular = buildStagedProfile(sport, log).regular;
+          // The page's own build: for the NFL with ESPN's stored games played per season (an empty map otherwise).
+          const regular = buildStagedProfile(sport, log, await fetchReportedGames(pool, league, player.id)).regular;
           const site = siteSeasons(sport, regular);
           const traded = args.live ? new Set<number>() : tradedSeasons(regular);
 
+          // Per season: ESPN's categories, and the games figure the loader has (or would store) for it.
           let espn: Map<number, StoredCategories>;
+          let espnGames: Map<number, number | null>;
           if (args.live) {
             const data = await fetchAthleteSeasonStats(league, player.id);
-            espn = seasonsFromPayload((data.categories ?? []) as EspnCategory[], seasonRow, minYear);
+            const payload = (data.categories ?? []) as EspnCategory[];
+            espn = seasonsFromPayload(payload, seasonRow, minYear);
+            espnGames = gamesPlayedFromPayload(payload, minYear);
           } else {
-            const { rows } = await pool.query<{ season: number; categories: StoredCategories }>(
-              `select season, categories from player_season_stats where league = $1 and player_espn_id = $2`,
+            const { rows } = await pool.query<{ season: number; categories: StoredCategories; games_played: number | null }>(
+              `select season, categories, games_played from player_season_stats where league = $1 and player_espn_id = $2`,
               [league, player.id]
             );
             espn = new Map(rows.map((r) => [r.season, r.categories]));
+            espnGames = new Map(rows.map((r) => [r.season, r.games_played]));
           }
 
           const seasons = [...new Set([...site.keys(), ...espn.keys()])].sort((a, b) => a - b);
           for (const season of seasons) {
             const siteLine = siteSeasonOrEmpty(site, season);
             const stored = espn.get(season);
-            const espnLine = stored ? espnFigures(league, stored) : null;
+            const espnLine = stored ? espnFigures(league, stored, espnGames.get(season)) : null;
             // Live, inside the loader's window: ESPN is authoritative, so a season it has no row for is a mismatch.
             const result = compareSeason(siteLine, espnLine, { league, requireEspnRow: Boolean(args.live) && season >= minYear });
             const finding: Finding = { league, playerId: player.id, name: player.name, season, siteGames: siteLine.games ?? 0, differences: result.differences, traded: traded.has(season) };
@@ -171,7 +186,7 @@ async function main() {
   console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the database has no regular-season box scores; never a match)`);
   console.log(`  no ESPN row:                ${noEspn.length}   (the site has regular-season games, ESPN has no row; ${args.live ? "outside the loader's window only, inside it is a mismatch" : "stored rows exist only for current-roster players"})`);
   console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
-  console.log(`  games short (no stat line): ${short.length}   (NFL: site games below ESPN's GP, every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
+  console.log(`  games short (no stat line): ${short.length}   (NFL: the page shows the logged count because no ESPN games figure is stored for the season; every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  nothing to compare:         ${nothing}   (neither side has anything for the season)`);
   if (failures.length > 0) console.log(`  failed reads:               ${failures.length}   (fails the run)`);
 
