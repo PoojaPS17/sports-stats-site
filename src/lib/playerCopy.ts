@@ -17,7 +17,7 @@ const noBoxScoreLead = (scope: string): string =>
   `† ESPN's box scores have no stat line for some of this player's games. For ${scope} the games, per-game averages and percentages are ESPN's own season figures where the site can use ESPN's row for the season; otherwise the games count includes them and the per-game averages and percentages cover only games with a box score (W-L is left blank).`;
 
 /** Added to the main player page's career strip description when its GP includes games with no box score (marked † in the tables). */
-export const NBA_NO_BOX_SCORE_NOTE = `${noBoxScoreLead("those seasons")} The game log, best games, splits and milestones below count only games with a box score.`;
+export const NBA_NO_BOX_SCORE_NOTE = `${noBoxScoreLead("those seasons")} The game log, best games and splits below count only games with a box score, as do the counts in Milestones.`;
 
 /** The same note for a season page, which reads for one season and has a game log, best games and splits but no milestones. */
 export const NBA_NO_BOX_SCORE_SEASON_NOTE = `${noBoxScoreLead("this season")} The game log, best games and splits below count only games with a box score.`;
@@ -48,7 +48,7 @@ export const withBoxRowsNote = (text: string, n: number): string => (n <= 0 ? te
  * of games shows ESPN's own line. */
 export const nbaCardNote = (boxOnlyShort: number): string =>
   boxOnlyShort === 0
-    ? "† Includes games without a box score; the figures are ESPN's season figures."
+    ? "† Includes games without a box score; the seasons short of a box score use ESPN's own season figures."
     : "† Includes games without a box score; some averages count only games with a box score.";
 
 /** Added to the Milestones description: "First game on record" and the "Nth game" landmarks count every game played
@@ -61,11 +61,12 @@ export const withMilestonesNote = (text: string, n: number): string => (n <= 0 ?
 /** The regular-season footnote at the foot of the player page when some games have no box score. Both halves hold
  * whether or not a season is shown from ESPN's row. */
 export const NBA_REGULAR_SEASON_FOOTNOTE =
-  "Where the site can use ESPN's row for a season, that season's figures are ESPN's own; otherwise the games played include games without a box score and the per-game averages cover only games with a box score. The game log, best games, splits and milestones count only games with a box score.";
+  "Where the site can use ESPN's row for a season, that season's figures are ESPN's own; otherwise the games played include games without a box score and the per-game averages cover only games with a box score. The game log, best games and splits count only games with a box score, as do the counts in Milestones.";
 
-/** The season page's section description: "every game" is not true when some of the season's games have no box score. */
+/** The season page's section description: "every game" is not true when some of the season's games have no box score, and
+ * "the games on record" is not true either when the season is shown from ESPN's own row, so the lead is neutral then. */
 export const seasonFiguresText = (label: string, split: boolean, noBoxScore: number): string =>
-  `${label}${split ? " regular-season" : ""} figures from ${noBoxScore > 0 ? "the games" : "every game"} on record.`;
+  `${label}${split ? " regular-season" : ""} figures${noBoxScore > 0 ? "" : " from every game on record"}.`;
 
 /** The GS column's tooltip in a table that has a † season: GS is a count, so it follows the season's line too. */
 export const nbaGamesStartedTitle = (espnLine: boolean): string =>
