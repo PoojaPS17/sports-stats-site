@@ -367,7 +367,9 @@ export const USAGE = [
   "  ESPN's own row, and checks its games and points against that row (honours --limit): 'confirmed', 'ESPN",
   "  internal' (within 3 games; listed, never fails), 'log incomplete' (the log is more than 3 games short of the",
   "  row and its points do not exceed the row's, so it is missing games; listed, never fails) or MISMATCH",
-  "  (fails the run, as does a game log that could not be read or has no regular-season game).",
+  "  (fails the run, as does a game log that could not be read). A season ESPN has no regular-season game log for",
+  "  (its box scores are blank for the Bulls' and Pelicans' 2015-2018 games) is listed as 'ESPN has no log' and",
+  "  never fails the run, unless every season checked was like that (a wholesale change on ESPN's side).",
 ].join("\n");
 
 export function parseArgs(argv: string[]): Args | { error: string } {

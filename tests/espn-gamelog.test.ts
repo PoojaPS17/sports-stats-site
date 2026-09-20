@@ -2,7 +2,7 @@
 // Pure: no network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { classifyGamelog, gamelogRegularSeason, MAX_GAME_POINTS, MAX_INTERNAL_GAMES } from "../scripts/lib/espn-gamelog";
+import { classifyGamelog, gamelogNotReadAtAll, gamelogRegularSeason, MAX_GAME_POINTS, MAX_INTERNAL_GAMES } from "../scripts/lib/espn-gamelog";
 
 const NAMES = [
   "minutes",
@@ -91,6 +91,101 @@ test("gamelogRegularSeason takes the group whose name contains Regular, whatever
     ],
   };
   assert.deepEqual(gamelogRegularSeason(p), { games: 1, points: 11 });
+});
+
+// -- the All-Star Game: ESPN lists it in "Regular Season", the site and ESPN's season row do not count it --------
+
+/** The real shape: `events` maps an event id to the event object, whose `team.isAllStar` marks the exhibition. */
+const eventInfo = (isAllStar: boolean | undefined) => ({ team: isAllStar === undefined ? {} : { isAllStar } });
+
+test("gamelogRegularSeason drops the All-Star Game (team.isAllStar true) and counts every other event", () => {
+  // Bosh 2015 in miniature: 43 real games of 908 points would be 2 games of 30 + 20 here; the All-Star Game is 11 minutes, 10 points.
+  const p = {
+    names: NAMES,
+    events: { "1": eventInfo(false), "2": eventInfo(false), "400606285": { ...eventInfo(true), eventNote: "NBA ALL-STAR GAME" } },
+    seasonTypes: [{ displayName: "2014-15 Regular Season", categories: [{ displayName: "January", events: [event("1", "34", "30"), event("400606285", "11", "10")] }, { displayName: "February", events: [event("2", "30", "20")] }] }],
+  };
+  assert.deepEqual(gamelogRegularSeason(p), { games: 2, points: 50 });
+});
+
+test("gamelogRegularSeason still counts an event with no matching payload.events entry, or with no isAllStar flag", () => {
+  const p = {
+    names: NAMES,
+    events: { "1": eventInfo(false), "3": eventInfo(undefined), "4": null, "5": "odd" },
+    seasonTypes: [{ displayName: "2014-15 Regular Season", categories: [{ events: [event("1", "30", "10"), event("2", "30", "11"), event("3", "30", "12"), event("4", "30", "13"), event("5", "30", "14")] }] }],
+  };
+  assert.deepEqual(gamelogRegularSeason(p), { games: 5, points: 60 });
+  // No `events` map at all (or one that is not a map): every event is counted, as before.
+  const bare = { names: NAMES, seasonTypes: p.seasonTypes };
+  assert.deepEqual(gamelogRegularSeason(bare), { games: 5, points: 60 });
+  assert.deepEqual(gamelogRegularSeason({ ...bare, events: [] }), { games: 5, points: 60 });
+  assert.deepEqual(gamelogRegularSeason({ ...bare, events: "x" }), { games: 5, points: 60 });
+});
+
+test("gamelogRegularSeason: the All-Star Game in a playoff group changes nothing, and isAllStar must be exactly true", () => {
+  const p = {
+    names: NAMES,
+    events: { "1": eventInfo(true), "2": { team: { isAllStar: "true" } } },
+    seasonTypes: [
+      { displayName: "Regular Season", categories: [{ events: [event("1", "11", "10"), event("2", "30", "7")] }] },
+      { displayName: "Postseason", categories: [{ events: [event("1", "11", "10")] }] },
+    ],
+  };
+  assert.deepEqual(gamelogRegularSeason(p), { games: 1, points: 7 });
+});
+
+// -- a game log ESPN does not have --------------------------------------------------------------------
+
+const FILTERS = [{ name: "season", value: "2016", options: [{ value: "2016", displayValue: "2015-16" }] }];
+
+test("gamelogRegularSeason: a bare {filters} payload is 0 games and 0 points (ESPN has no game log for that season)", () => {
+  assert.deepEqual(gamelogRegularSeason({ filters: FILTERS }), { games: 0, points: 0 });
+  assert.deepEqual(gamelogRegularSeason({ filters: [] }), { games: 0, points: 0 });
+});
+
+test("gamelogRegularSeason: only a payload whose sole key is a filters array reads as no games; every other odd payload is null", () => {
+  assert.equal(gamelogRegularSeason({ filters: FILTERS, names: ["minutes"] }), null);
+  assert.equal(gamelogRegularSeason({ filters: FILTERS, names: NAMES.filter((n) => n !== "points") }), null);
+  assert.equal(gamelogRegularSeason({ filters: FILTERS, seasonTypes: payload.seasonTypes }), null);
+  assert.equal(gamelogRegularSeason({ filters: FILTERS, events: {} }), null);
+  assert.equal(gamelogRegularSeason({ code: 404, message: "Not Found" }), null);
+  assert.equal(gamelogRegularSeason({ filters: "x" }), null);
+  assert.equal(gamelogRegularSeason({ filters: {} }), null);
+  assert.equal(gamelogRegularSeason({ filters: FILTERS, code: 404 }), null);
+  assert.equal(gamelogRegularSeason({}), null);
+});
+
+test("gamelogRegularSeason: a game log with only Preseason and Postseason groups is 0 games and 0 points", () => {
+  const p = {
+    names: NAMES,
+    filters: FILTERS,
+    events: { "9": eventInfo(false) },
+    seasonTypes: [
+      { displayName: "2014-15 Preseason", categories: [{ events: [event("8", "20", "8")] }] },
+      { displayName: "2014-15 Postseason", categories: [{ events: [event("9", "40", "40")] }] },
+    ],
+  };
+  assert.deepEqual(gamelogRegularSeason(p), { games: 0, points: 0 });
+});
+
+test("gamelogNotReadAtAll: a run that checked seasons and read none with games is a wholesale ESPN change; any readable log clears it", () => {
+  assert.equal(gamelogNotReadAtAll(0, 3), true);
+  assert.equal(gamelogNotReadAtAll(0, 1), true);
+  assert.equal(gamelogNotReadAtAll(1, 3), false);
+  assert.equal(gamelogNotReadAtAll(40, 2), false);
+  // Nothing checked at all (no season shown from ESPN's own row, or --gamelog not asked): nothing to fail.
+  assert.equal(gamelogNotReadAtAll(0, 0), false);
+  assert.equal(gamelogNotReadAtAll(5, 0), false);
+});
+
+// -- Bosh 2015 (ESPN athlete 1977): the log listed 44 games / 918 points, ESPN's row is 44 GP / 928 PTS ----------
+
+test("classifyGamelog: Bosh 2015 is ESPN internal once the All-Star Game is dropped, and was a MISMATCH with it counted", () => {
+  const row = { games: 44, pts: 928 };
+  // 43 real games (908 points); the 44th is a Bulls game ESPN's box score leaves blank (20 points in ours).
+  assert.equal(classifyGamelog({ games: 43, points: 908 }, row), "ESPN internal");
+  // Counting the All-Star Game (11 minutes, 10 points) made 44 games / 918 points: same games, 10 points short.
+  assert.equal(classifyGamelog({ games: 44, points: 918 }, row), "MISMATCH");
 });
 
 // -- classifying the game log against ESPN's totals ----------------------------------------------

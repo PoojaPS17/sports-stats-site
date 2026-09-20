@@ -26,13 +26,26 @@ function pointsOf(cell: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** True for the All-Star Game: ESPN's game log lists it in its "Regular Season" group, and the event object in the
+ * payload's `events` map (keyed by event id) carries `team.isAllStar: true` (and `eventNote: "NBA ALL-STAR GAME"`).
+ * An event with no matching entry, or with no such flag, is an ordinary game. */
+function isAllStarEvent(events: unknown, eventId: unknown): boolean {
+  if (!isRecord(events) || typeof eventId !== "string") return false;
+  const info = events[eventId];
+  return isRecord(info) && isRecord(info.team) && info.team.isAllStar === true;
+}
+
 /** The regular-season games played and points of an ESPN athlete game-log payload: `names` names the columns
  * of every event's `stats`, and only the `seasonTypes` group whose `displayName` contains "Regular" counts
  * (the playoffs, play-in and preseason are other groups). An event is a played game only when its `minutes`
- * cell is a number. Null when the payload is not a game log with both a `minutes` and a `points` column, so a
- * failed or changed response is never read as a season with no games; a game log with those columns and no
- * regular-season group is 0 games and 0 points. */
+ * cell is a number, and the All-Star Game, which ESPN lists in the regular season but neither its own season
+ * row nor the site counts, is dropped (`isAllStarEvent`). Null when the payload is not a game log with both a
+ * `minutes` and a `points` column, so a failed or changed response is never read as a season with no games; a
+ * game log with those columns and no regular-season group is 0 games and 0 points, and so is the bare
+ * `{ filters: [...] }` payload ESPN answers with for a season it has no game log for (its box scores are blank
+ * for the Bulls' and Pelicans' 2015-2018 games): that record has no `names`, `seasonTypes` or `events` at all. */
 export function gamelogRegularSeason(payload: unknown): GamelogSeason | null {
+  if (isRecord(payload) && Array.isArray(payload.filters) && Object.keys(payload).length === 1) return { games: 0, points: 0 };
   if (!isRecord(payload) || !Array.isArray(payload.names)) return null;
   const minutesAt = payload.names.indexOf("minutes");
   const pointsAt = payload.names.indexOf("points");
@@ -47,12 +60,21 @@ export function gamelogRegularSeason(payload: unknown): GamelogSeason | null {
       for (const event of category.events) {
         // An event whose stats stop short of either column is malformed, not a game with blank cells.
         if (!isRecord(event) || !Array.isArray(event.stats) || event.stats.length <= Math.max(minutesAt, pointsAt) || !playedMinutes(event.stats[minutesAt])) continue;
+        if (isAllStarEvent(payload.events, event.eventId)) continue;
         games += 1;
         points += pointsOf(event.stats[pointsAt]);
       }
     }
   }
   return { games, points };
+}
+
+/** Whether a run that found ESPN with no game log for some seasons has in fact read none: it checked at least one
+ * season and not one had regular-season games (`checked` counts the logs with games, `empty` those without). A few
+ * empty logs are ESPN's own gap (the Bulls' and Pelicans' 2015-2018 seasons) and never fail the run; every log
+ * empty is a wholesale change on ESPN's side, which must not read as a clean audit. */
+export function gamelogNotReadAtAll(checked: number, empty: number): boolean {
+  return checked === 0 && empty > 0;
 }
 
 /** The most games the game log and ESPN's season row may differ by and still be ESPN disagreeing with itself. */
@@ -70,8 +92,9 @@ export type GamelogVerdict = "confirmed" | "ESPN internal" | "log incomplete" | 
  *   confirmed      the log's games equal the row's GP and its points equal the row's PTS
  *   ESPN internal  the games differ by 1 to MAX_INTERNAL_GAMES and the points differ by what those games could
  *                  hold: the side with more games has at least as many points, and at most MAX_GAME_POINTS a
- *                  game more (ESPN's game log lists the All-Star Game and the NBA Cup final in its regular
- *                  season, its season row does not, and it disagrees with itself in a few other games)
+ *                  game more (the parser drops the All-Star Game ESPN's game log lists in its regular season; the
+ *                  NBA Cup final can still appear there and its season row does not count it, and ESPN
+ *                  disagrees with itself in a few other games, for instance a game whose box score is blank)
  *   log incomplete the row has more than MAX_INTERNAL_GAMES games more than the log and the log's points do not
  *                  exceed the row's: the log can only be missing games (ESPN's game log has none for some
  *                  seasons, for instance the Bulls' and Pelicans' 2015-2018 games) and the row cannot be

@@ -653,6 +653,8 @@ test("USAGE says the partial (no box score) class never fails the run, --strict 
   assert.doesNotMatch(USAGE, /explained/);
   assert.match(USAGE, /--gamelog/);
   assert.match(USAGE, /log incomplete/);
+  // A season ESPN has no game log for is listed, never a failure; only every log being empty fails.
+  assert.match(USAGE, /ESPN has no log/);
 });
 
 // -- ESPN rows the reader rejects ---------------------------------------------------------------

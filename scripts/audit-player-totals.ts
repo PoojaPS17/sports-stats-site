@@ -13,13 +13,16 @@
 //           short of, where the row matches by construction and proves nothing), fetch ESPN's athlete game
 //           log (one request per season, 150 ms apart) and check it against that row: the games played and
 //           the points summed from the log against the row's GP and PTS. confirmed, ESPN internal (the two
-//           differ by up to 3 games and by what those games could hold: the game log lists the All-Star Game;
-//           listed, never fails), log incomplete (the log is more than 3 games short of the row and its points
-//           do not exceed the row's, so it can only be missing games, as ESPN's game log is for the Bulls' and
-//           Pelicans' 2015-2018 games; listed, never fails) or MISMATCH. A response with no regular-season
-//           game counts as unreadable. Never runs unless asked; honours --limit.
+//           differ by up to 3 games and by what those games could hold: the game log lists the NBA Cup final and
+//           the row does not, or a game's box score is blank; the log's All-Star Game, which the row does not count
+//           either, is dropped by the parser; listed, never fails), log incomplete (the log is more than 3 games
+//           short of the row and its points do not exceed the row's, so it can only be missing games, as ESPN's
+//           game log is for the Bulls' and Pelicans' 2015-2018 games; listed, never fails) or MISMATCH. A season with no regular-season game log at
+//           all (ESPN has none where it blanked the box scores: the Bulls' and Pelicans' 2015-2018 seasons) is
+//           listed as "game log empty" and never fails, unless every season checked was empty (a wholesale change on
+//           ESPN's side). Never runs unless asked; honours --limit.
 // Exits 1 when any season is a MISMATCH (or a live read failed; with --gamelog, a game log that is a MISMATCH
-// or could not be read), 2 on bad arguments. Listed but not
+// or could not be read, or every game log checked being empty), 2 on bad arguments. Listed but not
 // failing: coverage gaps (ESPN has the season, no regular-season box scores), "no ESPN row" (stored
 // mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
 // gives no games played), NFL "games short (no stat line)" (the page shows the logged count, with a
@@ -60,7 +63,7 @@ import {
   type EspnCategory,
   type StoredCategories,
 } from "./lib/audit-player-totals";
-import { classifyGamelog, gamelogRegularSeason, type GamelogSeason } from "./lib/espn-gamelog";
+import { classifyGamelog, gamelogNotReadAtAll, gamelogRegularSeason, type GamelogSeason } from "./lib/espn-gamelog";
 import { getJson } from "./lib/espn";
 import { seasonRow, seasonWindowStart } from "./lib/season-row";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
@@ -143,6 +146,7 @@ async function main() {
   let gamelogConfirmed = 0;
   const gamelogInternal: GamelogFinding[] = [];
   const gamelogIncomplete: GamelogFinding[] = [];
+  const gamelogEmpty: GamelogFinding[] = [];
   const gamelogMismatches: GamelogFinding[] = [];
   const gamelogFailures: string[] = [];
   let compared = 0;
@@ -249,14 +253,18 @@ async function main() {
               try {
                 const gamelog = gamelogRegularSeason(await fetchGamelog(player.id, season.season));
                 if (!gamelog) throw new Error("the response is not a game log (no minutes or points column)");
-                if (gamelog.games === 0) throw new Error("no regular-season games in the response");
-                gamelogChecked += 1;
-                const verdict = classifyGamelog(gamelog, totals);
                 const found: GamelogFinding = { league, playerId: player.id, name: player.name, season: season.season, gamelog, espnGames: totals.games, espnPoints: totals.pts };
-                if (verdict === "confirmed") gamelogConfirmed += 1;
-                else if (verdict === "ESPN internal") gamelogInternal.push(found);
-                else if (verdict === "log incomplete") gamelogIncomplete.push(found);
-                else gamelogMismatches.push(found);
+                // ESPN has no regular-season game log for the season: the row cannot be checked, and that is ESPN's gap.
+                if (gamelog.games === 0) {
+                  gamelogEmpty.push(found);
+                } else {
+                  gamelogChecked += 1;
+                  const verdict = classifyGamelog(gamelog, totals);
+                  if (verdict === "confirmed") gamelogConfirmed += 1;
+                  else if (verdict === "ESPN internal") gamelogInternal.push(found);
+                  else if (verdict === "log incomplete") gamelogIncomplete.push(found);
+                  else gamelogMismatches.push(found);
+                }
               } catch (err) {
                 gamelogFailures.push(`${label}: ${err instanceof Error ? err.message : String(err)}`);
               }
@@ -294,7 +302,8 @@ async function main() {
     console.log("  Note: in stored mode an NFL season with a stored games figure matches on games by construction (the page and this audit read the same column); only --live checks that figure against ESPN.");
   }
   if (args.gamelog && args.leagues.includes("nba")) {
-    console.log(`  game log (--gamelog):       ${gamelogChecked} seasons shown from ESPN's own row checked: ${gamelogConfirmed} confirmed, ${gamelogInternal.length} ESPN internal (listed, never fails), ${gamelogIncomplete.length} log incomplete (the log is missing games; listed, never fails), ${gamelogMismatches.length} MISMATCH (fails the run)`);
+    console.log(`  game log (--gamelog):       ${gamelogChecked} seasons shown from ESPN's own row checked: ${gamelogConfirmed} confirmed, ${gamelogInternal.length} ESPN internal (listed, never fails), ${gamelogIncomplete.length} log incomplete (the log is missing games; listed, never fails), ${gamelogEmpty.length} ESPN has no log (listed, never fails), ${gamelogMismatches.length} MISMATCH (fails the run)`);
+    if (gamelogNotReadAtAll(gamelogChecked, gamelogEmpty.length)) console.log(`  game logs not read:         every one of the ${gamelogEmpty.length} game logs was empty (a wholesale change on ESPN's side; not verified; fails the run)`);
     if (gamelogFailures.length > 0) console.log(`  game logs not read:         ${gamelogFailures.length}   (not verified; fails the run)`);
   }
   if (failures.length > 0) console.log(`  failed reads:               ${failures.length}   (fails the run)`);
@@ -341,8 +350,12 @@ async function main() {
     for (const g of gamelogIncomplete.slice(0, MISMATCHES_SHOWN)) console.log(`  ${gamelogLine(g)}`);
   }
   if (gamelogInternal.length > 0) {
-    console.log(`\n[audit-player-totals] game log ESPN internal (first ${Math.min(MISMATCHES_SHOWN, gamelogInternal.length)} of ${gamelogInternal.length}): within 3 games of ESPN's own season row (its game log also lists the All-Star Game); not a failure`);
+    console.log(`\n[audit-player-totals] game log ESPN internal (first ${Math.min(MISMATCHES_SHOWN, gamelogInternal.length)} of ${gamelogInternal.length}): within 3 games of ESPN's own season row (the NBA Cup final is in its game log and not its season row, and it disagrees with itself in a few other games); not a failure`);
     for (const g of gamelogInternal.slice(0, MISMATCHES_SHOWN)) console.log(`  ${gamelogLine(g)}`);
+  }
+  if (gamelogEmpty.length > 0) {
+    console.log(`\n[audit-player-totals] game log empty (first ${Math.min(MISMATCHES_SHOWN, gamelogEmpty.length)} of ${gamelogEmpty.length}): ESPN has no regular-season game log for the season (its box scores are blank for the Bulls' and Pelicans' 2015-2018 games), so the row cannot be checked; not a failure`);
+    for (const g of gamelogEmpty.slice(0, MISMATCHES_SHOWN)) console.log(`  ${gamelogLine(g)}`);
   }
   if (gamelogFailures.length > 0) {
     console.log(`\n[audit-player-totals] game logs that could not be read (not verified; first ${Math.min(MISMATCHES_SHOWN, gamelogFailures.length)} of ${gamelogFailures.length})`);
@@ -355,7 +368,7 @@ async function main() {
   }
 
   const strictFailures = args.strict ? unverified.length + short.length : 0;
-  const gamelogFailed = gamelogMismatches.length > 0 || gamelogFailures.length > 0;
+  const gamelogFailed = gamelogMismatches.length > 0 || gamelogFailures.length > 0 || gamelogNotReadAtAll(gamelogChecked, gamelogEmpty.length);
   process.exit(mismatches.length > 0 || failures.length > 0 || strictFailures > 0 || gamelogFailed ? 1 : 0);
 }
 
