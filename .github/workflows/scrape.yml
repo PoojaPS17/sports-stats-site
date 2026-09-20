@@ -1,13 +1,8 @@
 name: Scrape ESPN data
 
+# The schedule (a live-game tick every 15 minutes, a full update daily) now runs from the
+# Oracle VM's systemd timers, so this workflow is manual only: run it from the Actions tab.
 on:
-  schedule:
-    # frequent tick — cheap live-game check only; the real fetch runs solely when
-    # something's in progress (or just finished), and then only for those leagues,
-    # so this stays free/cheap the rest of the day
-    - cron: "*/15 * * * *"
-    # guaranteed full update once a day, even if nothing was ever live
-    - cron: "7 6 * * *"
   workflow_dispatch: {}
 
 concurrency:
