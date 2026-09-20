@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { PRIMARY_HOST } from "./lib/launchHost";
 
 // Only https://sports-db.live is ever indexable. The site's own domain is wired up ahead
 // of launch so DNS and the certificate are ready, but it shows a holding page and tells
@@ -8,7 +9,6 @@ import { NextResponse, type NextRequest } from "next/server";
 // never index a second copy. Local development hosts are left alone.
 // To launch: set SITE_LAUNCHED=1 and NEXT_PUBLIC_SITE_URL=https://sports-db.live in the
 // app's environment (/opt/sportsdb/repo/.env.production on the VM), then rebuild and restart.
-const PRIMARY_HOST = "sports-db.live";
 const WWW_HOST = `www.${PRIMARY_HOST}`;
 const OWN_DOMAIN = /(^|\.)sports-db\.live$/i;
 const DEV_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|.+\.localhost)$/;
