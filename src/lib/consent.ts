@@ -1,5 +1,5 @@
 // The Google Analytics measurement id for the sports-db.live web stream. It is public
-// (it appears in every page's HTML), so it lives here rather than in Vercel's settings;
+// (it appears in every page's HTML), so it lives here rather than in the host's settings;
 // NEXT_PUBLIC_GA_ID overrides it. Analytics runs on production builds only, so local
 // development never sends hits.
 const PRODUCTION_GA_ID = "G-4B4HBLW466";

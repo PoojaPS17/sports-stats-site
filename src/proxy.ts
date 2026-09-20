@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // The site's own domain (sports-db.live) is wired up ahead of launch so DNS and the
 // certificate are ready, but it shows a holding page and tells crawlers to stay
-// away until SITE_LAUNCHED=1 is set in the Vercel project. The vercel.app alias is
+// away until SITE_LAUNCHED=1 is set in the app's environment. The vercel.app alias is
 // unaffected and keeps serving the site for review. To launch: set SITE_LAUNCHED=1
-// and NEXT_PUBLIC_SITE_URL=https://sports-db.live, then redeploy.
+// and NEXT_PUBLIC_SITE_URL=https://sports-db.live in the app's environment
+// (/opt/sportsdb/repo/.env.production on the VM), then rebuild and restart.
 const OWN_DOMAIN = /(^|\.)sports-db\.live$/i;
 
 export const config = {

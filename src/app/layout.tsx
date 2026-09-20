@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   description:
     "Live scores, standings, schedules and player stats for football, the NFL, NBA, cricket, tennis and F1, with results going back to 2015.",
   // Ownership proof for Google Search Console and Bing Webmaster Tools. Each tool
-  // hands out a token when the site is added; set it in Vercel and redeploy.
+  // hands out a token when the site is added; set it in the app's environment and rebuild.
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
     other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
