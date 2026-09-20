@@ -42,7 +42,7 @@ const CACHEABLE: { module: string; revalidate: number }[] = [
 const ENUMERATED = ["../src/app/[league]/layout", "../src/app/tennis/[tour]/layout"];
 
 for (const { module: path, revalidate } of CACHEABLE) {
-  const route = path.replace("../src/app", "").replace(/\/(page|opengraph-image)$/, (_m, m1) => (m1 === "page" ? "" : "/opengraph-image")) || "/";
+  const route = path.replace("../src/app", "").replace(/\/page$/, "");
 
   test(`${route} is cacheable and keeps revalidate = ${revalidate}`, async () => {
     const mod = (await import(path)) as Record<string, unknown>;
