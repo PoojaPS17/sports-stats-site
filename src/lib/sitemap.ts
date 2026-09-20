@@ -106,12 +106,14 @@ async function teams(league: League): Promise<Entry[]> {
 
 // SQL twin of each sport's `played` test in playerProfile.ts: a row for an unused
 // substitute is not an appearance, and a page with none renders noindex, so such
-// players and seasons stay out of the sitemap.
+// players and seasons stay out of the sitemap. NBA: a minutes cell that is a number
+// (including "0", a sub-minute appearance ESPN counts in GP) or any points; "--", ""
+// or no MIN is a bench-sheet DNP.
 const statNumber = (category: string, label: string) => `coalesce(nullif(substring(s.stats->'${category}'->>'${label}' from '^[0-9]+'), '')::int, 0)`;
 function playedSql(league: League): string {
   const sport = playerSport(league);
   if (sport === "soccer") return `${statNumber("match", "APP")} = 1`;
-  if (sport === "nba") return `(${statNumber("box", "MIN")} > 0 or ${statNumber("box", "PTS")} > 0)`;
+  if (sport === "nba") return `(coalesce(s.stats->'box'->>'MIN' ~ '^[0-9]+([.][0-9]+)?$', false) or ${statNumber("box", "PTS")} > 0)`;
   return "true";
 }
 
