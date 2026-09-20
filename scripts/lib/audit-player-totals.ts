@@ -1,6 +1,7 @@
 // The pure half of scripts/audit-player-totals.ts: how a season on the site is compared with the
 // same season on ESPN. Nothing here opens a database connection or calls ESPN, so the tests can
 // import it freely (the loader in season-stats.ts, which the CLI uses, opens the pool on import).
+import { espnSeasonTotals } from "../../src/lib/espnSeason";
 import { cell, type PlayerProfile, type PlayerSport } from "../../src/lib/playerProfile";
 import { seasonGamesPlayed, type SeasonStatRow } from "./season-row";
 
@@ -16,10 +17,12 @@ export interface SeasonFigures {
    * NFL comparison reads it. */
   gamesSource?: "espn" | "logged" | "listed";
   /** The site's side, NBA only, present only when the season has games ESPN published no box score for
-   * (the page's `unrecorded` above 0). `listed` is the player's own count from our rows, `recorded` plus the
-   * unrecorded games, before ESPN's figure is applied; `recorded` the games with a stat line; `points` the
-   * points in those; `bestGame` the most in one of them (0 when there are none). The season's `ppg`
-   * figure averages over `recorded`, ESPN's over all of its games. */
+   * (the page's `unrecorded` above 0) and the page shows the box-derived line, not ESPN's own (a season shown
+   * from ESPN's row matches it by construction and has none). `listed` is the player's own count from our
+   * rows, `recorded` plus the unrecorded games, before ESPN's figure is applied; `recorded` the games with a
+   * stat line; `points` the points in those; `bestGame` the most in one of them (0 when there are none;
+   * informational, the comparison does not read it). The season's `ppg` figure averages over `recorded`,
+   * ESPN's over all of its games. */
   noBoxScore?: { listed: number; recorded: number; points: number; bestGame: number };
   figures: Record<string, number | null>;
 }
@@ -31,7 +34,7 @@ export type Verdict =
   | "no ESPN row"
   | "games not verified"
   | "games short (no stat line)"
-  | "explained (no box score)"
+  | "partial (no box score)"
   | "nothing to compare";
 
 export interface Difference {
@@ -88,15 +91,19 @@ export interface CompareOptions {
  *   games not verified  every figure agrees but ESPN's games played is absent, so games are unchecked
  *   games short (no stat line)  NFL: site games below ESPN's GP, every figure equal, and the page shows
  *                       the logged count because no ESPN games figure is stored for the season
- *   explained (no box score)  NBA, a season with games ESPN published no box score for (`site.noBoxScore`):
- *                       the games agree (and our listed count is within MAX_LISTED_DRIFT of ESPN's) and the
- *                       only difference is the average, which ESPN takes over all its games and the site
- *                       over the recorded ones. The average is explained when ESPN's total (ppg x games) is
- *                       at least the site's recorded points less tol, and at most those points plus the best
- *                       recorded game for each game without a box score plus tol (tol = 0.05 games, ESPN
- *                       publishes ppg to one decimal). Outside that it is a MISMATCH; a season with nothing
+ *   partial (no box score)  NBA, a box-only season with games ESPN published no box score for
+ *                       (`site.noBoxScore`; the page labels it as partial): the games agree (and our listed
+ *                       count is within MAX_LISTED_DRIFT of ESPN's) and the only difference is the average,
+ *                       which ESPN takes over all its games and the site over the recorded ones. Arithmetic
+ *                       does not explain that average: how many points the games without a box score hold is
+ *                       unknown, so there is no upper bound (a bound from the best recorded game is invalid
+ *                       when only a few games are recorded). What is checked is the lower bound: ESPN's total
+ *                       (ppg x games) must be at least the site's recorded points less tol (tol = 0.05 games,
+ *                       ESPN publishes ppg to one decimal), else it is a MISMATCH; a season with nothing
  *                       missing must match. A season with no recorded game at all (the page shows no
- *                       average) has its ppg difference explained outright, the games checks still applying.
+ *                       average) is partial outright, the games checks still applying. A season the page
+ *                       shows from ESPN's own row is not in this class (it matches by construction); the
+ *                       independent check of those is ESPN's game log (see espn-gamelog.ts).
  *   nothing to compare  neither side has anything for the season
  * Only `match` is a match. */
 export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, options: CompareOptions = {}): Comparison {
@@ -111,13 +118,13 @@ export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, o
   // The games-without-a-box-score reading: NBA, and only against a season ESPN gives games played for.
   const noBox = options.league === "nba" && espn.games !== null ? site.noBoxScore : undefined;
   const figureDifferences: Difference[] = [];
-  let explained: Difference | null = null;
+  let partial: Difference | null = null;
   const fields = [...new Set([...Object.keys(site.figures), ...Object.keys(espn.figures)])];
   for (const field of fields) {
     const s = site.figures[field] ?? null;
     const e = espn.figures[field] ?? null;
     if (!differs(field, s, e)) continue;
-    if (noBox && field === "ppg" && espn.games !== null && ppgExplained(noBox, espn.games, e ?? 0, s)) explained = { field, site: s, espn: e };
+    if (noBox && field === "ppg" && espn.games !== null && ppgPartial(noBox, espn.games, e ?? 0, s)) partial = { field, site: s, espn: e };
     else figureDifferences.push({ field, site: s, espn: e });
   }
 
@@ -131,7 +138,7 @@ export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, o
   if (site.games === espn.games) {
     const real = [...drift, ...figureDifferences];
     if (real.length > 0) return { verdict: "MISMATCH", differences: real };
-    return explained ? { verdict: "explained (no box score)", differences: [explained] } : { verdict: "match", differences: [] };
+    return partial ? { verdict: "partial (no box score)", differences: [partial] } : { verdict: "match", differences: [] };
   }
   const games: Difference = { field: "games", site: site.games, espn: espn.games };
   if (options.league === "nfl" && site.games < espn.games && figureDifferences.length === 0 && site.gamesSource === "logged") {
@@ -140,19 +147,19 @@ export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, o
   return { verdict: "MISMATCH", differences: [games, ...drift, ...figureDifferences] };
 }
 
-/** Whether a differing ppg is what games without a box score explain. ESPN's ppg covers all `espnGames`, the
- * site's average only the `recorded` ones, so ESPN's total (ppg x games) is the recorded points plus what
- * the missing games scored: at least the recorded points (less `tol`, for ESPN's one-decimal rounding), and
- * at most the best recorded game for each missing game (plus `tol`). Nothing missing explains nothing.
- * A season with nothing recorded has no best game to bound by, and the page shows no average for it
- * (`sitePpg` null), so whatever ESPN publishes is not a figure the site contradicts. */
-function ppgExplained(noBox: NonNullable<SeasonFigures["noBoxScore"]>, espnGames: number, espnPpg: number, sitePpg: number | null): boolean {
+/** Whether a differing ppg is one a season with games without a box score leaves open (a partial season, not a
+ * contradiction). ESPN's ppg covers all `espnGames`, the site's average only the `recorded` ones, so ESPN's total
+ * (ppg x games) is the recorded points plus what the missing games scored, which nothing here knows: the only
+ * bound is the lower one, ESPN's total at least the recorded points (less `tol`, for ESPN's one-decimal
+ * rounding). Nothing missing leaves nothing open. A season with nothing recorded has no average on the page
+ * (`sitePpg` null), so whatever ESPN publishes is not a figure the site contradicts; an average shown for a
+ * season with nothing recorded is contradictory data and stays a difference. */
+function ppgPartial(noBox: NonNullable<SeasonFigures["noBoxScore"]>, espnGames: number, espnPpg: number, sitePpg: number | null): boolean {
   const missingGames = espnGames - noBox.recorded;
   if (missingGames <= 0) return false;
-  if (noBox.recorded === 0 && sitePpg === null) return true;
+  if (noBox.recorded === 0) return sitePpg === null;
   const tol = 0.05 * espnGames;
-  const missingPoints = espnPpg * espnGames - noBox.points;
-  return missingPoints >= -tol && missingPoints <= noBox.bestGame * missingGames + tol;
+  return espnPpg * espnGames - noBox.points >= -tol;
 }
 
 // ---------------------------------------------------------------------------
@@ -266,8 +273,9 @@ export function gamesPlayedFromPayload(categories: EspnCategory[], minYear: numb
  * in it); for the NFL the profile must be built with the same ESPN games map the page uses, and each
  * season carries its `gamesSource` ("espn" when ESPN's stored figure is shown, "logged" when it is the
  * logged count). NBA points per game is the table's own figure, an average over the games with a stat
- * line; an NBA season with games ESPN published no box score for (`unrecorded` above 0) also carries
- * `noBoxScore`, summed from the same rows with the cell reader the page uses (a blank PTS is 0). The NFL
+ * line; an NBA season with games ESPN published no box score for (`unrecorded` above 0) that the page shows
+ * from its box rows (`lineSource` "box"; a season shown from ESPN's own row has nothing to compare and carries
+ * none) also carries `noBoxScore`, summed from the same rows with the cell reader the page uses (a blank PTS is 0). The NFL
  * totals are summed from the same rows with the same cell reader the page's columns use, so they are the
  * page's numbers even for a category the page hides because it is a small part of the player's game (a
  * receiver's one carry). */
@@ -295,6 +303,18 @@ export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<num
   return out;
 }
 
+/** Whether ESPN's stored season row is one the site cannot use though ESPN counts more games than the site has
+ * logged: `averages.GP` is above `loggedGames` (the games with a stat line) but `espnSeasonTotals` rejects the
+ * row (its points fail `pts = 2 x FGM + 3PM + FTM`, a made count exceeds its attempts, or a figure is missing).
+ * The season then falls back to the box-derived line, silently short of ESPN's games; this is how the audit
+ * lists it. A row with no readable GP, or whose GP is not above the logged games, is not flagged. */
+export function unusableEspnRow(categories: unknown, loggedGames: number): boolean {
+  if (typeof categories !== "object" || categories === null) return false;
+  const averages = (categories as { averages?: StoredCategory }).averages;
+  const games = figureAt(averages, "GP");
+  return games !== null && games > loggedGames && espnSeasonTotals(categories) === null;
+}
+
 /** A season the profile has no regular-season games for (none stored, or playoffs only). */
 export function siteSeasonOrEmpty(seasons: Map<number, SeasonFigures>, season: number): SeasonFigures {
   return seasons.get(season) ?? { games: 0, figures: {} };
@@ -320,17 +340,25 @@ export interface Args {
   /** Also fail (exit 1) on "games not verified" and "games short (no stat line)" (the page shows the
    * logged count because no ESPN games figure is stored for the season). */
   strict: boolean;
+  /** NBA: also fetch ESPN's game log for every season the site shows from ESPN's own row and check it against
+   * that row (games and points). Off unless asked: one ESPN request per season. */
+  gamelog: boolean;
 }
 
 export const MAX_COUNT = 100000;
 
 export const USAGE = [
-  "usage: tsx scripts/audit-player-totals.ts [nba|nfl] [--live N] [--limit N] [--strict]   (N a whole number from 1 to 100000)",
+  "usage: tsx scripts/audit-player-totals.ts [nba|nfl] [--live N] [--limit N] [--strict] [--gamelog]   (N a whole number from 1 to 100000)",
   "  --live N --limit M samples the N random players from the first M players by ESPN id.",
   "  --strict also exits 1 on 'games not verified' and NFL 'games short (no stat line)'",
   "  (the page shows the logged count because no ESPN games figure is stored for the season).",
-  "  NBA 'explained (no box score)' (ESPN published no box score for some of the team's games; the average is",
-  "  inside what those games could hold) is listed and never fails the run, --strict included.",
+  "  NBA 'partial (no box score)' (a box-only season: ESPN published no box score for some of the team's games,",
+  "  so its average cannot be checked; ESPN's points total is at least the recorded points) is listed and never",
+  "  fails the run, --strict included.",
+  "  --gamelog (NBA) also fetches ESPN's game log, one request per season, for every season the page shows from",
+  "  ESPN's own row, and checks its games and points against that row (honours --limit): 'confirmed', 'ESPN",
+  "  internal' (within 3 games; listed, never fails) or MISMATCH (fails the run, as does a game log that could",
+  "  not be read).",
 ].join("\n");
 
 export function parseArgs(argv: string[]): Args | { error: string } {
@@ -338,6 +366,7 @@ export function parseArgs(argv: string[]): Args | { error: string } {
   let live: number | null = null;
   let limit: number | null = null;
   let strict = false;
+  let gamelog = false;
   const count = (flag: string, raw: string | undefined): number | { error: string } => {
     if (raw === undefined || !/^\d+$/.test(raw) || Number(raw) < 1) return { error: `${flag} needs a positive whole number, got ${raw === undefined ? "nothing" : `"${raw}"`}` };
     if (Number(raw) > MAX_COUNT) return { error: `${flag} must be at most ${MAX_COUNT}, got ${raw}` };
@@ -353,6 +382,8 @@ export function parseArgs(argv: string[]): Args | { error: string } {
       i += 1;
     } else if (arg === "--strict") {
       strict = true;
+    } else if (arg === "--gamelog") {
+      gamelog = true;
     } else if (arg === "nba" || arg === "nfl") {
       if (leagues) return { error: "give at most one league" };
       leagues = [arg];
@@ -360,5 +391,5 @@ export function parseArgs(argv: string[]): Args | { error: string } {
       return { error: `unknown argument "${arg}"` };
     }
   }
-  return { leagues: leagues ?? ["nba", "nfl"], live, limit, strict };
+  return { leagues: leagues ?? ["nba", "nfl"], live, limit, strict, gamelog };
 }

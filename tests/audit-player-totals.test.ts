@@ -11,6 +11,7 @@ import {
   siteSeasonOrEmpty,
   siteSeasons,
   tradedSeasons,
+  unusableEspnRow,
   USAGE,
   type SeasonFigures,
 } from "../scripts/lib/audit-player-totals";
@@ -183,6 +184,8 @@ test("an ESPN row with no audited data and no site games is nothing to compare, 
 
 // -- NBA: games ESPN published no box score for -------------------------------------------------------
 // ESPN's GP and PPG cover every game the team played; the site's average covers the games with a stat line.
+// Such a box-only season is 'partial': the games agree and ESPN's total is at least the recorded points; how
+// many points the missing games hold is unknown, so there is no upper bound.
 
 type NoBoxScore = NonNullable<SeasonFigures["noBoxScore"]>;
 const nba = { league: "nba" } as const;
@@ -191,9 +194,9 @@ const siteNoBox = (games: number, ppg: number | null, nb: NoBoxScore): SeasonFig
 // The worked case: 76 games on ESPN (total 25.3 x 76 = 1922.8), 70 with a stat line adding up to 1747 (24.957 a game), best game 41.
 const seventy = noBox(76, 70, 1747, 41);
 
-test("NBA no box score: games equal, ppg below ESPN's but inside what the missing games could hold, is explained and carries the ppg difference", () => {
+test("NBA no box score: games equal, ESPN's points total at or above the recorded points, is partial and carries the ppg difference", () => {
   const r = compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 25.3), nba);
-  assert.equal(r.verdict, "explained (no box score)");
+  assert.equal(r.verdict, "partial (no box score)");
   assert.deepEqual(r.differences, [{ field: "ppg", site: 24.96, espn: 25.3 }]);
 });
 
@@ -205,12 +208,23 @@ test("NBA no box score: ppg equal at one decimal is a match, with nothing listed
   }
 });
 
-test("NBA no box score: ppg above the bound (bestGame x missing games + tol) is a MISMATCH with a ppg difference", () => {
-  // missing 6, tol 0.05 x 76 = 3.8: the bound is 41 x 6 + 3.8 = 249.8 above the recorded 1747, so ESPN's total may reach 1996.8.
-  assert.equal(compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 26.2), nba).verdict, "explained (no box score)"); // 1991.2
-  const r = compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 26.3), nba); // 1998.8
-  assert.equal(r.verdict, "MISMATCH");
+test("NBA no box score: there is no upper bound; ESPN's ppg above what the missing games could plausibly hold is still partial", () => {
+  // The old bound (best game x missing games + tol = 41 x 6 + 3.8 above the recorded 1747) rejected 26.3 (1998.8); it is gone.
+  const r = compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 26.3), nba);
+  assert.equal(r.verdict, "partial (no box score)");
   assert.deepEqual(r.differences, [{ field: "ppg", site: 24.96, espn: 26.3 }]);
+  assert.equal(compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 60.0), nba).verdict, "partial (no box score)");
+});
+
+test("NBA no box score: 2 recorded games (best game 12) against ESPN's 20 ppg over 30 games is partial, not a MISMATCH", () => {
+  // The production false alarm: the bound best game x 28 missing games + tol = 12 x 28 + 1.5 = 337.5 above the recorded 20
+  // points, while ESPN's total is 20 x 30 = 600. Nothing says the missing games did not score it: it is just not verifiable.
+  const site = siteNoBox(30, 10.0, noBox(30, 2, 20, 12));
+  const r = compareSeason(site, nbaEspn(30, 20.0), nba);
+  assert.equal(r.verdict, "partial (no box score)");
+  assert.deepEqual(r.differences, [{ field: "ppg", site: 10.0, espn: 20.0 }]);
+  // The lower bound still holds: ESPN's total 6 x 30 = 180 is fine, but 0.5 x 30 = 15 is below the recorded 20 less tol 1.5.
+  assert.equal(compareSeason(site, nbaEspn(30, 0.5), nba).verdict, "MISMATCH");
 });
 
 test("NBA no box score: ppg below the lower bound (the site's total above ESPN's by more than tol) is a MISMATCH", () => {
@@ -218,22 +232,22 @@ test("NBA no box score: ppg below the lower bound (the site's total above ESPN's
   const r = compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 22.9), nba);
   assert.equal(r.verdict, "MISMATCH");
   assert.deepEqual(r.differences, [{ field: "ppg", site: 24.96, espn: 22.9 }]);
-  assert.equal(compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 23.0), nba).verdict, "explained (no box score)");
+  assert.equal(compareSeason(siteNoBox(76, 24.96, seventy), nbaEspn(76, 23.0), nba).verdict, "partial (no box score)");
 });
 
-test("NBA no box score: a site total above ESPN's by less than tol (ESPN's ppg is rounded) is explained, by more is a MISMATCH", () => {
+test("NBA no box score: a site total above ESPN's by less than tol (ESPN's ppg is rounded) is partial, by more is a MISMATCH", () => {
   // 40 games, ESPN 20.0 (total 800), tol 2, 39 with a stat line.
   const at = (points: number) => compareSeason(siteNoBox(40, points / 39, noBox(40, 39, points, 40)), nbaEspn(40, 20.0), nba);
-  assert.equal(at(801).verdict, "explained (no box score)"); // 800 - 801 = -1 >= -2
+  assert.equal(at(801).verdict, "partial (no box score)"); // 800 - 801 = -1 >= -2
   assert.equal(at(803).verdict, "MISMATCH"); // -3 < -2
 });
 
-test("NBA no box score: the upper bound is the best recorded game times the missing games, plus tol", () => {
-  // 40 games, 39 recorded for 20 points with a best game of 1, tol 2: ESPN's total may be at most 20 + 1 x 1 + 2 = 23.
+test("NBA no box score: the best recorded game plays no part; a bigger ESPN total than any missing game could add is partial too", () => {
+  // 40 games, 39 recorded for 20 points with a best game of 1: ESPN's total 24 exceeds 20 + 1 x 1 + 2, which used to fail.
   const site = siteNoBox(40, 0.51, noBox(40, 39, 20, 1));
   assert.equal(compareSeason(site, nbaEspn(40, 0.5), nba).verdict, "match"); // 20
-  assert.equal(compareSeason(site, nbaEspn(40, 0.55), nba).verdict, "explained (no box score)"); // 22, inside the bound
-  assert.equal(compareSeason(site, nbaEspn(40, 0.6), nba).verdict, "MISMATCH"); // 24
+  assert.equal(compareSeason(site, nbaEspn(40, 0.55), nba).verdict, "partial (no box score)"); // 22
+  assert.equal(compareSeason(site, nbaEspn(40, 0.6), nba).verdict, "partial (no box score)"); // 24
 });
 
 test("NBA no box score: nothing missing (recorded at or above ESPN's games) and a ppg difference is a MISMATCH", () => {
@@ -262,17 +276,17 @@ test("NBA no box score: our listed count may differ from ESPN's games by MAX_LIS
   }
 });
 
-test("NBA no box score: an explained ppg difference is never listed among a real mismatch's differences", () => {
-  // Listed drift too large, ppg explained: only the games (listed) difference.
+test("NBA no box score: a partial ppg difference is never listed among a real mismatch's differences", () => {
+  // Listed drift too large, ppg partial: only the games (listed) difference.
   const drift = compareSeason(siteNoBox(76, 24.96, noBox(80, 70, 1747, 41)), nbaEspn(76, 25.3), nba);
   assert.equal(drift.verdict, "MISMATCH");
   assert.deepEqual(drift.differences, [{ field: "games (listed)", site: 80, espn: 76 }]);
-  // Shown games differ from ESPN's (a stale stored figure), ppg explained: only the games difference.
+  // Shown games differ from ESPN's (a stale stored figure), ppg partial: only the games difference.
   const stale = compareSeason(siteNoBox(74, 24.96, seventy), nbaEspn(76, 25.3), nba);
   assert.equal(stale.verdict, "MISMATCH");
   assert.deepEqual(stale.differences, [{ field: "games", site: 74, espn: 76 }]);
-  // A real ppg difference and a listed drift: both listed.
-  const both = compareSeason(siteNoBox(76, 24.96, noBox(80, 70, 1747, 41)), nbaEspn(76, 30.0), nba);
+  // A real ppg difference (ESPN's total below the recorded points) and a listed drift: both listed.
+  const both = compareSeason(siteNoBox(76, 24.96, noBox(80, 70, 1747, 41)), nbaEspn(76, 20.0), nba);
   assert.deepEqual(both.differences.map((d) => d.field), ["games (listed)", "ppg"]);
 });
 
@@ -291,10 +305,10 @@ test("NBA no box score: a season ESPN has no row for is 'no ESPN row', whatever 
   assert.equal(compareSeason(siteNoBox(6, null, noBox(6, 0, 0, 0)), null, { league: "nba", requireEspnRow: true }).verdict, "MISMATCH");
 });
 
-test("NBA no box score: an all-blank season (nothing recorded, the page shows no average) is explained whatever ESPN's average, once the games agree", () => {
+test("NBA no box score: an all-blank season (nothing recorded, the page shows no average) is partial whatever ESPN's average, once the games agree", () => {
   const blankSeason = siteNoBox(6, null, noBox(6, 0, 0, 0));
   const r = compareSeason(blankSeason, nbaEspn(6, 15.3), nba);
-  assert.equal(r.verdict, "explained (no box score)");
+  assert.equal(r.verdict, "partial (no box score)");
   assert.deepEqual(r.differences, [{ field: "ppg", site: null, espn: 15.3 }]);
   // ESPN's average is zero too: the two agree, nothing to explain.
   assert.equal(compareSeason(blankSeason, nbaEspn(6, 0), nba).verdict, "match");
@@ -305,14 +319,14 @@ test("NBA no box score: an all-blank season still fails on the games figures", (
   const off = compareSeason(siteNoBox(3, null, noBox(6, 0, 0, 0)), nbaEspn(6, 15.3), nba);
   assert.equal(off.verdict, "MISMATCH");
   assert.deepEqual(off.differences, [{ field: "games", site: 3, espn: 6 }]);
-  // Games shown match, but our listed count is 3 from ESPN's: the drift check runs before the ppg is explained.
+  // Games shown match, but our listed count is 3 from ESPN's: the drift check runs before the ppg is called partial.
   const drift = compareSeason(siteNoBox(6, null, noBox(9, 0, 0, 0)), nbaEspn(6, 15.3), nba);
   assert.equal(drift.verdict, "MISMATCH");
   assert.deepEqual(drift.differences, [{ field: "games (listed)", site: 9, espn: 6 }]);
 });
 
-test("NBA no box score: nothing recorded but the page shows an average is not explained by the all-blank rule", () => {
-  // A site ppg that is not null contradicts 'nothing recorded': bestGame 0 leaves no room for ESPN's points.
+test("NBA no box score: nothing recorded but the page shows an average is not partial by the all-blank rule", () => {
+  // A site ppg that is not null contradicts 'nothing recorded': the all-blank rule does not cover it.
   const r = compareSeason(siteNoBox(6, 4.2, noBox(6, 0, 0, 0)), nbaEspn(6, 12.0), nba);
   assert.equal(r.verdict, "MISMATCH");
   assert.deepEqual(r.differences, [{ field: "ppg", site: 4.2, espn: 12.0 }]);
@@ -549,7 +563,19 @@ test("siteSeasons gives an NBA season that shows ESPN's own line no noBoxScore, 
   assert.deepEqual(seasons.get(2026)?.noBoxScore, { listed: 2, recorded: 1, points: 40, bestGame: 40 });
 });
 
-test("siteSeasons and compareSeason together: a season the page shows with ESPN's games and the recorded average is explained", () => {
+test("siteSeasons: an ESPN-line season's ppg is ESPN's total over its games, so it matches ESPN's own rounded one-decimal average", () => {
+  const box = (pts: number): Stats => ({ box: { MIN: "30", PTS: String(pts) } });
+  const rows = [row("a", "2025-01-01", "regular", 2025, box(2)), row("b", "2025-01-03", "regular", 2025, box(3))];
+  // 89 points over 37 games is 2.405...: ESPN publishes 2.4, and the page shows 2.4.
+  const line: EspnSeasonTotals = { games: 37, starts: 0, minutesPerGame: 5, pts: 89, reb: 10, ast: 10, stl: 1, blk: 1, to: 1, fgm: 30, fga: 60, tpm: 9, tpa: 20, ftm: 20, fta: 25 };
+  const season = siteSeasons("nba", buildStagedProfile("nba", rows, undefined, new Map([[2025, line]])).regular).get(2025)!;
+  assert.equal(season.games, 37);
+  assert.ok(!("noBoxScore" in season));
+  assert.equal(compareSeason(season, nbaEspn(37, 2.4), nba).verdict, "match");
+  assert.equal(compareSeason(season, nbaEspn(37, 2.5), nba).verdict, "MISMATCH");
+});
+
+test("siteSeasons and compareSeason together: a season the page shows with ESPN's games and the recorded average is partial", () => {
   const box = (pts: number): Stats => ({ box: { MIN: "30", PTS: String(pts) } });
   const blank: Stats = { box: { MIN: "--", PTS: "--" } };
   const rows = [
@@ -558,9 +584,10 @@ test("siteSeasons and compareSeason together: a season the page shows with ESPN'
     { ...row("x", "2025-01-09", "regular", 2025, blank), no_box_score: true },
   ];
   const site = siteSeasons("nba", buildStagedProfile("nba", rows, new Map([[2025, 3]])).regular).get(2025)!;
-  // ESPN: 3 games at 26.0 a game = 78; the site has 50 over 2 games, the third game could hold up to 30.
-  assert.equal(compareSeason(site, nbaEspn(3, 26.0), nba).verdict, "explained (no box score)");
-  assert.equal(compareSeason(site, nbaEspn(3, 34.0), nba).verdict, "MISMATCH"); // 102 - 50 = 52 > 30 + 0.15
+  // ESPN: 3 games at 26.0 a game = 78; the site has 50 over 2 games (25.0 a game), the third game is not recorded.
+  assert.equal(compareSeason(site, nbaEspn(3, 26.0), nba).verdict, "partial (no box score)");
+  assert.equal(compareSeason(site, nbaEspn(3, 34.0), nba).verdict, "partial (no box score)"); // no upper bound: 102 is not contradicted
+  assert.equal(compareSeason(site, nbaEspn(3, 15.0), nba).verdict, "MISMATCH"); // 45 < 50 recorded points, less 0.15
   // ESPN's stored games, as the page shows them, are ESPN's own: the listed count (3) matches.
   assert.equal(compareSeason(site, nbaEspn(4, 30.0), nba).verdict, "MISMATCH"); // shown 3, ESPN 4
 });
@@ -578,16 +605,18 @@ test("tradedSeasons lists the seasons a player's regular-season games span sever
 
 // -- command line -------------------------------------------------------------------------------
 
-test("parseArgs: defaults, league, --live, --limit and --strict", () => {
-  assert.deepEqual(parseArgs([]), { leagues: ["nba", "nfl"], live: null, limit: null, strict: false });
-  assert.deepEqual(parseArgs(["nfl", "--live", "5", "--limit", "20"]), { leagues: ["nfl"], live: 5, limit: 20, strict: false });
-  assert.deepEqual(parseArgs(["--limit", "3", "nba"]), { leagues: ["nba"], live: null, limit: 3, strict: false });
-  assert.deepEqual(parseArgs(["--strict", "nba"]), { leagues: ["nba"], live: null, limit: null, strict: true });
-  assert.deepEqual(parseArgs(["--limit", "100000"]), { leagues: ["nba", "nfl"], live: null, limit: 100000, strict: false });
+test("parseArgs: defaults, league, --live, --limit, --strict and --gamelog", () => {
+  assert.deepEqual(parseArgs([]), { leagues: ["nba", "nfl"], live: null, limit: null, strict: false, gamelog: false });
+  assert.deepEqual(parseArgs(["nfl", "--live", "5", "--limit", "20"]), { leagues: ["nfl"], live: 5, limit: 20, strict: false, gamelog: false });
+  assert.deepEqual(parseArgs(["--limit", "3", "nba"]), { leagues: ["nba"], live: null, limit: 3, strict: false, gamelog: false });
+  assert.deepEqual(parseArgs(["--strict", "nba"]), { leagues: ["nba"], live: null, limit: null, strict: true, gamelog: false });
+  assert.deepEqual(parseArgs(["--limit", "100000"]), { leagues: ["nba", "nfl"], live: null, limit: 100000, strict: false, gamelog: false });
+  assert.deepEqual(parseArgs(["nba", "--gamelog", "--limit", "5"]), { leagues: ["nba"], live: null, limit: 5, strict: false, gamelog: true });
+  assert.deepEqual(parseArgs(["--gamelog", "--strict"]), { leagues: ["nba", "nfl"], live: null, limit: null, strict: true, gamelog: true });
 });
 
 test("parseArgs rejects an unknown league, a non-numeric, missing or over-cap N, and unknown flags", () => {
-  const bads = [["epl"], ["--live", "abc"], ["--limit", "0"], ["--live"], ["--limit", "-2"], ["--bogus"], ["nba", "nfl"], ["--limit", "100001"], ["--live", "99999999999"], ["--strict", "yes"]];
+  const bads = [["epl"], ["--live", "abc"], ["--limit", "0"], ["--live"], ["--limit", "-2"], ["--bogus"], ["nba", "nfl"], ["--limit", "100001"], ["--live", "99999999999"], ["--strict", "yes"], ["--gamelog", "yes"], ["--gamelog=1"]];
   for (const bad of bads) assert.ok("error" in parseArgs(bad), `expected an error for ${bad.join(" ")}`);
   const over = parseArgs(["--limit", "100001"]);
   assert.ok("error" in over && /100000/.test(over.error));
@@ -598,6 +627,42 @@ test("USAGE documents --strict and how --live and --limit combine", () => {
   assert.match(USAGE, /--live N --limit M/);
 });
 
-test("USAGE says the explained (no box score) class never fails the run, --strict included", () => {
-  assert.match(USAGE, /explained \(no box score\)/);
+test("USAGE says the partial (no box score) class never fails the run, --strict included, and documents --gamelog", () => {
+  assert.match(USAGE, /partial \(no box score\)/);
+  assert.doesNotMatch(USAGE, /explained/);
+  assert.match(USAGE, /--gamelog/);
+});
+
+// -- ESPN rows the reader rejects ---------------------------------------------------------------
+
+// Knicks 2022 row (26 GP, 311 PTS = 2 x 122 + 37 + 30): usable.
+function knicksRow(pts: string, fg = "122-274") {
+  return {
+    averages: { labels: ["GP", "GS", "MIN", "PTS"], values: ["26", "4", "24.5", "12.0"] },
+    totals: {
+      labels: ["FG", "3PT", "FT", "REB", "AST", "BLK", "STL", "TO", "PTS"],
+      values: [fg, "37-92", "30-31", "78", "103", "12", "22", "39", pts],
+    },
+  };
+}
+
+test("unusableEspnRow: a usable row is not flagged, whatever the site's games", () => {
+  assert.equal(unusableEspnRow(knicksRow("311"), 7), false);
+  assert.equal(unusableEspnRow(knicksRow("311"), 0), false);
+});
+
+test("unusableEspnRow: a row failing the points identity with GP above the site's games is flagged", () => {
+  assert.equal(unusableEspnRow(knicksRow("312"), 7), true); // 312 != 2 x 122 + 37 + 30
+  assert.equal(unusableEspnRow(knicksRow("311", "122-100"), 7), true); // more field goals made than attempted, the same way
+});
+
+test("unusableEspnRow: a rejected row with GP not above the site's games is not flagged", () => {
+  assert.equal(unusableEspnRow(knicksRow("312"), 26), false);
+  assert.equal(unusableEspnRow(knicksRow("312"), 30), false);
+});
+
+test("unusableEspnRow: a row with no readable GP, or no row at all, is not flagged", () => {
+  assert.equal(unusableEspnRow({ totals: knicksRow("312").totals }, 7), false);
+  assert.equal(unusableEspnRow({ averages: { labels: ["GP"], values: ["--"] } }, 7), false);
+  for (const bad of [null, undefined, "x", 3, {}]) assert.equal(unusableEspnRow(bad, 7), false);
 });

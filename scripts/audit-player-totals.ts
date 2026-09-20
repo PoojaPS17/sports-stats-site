@@ -3,22 +3,33 @@
 // the site's `regular` profile (buildStagedProfile) must equal it: games played for both leagues,
 // points per game for the NBA, passing / rushing / receiving yards and touchdowns for the NFL.
 //
-//   tsx scripts/audit-player-totals.ts [nba|nfl] [--live N] [--limit N]
+//   tsx scripts/audit-player-totals.ts [nba|nfl] [--live N] [--limit N] [--strict] [--gamelog]
 //
 // Default: compare against the season rows the loader stored in player_season_stats.
 // --live N: pick N random players and read ESPN's athlete /stats now, so a stale or wrongly
 //           stored row cannot hide (or invent) a difference.
 // --limit N: cap the players per league (lowest ESPN ids first).
-// Exits 1 when any season is a MISMATCH (or a live read failed), 2 on bad arguments. Listed but not
+// --gamelog: NBA, for every season the page shows from ESPN's own season row (a season the box scores are
+//           short of, where the row matches by construction and proves nothing), fetch ESPN's athlete game
+//           log (one request per season, 150 ms apart) and check it against that row: the games played and
+//           the points summed from the log against the row's GP and PTS. confirmed, ESPN internal (the two
+//           differ by up to 3 games and by what those games could hold: the game log lists the All-Star Game;
+//           listed, never fails) or MISMATCH. Never runs unless asked; honours --limit.
+// Exits 1 when any season is a MISMATCH (or a live read failed; with --gamelog, a game log that is a MISMATCH
+// or could not be read), 2 on bad arguments. Listed but not
 // failing: coverage gaps (ESPN has the season, no regular-season box scores), "no ESPN row" (stored
 // mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
 // gives no games played), NFL "games short (no stat line)" (the page shows the logged count, with a
 // `*`, because no ESPN games figure is stored for the season; site games below ESPN's, every figure
-// equal), NBA "explained (no box score)" (ESPN published no box score for some of the team's games,
-// so its GP and PPG cover games the site's average cannot; the games figure matches ESPN's or our
-// listed count is within 2 of it, and the average is inside what those games could hold). --strict
-// makes "games not verified" and "games short" fail too, and never the explained class: a real
-// mismatch, an average outside those bounds included, fails the run either way.
+// equal), NBA "partial (no box score)" (a box-only season: ESPN published no box score for some of the
+// team's games, so its GP and PPG cover games the site's average cannot; the games figure matches ESPN's or
+// our listed count is within 2 of it, and ESPN's points total is at least the recorded points; nothing says
+// what the missing games scored, so the average is not checked further, and the page labels these seasons as
+// partial), and, in stored mode, NBA "ESPN row unusable" (ESPN counts more games than the database has box
+// scores for, but its stored row fails its own points identity or a made-attempted pair, so the page cannot
+// show it and falls back to the box-derived line). --strict makes "games not verified" and "games short" fail
+// too, and never the partial class: a real mismatch, ESPN's total below the recorded points included, fails
+// the run either way.
 //
 // NFL games: the site side is the page's own figure (the regular profile is built with the stored ESPN
 // games map, as the player page does: ESPN's games played where stored, else the logged count). The
@@ -39,17 +50,21 @@ import {
   siteSeasonOrEmpty,
   siteSeasons,
   tradedSeasons,
+  unusableEspnRow,
   USAGE,
   type AuditLeague,
   type Difference,
   type EspnCategory,
   type StoredCategories,
 } from "./lib/audit-player-totals";
+import { classifyGamelog, gamelogRegularSeason, type GamelogSeason } from "./lib/espn-gamelog";
 import { seasonRow, seasonWindowStart } from "./lib/season-row";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
 import { buildStagedProfile, playerSport } from "../src/lib/playerProfile";
 
 const LIVE_PAUSE_MS = 150;
+const GAMELOG_PAUSE_MS = 150;
+const GAMELOG_TIMEOUT_MS = 20_000;
 const MISMATCHES_SHOWN = 50;
 const GAPS_SHOWN = 20;
 
@@ -62,15 +77,38 @@ interface Finding {
   differences: Difference[];
   /** Stored mode, and the player's regular-season games span several teams that season. */
   traded: boolean;
-  /** "explained (no box score)" only: ESPN's games played, and the games of them with a stat line. */
+  /** "partial (no box score)" and "ESPN row unusable": ESPN's games played; for the former also `recorded`, the
+   * games of them with a stat line. */
   espnGames?: number;
   recorded?: number;
+}
+
+/** A season shown from ESPN's own row whose game log is not the row: both sides' games and points. */
+interface GamelogFinding {
+  league: AuditLeague;
+  playerId: string;
+  name: string;
+  season: number;
+  gamelog: GamelogSeason;
+  espnGames: number;
+  espnPoints: number;
 }
 
 const TRADED_NOTE = "traded: stored row is one stint";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const fmt = (v: number | null) => (v === null ? "none" : String(v));
+
+/** ESPN's athlete game log for one NBA season (season year = the ending year, as everywhere else here). Throws on
+ * any failed request (a 403, a 5xx, a timeout, a body that is not JSON): the caller reports it, never counts it as
+ * confirmed. The headers are those of the other ESPN fetches (scripts/lib/espn.ts): JSON accepted, the runtime's
+ * own User-Agent. */
+async function fetchGamelog(playerEspnId: string, season: number): Promise<unknown> {
+  const url = `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${encodeURIComponent(playerEspnId)}/gamelog?season=${season}`;
+  const res = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(GAMELOG_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`ESPN game log request failed (${res.status}): ${url}`);
+  return res.json();
+}
 
 function sample<T>(items: T[], n: number): T[] {
   const pool = [...items];
@@ -89,6 +127,7 @@ async function main() {
   }
   const { pool } = await import("./lib/db");
   const { fetchAthleteSeasonStats } = await import("./lib/espn");
+  if (args.gamelog && !args.leagues.includes("nba")) console.log("[audit-player-totals] --gamelog checks NBA seasons only; nothing to fetch for nfl");
   const mode = args.live ? `live (${args.live} random players per league, read from ESPN now)` : "stored player_season_stats rows";
   console.log(`[audit-player-totals] ${args.leagues.join(", ")}: comparing the site's regular-season totals with ESPN, ${mode}`);
 
@@ -97,8 +136,14 @@ async function main() {
   const noEspn: Finding[] = [];
   const unverified: Finding[] = [];
   const short: Finding[] = [];
-  const explained: Finding[] = [];
+  const partial: Finding[] = [];
+  const unusable: Finding[] = [];
   const failures: string[] = [];
+  let gamelogChecked = 0;
+  let gamelogConfirmed = 0;
+  const gamelogInternal: GamelogFinding[] = [];
+  const gamelogMismatches: GamelogFinding[] = [];
+  const gamelogFailures: string[] = [];
   let compared = 0;
   let matched = 0;
   let nothing = 0;
@@ -126,7 +171,8 @@ async function main() {
           const log = await fetchPlayerLog(pool, league, player.id);
           // The page's own build: with ESPN's stored games played per season (NFL; NBA seasons with games that have no box score)
           // and, for the NBA, ESPN's stored season line where the game rows are short of it.
-          const regular = buildStagedProfile(sport, log, await fetchReportedGames(pool, league, player.id), await fetchEspnSeasons(pool, league, player.id)).regular;
+          const espnSeasons = await fetchEspnSeasons(pool, league, player.id);
+          const regular = buildStagedProfile(sport, log, await fetchReportedGames(pool, league, player.id), espnSeasons).regular;
           const site = siteSeasons(sport, regular);
           const traded = args.live ? new Set<number>() : tradedSeasons(regular);
 
@@ -145,6 +191,16 @@ async function main() {
             );
             espn = new Map(rows.map((r) => [r.season, r.categories]));
             espnGames = new Map(rows.map((r) => [r.season, r.games_played]));
+          }
+
+          // Stored mode, NBA: ESPN counts more games than the database has logged, but its row is one the page cannot use.
+          if (!args.live && league === "nba") {
+            const loggedBySeason = new Map(regular.seasons.map((s) => [s.season, s.recorded]));
+            for (const [season, categories] of espn) {
+              const logged = loggedBySeason.get(season) ?? 0;
+              if (!unusableEspnRow(categories, logged)) continue;
+              unusable.push({ league, playerId: player.id, name: player.name, season, siteGames: logged, differences: [], traded: traded.has(season), espnGames: espnFigures(league, categories)?.games ?? 0 });
+            }
           }
 
           const seasons = [...new Set([...site.keys(), ...espn.keys()])].sort((a, b) => a - b);
@@ -170,12 +226,38 @@ async function main() {
               unverified.push(finding);
             } else if (result.verdict === "games short (no stat line)") {
               short.push(finding);
-            } else if (result.verdict === "explained (no box score)") {
-              // Both sides have the season, but it is not a match: the average is only explained.
+            } else if (result.verdict === "partial (no box score)") {
+              // Both sides have the season, but it is not a match: the average cannot be checked past the lower bound.
               compared += 1;
-              explained.push({ ...finding, espnGames: espnLine?.games ?? 0, recorded: siteLine.noBoxScore?.recorded ?? 0 });
+              partial.push({ ...finding, espnGames: espnLine?.games ?? 0, recorded: siteLine.noBoxScore?.recorded ?? 0 });
             } else {
               nothing += 1;
+            }
+          }
+
+          // --gamelog: a season shown from ESPN's own row matches it by construction; ESPN's game log is the independent check.
+          if (args.gamelog && league === "nba") {
+            for (const season of regular.seasons) {
+              if (season.lineSource !== "espn") continue;
+              const label = `${league} ${player.id} ${player.name} ${season.season}`;
+              const totals = espnSeasons.get(season.season);
+              if (!totals) {
+                gamelogFailures.push(`${label}: no usable ESPN season row to check the game log against`);
+                continue;
+              }
+              try {
+                const gamelog = gamelogRegularSeason(await fetchGamelog(player.id, season.season));
+                if (!gamelog) throw new Error("the response is not a game log (no minutes or points column)");
+                gamelogChecked += 1;
+                const verdict = classifyGamelog(gamelog, totals);
+                const found: GamelogFinding = { league, playerId: player.id, name: player.name, season: season.season, gamelog, espnGames: totals.games, espnPoints: totals.pts };
+                if (verdict === "confirmed") gamelogConfirmed += 1;
+                else if (verdict === "ESPN internal") gamelogInternal.push(found);
+                else gamelogMismatches.push(found);
+              } catch (err) {
+                gamelogFailures.push(`${label}: ${err instanceof Error ? err.message : String(err)}`);
+              }
+              await sleep(GAMELOG_PAUSE_MS);
             }
           }
         } catch (err) {
@@ -200,10 +282,17 @@ async function main() {
   console.log(`  no ESPN row:                ${noEspn.length}   (the site has regular-season games, ESPN has no row; ${args.live ? "outside the loader's window only, inside it is a mismatch" : "stored rows exist only for current-roster players"})`);
   console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  games short (no stat line): ${short.length}   (NFL: the page shows the logged count because no ESPN games figure is stored for the season; every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
-  console.log(`  explained (no box score):   ${explained.length}   (ESPN published no box score for some of the team's games; the games figure matches ESPN or is within 2, the average is inside what those games could hold; never fails the run)`);
+  console.log(`  partial (no box score):     ${partial.length}   (box-only season: ESPN published no box score for some of the team's games; the games figure matches ESPN or is within 2, ESPN's points total is at least the recorded points, the average is not checked further; labelled as partial on the page; never fails the run)`);
+  if (!args.live && args.leagues.includes("nba")) {
+    console.log(`  ESPN row unusable:          ${unusable.length}   (NBA: ESPN counts more games than the database has logged but its stored row fails its own points identity or a made-attempted pair, so the page shows the box-derived line; informational, never fails the run)`);
+  }
   console.log(`  nothing to compare:         ${nothing}   (neither side has anything for the season)`);
   if (!args.live && args.leagues.includes("nfl")) {
     console.log("  Note: in stored mode an NFL season with a stored games figure matches on games by construction (the page and this audit read the same column); only --live checks that figure against ESPN.");
+  }
+  if (args.gamelog && args.leagues.includes("nba")) {
+    console.log(`  game log (--gamelog):       ${gamelogChecked} seasons shown from ESPN's own row checked: ${gamelogConfirmed} confirmed, ${gamelogInternal.length} ESPN internal (listed, never fails), ${gamelogMismatches.length} MISMATCH (fails the run)`);
+    if (gamelogFailures.length > 0) console.log(`  game logs not read:         ${gamelogFailures.length}   (not verified; fails the run)`);
   }
   if (failures.length > 0) console.log(`  failed reads:               ${failures.length}   (fails the run)`);
 
@@ -224,9 +313,9 @@ async function main() {
   section("games short (no stat line)", "games short", short, gapOf, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: site ${f.differences[0]?.site} / ESPN ${f.differences[0]?.espn} games, ${gapOf(f)} short${note(f)}`);
 
   section(
-    "explained: ESPN published no box score for some of the team's games",
+    "partial: ESPN published no box score for some of the team's games (box-only seasons)",
     "games without a box score",
-    explained,
+    partial,
     boxlessOf,
     (f) => {
       const ppg = f.differences.find((d) => d.field === "ppg");
@@ -234,13 +323,33 @@ async function main() {
     }
   );
 
+  if (unusable.length > 0) {
+    console.log(`\n[audit-player-totals] ESPN row unusable (${unusable.length}): ESPN counts more games than the database has logged, but its stored row fails its own identity; not a failure`);
+    for (const f of unusable) console.log(`  ${f.league} ${f.playerId} ${f.name} ${f.season}: ESPN ${f.espnGames} games, ${f.siteGames} logged${note(f)}`);
+  }
+
+  const gamelogLine = (g: GamelogFinding) => `${g.league} ${g.playerId} ${g.name} ${g.season}: game log ${g.gamelog.games} games / ${g.gamelog.points} points, ESPN season row ${g.espnGames} games / ${g.espnPoints} points`;
+  if (gamelogMismatches.length > 0) {
+    console.log(`\n[audit-player-totals] game log MISMATCH (${gamelogMismatches.length}): ESPN's game log and its own season row disagree beyond what a few games explain`);
+    for (const g of gamelogMismatches) console.log(`  ${gamelogLine(g)}`);
+  }
+  if (gamelogInternal.length > 0) {
+    console.log(`\n[audit-player-totals] game log ESPN internal (${gamelogInternal.length}): within 3 games of ESPN's own season row (its game log also lists the All-Star Game); not a failure`);
+    for (const g of gamelogInternal) console.log(`  ${gamelogLine(g)}`);
+  }
+  if (gamelogFailures.length > 0) {
+    console.log(`\n[audit-player-totals] game logs that could not be read (not verified, ${gamelogFailures.length})`);
+    for (const f of gamelogFailures) console.log(`  ${f}`);
+  }
+
   if (failures.length > 0) {
     console.log("\n[audit-player-totals] players that could not be read (not verified)");
     for (const f of failures.slice(0, MISMATCHES_SHOWN)) console.log(`  ${f}`);
   }
 
   const strictFailures = args.strict ? unverified.length + short.length : 0;
-  process.exit(mismatches.length > 0 || failures.length > 0 || strictFailures > 0 ? 1 : 0);
+  const gamelogFailed = gamelogMismatches.length > 0 || gamelogFailures.length > 0;
+  process.exit(mismatches.length > 0 || failures.length > 0 || strictFailures > 0 || gamelogFailed ? 1 : 0);
 }
 
 // One listing for a class that is reported but does not fail: a per-season table, then the first few players.
