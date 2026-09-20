@@ -3,6 +3,7 @@
 // kickoff time goes through here.
 import type { GameRow } from "./queries";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
+import { isCricketLeague, LEAGUE_LABEL } from "./leagues";
 import { teamDisplayName } from "./teamName";
 import { finishedLabel, normalizeStage } from "./stage";
 import type { League } from "./leagues";
@@ -58,4 +59,35 @@ export function scoreboardTileStatus(league: League, g: StatusFields & Pick<Game
 export function finishedNoScoreNote(g: Pick<GameRow, "completed" | "home_score" | "away_score" | "status_summary">): string | null {
   if (!g.completed || (g.home_score != null && g.away_score != null)) return null;
   return g.status_summary?.trim() || null;
+}
+
+/**
+ * The meta description of the scores-by-date page. Only finished games count as played; a called-off game is
+ * listed on the page with its pill but is mentioned as postponed, cancelled or called off, never counted as played
+ * or described as having a final score; games still to come are not counted either.
+ */
+export function scoresDayDescription(league: League, dayLabel: string, games: StatusFields[]): string {
+  const label = LEAGUE_LABEL[league];
+  const american = league === "nba" || league === "nfl";
+  const noun = american ? "game" : "match";
+  const nouns = american ? "games" : "matches";
+  const finished = games.filter((g) => g.completed).length;
+  const off = games.map(gameCalledOffLabel).filter((l): l is string => l !== null);
+  const toPlay = games.length - finished - off.length;
+  const links = american ? "box score" : isCricketLeague(league) ? "scorecard" : "match report";
+
+  let text: string;
+  if (finished > 0) {
+    const count = finished === games.length ? (finished === 1 ? "The one" : `All ${finished}`) : String(finished);
+    text = `${count} ${label} ${finished === 1 ? noun : nouns} played on ${dayLabel}, with final scores and a link to each ${links}.`;
+  } else if (toPlay > 0) {
+    text = `${toPlay} ${label} ${toPlay === 1 ? noun : nouns} to be played on ${dayLabel}, with scores as they finish.`;
+  } else {
+    text = `No ${label} ${nouns} were played on ${dayLabel}.`;
+  }
+  if (off.length > 0) {
+    const reason = new Set(off).size === 1 ? off[0].toLowerCase() : "called off";
+    text += ` ${off.length} ${off.length === 1 ? noun : nouns} ${off.length === 1 ? "was" : "were"} ${reason}.`;
+  }
+  return text;
 }

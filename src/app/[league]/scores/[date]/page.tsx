@@ -7,7 +7,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
-import { isCricketLeague } from "@/lib/leagues";
+import { scoresDayDescription } from "@/lib/gameDisplay";
 import type { Metadata } from "next";
 
 export const revalidate = 15;
@@ -23,13 +23,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league) || !DATE_RE.test(date)) return pageMeta("Scores", "Scores by date.", undefined, { noindex: true });
   const games = await getGamesByDate(league, date);
   const label = dayLabel(date);
-  const american = league === "nba" || league === "nfl";
-  const noun = american ? "game" : "match";
   return pageMeta(
     `${LEAGUE_LABEL[league]} Scores, ${label}`,
-    games.length === 0
-      ? `No ${LEAGUE_LABEL[league]} ${noun === "match" ? "matches" : "games"} were played on ${label}.`
-      : `${games.length === 1 ? "The one" : `All ${games.length}`} ${LEAGUE_LABEL[league]} ${games.length === 1 ? noun : noun === "match" ? "matches" : "games"} played on ${label}, with final scores and a link to each ${american ? "box score" : isCricketLeague(league) ? "scorecard" : "match report"}.`,
+    scoresDayDescription(league, label, games),
     `/${league}/scores/${date}`,
     // A date with nothing played is an empty page, so keep it out of the index.
     { noindex: games.length === 0 }

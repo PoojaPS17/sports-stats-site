@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { finishedNoScoreNote, gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
+import { scoresDayDescription, finishedNoScoreNote, gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
 
 // scheduleRowHeading and gameAccessibleLabel format in the machine's own time zone (the schedule image is rendered
 // where the viewer is), so the tests pin the zone rather than depend on where they run. New York: 12:00 UTC is
@@ -102,4 +102,42 @@ test("finishedNoScoreNote: a finished match with no scores says how it ended, an
   assert.equal(finishedNoScoreNote({ ...abandoned, completed: false }), null);
   assert.equal(finishedNoScoreNote({ ...abandoned, status_summary: null }), null);
   assert.equal(finishedNoScoreNote({ ...abandoned, status_summary: "  " }), null);
+});
+
+/* ---- the scores-by-date page description ------------------------------- */
+
+const DAY = "Sunday, September 20, 2026";
+
+test("scoresDayDescription: a day of finished games reads as before", () => {
+  const all = [finished(), finished(), finished()];
+  assert.equal(scoresDayDescription("nba", DAY, all), "All 3 NBA games played on Sunday, September 20, 2026, with final scores and a link to each box score.");
+  assert.equal(scoresDayDescription("epl", DAY, [finished()]), "The one Premier League match played on Sunday, September 20, 2026, with final scores and a link to each match report.");
+  assert.equal(scoresDayDescription("ipl", DAY, [finished(), finished()]), "All 2 IPL matches played on Sunday, September 20, 2026, with final scores and a link to each scorecard.");
+  assert.equal(scoresDayDescription("nba", DAY, []), "No NBA games were played on Sunday, September 20, 2026.");
+});
+
+test("scoresDayDescription: a postponed game is not counted as played, and is mentioned as postponed", () => {
+  const nine = Array.from({ length: 9 }, () => finished());
+  assert.equal(
+    scoresDayDescription("epl", DAY, [...nine, calledOff("Postponed")]),
+    "9 Premier League matches played on Sunday, September 20, 2026, with final scores and a link to each match report. 1 match was postponed."
+  );
+  assert.equal(scoresDayDescription("nba", DAY, [finished(), calledOff("Canceled"), calledOff("Canceled")]), "1 NBA game played on Sunday, September 20, 2026, with final scores and a link to each box score. 2 games were cancelled.");
+  // different reasons: the plain count
+  assert.match(scoresDayDescription("nba", DAY, [finished(), calledOff("Canceled"), calledOff("Postponed")]), / 2 games were called off\.$/);
+});
+
+test("scoresDayDescription: a day where every game was called off says nothing was played", () => {
+  assert.equal(scoresDayDescription("nba", DAY, [calledOff("Postponed"), calledOff("Postponed")]), "No NBA games were played on Sunday, September 20, 2026. 2 games were postponed.");
+  assert.equal(scoresDayDescription("epl", DAY, [calledOff("Postponed")]), "No Premier League matches were played on Sunday, September 20, 2026. 1 match was postponed.");
+});
+
+test("scoresDayDescription: a finished abandoned cricket match is played (a result), not called off", () => {
+  const abandoned = game({ completed: true, status_detail: "Abandoned" });
+  assert.equal(scoresDayDescription("ipl", DAY, [abandoned]), "The one IPL match played on Sunday, September 20, 2026, with final scores and a link to each scorecard.");
+});
+
+test("scoresDayDescription: games still to come are not counted as played", () => {
+  assert.equal(scoresDayDescription("nba", DAY, [game(), game()]), "2 NBA games to be played on Sunday, September 20, 2026, with scores as they finish.");
+  assert.equal(scoresDayDescription("nba", DAY, [finished(), game()]), "1 NBA game played on Sunday, September 20, 2026, with final scores and a link to each box score.");
 });
