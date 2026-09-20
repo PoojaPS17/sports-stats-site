@@ -192,7 +192,8 @@ const NFL_FIGURES: { field: string; category: string; label: string }[] = [
 ];
 
 /** ESPN's regular-season line for one season, read the way the loader reads it.
- * NBA: `averages` GP and PTS (`gamesPlayed` is ignored). NFL: passing, rushing and receiving YDS and TD,
+ * NBA: `averages` GP and PTS, and games: the row's GP, or the loader's `gamesPlayed` when that is above it (a stint
+ * row's GP is below the season's, and the page then does not show the row's line). NFL: passing, rushing and receiving YDS and TD,
  * and games: the loader's own figure `gamesPlayed` (player_season_stats.games_played, or
  * `seasonGamesPlayed` on a live payload) when there is one, else the largest GP the categories give
  * (each category repeats the player's games played, but a traded player's first-stint row is one stint).
@@ -201,7 +202,10 @@ export function espnFigures(league: AuditLeague, categories: StoredCategories, g
   if (league === "nba") {
     const averages = categories.averages;
     if (!averages) return null;
-    return { games: figureAt(averages, "GP"), figures: { ppg: figureAt(averages, "PTS") } };
+    // The row's GP can be one stint's (or the first team's); the loader's figure, when above it, is the whole season's.
+    const rowGames = figureAt(averages, "GP");
+    const games = typeof gamesPlayed === "number" && gamesPlayed > (rowGames ?? 0) ? gamesPlayed : rowGames;
+    return { games, figures: { ppg: figureAt(averages, "PTS") } };
   }
   const cats = Object.values(categories);
   if (cats.length === 0) return null;

@@ -365,9 +365,30 @@ test("espnFigures: for the NFL a games figure (the loader's) overrides the categ
   assert.equal(espnFigures("nfl", { rushing: { labels: ["YDS"], values: ["100"] } }, 9)?.games, 9);
 });
 
-test("espnFigures: the NBA ignores a games figure", () => {
+test("espnFigures: the NBA takes the loader's games figure when it is above the row's GP, else the row's GP", () => {
+  // The stored row's GP can be one stint (or the first team's games); the loader's figure is the whole-season floor.
   const stored = { averages: { labels: ["GP", "PTS"], values: ["50", "28.2"] } };
-  assert.deepEqual(espnFigures("nba", stored, 99), { games: 50, figures: { ppg: 28.2 } });
+  assert.deepEqual(espnFigures("nba", stored, 99), { games: 99, figures: { ppg: 28.2 } });
+  for (const figure of [50, 40, 0, null, undefined]) assert.deepEqual(espnFigures("nba", stored, figure), { games: 50, figures: { ppg: 28.2 } }, `games_played ${figure}`);
+  // A row with no readable GP takes the loader's figure too, as the NFL does.
+  assert.equal(espnFigures("nba", { averages: { labels: ["PTS"], values: ["28.2"] } }, 60)?.games, 60);
+  assert.equal(espnFigures("nba", { averages: { labels: ["GP", "PTS"], values: ["50", "28.2"] } })?.games, 50);
+});
+
+test("a season shown from ESPN's row is not a games match when the loader's games figure is above the row's GP", () => {
+  // Built without the games figure (as a page could be for a row nothing contradicts), the site shows the row's 75 games.
+  const rows = [
+    ...Array.from({ length: 20 }, (_, i) => row(`g${i}`, `2025-01-${String(i + 1).padStart(2, "0")}`, "regular", 2025, { box: { MIN: "30", PTS: "10" } })),
+    ...Array.from({ length: 3 }, (_, i) => ({ ...row(`u${i}`, `2025-02-0${i + 1}`, "regular", 2025, { box: { MIN: "--", PTS: "--" } }), no_box_score: true })),
+  ];
+  const line: EspnSeasonTotals = { games: 75, starts: 0, minutesPerGame: 20, pts: 900, reb: 10, ast: 10, stl: 1, blk: 1, to: 1, fgm: 300, fga: 600, tpm: 100, tpa: 200, ftm: 100, fta: 120 };
+  const site = siteSeasons("nba", buildStagedProfile("nba", rows, undefined, new Map([[2025, line]])).regular).get(2025)!;
+  assert.equal(site.games, 75);
+  const stored = { averages: { labels: ["GP", "PTS"], values: ["75", "12.0"] } };
+  assert.equal(compareSeason(site, espnFigures("nba", stored), nba).verdict, "match"); // by construction, without the games figure
+  const r = compareSeason(site, espnFigures("nba", stored, 82), nba);
+  assert.equal(r.verdict, "MISMATCH");
+  assert.deepEqual(r.differences, [{ field: "games", site: 75, espn: 82 }]);
 });
 
 // Robinson-shaped: a traded player whose payload has a row per team and no Totals row (3 games, then 1).
