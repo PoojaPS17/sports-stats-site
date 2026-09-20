@@ -50,3 +50,12 @@ export function scoreboardTileStatus(league: League, g: StatusFields & Pick<Game
   if (live) return g.status_detail ?? "Live";
   return `${new Date(g.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
 }
+
+/**
+ * How a finished match that has no scores ended ("Match abandoned without a ball bowled", "No result"): the
+ * result text ESPN gives, for the share image to show in place of "vs". It is a result, never a called-off label.
+ */
+export function finishedNoScoreNote(g: Pick<GameRow, "completed" | "home_score" | "away_score" | "status_summary">): string | null {
+  if (!g.completed || (g.home_score != null && g.away_score != null)) return null;
+  return g.status_summary?.trim() || null;
+}

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
+import { finishedNoScoreNote, gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
 
 // scheduleRowHeading and gameAccessibleLabel format in the machine's own time zone (the schedule image is rendered
 // where the viewer is), so the tests pin the zone rather than depend on where they run. New York: 12:00 UTC is
@@ -91,4 +91,15 @@ test("a live game is live even when its status text reads like a stoppage", () =
   assert.equal(isUpcomingGame(live), false);
   assert.equal(scheduleRowHeading(live), "Sun, Sep 20");
   assert.equal(gameAccessibleLabel(live), "Chelsea at Arsenal, Sunday, September 20");
+});
+
+test("finishedNoScoreNote: a finished match with no scores says how it ended, and is never a called-off label", () => {
+  const abandoned = { completed: true, home_score: null, away_score: null, status_summary: "Match abandoned without a ball bowled" };
+  assert.equal(finishedNoScoreNote(abandoned), "Match abandoned without a ball bowled");
+  assert.equal(finishedNoScoreNote({ ...abandoned, status_summary: "No result" }), "No result");
+  // scored matches, unfinished matches and matches with no summary have nothing extra to say
+  assert.equal(finishedNoScoreNote({ ...abandoned, home_score: 150, away_score: 120 }), null);
+  assert.equal(finishedNoScoreNote({ ...abandoned, completed: false }), null);
+  assert.equal(finishedNoScoreNote({ ...abandoned, status_summary: null }), null);
+  assert.equal(finishedNoScoreNote({ ...abandoned, status_summary: "  " }), null);
 });
