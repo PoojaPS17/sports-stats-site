@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { finishedLabel } from "@/lib/stage";
+import { isCalledOff } from "@/lib/gameStatus";
 import type { GameRow, League } from "@/lib/queries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { TeamLogo } from "./TeamLogo";
@@ -15,7 +16,8 @@ export function pickSpotlight(games: GameRow[]): GameRow | null {
   // `date` arrives as a Date object from pg despite the string type, so compare by time.
   const now = Date.now();
   const at = (g: GameRow) => new Date(g.date).getTime();
-  const upcoming = games.filter((g) => !g.completed && at(g) > now).sort((a, b) => at(a) - at(b))[0];
+  // A postponed or cancelled game with a future date is not a fixture.
+  const upcoming = games.filter((g) => !g.completed && !isCalledOff(g.status_detail) && at(g) > now).sort((a, b) => at(a) - at(b))[0];
   if (upcoming && at(upcoming) - now < 36 * 3600 * 1000) return upcoming;
   const recent = games.filter((g) => g.completed).sort((a, b) => at(b) - at(a))[0];
   return recent ?? upcoming ?? null;

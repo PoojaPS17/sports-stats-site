@@ -5,6 +5,7 @@
 import type { GameRow, League } from "./queries";
 import { isCricketLeague } from "./leagues";
 import { resolveCricketWinner } from "./cricketResult";
+import { isCalledOff } from "./gameStatus";
 
 const LIVE_REVALIDATE = 10;
 
@@ -41,10 +42,10 @@ async function fetchScoreboard(league: League): Promise<Map<string, any>> {
   return out;
 }
 
-/** True when a game could be in play now: kicked off within the last nine hours, or about to. */
+/** True when a game could be in play now: kicked off within the last nine hours, or about to. A called-off game never is. */
 function couldBeLive(g: GameRow, now: number): boolean {
   if (g.status_state === "in") return true;
-  if (g.completed) return false;
+  if (g.completed || isCalledOff(g.status_detail)) return false;
   const t = new Date(g.date).getTime();
   return t <= now + 15 * 60_000 && t >= now - 9 * 3_600_000;
 }

@@ -5,7 +5,7 @@
 import { pool } from "./db";
 import { isCricketLeague, SOCCER_LEAGUES, type League } from "./leagues";
 import type { GameStage } from "./gameStage";
-import { isCalledOff } from "./gameStatus";
+import { CALLED_OFF, isCalledOff } from "./gameStatus";
 import type { GameRow } from "./queries";
 
 /* ------------------------------------------------------------------------ */
@@ -303,12 +303,13 @@ export async function getPowerRankings(league: League, nextN = 5): Promise<Power
   }
   const activeRows = rows.filter((r) => active.has(r.team.espn_id));
 
-  // Upcoming fixtures for the difficulty run.
+  // Upcoming fixtures for the difficulty run. A postponed or cancelled game is not one to play.
   const { rows: upcoming } = await pool.query(
     `select espn_id, date, home_team_espn_id, away_team_espn_id from games
      where league = $1 and completed = false and date > now() and stage = 'regular'
+       and coalesce(status_detail, '') !~* $2
      order by date asc`,
-    [league]
+    [league, CALLED_OFF.source]
   );
   const perTeam = new Map<string, FixtureDifficultyRow>();
   for (const g of upcoming) {

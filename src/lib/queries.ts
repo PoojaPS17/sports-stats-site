@@ -1,5 +1,6 @@
 import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
+import { CALLED_OFF } from "./gameStatus";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 import type { GameDetails } from "./matchDetail";
@@ -403,9 +404,10 @@ export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
      join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
      join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
      where g.date > now() - interval '3 days' and g.date < now() + interval '10 days'
+       and coalesce(g.status_detail, '') !~* $2
      order by g.completed desc, case when g.completed then g.date end desc, g.date asc
      limit $1`,
-    [limit]
+    [limit, CALLED_OFF.source]
   );
   return rows;
 }

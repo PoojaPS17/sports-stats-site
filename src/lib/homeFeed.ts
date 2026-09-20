@@ -3,6 +3,7 @@
 import { pool } from "./db";
 import { GAME_SELECT, type GameRow, type League } from "./queries";
 import { ALL_LEAGUES } from "./leagues";
+import { CALLED_OFF } from "./gameStatus";
 import { type F1EventRow } from "./f1";
 
 // Which competitions lead the upcoming list when fixtures fall on the same day.
@@ -18,14 +19,19 @@ function priority(g: GameRow): number {
   return i === -1 ? LEAGUE_PRIORITY.length : i;
 }
 
-/** Games stored as in play, plus any whose start has passed without a result (the scrape may not have seen them start). */
+/**
+ * Games stored as in play, plus any whose start has passed without a result (the scrape may not have seen
+ * them start). A postponed or cancelled game has no result either, but it is not in play: only the second
+ * arm, which guesses from the start time, leaves it out.
+ */
 export async function getLiveGames(): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
      where g.league = any($1::text[]) and g.completed = false
-       and ((g.status_state = 'in' and g.date > now() - interval '12 hours') or (g.date <= now() + interval '15 minutes' and g.date > now() - interval '9 hours'))
+       and ((g.status_state = 'in' and g.date > now() - interval '12 hours')
+         or (g.date <= now() + interval '15 minutes' and g.date > now() - interval '9 hours' and coalesce(g.status_detail, '') !~* $2))
      order by g.date`,
-    [ALL_LEAGUES]
+    [ALL_LEAGUES, CALLED_OFF.source]
   );
   return rows;
 }
