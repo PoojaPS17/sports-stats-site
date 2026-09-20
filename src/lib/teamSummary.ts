@@ -1,3 +1,4 @@
+import { isCalledOff } from "./gameStatus";
 import type { GameRow } from "./queries";
 
 export type ResultLetter = "W" | "L" | "D";
@@ -58,7 +59,8 @@ export function summarizeTeamSeason(games: GameRow[], teamEspnId: string): TeamS
     }
     if (form.length < 5) form.push(r);
   }
-  const upcoming = games.filter((g) => !g.completed && g.status_state !== "in");
+  // A postponed or cancelled game keeps its original event (0-0, not completed); it is not the next fixture.
+  const upcoming = games.filter((g) => !g.completed && g.status_state !== "in" && !isCalledOff(g.status_detail));
   const nextGame = upcoming.length > 0 ? upcoming.reduce((a, b) => (new Date(a.date) < new Date(b.date) ? a : b)) : null;
   return { wins, losses, draws, form, nextGame };
 }

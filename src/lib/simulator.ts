@@ -5,6 +5,7 @@ import { pool } from "./db";
 import { isSoccer, getEloRatings, homeWinProbability, type TeamRef } from "./analytics";
 import { GAME_SELECT, isCupCompetition, isSoccerLeague, type GameRow, type League } from "./queries";
 import { getSeasonsWithGames } from "./matchweeks";
+import { isCalledOff } from "./gameStatus";
 
 export function supportsProjections(league: League): boolean {
   return isSoccerLeague(league) || league === "nfl" || league === "nba";
@@ -177,7 +178,9 @@ export async function getSeasonProjection(league: League): Promise<SeasonProject
 
   // Results so far.
   const played = games.filter((g) => g.completed && g.home_score != null && g.away_score != null);
-  const remaining = games.filter((g) => !g.completed);
+  // A postponed or cancelled game is neither played nor still to play (ESPN keeps its original 0-0
+  // event; the replay is a separate game), so it is not simulated and does not keep a season open.
+  const remaining = games.filter((g) => !g.completed && !isCalledOff(g.status_detail));
   for (const g of played) {
     const h = states[index.get(g.home_team_espn_id)!];
     const a = states[index.get(g.away_team_espn_id)!];

@@ -99,6 +99,37 @@ test("a team's next game still comes from every game, including the play-in", ()
   assert.equal(s.nextGame?.espn_id, "pi");
 });
 
+// ESPN keeps the original event of a postponed or cancelled game (0-0, not completed, status_state
+// 'post'); the replay is a separate event. That original is not the team's next game.
+function unplayed(id: string, date: string, extra: Partial<GameRow> = {}): GameRow {
+  return game(id, date, { completed: false, status_state: "pre", home_winner: null, away_winner: null, home_score: null, away_score: null, ...extra });
+}
+function calledOff(id: string, date: string, detail: string): GameRow {
+  return unplayed(id, date, { status_state: "post", status_detail: detail, home_score: 0, away_score: 0 });
+}
+const inDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString();
+
+test("a team's next game skips an earlier postponed game and finds the real one", () => {
+  const s = summarizeTeamSeason([unplayed("real", inDays(9)), calledOff("pp", inDays(2), "Postponed")], "1");
+  assert.equal(s.nextGame?.espn_id, "real");
+});
+
+test("a team has no next game when only postponed and cancelled games are left", () => {
+  assert.equal(summarizeTeamSeason([calledOff("pp", inDays(2), "Postponed")], "1").nextGame, null);
+  assert.equal(summarizeTeamSeason([calledOff("cx", inDays(3), "Canceled"), calledOff("pp", inDays(2), "Postponed")], "1").nextGame, null);
+});
+
+test("a team's next game still skips a live game", () => {
+  const live = unplayed("live", inDays(0), { status_state: "in" });
+  assert.equal(summarizeTeamSeason([live], "1").nextGame, null);
+  assert.equal(summarizeTeamSeason([unplayed("real", inDays(4)), live], "1").nextGame?.espn_id, "real");
+});
+
+test("a team's next game is still the earliest of normal upcoming games", () => {
+  const s = summarizeTeamSeason([unplayed("later", inDays(20)), unplayed("sooner", inDays(6))], "1");
+  assert.equal(s.nextGame?.espn_id, "sooner");
+});
+
 test("a league without split stages keeps counting round games in the record", () => {
   const games = [
     game("f", "2026-05-25T00:00:00Z", { league: "ipl", stage: "other", round: "Final" }),
@@ -130,6 +161,8 @@ after(async () => {
 interface Seed {
   id: string;
   date: string;
+  /** Defaults to 2025. */
+  seasonYear?: number;
   seasonType?: number | null;
   competitionType?: string;
   round?: string | null;
@@ -146,7 +179,7 @@ async function seed(league: string, games: Seed[]) {
     const scores = g.scores === undefined ? [100, 90] : g.scores;
     await db.pool.query(
       `insert into games (league, espn_id, date, name, season_year, home_team_espn_id, away_team_espn_id, home_score, away_score, completed, season_type, competition_type, round, status_state, status_detail)
-       values ($1, $2, $3, 'x', 2025, '1', '2', $4, $5, $6, $7, $8, $9, $10, $11)`,
+       values ($1, $2, $3, 'x', $12, '1', '2', $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         league,
         g.id,
@@ -159,6 +192,7 @@ async function seed(league: string, games: Seed[]) {
         g.round ?? null,
         g.statusDetail ? "post" : null,
         g.statusDetail ?? null,
+        g.seasonYear ?? 2025,
       ]
     );
   }
@@ -339,4 +373,58 @@ test("head-to-head next meeting is the earliest of several upcoming games", asyn
   assert.equal(h2h?.upcoming?.espn_id, "sooner");
   // The same from the other team's side.
   assert.equal((await analytics.getHeadToHead("ucl", "two", "one"))?.upcoming?.espn_id, "sooner");
+});
+
+// The season projection: a postponed or cancelled game is neither played nor remaining. The projection
+// needs a league that supports it, and every such league already has games in this file, so these two
+// tests seed a season no other test uses (the latest season is the one projected) in NFL, whose only
+// other games are the head-to-head ones above, and remove it again so neither test depends on the other.
+const PROJECTED_SEASON = 2030;
+async function withProjectedSeason(games: Seed[], check: (projection: NonNullable<Awaited<ReturnType<typeof simulator.getSeasonProjection>>>) => void) {
+  await seed(
+    "nfl",
+    games.map((g) => ({ ...g, seasonYear: PROJECTED_SEASON, seasonType: 2 }))
+  );
+  try {
+    const projection = await simulator.getSeasonProjection("nfl");
+    assert.ok(projection);
+    assert.equal(projection.season, PROJECTED_SEASON);
+    check(projection);
+  } finally {
+    await db.pool.query(`delete from games where league = 'nfl' and season_year = $1`, [PROJECTED_SEASON]);
+  }
+}
+
+test("the season projection does not simulate or list a postponed game", async () => {
+  await withProjectedSeason(
+    [
+      { id: "p-a", date: "2030-09-08T00:00:00Z" },
+      { id: "p-b", date: "2030-09-15T00:00:00Z", scores: [90, 100] },
+      { id: "p-pp", date: future(2), scores: [0, 0], completed: false, statusDetail: "Postponed" },
+      { id: "p-next", date: future(3), scores: null },
+    ],
+    (projection) => {
+      assert.equal(projection.playedGames, 2);
+      assert.equal(projection.remainingGames, 1);
+      assert.deepEqual(projection.upcoming.map((u) => u.game.espn_id), ["p-next"]);
+      assert.equal(projection.finished, false);
+      assert.equal(projection.preseason, false);
+    }
+  );
+});
+
+test("a season whose only unfinished game was cancelled is finished", async () => {
+  await withProjectedSeason(
+    [
+      { id: "c-a", date: "2030-09-08T00:00:00Z" },
+      { id: "c-b", date: "2030-09-15T00:00:00Z", scores: [90, 100] },
+      { id: "c-cx", date: future(2), scores: [0, 0], completed: false, statusDetail: "Canceled" },
+    ],
+    (projection) => {
+      assert.equal(projection.playedGames, 2);
+      assert.equal(projection.remainingGames, 0);
+      assert.deepEqual(projection.upcoming, []);
+      assert.equal(projection.finished, true);
+    }
+  );
 });
