@@ -14,7 +14,7 @@ import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SeasonTabs } from "@/components/SeasonTabs";
-import { buildStagedProfile, formatStat, playerMeta, playerSport, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, formatStat, noBoxScoreGames, playerMeta, playerSport, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
 import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
@@ -22,7 +22,7 @@ import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
-import { NFL_PLAYOFFS_NOTE, nflRegularSeasonNote } from "@/lib/playerCopy";
+import { NBA_NO_BOX_SCORE_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote } from "@/lib/playerCopy";
 
 // A past season's stat line is static (it never changes once the season is over), so
 // this can be cached far longer than the live current-season player page.
@@ -88,6 +88,11 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
   const seasonStats = await getPlayerSeasonStatsBySeason(league, player.espn_id, season);
   const basePath = `/${league}/players/${slug}`;
   const label = formatSeasonLabel(league, season) ?? String(season);
+  // NBA games ESPN published no box score for: in GP, in no average. The section notes and the log line say so.
+  const regularNoBoxScore = staged && profile ? noBoxScoreGames(staged.regular.sport, profile.games, profile.recorded) : 0;
+  const playoffsNoBoxScore = staged?.playoffs ? noBoxScoreGames(staged.playoffs.sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
+  const playinNoBoxScore = staged?.playin ? noBoxScoreGames(staged.playin.sport, staged.playin.games, staged.playin.recorded) : 0;
+  const unlisted = staged && staged.counted.unrecorded > 0 ? unlistedGamesNote(staged.counted.unrecorded) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -111,7 +116,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {profile.games > 0 && (
             <section>
               <SectionHeader
-                description={sport === "nfl" ? nflRegularSeasonNote(staged.regular.gamesFromEspn) : staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`}
+                description={sport === "nfl" ? nflRegularSeasonNote(staged.regular.gamesFromEspn) : `${staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`}${regularNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}
                 tools={
                   <ImageActions
                     filename={`${slug}-${season}-${league}`}
@@ -135,14 +140,14 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
 
           {staged.playoffs && (
             <section>
-              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : "Playoff games only; ESPN lists these separately from the regular season."}>Playoffs</SectionHeader>
+              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : `Playoff games only; ESPN lists these separately from the regular season.${playoffsNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Playoffs</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} activeSeason={season} careerLabel="Career playoffs" baseSeason={null} />
             </section>
           )}
 
           {staged.playin && (
             <section>
-              <SectionHeader description="Play-in tournament games, listed separately from the regular season and the playoffs.">Play-In</SectionHeader>
+              <SectionHeader description={`Play-in tournament games, listed separately from the regular season and the playoffs.${playinNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Play-In</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} activeSeason={season} careerLabel="Career play-in" baseSeason={null} />
             </section>
           )}
@@ -154,7 +159,8 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
             </section>
           )}
 
-          {profile.games > 0 && (
+          {/* The splits read the games with a stat line: a season made only of games with no box score has none. */}
+          {profile.rows.length > 0 && (
             <div className="grid gap-6 lg:grid-cols-2">
               <section>
                 <SectionHeader>Home and away</SectionHeader>
@@ -170,8 +176,12 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           )}
 
           <section>
-            <SectionHeader>{label} game log</SectionHeader>
-            <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={staged.split} season={season} />
+            <SectionHeader description={staged.log.length > 0 && unlisted ? unlisted : undefined}>{label} game log</SectionHeader>
+            {staged.log.length === 0 && unlisted ? (
+              <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{unlisted}</p>
+            ) : (
+              <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={staged.split} season={season} />
+            )}
           </section>
         </>
       )}

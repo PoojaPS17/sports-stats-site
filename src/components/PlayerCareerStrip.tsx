@@ -44,7 +44,9 @@ function Stat({ label, value, title }: { label: string; value: string; title?: s
       <p className="truncate text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]" title={title ?? label}>
         {label}
       </p>
-      <p className="text-xl font-bold tabular-nums tracking-tight sm:text-2xl">{value}</p>
+      <p className="text-xl font-bold tabular-nums tracking-tight sm:text-2xl" title={value.endsWith("†") ? title : undefined}>
+        {value}
+      </p>
     </div>
   );
 }

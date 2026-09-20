@@ -31,7 +31,7 @@ import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
-import { buildStagedProfile, goalBands, formatStat, playerMeta, playerSport, positionLabel, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, goalBands, formatStat, noBoxScoreGames, playerMeta, playerSport, positionLabel, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { ImageActions } from "@/components/ImageActions";
 import { PlayerExportCard } from "@/components/PlayerExportCard";
@@ -46,7 +46,7 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
-import { NFL_PLAYOFFS_NOTE, nflRegularSeasonNote } from "@/lib/playerCopy";
+import { NBA_NO_BOX_SCORE_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -191,6 +191,11 @@ export default async function PlayerPage({
   ]);
   const summary = profileSummary(league, player, profile);
   const soccer = sport === "soccer";
+  // NBA games ESPN published no box score for: in GP, in no average. The section notes and the log line say so.
+  const regularNoBoxScore = noBoxScoreGames(sport, profile.games, profile.recorded);
+  const playoffsNoBoxScore = staged.playoffs ? noBoxScoreGames(sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
+  const playinNoBoxScore = staged.playin ? noBoxScoreGames(sport, staged.playin.games, staged.playin.recorded) : 0;
+  const unlisted = staged.counted.unrecorded > 0 ? unlistedGamesNote(staged.counted.unrecorded) : null;
   const bands = goals ? goalBands(goals.clocks) : [];
   const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
 
@@ -240,7 +245,7 @@ export default async function PlayerPage({
               </section>
 
               <section>
-                <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <SectionHeader description={profile.sport === "nba" ? `Per-game averages; shooting as made over attempted for the season.${regularNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}` : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
                 <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
               </section>
             </>
@@ -253,14 +258,14 @@ export default async function PlayerPage({
 
           {staged.playoffs && (
             <section>
-              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : "Playoff games only; ESPN lists these separately from the regular season."}>Playoffs</SectionHeader>
+              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : `Playoff games only; ESPN lists these separately from the regular season.${playoffsNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Playoffs</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} careerLabel="Career playoffs" baseSeason={latestRegular} />
             </section>
           )}
 
           {staged.playin && (
             <section>
-              <SectionHeader description="Play-in tournament games, listed separately from the regular season and the playoffs.">Play-In</SectionHeader>
+              <SectionHeader description={`Play-in tournament games, listed separately from the regular season and the playoffs.${playinNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Play-In</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} careerLabel="Career play-in" baseSeason={latestRegular} />
             </section>
           )}
@@ -281,30 +286,35 @@ export default async function PlayerPage({
 
           {profile.games > 0 && (
             <>
-              <div className="grid gap-6 lg:grid-cols-2">
-                <section>
-                  <SectionHeader>Home and away</SectionHeader>
-                  <PlayerSplitsTable league={league} profile={profile} rows={profile.homeAway} firstColumn="Venue" />
-                </section>
-                {profile.byResult.length > 0 && (
+              {/* The splits read the games with a stat line: a regular season made only of games with no box score has none. */}
+              {profile.rows.length > 0 && (
+                <>
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <section>
+                      <SectionHeader>Home and away</SectionHeader>
+                      <PlayerSplitsTable league={league} profile={profile} rows={profile.homeAway} firstColumn="Venue" />
+                    </section>
+                    {profile.byResult.length > 0 && (
+                      <section>
+                        <SectionHeader>By result</SectionHeader>
+                        <PlayerSplitsTable league={league} profile={profile} rows={profile.byResult} firstColumn="Team result" />
+                      </section>
+                    )}
+                  </div>
+
+                  {goals && goals.clocks.length > 0 && (
+                    <section>
+                      <SectionHeader>Goals by minute</SectionHeader>
+                      <GoalMinutesChart bands={bands} reports={goals.reports} games={profile.games} />
+                    </section>
+                  )}
+
                   <section>
-                    <SectionHeader>By result</SectionHeader>
-                    <PlayerSplitsTable league={league} profile={profile} rows={profile.byResult} firstColumn="Team result" />
+                    <SectionHeader description="Every opponent faced, most often first.">Against each opponent</SectionHeader>
+                    <PlayerSplitsTable league={league} profile={profile} rows={profile.opponents} firstColumn="Opponent" linkTeams />
                   </section>
-                )}
-              </div>
-
-              {goals && goals.clocks.length > 0 && (
-                <section>
-                  <SectionHeader>Goals by minute</SectionHeader>
-                  <GoalMinutesChart bands={bands} reports={goals.reports} games={profile.games} />
-                </section>
+                </>
               )}
-
-              <section>
-                <SectionHeader description="Every opponent faced, most often first.">Against each opponent</SectionHeader>
-                <PlayerSplitsTable league={league} profile={profile} rows={profile.opponents} firstColumn="Opponent" linkTeams />
-              </section>
 
               {profile.milestones.length > 0 && (
                 <section>
@@ -318,8 +328,12 @@ export default async function PlayerPage({
           <AdSlot label="Player page middle" />
 
           <section>
-            <SectionHeader description={`Every ${LEAGUE_LABEL[league]} game on record, latest season open.`}>Game log</SectionHeader>
-            <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={split} />
+            <SectionHeader description={`Every ${LEAGUE_LABEL[league]} game on record, latest season open.${unlisted && staged.log.length > 0 ? ` ${unlisted}` : ""}`}>Game log</SectionHeader>
+            {staged.log.length === 0 && unlisted ? (
+              <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{unlisted}</p>
+            ) : (
+              <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={split} />
+            )}
           </section>
 
           {feedStats && <PlayerSeasonStats league={league} stats={feedStats} seasons={seasons} activeSeason={latest} basePath={basePath} />}
@@ -335,9 +349,15 @@ export default async function PlayerPage({
 
           {split ? (
             <p className="text-[11px] text-[var(--text-faint)]">
-              {profile.games > 0 && (
+              {profile.games > 0 && regularNoBoxScore === 0 && (
                 <>
                   Regular-season figures are summed from the {sport === "nfl" ? profile.rows.length : profile.games} {LEAGUE_LABEL[league]} regular-season games {sport === "nfl" ? "with a recorded stat line" : "on record"} here
+                  {since ? ` since ${since}` : ""}.{" "}
+                </>
+              )}
+              {regularNoBoxScore > 0 && profile.recorded > 0 && (
+                <>
+                  Regular-season per-game averages are over the {profile.recorded} {LEAGUE_LABEL[league]} regular-season games with a box score here
                   {since ? ` since ${since}` : ""}.{" "}
                 </>
               )}

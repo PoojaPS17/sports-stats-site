@@ -2,8 +2,9 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
-import { formatStat, gamesHeader, type PlayerProfile } from "@/lib/playerProfile";
-import { recordText } from "./PlayerStatsShared";
+import { formatStat, gamesHeader, noBoxScoreGames, type PlayerProfile, type SeasonLine } from "@/lib/playerProfile";
+import { noBoxScoreGamesTitle } from "@/lib/playerCopy";
+import { careerNoBoxScoreTitle, recordText } from "./PlayerStatsShared";
 
 const num = "px-2 py-2 text-right tabular-nums";
 
@@ -28,8 +29,26 @@ export function PlayerSeasonTable({
   const soccer = profile.sport === "soccer";
   const specs = profile.profile.specs.filter((s) => s.table !== false);
   const games = gamesHeader(profile);
-  // A table whose header says GP but that has a season with no ESPN figure marks that season's number.
-  const mixed = profile.gamesFromEspn && profile.seasons.some((s) => s.gamesSource === "logged");
+  // An NFL table whose header says GP but that has a season with no ESPN figure marks that season's number. (An
+  // NBA season is only ever ESPN's figure when it has games with no box score, so it takes the † instead.)
+  const mixed = profile.sport === "nfl" && profile.gamesFromEspn && profile.seasons.some((s) => s.gamesSource === "logged");
+  const careerNoBoxScore = careerNoBoxScoreTitle(profile);
+  const gamesCell = (row: SeasonLine) => {
+    const noBoxScore = noBoxScoreGames(profile.sport, row.games, row.recorded);
+    if (noBoxScore > 0)
+      return (
+        <td className={num} title={noBoxScoreGamesTitle(noBoxScore, row.gamesSource)}>
+          {row.games}†
+        </td>
+      );
+    if (mixed && row.gamesSource === "logged")
+      return (
+        <td className={num} title="Games with a recorded stat line; ESPN's figure is not stored for this season.">
+          {row.games}*
+        </td>
+      );
+    return <td className={num}>{row.games}</td>;
+  };
   const latest = baseSeason === undefined ? (profile.seasons[0]?.season ?? null) : baseSeason;
   return (
     <div className="card overflow-hidden">
@@ -68,13 +87,7 @@ export function PlayerSeasonTable({
                     ))}
                   </span>
                 </td>
-                {mixed && row.gamesSource === "logged" ? (
-                  <td className={num} title="Games with a recorded stat line; ESPN's figure is not stored for this season.">
-                    {row.games}*
-                  </td>
-                ) : (
-                  <td className={num}>{row.games}</td>
-                )}
+                {gamesCell(row)}
                 <td className={`${num} whitespace-nowrap text-[var(--text-muted)]`}>{recordText(row.record, soccer)}</td>
                 {specs.map((s) => (
                   <td key={s.key} className={num}>
@@ -88,7 +101,13 @@ export function PlayerSeasonTable({
                 <td className="py-2 pl-4" colSpan={2}>
                   {careerLabel}
                 </td>
-                <td className={num}>{profile.games}</td>
+                {careerNoBoxScore ? (
+                  <td className={num} title={careerNoBoxScore}>
+                    {profile.games}†
+                  </td>
+                ) : (
+                  <td className={num}>{profile.games}</td>
+                )}
                 <td className={`${num} whitespace-nowrap text-[var(--text-muted)]`}>{recordText(profile.record, soccer)}</td>
                 {specs.map((s) => (
                   <td key={s.key} className={num}>

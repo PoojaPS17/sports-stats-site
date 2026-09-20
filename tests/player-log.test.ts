@@ -26,7 +26,7 @@ before(async () => {
 
 const box = (min: string | null, pts: string) => ({ box: { ...(min === null ? {} : { MIN: min }), PTS: pts, REB: "0", AST: "0" } });
 
-/** Games g1..g6 in each of nba and nfl; p1 is in every one, teammates carry the stat lines. */
+/** Six games (blank, min, pts, zeros, own, solo) in each of nba and nfl; p1 is in every one, teammates carry the stat lines. */
 async function seedGames() {
   const games: { id: string; stats: Record<string, object> }[] = [
     // Nobody has a minutes line or points: ESPN published no box score.

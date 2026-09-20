@@ -372,6 +372,8 @@ export interface SeasonLine {
    * stored), or the logged count plus the games with no box score. */
   games: number;
   gamesSource: GamesSource;
+  /** The season's games with a stat line: the rows behind `line`. `games - recorded` is the games with no box score. */
+  recorded: number;
   /** How many of the player's games this season have no box score (NBA only, else 0). They are in `games`
    * but in no `line`, split or W-L. */
   unrecorded: number;
@@ -407,6 +409,8 @@ export interface PlayerProfile {
   /** The sum of the seasons' displayed games when ESPN's figures were supplied or a season has games with no
    * box score, else the logged count. */
   games: number;
+  /** The games with a stat line: the seasons' `recorded` plus the played rows with no season year. */
+  recorded: number;
   /** The sum of the seasons' `unrecorded`: games with no box score. */
   unrecorded: number;
   /** Null when any season's record is null. */
@@ -442,14 +446,15 @@ function ordinal(n: number): string {
 
 /** `unrecorded` is the player's rows in games with no box score (NBA; empty for the others). A game with no box
  * score is still a game played, so it takes a place in the count behind "First game on record" and the "Nth game"
- * ordinals; when that place is the milestone's game there is no stat line to point at and the milestone is left
- * out. Every other milestone reads the games with a stat line only. */
+ * ordinals. The first game is that game even when it has no box score (its page says so); an Nth game with no box
+ * score is left out, since a landmark pinned to it would claim a stat line. Every other milestone reads the games
+ * with a stat line only. */
 function milestonesFor(sport: PlayerSport, profile: SportProfile, chrono: PlayerLogRow[], unrecorded: PlayerLogRow[]): Milestone[] {
   const out: Milestone[] = [];
   const timeline = unrecorded.length > 0 ? [...chrono, ...unrecorded].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)) : chrono;
   if (timeline.length === 0) return out;
   const isUnrecorded = (r: PlayerLogRow) => unrecorded.includes(r);
-  if (!isUnrecorded(timeline[0])) out.push({ label: `First ${profile.gamesLabel === "Apps" ? "appearance" : "game"} on record`, detail: "", game: timeline[0] });
+  out.push({ label: `First ${profile.gamesLabel === "Apps" ? "appearance" : "game"} on record`, detail: "", game: timeline[0] });
   for (const n of [50, 100, 200, 300, 400, 500]) {
     if (timeline.length >= n && !isUnrecorded(timeline[n - 1])) out.push({ label: `${ordinal(n)} ${profile.gamesLabel === "Apps" ? "appearance" : "game"}`, detail: "", game: timeline[n - 1] });
   }
@@ -515,6 +520,13 @@ export function gamesHeader(profile: PlayerProfile, fromEspn: boolean = profile.
   return { label: "Logged", title: "Games with a recorded stat line" };
 }
 
+/** The games in a season's or career's GP that ESPN published no box score for: `games - recorded`, never negative.
+ * NBA only: an NFL figure above the log is players without a stat line (a lineman), which the NFL pages word
+ * their own way, and soccer has no such games. */
+export function noBoxScoreGames(sport: PlayerSport, games: number, recorded: number): number {
+  return sport === "nba" ? Math.max(0, games - recorded) : 0;
+}
+
 /** NFL picks its columns from the rows it is given; the staged tables pass the regular-season rows
  * as `specRows` so every table for a player has the same columns. `reportedGames` (season year to ESPN's
  * games played) applies to the NFL, where ESPN's box scores omit players without a stat line so the log
@@ -552,6 +564,7 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
         teams: [...teams.values()],
         games,
         gamesSource: figure !== undefined ? "espn" : us.length > 0 ? "listed" : "logged",
+        recorded: logged,
         unrecorded: us.length,
         record: games > logged ? null : record(rs),
         line: aggregate(rs, specs),
@@ -559,8 +572,9 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
     });
   const unrecorded = unrecordedRows.length;
 
+  // Newest first, so the latest club leads; a team the player has only games with no box score for is still a team.
   const teams = new Map<string, SeasonLine["teams"][number]>();
-  for (const r of rows) teams.set(r.team_espn_id, { espn_id: r.team_espn_id, name: r.team_name, slug: r.team_slug, logo: r.team_logo });
+  for (const r of unrecordedRows.length > 0 ? [...rows, ...unrecordedRows].sort(newestFirst) : rows) teams.set(r.team_espn_id, { espn_id: r.team_espn_id, name: r.team_name, slug: r.team_slug, logo: r.team_logo });
 
   const split = (key: string, label: string, rs: PlayerLogRow[]): Split => ({ key, label, games: rs.length, record: record(rs), line: aggregate(rs, specs) });
   const homeAway = [split("home", "Home", rows.filter((r) => r.is_home)), split("away", "Away", rows.filter((r) => !r.is_home))];
@@ -592,8 +606,11 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
     rows,
     // Rows with no season year are in no season line but are still in the career line and W-L, so they count here.
     games: reported || unrecorded > 0 ? seasons.reduce((n, s) => n + s.games, 0) + [...rows, ...unrecordedRows].filter((r) => r.season_year === null).length : rows.length,
+    // Every played row is in a season or has no season year, and both are in the career line.
+    recorded: rows.length,
     unrecorded,
-    record: seasons.some((s) => s.record === null) ? null : record(rows),
+    // A game with no box score and no season year is in no season, but the W-L still cannot cover it.
+    record: seasons.some((s) => s.record === null) || unrecordedRows.some((r) => r.season_year === null) ? null : record(rows),
     gamesFromEspn: seasons.some((s) => s.gamesSource === "espn"),
     career: aggregate(rows, specs),
     seasons,

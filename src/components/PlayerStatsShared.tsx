@@ -2,7 +2,8 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import type { League } from "@/lib/queries";
-import { gamesHeader, headlineCareerStats, type PlayerLogRow, type PlayerProfile, type Record3 } from "@/lib/playerProfile";
+import { gamesHeader, headlineCareerStats, noBoxScoreGames, type PlayerLogRow, type PlayerProfile, type Record3 } from "@/lib/playerProfile";
+import { noBoxScoreGamesTitle } from "@/lib/playerCopy";
 
 export function fmtDate(date: string): string {
   return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -14,13 +15,21 @@ export function recordText(r: Record3 | null, soccer: boolean): string {
   return soccer ? `${r.w}-${r.d}-${r.l}` : `${r.w}-${r.l}`;
 }
 
+/** The tooltip for the † on a career GP that includes NBA games with no box score; null when it has none. It says
+ * ESPN's own figure is behind the count when any season's games are ESPN's, else that they were counted from the rosters. */
+export function careerNoBoxScoreTitle(profile: PlayerProfile): string | null {
+  const n = noBoxScoreGames(profile.sport, profile.games, profile.recorded);
+  return n > 0 ? noBoxScoreGamesTitle(n, profile.gamesFromEspn ? "espn" : "listed") : null;
+}
+
 // Every number in the career strip, in order - shared by the live strip and the downloadable
 // card so the two can never drift apart.
 export function careerStripStats(profile: PlayerProfile): { label: string; value: string; title?: string }[] {
   const soccer = profile.sport === "soccer";
   const games = gamesHeader(profile);
+  const noBoxScore = careerNoBoxScoreTitle(profile);
   return [
-    { label: games.label, value: String(profile.games), ...(games.title ? { title: games.title } : {}) },
+    { label: games.label, value: `${profile.games}${noBoxScore ? "†" : ""}`, ...(noBoxScore ? { title: noBoxScore } : games.title ? { title: games.title } : {}) },
     { label: soccer ? "W-D-L" : "W-L", value: recordText(profile.record, soccer) },
     ...headlineCareerStats(profile),
   ];

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildProfile, buildStagedProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
+import { buildProfile, buildStagedProfile, noBoxScoreGames, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
+import { noBoxScoreGamesTitle } from "../src/lib/playerCopy";
 import type { GameStage } from "../src/lib/gameStage";
 import { careerStripStats, recordText } from "../src/components/PlayerStatsShared";
 
@@ -449,7 +450,8 @@ test("NBA: a season whose every game has no box score is still a season, with no
   assert.equal(p.unrecorded, 4);
   assert.equal(p.record, null);
   assert.ok(Object.values(p.career).every((v) => v === null));
-  assert.deepEqual(p.milestones, []);
+  // The one landmark such a career has is its first game, on a game with no box score.
+  assert.deepEqual(p.milestones.map((m) => [m.label, m.game?.game_espn_id]), [["First game on record", "u1"]]);
 
   // Without a figure the listed count stands.
   const listed = buildProfile("nba", rows).seasons[0];
@@ -520,6 +522,9 @@ test("NBA: career games and unrecorded add up across seasons, and a row with no 
   const noYear = buildProfile("nba", [played("a1", "2026-01-10", 10), blank("un", "2026-01-12", { season_year: null })]);
   assert.equal(noYear.games, 2);
   assert.equal(noYear.unrecorded, 1);
+  // Its result is unknown, so the W-L is dropped even though no season line lost its own.
+  assert.equal(noYear.record, null);
+  assert.equal(buildProfile("nba", [blank("un", "2026-01-12", { season_year: null })]).record, null);
 });
 
 test("NBA staged: a playoff run of games with no box score is a listed playoffs table; the log leaves them out", () => {
@@ -588,18 +593,126 @@ test("NBA milestones: without unrecorded games the ordinals are unchanged", () =
 });
 
 test("NBA milestones: an earlier game with no box score counts toward the 50th game", () => {
-  const rows = careerRows(10, 3);
+  // g5 is a 30-point game; the third game has no box score.
+  const rows = careerRows(10, 3).map((r) => (r.game_espn_id === "g5" ? played("g5", r.date, 30) : r));
   const p = buildProfile("nba", rows);
   // 60 games listed, the third without a box score: the 50th game is g50 (played rows alone would give g51).
   assert.equal(p.milestones.find((m) => m.label === "50th game")?.game?.game_espn_id, "g50");
   assert.equal(p.rows.length, 59);
-  // The 30-point game and the like still read the played rows only.
-  assert.equal(p.milestones.some((m) => m.label === "30-point game"), false);
+  // The 30-point game and the like still read the played rows only, so they never point at the row with no box score.
+  assert.equal(p.milestones.find((m) => m.label === "30-point game")?.game?.game_espn_id, "g5");
 });
 
-test("NBA milestones: the first game on record is skipped when it has no box score", () => {
+test("NBA milestones: the first game on record is that game even when it has no box score", () => {
   const rows = [blank("u0", "2019-12-30"), played("a1", "2020-01-05", 35)];
   const p = buildProfile("nba", rows);
-  assert.equal(p.milestones.some((m) => m.label === "First game on record"), false);
+  const first = p.milestones.find((m) => m.label === "First game on record");
+  assert.equal(first?.game?.game_espn_id, "u0");
+  assert.equal(first?.game?.no_box_score, true);
   assert.equal(p.milestones.find((m) => m.label === "30-point game")?.game?.game_espn_id, "a1");
+  // firstDate and the rest of the played-row facts still start at the first game with a stat line.
+  assert.equal(p.firstDate, "2020-01-05");
+});
+
+// ---------------------------------------------------------------------------
+// `recorded`: the games with a stat line. GP minus it is the games with no box score, never negative.
+// ---------------------------------------------------------------------------
+test("recorded: an ordinary season and career equal their games", () => {
+  const p = buildProfile("nba", NBA_ROWS.filter((r) => r.stage === "regular"));
+  assert.equal(p.seasons[0].recorded, 3);
+  assert.equal(p.seasons[0].games, 3);
+  assert.equal(p.recorded, 3);
+  assert.equal(p.games - p.recorded, 0);
+});
+
+test("recorded: a season with unrecorded rows and ESPN's figure counts only its stat lines", () => {
+  const p = buildStagedProfile("nba", MIXED, new Map([[2026, 6]])).regular;
+  assert.equal(p.seasons[0].games, 6);
+  assert.equal(p.seasons[0].recorded, 3);
+  assert.equal(p.recorded, 3);
+  assert.equal(p.games - p.recorded, 3);
+  // Without a figure the games are the listed ones.
+  const listed = buildProfile("nba", MIXED);
+  assert.equal(listed.seasons[0].recorded, 3);
+  assert.equal(listed.games - listed.recorded, 2);
+});
+
+test("recorded: a stale ESPN figure below the logged games leaves no games with no box score", () => {
+  const p = buildStagedProfile("nba", MIXED, new Map([[2026, 2]])).regular;
+  assert.equal(p.seasons[0].games, 3);
+  assert.equal(p.seasons[0].recorded, 3);
+  assert.equal(p.games - p.recorded, 0);
+});
+
+test("recorded: a season whose every game has no box score records none", () => {
+  const rows = ["u1", "u2", "u3"].map((id, i) => blank(id, `2026-02-0${i + 1}`));
+  const p = buildProfile("nba", rows);
+  assert.equal(p.seasons[0].games, 3);
+  assert.equal(p.seasons[0].recorded, 0);
+  assert.equal(p.games, 3);
+  assert.equal(p.recorded, 0);
+  assert.equal(p.games - p.recorded, 3);
+});
+
+test("recorded: the career adds every season's stat lines and the played rows with no season year", () => {
+  const rows = [
+    played("a1", "2026-01-10", 10),
+    played("a2", "2026-01-20", 20),
+    played("n1", "2026-01-30", 30, { season_year: null }),
+    blank("nu", "2026-01-31", { season_year: null }),
+    played("b1", "2025-01-10", 10, { season_year: 2025 }),
+    blank("bu1", "2025-01-12", { season_year: 2025 }),
+  ];
+  const p = buildProfile("nba", rows, rows, new Map([[2025, 70]]));
+  assert.deepEqual(p.seasons.map((s) => [s.season, s.games, s.recorded]), [[2026, 2, 2], [2025, 70, 1]]);
+  // 2 + 1 across the seasons, plus the played row with no season year; the unrecorded one with no year is not a stat line.
+  assert.equal(p.recorded, 4);
+  assert.equal(p.recorded, p.seasons.reduce((n, s) => n + s.recorded, 0) + 1);
+  assert.equal(p.games, 2 + 70 + 2);
+  assert.equal(p.games - p.recorded, 70);
+});
+
+test("recorded: the NFL's ESPN figure above the log does not read as games with no box score", () => {
+  const p = buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 17], [2025, 16]])).regular;
+  assert.equal(p.recorded, 5);
+  assert.equal(p.games, 33);
+  assert.equal(noBoxScoreGames(p.sport, p.games, p.recorded), 0);
+  assert.equal(noBoxScoreGames("soccer", 4, 2), 0);
+  assert.equal(noBoxScoreGames("nba", 5, 3), 2);
+  assert.equal(noBoxScoreGames("nba", 3, 3), 0);
+  assert.equal(noBoxScoreGames("nba", 2, 3), 0);
+});
+
+test("profile teams include a team the player only has games with no box score for", () => {
+  const rows = [played("a1", "2026-01-10", 10), blank("u1", "2026-02-01")];
+  rows[1] = { ...rows[1], team_espn_id: "9", team_name: "Other FC", team_slug: "other-fc" };
+  const p = buildProfile("nba", rows);
+  assert.deepEqual(p.teams.map((t) => t.espn_id), ["9", "1"]);
+  assert.deepEqual(p.seasons[0].teams.map((t) => t.espn_id), ["1", "9"]);
+  // The staged profiles read every counted game too.
+  assert.deepEqual(buildStagedProfile("nba", rows).counted.teams.map((t) => t.espn_id), ["9", "1"]);
+  // A profile with nothing but games with no box score still names its team.
+  assert.deepEqual(buildProfile("nba", [rows[1]]).teams.map((t) => t.espn_id), ["9"]);
+});
+
+// ---------------------------------------------------------------------------
+// The career strip's GP: a dagger and a tooltip when it includes games with no box score, the NBA only.
+// ---------------------------------------------------------------------------
+test("career strip: NBA GP carries a dagger and the tooltip when games have no box score", () => {
+  const listed = careerStripStats(buildProfile("nba", MIXED));
+  assert.deepEqual(listed[0], { label: "GP", value: "5†", title: noBoxScoreGamesTitle(2, "listed") });
+  const espn = careerStripStats(buildStagedProfile("nba", MIXED, new Map([[2026, 6]])).regular);
+  assert.deepEqual(espn[0], { label: "GP", value: "6†", title: noBoxScoreGamesTitle(3, "espn") });
+  // A stale figure below the logged games leaves nothing to mark.
+  assert.deepEqual(careerStripStats(buildStagedProfile("nba", MIXED, new Map([[2026, 2]])).regular)[0], { label: "GP", value: "3" });
+  // Every game without a box score: the games are all there is, the averages are dashes.
+  const only = careerStripStats(buildProfile("nba", [blank("u1", "2026-02-01"), blank("u2", "2026-02-02")]));
+  assert.equal(only[0].value, "2†");
+  assert.equal(only[1].value, "–");
+  assert.ok(only.slice(2).every((s) => s.value === "–"));
+});
+
+test("career strip: an NFL profile with ESPN's figure above its log gets no dagger", () => {
+  const strip = careerStripStats(buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 17], [2025, 16]])).regular);
+  assert.deepEqual(strip[0], { label: "GP", value: "33" });
 });
