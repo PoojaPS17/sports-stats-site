@@ -23,7 +23,7 @@ export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number
     `insert into f1_events (espn_id, name, short_name, date, end_date, season_year, circuit_name, circuit_city, circuit_country, updated_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
      on conflict (espn_id) do update set
-       name = excluded.name, short_name = excluded.short_name,
+       name = excluded.name, short_name = coalesce(excluded.short_name, f1_events.short_name),
        date = excluded.date, end_date = excluded.end_date,
        season_year = coalesce(excluded.season_year, f1_events.season_year),
        circuit_name = excluded.circuit_name, circuit_city = excluded.circuit_city,

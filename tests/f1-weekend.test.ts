@@ -52,3 +52,11 @@ test("a rescheduled session and a renamed event reach the database on the next r
   const winner = (await db.pool.query("select winner from f1_session_results where driver_espn_id = 'd1'")).rows[0];
   assert.equal(winner.winner, true);
 });
+
+test("a run whose feed omits shortName keeps the stored short name", async () => {
+  const base = { ...weekend({ name: "Short Name Grand Prix", qualDate: "2026-10-03T14:00:00Z", qualState: "pre", winner: false }), id: "evt-short" };
+  await lib.upsertF1Weekend(db.pool, base, 2026);
+  await lib.upsertF1Weekend(db.pool, { ...base, shortName: undefined }, 2026);
+  const event = (await db.pool.query("select short_name from f1_events where espn_id = 'evt-short'")).rows[0];
+  assert.equal(event.short_name, "GP");
+});
