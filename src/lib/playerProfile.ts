@@ -489,15 +489,20 @@ function ordinal(n: number): string {
  * score is still a game played, so it takes a place in the count behind "First game on record" and the "Nth game"
  * ordinals. The first game is that game even when it has no box score (its page says so); an Nth game with no box
  * score is left out, since a landmark pinned to it would claim a stat line. Every other milestone reads the games
- * with a stat line only. */
-function milestonesFor(sport: PlayerSport, profile: SportProfile, chrono: PlayerLogRow[], unrecorded: PlayerLogRow[]): Milestone[] {
+ * with a stat line only.
+ * `games` is the profile's games. When (NBA) it is beyond the rows the timeline holds, some games have no row at all
+ * (ESPN listed a player who played with no athlete id, or a season is shown from ESPN's line), so the Nth game cannot
+ * be located and every "Nth game" is skipped; the counts then say they are over the games with a box score. */
+function milestonesFor(sport: PlayerSport, profile: SportProfile, chrono: PlayerLogRow[], unrecorded: PlayerLogRow[], games: number): Milestone[] {
   const out: Milestone[] = [];
   const timeline = unrecorded.length > 0 ? [...chrono, ...unrecorded].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)) : chrono;
   if (timeline.length === 0) return out;
+  const unlocatable = sport === "nba" && games > timeline.length;
+  const boxRowsOnly = sport === "nba" && games > chrono.length;
   const isUnrecorded = (r: PlayerLogRow) => unrecorded.includes(r);
   out.push({ label: `First ${profile.gamesLabel === "Apps" ? "appearance" : "game"} on record`, detail: "", game: timeline[0] });
   for (const n of [50, 100, 200, 300, 400, 500]) {
-    if (timeline.length >= n && !isUnrecorded(timeline[n - 1])) out.push({ label: `${ordinal(n)} ${profile.gamesLabel === "Apps" ? "appearance" : "game"}`, detail: "", game: timeline[n - 1] });
+    if (!unlocatable && timeline.length >= n && !isUnrecorded(timeline[n - 1])) out.push({ label: `${ordinal(n)} ${profile.gamesLabel === "Apps" ? "appearance" : "game"}`, detail: "", game: timeline[n - 1] });
   }
   const landmark = (per: (r: PlayerLogRow) => number, steps: number[], unit: string) => {
     let running = 0;
@@ -542,7 +547,7 @@ function milestonesFor(sport: PlayerSport, profile: SportProfile, chrono: Player
   } else {
     const count = (label: string, test: (r: PlayerLogRow) => boolean) => {
       const hits = chrono.filter(test);
-      if (hits.length) out.push({ label, detail: `${hits.length} time${hits.length === 1 ? "" : "s"}, most recently`, game: hits[hits.length - 1] });
+      if (hits.length) out.push({ label, detail: `${hits.length} time${hits.length === 1 ? "" : "s"}${boxRowsOnly ? " in games with a box score" : ""}, most recently`, game: hits[hits.length - 1] });
     };
     const dd = (r: PlayerLogRow) => ["PTS", "REB", "AST", "STL", "BLK"].filter((l) => (cell(r.stats, "box", l) ?? 0) >= 10).length;
     count("30-point game", (r) => (cell(r.stats, "box", "PTS") ?? 0) >= 30);
@@ -552,6 +557,15 @@ function milestonesFor(sport: PlayerSport, profile: SportProfile, chrono: Player
     count("Triple-double", (r) => dd(r) >= 3);
   }
   return out;
+}
+
+/** The averages a meta or structured-data description may quote, or null when it must give the games alone. An NBA
+ * profile quotes them only when no season is still short of ESPN's games on its box rows (`boxOnlyShort`) and it has a
+ * career figure; a season shown from ESPN's line quotes ESPN's figures even with no game rows of its own. The other
+ * sports quote whenever a game is recorded. */
+export function metaFigures(profile: PlayerProfile, figures: string): string | null {
+  if (profile.sport === "nba") return profile.boxOnlyShort === 0 && profile.career.pts !== null ? figures : null;
+  return profile.recorded > 0 ? figures : null;
 }
 
 /** The column header (and its tooltip) for a games count. An NFL count that is not ESPN's is the number of
@@ -669,12 +683,14 @@ export function buildProfile(
     .slice(0, 5)
     .map(({ r }) => r);
 
+  // Rows with no season year are in no season line but are still in the career line and W-L, so they count here.
+  const games = reported || espnUsed.size > 0 || unrecorded > 0 ? seasons.reduce((n, s) => n + s.games, 0) + [...rows, ...unrecordedRows].filter((r) => r.season_year === null).length : rows.length;
+
   return {
     sport,
     profile,
     rows,
-    // Rows with no season year are in no season line but are still in the career line and W-L, so they count here.
-    games: reported || espnUsed.size > 0 || unrecorded > 0 ? seasons.reduce((n, s) => n + s.games, 0) + [...rows, ...unrecordedRows].filter((r) => r.season_year === null).length : rows.length,
+    games,
     // Every played row is in a season or has no season year, and both are in the career line.
     recorded: rows.length,
     unrecorded,
@@ -690,7 +706,7 @@ export function buildProfile(
     byResult,
     opponents,
     best,
-    milestones: milestonesFor(sport, profile, chrono, unrecordedRows),
+    milestones: milestonesFor(sport, profile, chrono, unrecordedRows, games),
     form: rows.slice(0, 10).reverse().map((row) => ({ row, value: profile.form.value(row) })),
     firstDate: chrono[0]?.date ?? null,
     lastDate: rows[0]?.date ?? null,

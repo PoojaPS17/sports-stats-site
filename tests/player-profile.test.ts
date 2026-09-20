@@ -1,7 +1,7 @@
 // How a box-score cell is read, and what that does to a season's totals when a game is negative.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aggregate, aggregateWithEspn, buildProfile, buildStagedProfile, cell, noBoxScoreGames, sportProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
+import { aggregate, aggregateWithEspn, buildProfile, buildStagedProfile, cell, metaFigures, noBoxScoreGames, sportProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import { espnSeasonTotals, type EspnSeasonTotals } from "../src/lib/espnSeason";
 
 const one = (category: string, label: string, value: string | undefined): Stats => ({ [category]: value === undefined ? {} : { [label]: value } });
@@ -357,4 +357,112 @@ test("ESPN line: a two-team season that passes guard (b) is the whole of its car
   assert.equal(p.seasons[0].lineSource, "espn");
   assert.equal(p.seasons[0].teams.length, 2);
   assert.deepEqual(p.career, p.seasons[0].line);
+});
+
+// ---------------------------------------------------------------------------
+// Milestones: what they count when the profile's games are beyond its rows.
+// ---------------------------------------------------------------------------
+/** `n` recorded rows, one a day from 2025-01-01, `pts` points each except the rows named in `big` (32 points). */
+const daily = (n: number, big: number[] = []): PlayerLogRow[] =>
+  Array.from({ length: n }, (_, i) => nbaRow(`d${i + 1}`, new Date(Date.UTC(2025, 0, i + 1)).toISOString().slice(0, 10), full(big.includes(i + 1) ? 32 : 10)));
+const labelsOf = (p: ReturnType<typeof buildProfile>) => p.milestones.map((m) => m.label);
+
+test("milestones: games with no row at all leave the Nth game unlocatable, so every ordinal is skipped", () => {
+  const rows = daily(60);
+  const short = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ games: 90, pts: 5000 })));
+  assert.equal(short.games, 90);
+  assert.equal(short.recorded, 60);
+  assert.equal(short.unrecorded, 0);
+  const labels = labelsOf(short);
+  assert.equal(labels.includes("50th game"), false);
+  assert.equal(labels.some((l) => /^\d+(st|nd|rd|th) game$/.test(l)), false);
+  assert.equal(labels.includes("First game on record"), true);
+  const whole = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ games: 60, pts: 5000 })));
+  assert.equal(whole.games, 60);
+  assert.equal(whole.milestones.find((m) => m.label === "50th game")?.game?.game_espn_id, "d50");
+  assert.equal(labelsOf(whole).includes("First game on record"), true);
+});
+
+test("milestones: an ESPN-line season with rows missing skips the ordinals too, and one listed row does not make the rest locatable", () => {
+  const rows = [...daily(60), ...listed(1)];
+  // 60 recorded + 1 listed = 61 rows in the timeline; ESPN counts 90.
+  const espn = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ games: 90, pts: 5000 })));
+  assert.equal(espn.games, 90);
+  assert.equal(labelsOf(espn).includes("50th game"), false);
+  assert.equal(labelsOf(espn).includes("First game on record"), true);
+  // A listed row that is the only gap: the timeline is complete, the ordinals stay.
+  const complete = buildProfile("nba", rows, rows);
+  assert.equal(complete.games, 61);
+  assert.equal(labelsOf(complete).includes("50th game"), true);
+});
+
+test("milestones: a count says it is over games with a box score when the profile has games beyond its rows", () => {
+  const rows = daily(60, [3, 9]);
+  const short = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ games: 90, pts: 5000 })));
+  assert.equal(short.milestones.find((m) => m.label === "30-point game")?.detail, "2 times in games with a box score, most recently");
+  const one = buildProfile("nba", daily(60, [3]), daily(60, [3]), undefined, espnFor(espnLine({ games: 90, pts: 5000 })));
+  assert.equal(one.milestones.find((m) => m.label === "30-point game")?.detail, "1 time in games with a box score, most recently");
+  // Every game has a row: unchanged.
+  const whole = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ games: 60, pts: 5000 })));
+  assert.equal(whole.milestones.find((m) => m.label === "30-point game")?.detail, "2 times, most recently");
+  const none = buildProfile("nba", rows);
+  assert.equal(none.milestones.find((m) => m.label === "30-point game")?.detail, "2 times, most recently");
+});
+
+test("milestones: NFL and soccer are untouched when ESPN's games exceed the rows", () => {
+  const rush = (id: string, date: string, yds: string): PlayerLogRow => row(id, date, { rushing: { CAR: "20", YDS: yds, AVG: "5", TD: "1" } });
+  const rows = [rush("a", "2025-09-07", "120"), rush("b", "2025-09-14", "40")];
+  const p = buildProfile("nfl", rows, rows, new Map([[2025, 17]]));
+  assert.equal(p.games, 17);
+  assert.equal(p.milestones.find((m) => m.label === "100-yard rushing game")?.detail, "1 time, most recently");
+});
+
+// ---------------------------------------------------------------------------
+// metaFigures: the averages a description may quote.
+// ---------------------------------------------------------------------------
+test("metaFigures: a season on ESPN's line, or a complete one, quotes its averages", () => {
+  const rows = games(7, 6);
+  const espn = buildProfile("nba", rows, rows, undefined, espnFor(espnLine()));
+  assert.equal(espn.boxOnlyShort, 0);
+  assert.equal(metaFigures(espn, "12.0 points"), "12.0 points");
+  const complete = buildProfile("nba", rows);
+  assert.equal(metaFigures(complete, "6.0 points"), "6.0 points");
+});
+
+test("metaFigures: an ESPN season with no game rows of its own still quotes ESPN's averages", () => {
+  const rows = listed(3);
+  const p = buildProfile("nba", rows, rows, undefined, espnFor(espnLine()));
+  assert.equal(p.recorded, 0);
+  assert.equal(p.seasons[0].lineSource, "espn");
+  assert.equal(metaFigures(p, "2.4 points"), "2.4 points");
+});
+
+test("metaFigures: a season still short of ESPN's games on its box rows quotes none", () => {
+  const rows = [...games(7, 6), ...listed(2)];
+  // Guard (a) fails (ESPN's points below the recorded ones), so the line stays box-only and short.
+  const partial = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ pts: 30 })));
+  assert.equal(partial.boxOnlyShort, 1);
+  assert.equal(metaFigures(partial, "6.0 points"), null);
+  // No ESPN row at all for a season with listed games.
+  const noEspn = buildProfile("nba", rows);
+  assert.equal(noEspn.boxOnlyShort, 1);
+  assert.equal(metaFigures(noEspn, "6.0 points"), null);
+  // Every game without a box score and no ESPN line: nothing to average.
+  const blank = buildProfile("nba", listed(3));
+  assert.equal(blank.recorded, 0);
+  assert.equal(metaFigures(blank, "0.0 points"), null);
+});
+
+test("metaFigures: one short season among complete ones is enough to quote none", () => {
+  const rows = [...games(7, 6, { season: 2024 }), ...games(5, 6, { season: 2025 }), ...listed(2, { season: 2025 })];
+  const p = buildProfile("nba", rows);
+  assert.equal(p.boxOnlyShort, 1);
+  assert.equal(metaFigures(p, "6.0 points"), null);
+});
+
+test("metaFigures: NFL and soccer keep quoting whenever a game is recorded", () => {
+  const rush = row("a", "2025-09-07", { rushing: { CAR: "20", YDS: "120", AVG: "5", TD: "1" } });
+  const nfl = buildProfile("nfl", [rush], [rush], new Map([[2025, 17]]));
+  assert.equal(metaFigures(nfl, "120 yards"), "120 yards");
+  assert.equal(metaFigures(buildProfile("nfl", []), "0 yards"), null);
 });

@@ -32,7 +32,7 @@ import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
-import { buildStagedProfile, goalBands, formatStat, noBoxScoreGames, playerMeta, playerSport, positionLabel, unlistedGameCount, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, goalBands, formatStat, metaFigures, noBoxScoreGames, playerMeta, playerSport, positionLabel, unlistedGameCount, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { ImageActions } from "@/components/ImageActions";
 import { PlayerExportCard } from "@/components/PlayerExportCard";
@@ -47,7 +47,7 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
-import { gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
+import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NBA_NO_BOX_SCORE_NOTE, nbaEspnLineFootnote, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -63,8 +63,9 @@ function profileSummary(league: League, player: PlayerRow, profile: PlayerProfil
   const teams = profile.teams.map((t) => t.name);
   const since = profile.seasons[profile.seasons.length - 1]?.season;
   const games = `${profile.games} ${profile.profile.gamesLabel === "Apps" ? "appearances" : "games"}`;
-  // A career of only games with no box score has no averages to quote: the lead is the games and clubs alone.
-  const quoted = profile.recorded > 0 ? `${figures.join(", ")}${perGame ? " per game" : ""}` : null;
+  // Averages are quoted only where they cover the games named beside them: an NBA career with a season still short of
+  // ESPN's games on its box rows (or made only of games with no box score) gives the games and clubs alone.
+  const quoted = metaFigures(profile, `${figures.join(", ")}${perGame ? " per game" : ""}`);
   const lead = `${player.name} ${LEAGUE_LABEL[league]} stats: ${gamesAndFigures(games, quoted)} for ${teams.join(" and ")}${since ? ` since ${formatSeasonLabel(league, since)}` : ""}.`;
   if (!short) return `${lead} Season-by-season totals, full game log, home and away and opponent splits, best games and milestones.`;
   const tail = " Game log, splits and best games.";
@@ -195,12 +196,17 @@ export default async function PlayerPage({
   ]);
   const summary = profileSummary(league, player, profile);
   const soccer = sport === "soccer";
-  // NBA games ESPN published no box score for: in GP, in no average. The section notes and the log line say so.
+  // NBA games without a box score: in GP, in no game-by-game section. The section notes and the log line say so.
   const regularNoBoxScore = noBoxScoreGames(sport, profile.games, profile.recorded);
   const playoffsNoBoxScore = staged.playoffs ? noBoxScoreGames(sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
   const playinNoBoxScore = staged.playin ? noBoxScoreGames(sport, staged.playin.games, staged.playin.recorded) : 0;
   const unlistedCount = unlistedGameCount(staged);
   const unlisted = unlistedCount > 0 ? unlistedGamesNote(unlistedCount) : null;
+  // The sections built from game rows say so: the regular-season ones by the regular season's games without a box score,
+  // the ones that read every counted game (best games, recent form) by all of them.
+  const regularRowsNote = regularNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
+  const countedRowsNote = unlistedCount > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
+  const espnLineShown = profile.seasons.some((s) => s.lineSource === "espn");
   const bands = goals ? goalBands(goals.clocks) : [];
   const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
 
@@ -217,7 +223,7 @@ export default async function PlayerPage({
       ? profile.opponents
           .filter((o) => o.slug !== teamSlug)
           .slice(0, 6)
-          .map((o) => ({ href: h2hPath(league, teamSlug, o.slug), label: `${teamName} vs ${o.label}`, sub: `${o.games} ${o.games === 1 ? "game" : "games"} played in`, image: o.logo, imageName: o.label }))
+          .map((o) => ({ href: h2hPath(league, teamSlug, o.slug), label: `${teamName} vs ${o.label}`, sub: `${o.games} ${o.games === 1 ? "game" : "games"} played in${regularNoBoxScore > 0 ? " with a box score" : ""}`, image: o.logo, imageName: o.label }))
       : [];
   const compareLinks = peers.slice(0, 3).map((p) => ({ href: `/${league}/compare/players?a=${slug}&b=${p.href.split("/").pop()}`, label: `${player.name} vs ${p.label}`, sub: "Season stats side by side" }));
 
@@ -236,11 +242,12 @@ export default async function PlayerPage({
             <>
               <section>
                 <SectionHeader
+                  description={regularNoBoxScore > 0 ? NBA_NO_BOX_SCORE_NOTE : undefined}
                   tools={
                     <ImageActions
                       filename={`${slug}-${league}`}
                       shareTitle={split ? `${player.name} career stats (regular season)` : `${player.name} career stats`}
-                      card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamColor={player.team_color} meta={[...playerMeta(sport, player), ...lastClub]} stats={careerStripStats(profile)} />}
+                      card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamColor={player.team_color} meta={[...playerMeta(sport, player), ...lastClub]} stats={careerStripStats(profile)} boxOnlyShort={profile.boxOnlyShort} />}
                     />
                   }
                 >
@@ -277,14 +284,14 @@ export default async function PlayerPage({
 
           {staged.counted.form.length > 1 && (
             <section>
-              <SectionHeader>Recent form</SectionHeader>
+              <SectionHeader description={countedRowsNote}>Recent form</SectionHeader>
               <PlayerFormChart league={league} profile={staged.counted} />
             </section>
           )}
 
           {staged.counted.best.length > 0 && (
             <section>
-              <SectionHeader description={staged.counted.profile.rankNote}>Best games</SectionHeader>
+              <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, unlistedCount)}>Best games</SectionHeader>
               <PlayerBestGames league={league} profile={staged.counted} />
             </section>
           )}
@@ -296,12 +303,12 @@ export default async function PlayerPage({
                 <>
                   <div className="grid gap-6 lg:grid-cols-2">
                     <section>
-                      <SectionHeader>Home and away</SectionHeader>
+                      <SectionHeader description={regularRowsNote}>Home and away</SectionHeader>
                       <PlayerSplitsTable league={league} profile={profile} rows={profile.homeAway} firstColumn="Venue" />
                     </section>
                     {profile.byResult.length > 0 && (
                       <section>
-                        <SectionHeader>By result</SectionHeader>
+                        <SectionHeader description={regularRowsNote}>By result</SectionHeader>
                         <PlayerSplitsTable league={league} profile={profile} rows={profile.byResult} firstColumn="Team result" />
                       </section>
                     )}
@@ -315,7 +322,7 @@ export default async function PlayerPage({
                   )}
 
                   <section>
-                    <SectionHeader description="Every opponent faced, most often first.">Against each opponent</SectionHeader>
+                    <SectionHeader description={withBoxRowsNote("Opponents faced, most often first.", regularNoBoxScore)}>Against each opponent</SectionHeader>
                     <PlayerSplitsTable league={league} profile={profile} rows={profile.opponents} firstColumn="Opponent" linkTeams />
                   </section>
                 </>
@@ -323,7 +330,7 @@ export default async function PlayerPage({
 
               {profile.milestones.length > 0 && (
                 <section>
-                  <SectionHeader description="Landmarks within the games on record, pinned to the game they came in.">Milestones</SectionHeader>
+                  <SectionHeader description={withBoxRowsNote("Landmarks within the games on record, pinned to the game they came in.", regularNoBoxScore)}>Milestones</SectionHeader>
                   <PlayerMilestones league={league} profile={profile} />
                 </section>
               )}
@@ -360,7 +367,12 @@ export default async function PlayerPage({
                   {since ? ` since ${since}` : ""}.{" "}
                 </>
               )}
-              {regularNoBoxScore > 0 && profile.recorded > 0 && (
+              {regularNoBoxScore > 0 && espnLineShown && (
+                <>
+                  {nbaEspnLineFootnote(profile.boxOnlyShort)}{" "}
+                </>
+              )}
+              {regularNoBoxScore > 0 && !espnLineShown && profile.recorded > 0 && (
                 <>
                   Regular-season per-game averages are over the {profile.recorded} {LEAGUE_LABEL[league]} regular-season games with a box score here
                   {since ? ` since ${since}` : ""}.{" "}

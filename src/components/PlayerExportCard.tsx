@@ -3,7 +3,7 @@ import { TeamLogo } from "./TeamLogo";
 import { ExportFooter } from "./ExportFooter";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
-import { NBA_NO_BOX_SCORE_CARD_NOTE } from "@/lib/playerCopy";
+import { nbaCardNote } from "@/lib/playerCopy";
 
 // The downloadable version of PlayerHeader + PlayerCareerStrip: same facts (name,
 // team, headline numbers), redrawn on a fixed-width light card so nothing truncates
@@ -16,6 +16,7 @@ export function PlayerExportCard({
   teamColor,
   meta,
   stats,
+  boxOnlyShort,
   context = "Career stats",
 }: {
   league: League;
@@ -26,6 +27,8 @@ export function PlayerExportCard({
   meta: string[];
   /** `noBoxScore` marks a value that carries the † (see `careerStripStats`); the card then explains it. */
   stats: { label: string; value: string; noBoxScore?: boolean }[];
+  /** The profile's `boxOnlyShort`: whether every † season shows ESPN's figures, which the card's note says. */
+  boxOnlyShort: number;
   /** What the numbers cover, shown in the footer ("Career stats", "2025-26 stats"). */
   context?: string;
 }) {
@@ -57,7 +60,7 @@ export function PlayerExportCard({
           ))}
         </div>
       )}
-      {stats.some((s) => s.noBoxScore) && <div style={{ marginTop: 12, fontSize: 12, color: CARD.textMuted }}>{NBA_NO_BOX_SCORE_CARD_NOTE}</div>}
+      {stats.some((s) => s.noBoxScore) && <div style={{ marginTop: 12, fontSize: 12, color: CARD.textMuted }}>{nbaCardNote(boxOnlyShort)}</div>}
       <ExportFooter context={context} />
     </div>
   );

@@ -3,7 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
 import { formatStat, gamesHeader, noBoxScoreGames, type PlayerProfile, type SeasonLine } from "@/lib/playerProfile";
-import { noBoxScoreGamesTitle } from "@/lib/playerCopy";
+import { nbaGamesStartedTitle, noBoxScoreGamesTitle } from "@/lib/playerCopy";
 import { careerNoBoxScoreTitle, recordText } from "./PlayerStatsShared";
 
 const num = "px-2 py-2 text-right tabular-nums";
@@ -33,6 +33,8 @@ export function PlayerSeasonTable({
   // NBA season is only ever ESPN's figure when it has games with no box score, so it takes the † instead.)
   const mixed = profile.sport === "nfl" && profile.gamesFromEspn && profile.seasons.some((s) => s.gamesSource === "logged");
   const careerNoBoxScore = careerNoBoxScoreTitle(profile);
+  // GS is a count, not an average: in a table with a † season it says whose count it is.
+  const gsTitle = careerNoBoxScore ? nbaGamesStartedTitle(profile.seasons.some((s) => s.lineSource === "espn")) : undefined;
   const gamesCell = (row: SeasonLine) => {
     const noBoxScore = noBoxScoreGames(profile.sport, row.games, row.recorded);
     if (noBoxScore > 0)
@@ -63,7 +65,7 @@ export function PlayerSeasonTable({
               </th>
               <th className={`${num} font-semibold`}>{soccer ? "W-D-L" : "W-L"}</th>
               {specs.map((s) => (
-                <th key={s.key} className={`${num} font-semibold`} title={s.title}>
+                <th key={s.key} className={`${num} font-semibold`} title={s.key === "gs" && gsTitle ? gsTitle : s.title}>
                   {s.label}
                 </th>
               ))}

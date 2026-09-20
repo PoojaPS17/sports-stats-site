@@ -15,7 +15,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SeasonTabs } from "@/components/SeasonTabs";
 import type { EspnSeasonTotals } from "@/lib/espnSeason";
-import { buildStagedProfile, formatStat, noBoxScoreGames, playerMeta, playerSport, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, formatStat, metaFigures, noBoxScoreGames, playerMeta, playerSport, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
 import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
@@ -23,7 +23,7 @@ import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
-import { gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
+import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 // A past season's stat line is static (it never changes once the season is over), so
 // this can be cached far longer than the live current-season player page.
@@ -54,8 +54,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     const p = staged.regular;
     if (p.games > 0) {
       const headline = p.profile.specs.filter((s) => s.headline).slice(0, 3);
-      // A season of only games with no box score has no averages to quote: the games and clubs alone.
-      const quoted = p.recorded > 0 ? headline.map((s) => `${formatStat(s, p.career[s.key])} ${s.title.toLowerCase()}`).join(", ") : null;
+      // Averages are quoted only where they cover the games named beside them: an NBA season still short of ESPN's games
+      // on its box rows (or made only of games with no box score) gives the games and clubs alone.
+      const quoted = metaFigures(p, headline.map((s) => `${formatStat(s, p.career[s.key])} ${s.title.toLowerCase()}`).join(", "));
       figures = ` ${gamesAndFigures(`${p.games} ${p.profile.gamesLabel === "Apps" ? "appearances" : "games"}`, quoted)} for ${p.teams.map((t) => t.name).join(" and ")}.`;
     } else {
       // Named in a squad but never used that season: nothing here worth indexing. (A season of
@@ -93,12 +94,15 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
   const seasonStats = await getPlayerSeasonStatsBySeason(league, player.espn_id, season);
   const basePath = `/${league}/players/${slug}`;
   const label = formatSeasonLabel(league, season) ?? String(season);
-  // NBA games ESPN published no box score for: in GP, in no average. The section notes and the log line say so.
+  // NBA games without a box score: in GP, in no game-by-game section. The section notes and the log line say so.
   const regularNoBoxScore = staged && profile ? noBoxScoreGames(staged.regular.sport, profile.games, profile.recorded) : 0;
   const playoffsNoBoxScore = staged?.playoffs ? noBoxScoreGames(staged.playoffs.sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
   const playinNoBoxScore = staged?.playin ? noBoxScoreGames(staged.playin.sport, staged.playin.games, staged.playin.recorded) : 0;
   const unlistedCount = staged ? unlistedGameCount(staged) : 0;
   const unlisted = unlistedCount > 0 ? unlistedGamesNote(unlistedCount) : null;
+  // The sections built from game rows say so: the splits by the regular season's games without a box score, best
+  // games (which reads every counted game) by all of them.
+  const regularRowsNote = regularNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,7 +131,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
                   <ImageActions
                     filename={`${slug}-${season}-${league}`}
                     shareTitle={`${player.name} ${label} stats`}
-                    card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={player.team_name} teamColor={player.team_color} meta={playerMeta(sport, player)} stats={careerStripStats(profile)} context={`${label} stats`} />}
+                    card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={player.team_name} teamColor={player.team_color} meta={playerMeta(sport, player)} stats={careerStripStats(profile)} boxOnlyShort={profile.boxOnlyShort} context={`${label} stats`} />}
                   />
                 }
               >
@@ -160,7 +164,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
 
           {staged.counted.best.length > 0 && (
             <section>
-              <SectionHeader description={staged.counted.profile.rankNote}>Best games</SectionHeader>
+              <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, unlistedCount)}>Best games</SectionHeader>
               <PlayerBestGames league={league} profile={staged.counted} />
             </section>
           )}
@@ -169,12 +173,12 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {profile.rows.length > 0 && (
             <div className="grid gap-6 lg:grid-cols-2">
               <section>
-                <SectionHeader>Home and away</SectionHeader>
+                <SectionHeader description={regularRowsNote}>Home and away</SectionHeader>
                 <PlayerSplitsTable league={league} profile={profile} rows={profile.homeAway} firstColumn="Venue" />
               </section>
               {profile.byResult.length > 0 && (
                 <section>
-                  <SectionHeader>By result</SectionHeader>
+                  <SectionHeader description={regularRowsNote}>By result</SectionHeader>
                   <PlayerSplitsTable league={league} profile={profile} rows={profile.byResult} firstColumn="Team result" />
                 </section>
               )}
