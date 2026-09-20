@@ -101,6 +101,12 @@ test("classifyGamelog: the same games and the same points are confirmed", () => 
   assert.equal(classifyGamelog({ games: 60, points: 1200 }, espn), "confirmed");
 });
 
+test("classifyGamelog: ESPN internal needs 1 to 3 games apart, wherever the other rules would also fit", () => {
+  assert.equal(classifyGamelog({ games: 63, points: 1300 }, espn), "ESPN internal");
+  assert.equal(classifyGamelog({ games: 64, points: 1300 }, espn), "MISMATCH");
+  assert.equal(classifyGamelog({ games: 57, points: 1000 }, espn), "ESPN internal");
+});
+
 test("classifyGamelog: the constants are the documented ones", () => {
   assert.equal(MAX_INTERNAL_GAMES, 3);
   assert.equal(MAX_GAME_POINTS, 100);
@@ -119,10 +125,29 @@ test("classifyGamelog: the log missing games ESPN counts is ESPN internal, when 
   assert.equal(classifyGamelog({ games: 59, points: 1200 - MAX_GAME_POINTS - 1 }, espn), "MISMATCH");
 });
 
-test("classifyGamelog: a games difference of more than 3 is a MISMATCH", () => {
+test("classifyGamelog: a log with more than 3 more games than the row is a MISMATCH", () => {
   assert.equal(classifyGamelog({ games: 64, points: 1250 }, espn), "MISMATCH");
-  assert.equal(classifyGamelog({ games: 56, points: 1100 }, espn), "MISMATCH");
+  assert.equal(classifyGamelog({ games: 64, points: 1200 }, espn), "MISMATCH");
+});
+
+test("classifyGamelog: an empty log is never confirmed or ESPN internal, whatever the row's games", () => {
   assert.equal(classifyGamelog({ games: 0, points: 0 }, espn), "MISMATCH");
+  // The bug this guards: 0 games against a row of 2 is 'within 3 games' and 0 <= 100 points apart.
+  assert.equal(classifyGamelog({ games: 0, points: 0 }, { games: 2, pts: 10 }), "MISMATCH");
+  assert.equal(classifyGamelog({ games: 0, points: 0 }, { games: 1, pts: 0 }), "MISMATCH");
+  // Not "log incomplete" either, for a row with many games.
+  assert.equal(classifyGamelog({ games: 0, points: 0 }, { games: 40, pts: 800 }), "MISMATCH");
+});
+
+test("classifyGamelog: log incomplete is a log more than 3 games short of the row whose points do not exceed the row's", () => {
+  // Boundary in games: 3 short is ESPN internal, 4 short is log incomplete.
+  assert.equal(classifyGamelog({ games: 57, points: 1100 }, espn), "ESPN internal");
+  assert.equal(classifyGamelog({ games: 56, points: 1100 }, espn), "log incomplete");
+  assert.equal(classifyGamelog({ games: 1, points: 20 }, espn), "log incomplete");
+  // Boundary in points: equal to the row's is incomplete, one above is a MISMATCH.
+  assert.equal(classifyGamelog({ games: 56, points: 1200 }, espn), "log incomplete");
+  assert.equal(classifyGamelog({ games: 56, points: 1201 }, espn), "MISMATCH");
+  assert.equal(classifyGamelog({ games: 0, points: 0 }, espn), "MISMATCH"); // handled by the empty-log rule, not this one
 });
 
 test("classifyGamelog: the same games with different points is a MISMATCH", () => {

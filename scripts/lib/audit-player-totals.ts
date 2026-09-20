@@ -357,8 +357,9 @@ export const USAGE = [
   "  fails the run, --strict included.",
   "  --gamelog (NBA) also fetches ESPN's game log, one request per season, for every season the page shows from",
   "  ESPN's own row, and checks its games and points against that row (honours --limit): 'confirmed', 'ESPN",
-  "  internal' (within 3 games; listed, never fails) or MISMATCH (fails the run, as does a game log that could",
-  "  not be read).",
+  "  internal' (within 3 games; listed, never fails), 'log incomplete' (the log is more than 3 games short of the",
+  "  row and its points do not exceed the row's, so it is missing games; listed, never fails) or MISMATCH",
+  "  (fails the run, as does a game log that could not be read or has no regular-season game).",
 ].join("\n");
 
 export function parseArgs(argv: string[]): Args | { error: string } {

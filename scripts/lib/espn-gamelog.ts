@@ -62,17 +62,24 @@ export const MAX_INTERNAL_GAMES = 3;
  * could account for at most. */
 export const MAX_GAME_POINTS = 100;
 
-export type GamelogVerdict = "confirmed" | "ESPN internal" | "MISMATCH";
+export type GamelogVerdict = "confirmed" | "ESPN internal" | "log incomplete" | "MISMATCH";
 
-/** Sets ESPN's game log against the season row it was fetched to check.
+/** Sets ESPN's game log against the season row it was fetched to check, first match wins:
+ *   MISMATCH       a log with no games against a row with games (an empty log checks nothing; the caller treats
+ *                  it as unreadable, this is the defence in depth)
  *   confirmed      the log's games equal the row's GP and its points equal the row's PTS
  *   ESPN internal  the games differ by 1 to MAX_INTERNAL_GAMES and the points differ by what those games could
  *                  hold: the side with more games has at least as many points, and at most MAX_GAME_POINTS a
  *                  game more (ESPN's game log lists the All-Star Game and the NBA Cup final in its regular
  *                  season, its season row does not, and it disagrees with itself in a few other games)
- *   MISMATCH       anything else: the same games with different points, more games apart, or points that
- *                  the differing games cannot account for */
+ *   log incomplete the row has more than MAX_INTERNAL_GAMES games more than the log and the log's points do not
+ *                  exceed the row's: the log can only be missing games (ESPN's game log has none for some
+ *                  seasons, for instance the Bulls' and Pelicans' 2015-2018 games) and the row cannot be
+ *                  checked further; listed, not a failure
+ *   MISMATCH       anything else: the same games with different points, a log with more than
+ *                  MAX_INTERNAL_GAMES more games than the row, or points the differing games cannot account for */
 export function classifyGamelog(gamelog: GamelogSeason, espn: { games: number; pts: number }): GamelogVerdict {
+  if (gamelog.games === 0 && espn.games > 0) return "MISMATCH";
   const gameDifference = gamelog.games - espn.games;
   const pointDifference = gamelog.points - espn.pts;
   if (gameDifference === 0 && pointDifference === 0) return "confirmed";
@@ -82,5 +89,6 @@ export function classifyGamelog(gamelog: GamelogSeason, espn: { games: number; p
     const extra = gameDifference > 0 ? pointDifference : -pointDifference;
     if (extra >= 0 && extra <= apart * MAX_GAME_POINTS) return "ESPN internal";
   }
+  if (-gameDifference > MAX_INTERNAL_GAMES && pointDifference <= 0) return "log incomplete";
   return "MISMATCH";
 }
