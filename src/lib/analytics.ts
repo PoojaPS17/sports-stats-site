@@ -365,6 +365,24 @@ export interface HeadToHead {
   firstSeason: number | null;
 }
 
+/** A completed game with both scores: every meeting the page lists (the counted ones, below, are the subset that leaves out excluded stages). */
+export const isCompletedMeeting = (g: Pick<GameRow, "completed" | "home_score" | "away_score">): boolean =>
+  Boolean(g.completed) && g.home_score != null && g.away_score != null;
+
+/**
+ * The one definition of a meeting the head-to-head page counts (its `meetings`, tally, biggest wins and run): a
+ * completed game with both scores, other than one that says nothing about the rivalry (stage 'excluded': preseason,
+ * All-Star, the NBA Cup final). A postponed or cancelled game is stored as not completed, so it is not one. The
+ * page also decides its robots directive from it (no counted meeting, noindex), so `countedMeetingSql` below, the
+ * SQL twin the h2h sitemap uses, must say the same. tests/sitemap-h2h.test.ts asserts both on the same rows.
+ */
+export const isCountedMeeting = (g: Pick<GameRow, "completed" | "home_score" | "away_score" | "stage">): boolean =>
+  isCompletedMeeting(g) && g.stage !== "excluded";
+
+/** SQL twin of isCountedMeeting for a games row aliased `alias`. */
+export const countedMeetingSql = (alias: string): string =>
+  `(${alias}.completed is true and ${alias}.home_score is not null and ${alias}.away_score is not null and ${alias}.stage is distinct from 'excluded')`;
+
 export async function getHeadToHead(league: League, slugA: string, slugB: string): Promise<HeadToHead | null> {
   const { rows: teamRows } = await pool.query(
     `select espn_id, name, slug, abbreviation, logo_url, color from teams where league = $1 and slug = any($2)`,
@@ -394,8 +412,8 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
   // Every completed meeting is listed; the tally (meetings, wins, goals, biggest wins, the current
   // run) leaves out games that say nothing about the rivalry (preseason, All-Star, the NBA Cup final)
   // and keeps playoffs and the play-in, as Elo does.
-  const completed = games.filter((g) => g.completed && g.home_score != null && g.away_score != null);
-  const counted = completed.filter((g) => g.stage !== "excluded");
+  const completed = games.filter(isCompletedMeeting);
+  const counted = games.filter(isCountedMeeting);
   // The next meeting is the earliest game still to play. A postponed or cancelled game is not one:
   // ESPN keeps its original (past) event with a 0-0 score and the replay is a separate event.
   const upcoming = [...games].reverse().find((g) => !g.completed && !isCalledOff(g.status_detail)) ?? null;

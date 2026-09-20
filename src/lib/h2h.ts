@@ -4,3 +4,12 @@ export function h2hPath(league: string, slugA: string, slugB: string): string {
   const [a, b] = [slugA, slugB].sort();
   return `/${league}/h2h/${a}-vs-${b}`;
 }
+
+/**
+ * Meta description of a pair page. With no counted meeting there is no record to quote ("0-0-0 in 0 meetings"),
+ * and the page itself renders noindex, so the description says the pair has not met in the archive.
+ */
+export function h2hDescription(teamA: string, teamB: string, leagueLabel: string, meetings: number, record: string): string {
+  if (meetings === 0) return `${teamA} vs ${teamB} in the ${leagueLabel}: the two teams have not met in our archive yet.`;
+  return `${teamA} vs ${teamB} all-time ${leagueLabel} record (${record} in ${meetings} meetings), recent results and biggest wins.`;
+}

@@ -7,7 +7,7 @@ import { TOURS } from "./tennisTours";
 import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
 import { hasWeeks, loadWeeks } from "./matchweekPage";
-import { supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
+import { countedMeetingSql, supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
 import { h2hPath } from "./h2h";
 import { supportsProjections } from "./simulator";
 import { playerSport } from "./playerProfile";
@@ -207,17 +207,29 @@ async function weeks(league: League): Promise<Entry[]> {
   return out;
 }
 
-// Head-to-head pages for every pairing of clubs in the current standings.
+// Head-to-head pages for the pairings of clubs in the current standings that have met. A page with no counted
+// meeting renders noindex (its `meetings` is 0), so it is listed only if countedMeetingSql (the twin of the
+// page's rule, in analytics.ts: a completed game with both scores, not an excluded stage, either home/away order,
+// the same league) finds one.
 async function h2h(league: League): Promise<Entry[]> {
-  const { rows } = await pool.query(
+  const { rows: current } = await pool.query(
     `select distinct t.slug from standings s join teams t on t.league = s.league and t.espn_id = s.team_espn_id
-     where s.league = $1 and s.season = (select max(season) from standings where league = $1) order by t.slug`,
+     where s.league = $1 and s.season = (select max(season) from standings where league = $1)`,
     [league]
   );
-  const slugs = rows.map((r) => r.slug as string);
-  const out: Entry[] = [];
-  for (let i = 0; i < slugs.length; i++) for (let j = i + 1; j < slugs.length; j++) out.push(entry(h2hPath(league, slugs[i], slugs[j]), "weekly", 0.4));
-  return out;
+  const inStandings = new Set(current.map((r) => r.slug as string));
+  const { rows: met } = await pool.query(
+    `select distinct ht.slug as home_slug, at.slug as away_slug
+     from games g
+     join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
+     join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
+     where g.league = $1 and ht.espn_id <> at.espn_id and ${countedMeetingSql("g")}`,
+    [league]
+  );
+  // h2hPath puts a pair in its one canonical (alphabetical) order, so both home/away orders collapse to one URL.
+  const paths = new Set<string>();
+  for (const { home_slug, away_slug } of met) if (inStandings.has(home_slug) && inStandings.has(away_slug)) paths.add(h2hPath(league, home_slug, away_slug));
+  return [...paths].sort().map((path) => entry(path, "weekly", 0.4));
 }
 
 export async function sitemapEntries(id: string): Promise<Entry[]> {

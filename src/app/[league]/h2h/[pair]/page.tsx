@@ -5,7 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel, type GameRow } from "@/lib/queries";
 import { getHeadToHead, isSoccer } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
-import { h2hPath } from "@/lib/h2h";
+import { h2hDescription, h2hPath } from "@/lib/h2h";
 import { AdSlot } from "@/components/AdSlot";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GameCard } from "@/components/GameCard";
@@ -40,8 +40,11 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // Champions League), which would otherwise give two pages the same bare title.
   return pageMeta(
     `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_LABEL[league]})`,
-    `${h2h.teamA.name} vs ${h2h.teamB.name} all-time ${LEAGUE_LABEL[league]} record (${record} in ${h2h.meetings} meetings), recent results and biggest wins.`,
-    h2hPath(league, slugs[0], slugs[1])
+    h2hDescription(h2h.teamA.name, h2h.teamB.name, LEAGUE_LABEL[league], h2h.meetings, record),
+    h2hPath(league, slugs[0], slugs[1]),
+    // No counted meeting: the page still renders for visitors, but has nothing to index. The h2h sitemap
+    // lists a pair only if it has one (countedMeetingSql), so the two rules stay in step.
+    { noindex: h2h.meetings === 0 }
   );
 }
 
