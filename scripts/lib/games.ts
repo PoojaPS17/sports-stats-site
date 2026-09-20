@@ -78,7 +78,7 @@ export function parseStageFields(league: League, ev: any): { seasonType: number 
 // once real stages exist (IPL playoffs, NBA/NFL postseason rounds), and uninformative
 // even for an ordinary cricket match (every one of a team's 14 league games looked
 // identical). Pull whatever real stage/round info each sport actually exposes instead.
-function parseRound(league: League, ev: any): string | null {
+export function parseRound(league: League, ev: any): string | null {
   if (isCupCompetition(league)) return parseCupRound(ev);
   // Cricket: `description` reads like "Qualifier 1 (N), Indian Premier League at
   // Chennai, May 23 2023" for a playoff match, or "69th Match (D/N), Indian Premier

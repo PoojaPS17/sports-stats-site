@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import type { League } from "./espn";
-import { parseStageFields, upsertEvent } from "./games";
+import { parseRound, parseStageFields } from "./games";
 
 // The default team-schedule call returns only the regular season; the postseason needs
 // seasontype=3, and the NBA's play-in tournament (2020-21 on) needs seasontype=5. Preseason
@@ -42,16 +42,20 @@ export async function classifyUntypedGames(
     }
     for (const ev of data.events ?? []) {
       if (!wanted.has(String(ev.id))) continue;
+      // Only the three classification columns are written. An exhibition (All-Star, Pro Bowl) is
+      // typed in place too and never upserted: no teams, no new game rows. Scores, status and dates
+      // are left alone: ESPN caches partly hydrated old seasons, and a thin day feed must not
+      // overwrite results already stored.
       const stage = parseStageFields(league, ev);
-      if (stage.competitionType === "ALLSTAR") {
-        // upsertEvent skips exhibitions, so a row stored before that rule is typed in place.
-        await pool.query(
-          `update games set competition_type = 'ALLSTAR', season_type = coalesce($3, season_type) where league = $1 and espn_id = $2`,
-          [league, String(ev.id), stage.seasonType]
-        );
-      } else {
-        await upsertEvent(league, ev);
-      }
+      const res = await pool.query(
+        `update games
+            set season_type = coalesce($3, season_type),
+                competition_type = coalesce($4, competition_type),
+                round = coalesce($5, round)
+          where league = $1 and espn_id = $2`,
+        [league, String(ev.id), stage.seasonType, stage.competitionType, parseRound(league, ev)]
+      );
+      if (!res.rowCount) continue;
       wanted.delete(String(ev.id));
       typed += 1;
     }
