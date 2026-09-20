@@ -3,6 +3,7 @@ import { TeamLogo } from "./TeamLogo";
 import { ExportFooter } from "./ExportFooter";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
+import { NBA_NO_BOX_SCORE_CARD_NOTE } from "@/lib/playerCopy";
 
 // The downloadable version of PlayerHeader + PlayerCareerStrip: same facts (name,
 // team, headline numbers), redrawn on a fixed-width light card so nothing truncates
@@ -23,7 +24,8 @@ export function PlayerExportCard({
   teamName: string | null;
   teamColor: string | null;
   meta: string[];
-  stats: { label: string; value: string }[];
+  /** `noBoxScore` marks a value that carries the † (see `careerStripStats`); the card then explains it. */
+  stats: { label: string; value: string; noBoxScore?: boolean }[];
   /** What the numbers cover, shown in the footer ("Career stats", "2025-26 stats"). */
   context?: string;
 }) {
@@ -55,6 +57,7 @@ export function PlayerExportCard({
           ))}
         </div>
       )}
+      {stats.some((s) => s.noBoxScore) && <div style={{ marginTop: 12, fontSize: 12, color: CARD.textMuted }}>{NBA_NO_BOX_SCORE_CARD_NOTE}</div>}
       <ExportFooter context={context} />
     </div>
   );

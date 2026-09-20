@@ -46,7 +46,7 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
-import { NBA_NO_BOX_SCORE_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote } from "@/lib/playerCopy";
+import { gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -62,7 +62,9 @@ function profileSummary(league: League, player: PlayerRow, profile: PlayerProfil
   const teams = profile.teams.map((t) => t.name);
   const since = profile.seasons[profile.seasons.length - 1]?.season;
   const games = `${profile.games} ${profile.profile.gamesLabel === "Apps" ? "appearances" : "games"}`;
-  const lead = `${player.name} ${LEAGUE_LABEL[league]} stats: ${games}, ${figures.join(", ")}${perGame ? " per game" : ""} for ${teams.join(" and ")}${since ? ` since ${formatSeasonLabel(league, since)}` : ""}.`;
+  // A career of only games with no box score has no averages to quote: the lead is the games and clubs alone.
+  const quoted = profile.recorded > 0 ? `${figures.join(", ")}${perGame ? " per game" : ""}` : null;
+  const lead = `${player.name} ${LEAGUE_LABEL[league]} stats: ${gamesAndFigures(games, quoted)} for ${teams.join(" and ")}${since ? ` since ${formatSeasonLabel(league, since)}` : ""}.`;
   if (!short) return `${lead} Season-by-season totals, full game log, home and away and opponent splits, best games and milestones.`;
   const tail = " Game log, splits and best games.";
   return lead.length + tail.length <= 160 ? lead + tail : lead;
@@ -245,7 +247,7 @@ export default async function PlayerPage({
               </section>
 
               <section>
-                <SectionHeader description={profile.sport === "nba" ? `Per-game averages; shooting as made over attempted for the season.${regularNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}` : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <SectionHeader description={profile.sport === "nba" ? withNoBoxScoreNote("Per-game averages; shooting as made over attempted for the season.", regularNoBoxScore, "regular") : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
                 <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
               </section>
             </>
@@ -258,14 +260,14 @@ export default async function PlayerPage({
 
           {staged.playoffs && (
             <section>
-              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : `Playoff games only; ESPN lists these separately from the regular season.${playoffsNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Playoffs</SectionHeader>
+              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : withNoBoxScoreNote("Playoff games only; ESPN lists these separately from the regular season.", playoffsNoBoxScore, "other")}>Playoffs</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} careerLabel="Career playoffs" baseSeason={latestRegular} />
             </section>
           )}
 
           {staged.playin && (
             <section>
-              <SectionHeader description={`Play-in tournament games, listed separately from the regular season and the playoffs.${playinNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Play-In</SectionHeader>
+              <SectionHeader description={withNoBoxScoreNote("Play-in tournament games, listed separately from the regular season and the playoffs.", playinNoBoxScore, "other")}>Play-In</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} careerLabel="Career play-in" baseSeason={latestRegular} />
             </section>
           )}

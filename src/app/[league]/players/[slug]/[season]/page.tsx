@@ -22,7 +22,7 @@ import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
-import { NBA_NO_BOX_SCORE_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote } from "@/lib/playerCopy";
+import { gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 // A past season's stat line is static (it never changes once the season is over), so
 // this can be cached far longer than the live current-season player page.
@@ -52,7 +52,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     const p = staged.regular;
     if (p.games > 0) {
       const headline = p.profile.specs.filter((s) => s.headline).slice(0, 3);
-      figures = ` ${p.games} ${p.profile.gamesLabel === "Apps" ? "appearances" : "games"}, ${headline.map((s) => `${formatStat(s, p.career[s.key])} ${s.title.toLowerCase()}`).join(", ")} for ${p.teams.map((t) => t.name).join(" and ")}.`;
+      // A season of only games with no box score has no averages to quote: the games and clubs alone.
+      const quoted = p.recorded > 0 ? headline.map((s) => `${formatStat(s, p.career[s.key])} ${s.title.toLowerCase()}`).join(", ") : null;
+      figures = ` ${gamesAndFigures(`${p.games} ${p.profile.gamesLabel === "Apps" ? "appearances" : "games"}`, quoted)} for ${p.teams.map((t) => t.name).join(" and ")}.`;
     } else {
       // Named in a squad but never used that season: nothing here worth indexing. (A season of
       // playoff or play-in games only still has a page to show.)
@@ -116,7 +118,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {profile.games > 0 && (
             <section>
               <SectionHeader
-                description={sport === "nfl" ? nflRegularSeasonNote(staged.regular.gamesFromEspn) : `${staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`}${regularNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}
+                description={sport === "nfl" ? nflRegularSeasonNote(staged.regular.gamesFromEspn) : withNoBoxScoreNote(staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`, regularNoBoxScore, "regular")}
                 tools={
                   <ImageActions
                     filename={`${slug}-${season}-${league}`}
@@ -140,14 +142,14 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
 
           {staged.playoffs && (
             <section>
-              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : `Playoff games only; ESPN lists these separately from the regular season.${playoffsNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Playoffs</SectionHeader>
+              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : withNoBoxScoreNote("Playoff games only; ESPN lists these separately from the regular season.", playoffsNoBoxScore, "other")}>Playoffs</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} activeSeason={season} careerLabel="Career playoffs" baseSeason={null} />
             </section>
           )}
 
           {staged.playin && (
             <section>
-              <SectionHeader description={`Play-in tournament games, listed separately from the regular season and the playoffs.${playinNoBoxScore > 0 ? ` ${NBA_NO_BOX_SCORE_NOTE}` : ""}`}>Play-In</SectionHeader>
+              <SectionHeader description={withNoBoxScoreNote("Play-in tournament games, listed separately from the regular season and the playoffs.", playinNoBoxScore, "other")}>Play-In</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} activeSeason={season} careerLabel="Career play-in" baseSeason={null} />
             </section>
           )}

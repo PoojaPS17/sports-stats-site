@@ -700,14 +700,16 @@ test("profile teams include a team the player only has games with no box score f
 // ---------------------------------------------------------------------------
 test("career strip: NBA GP carries a dagger and the tooltip when games have no box score", () => {
   const listed = careerStripStats(buildProfile("nba", MIXED));
-  assert.deepEqual(listed[0], { label: "GP", value: "5†", title: noBoxScoreGamesTitle(2, "listed") });
+  assert.deepEqual(listed[0], { label: "GP", value: "5†", title: noBoxScoreGamesTitle(2, "listed"), noBoxScore: true });
   const espn = careerStripStats(buildStagedProfile("nba", MIXED, new Map([[2026, 6]])).regular);
-  assert.deepEqual(espn[0], { label: "GP", value: "6†", title: noBoxScoreGamesTitle(3, "espn") });
+  assert.deepEqual(espn[0], { label: "GP", value: "6†", title: noBoxScoreGamesTitle(3, "espn"), noBoxScore: true });
   // A stale figure below the logged games leaves nothing to mark.
   assert.deepEqual(careerStripStats(buildStagedProfile("nba", MIXED, new Map([[2026, 2]])).regular)[0], { label: "GP", value: "3" });
   // Every game without a box score: the games are all there is, the averages are dashes.
   const only = careerStripStats(buildProfile("nba", [blank("u1", "2026-02-01"), blank("u2", "2026-02-02")]));
   assert.equal(only[0].value, "2†");
+  // Only the GP stat is marked; the flag is absent (not false) everywhere else, so other strips keep their shape.
+  assert.deepEqual(only.map((s) => "noBoxScore" in s), [true, ...only.slice(1).map(() => false)]);
   assert.equal(only[1].value, "–");
   assert.ok(only.slice(2).every((s) => s.value === "–"));
 });

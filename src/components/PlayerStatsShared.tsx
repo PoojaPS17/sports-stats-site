@@ -24,12 +24,13 @@ export function careerNoBoxScoreTitle(profile: PlayerProfile): string | null {
 
 // Every number in the career strip, in order - shared by the live strip and the downloadable
 // card so the two can never drift apart.
-export function careerStripStats(profile: PlayerProfile): { label: string; value: string; title?: string }[] {
+/** `noBoxScore` marks the stat whose value carries the † (present only then), so the strip and the card can explain it. */
+export function careerStripStats(profile: PlayerProfile): { label: string; value: string; title?: string; noBoxScore?: boolean }[] {
   const soccer = profile.sport === "soccer";
   const games = gamesHeader(profile);
   const noBoxScore = careerNoBoxScoreTitle(profile);
   return [
-    { label: games.label, value: `${profile.games}${noBoxScore ? "†" : ""}`, ...(noBoxScore ? { title: noBoxScore } : games.title ? { title: games.title } : {}) },
+    { label: games.label, value: `${profile.games}${noBoxScore ? "†" : ""}`, ...(noBoxScore ? { title: noBoxScore, noBoxScore: true } : games.title ? { title: games.title } : {}) },
     { label: soccer ? "W-D-L" : "W-L", value: recordText(profile.record, soccer) },
     ...headlineCareerStats(profile),
   ];

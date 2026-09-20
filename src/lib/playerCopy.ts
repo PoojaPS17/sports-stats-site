@@ -16,6 +16,23 @@ export const NFL_PLAYOFFS_NOTE = "Playoff games only; ESPN lists these separatel
 export const NBA_NO_BOX_SCORE_NOTE =
   "ESPN published no box score for some of this player's games. Those games count toward GP (ESPN's own figure where it is stored) but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons.";
 
+/** The same note for a Playoffs or Play-In table, where GP is always counted from the rosters (ESPN's stored figure is regular season only). */
+export const NBA_NO_BOX_SCORE_STAGE_NOTE =
+  "ESPN published no box score for some of this player's games. Those games are counted from the game rosters toward GP but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons.";
+
+/** A section description, with the no-box-score note after it when `n` of its games have none. */
+export function withNoBoxScoreNote(text: string, n: number, stage: "regular" | "other"): string {
+  if (n <= 0) return text;
+  return `${text} ${stage === "regular" ? NBA_NO_BOX_SCORE_NOTE : NBA_NO_BOX_SCORE_STAGE_NOTE}`;
+}
+
+/** The line under the downloadable card's numbers when its GP carries the † (see `careerStripStats`). */
+export const NBA_NO_BOX_SCORE_CARD_NOTE = "† Includes games ESPN published no box score for.";
+
+/** "82 games, 27.1 points, ..." for a meta description; just the games when there are no figures to quote
+ * (every one of the player's games has no box score, so each average would be a dash). */
+export const gamesAndFigures = (gamesText: string, figures: string | null): string => (figures ? `${gamesText}, ${figures}` : gamesText);
+
 const games = (n: number): string => `${n} ${n === 1 ? "game" : "games"}`;
 
 /** The tooltip on a † GP: how many of its games have no box score, and whether ESPN's own figure is behind the count. */
