@@ -3,6 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import type { FormResult, MatchContext, SideContext } from "@/lib/matchContext";
 import type { GameRow, League } from "@/lib/queries";
 import { isSoccerLeague } from "@/lib/queries";
+import type { matchContextView } from "@/lib/gamePage";
 
 function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
@@ -66,14 +67,16 @@ function Standing({ side, soccer }: { side: SideContext; soccer: boolean }) {
 
 // Going in and coming out: ratings, the probability they implied, recent form, and
 // where the result left each side. Everything computed from stored results.
-export function MatchContextCard({ league, game, context }: { league: League; game: GameRow; context: MatchContext }) {
+// The wording and whether the win probability shows come from matchContextView: a game that was called off has
+// ratings and form but no probability, and nothing that reads as going into a match.
+export function MatchContextCard({ league, game, context, view }: { league: League; game: GameRow; context: MatchContext; view: ReturnType<typeof matchContextView> }) {
   const soccer = isSoccerLeague(league);
-  const p = context.probabilities;
+  const p = view.showProbability ? context.probabilities : null;
   const rows: { label: string; away: React.ReactNode; home: React.ReactNode }[] = [
-    { label: game.completed ? "Elo rating (change)" : "Elo rating", away: <Elo side={context.away} />, home: <Elo side={context.home} /> },
-    { label: "Form going in", away: <Form form={context.away.form} />, home: <Form form={context.home.form} /> },
+    { label: view.labels.elo, away: <Elo side={context.away} />, home: <Elo side={context.home} /> },
+    { label: view.labels.form, away: <Form form={context.away.form} />, home: <Form form={context.home.form} /> },
   ];
-  const standingLabel = soccer ? (game.completed ? "Table position" : "Position") : game.completed ? "Record" : "Record going in";
+  const standingLabel = view.labels.standing;
   if ((soccer && (context.home.position || context.away.position)) || (!soccer && (context.home.record || context.away.record))) {
     rows.push({ label: standingLabel, away: <Standing side={context.away} soccer={soccer} />, home: <Standing side={context.home} soccer={soccer} /> });
   }

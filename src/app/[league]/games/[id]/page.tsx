@@ -9,6 +9,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
 import { fetchMatchSummary, extractGameDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
 import { getMatchContext } from "@/lib/matchContext";
+import { gameDescription, gameSections, gameSides, hasTeamStats, matchContextView, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -74,8 +75,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const date = new Date(game.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   // The NFL and NBA name the visitors first ("Chiefs at Bills"); football and cricket
   // name the home side first.
-  const awayFirst = league === "nfl" || league === "nba";
-  const [first, second] = awayFirst ? ([game.away_name, game.home_name] as const) : ([game.home_name, game.away_name] as const);
+  const { first, second, awayFirst } = gameSides(league, game);
   // A cricket score carries its overs and target ("151/1 (15.3/20 ov, target 148)");
   // the title keeps runs and wickets only.
   const bare = (v: string | number | null) => (typeof v === "string" ? v.replace(/\s*\([^)]*\)/g, "").trim() : v);
@@ -84,26 +84,14 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const score = game.completed && game.away_score != null && game.home_score != null ? (awayFirst ? ` ${awayScore}-${homeScore}` : ` ${homeScore}-${awayScore}`) : "";
   const details = game.completed ? await getGameDetails(league, id) : null;
   const where = details?.venue ? ` at ${details.venue}` : "";
-  const covers = isCricketLeague(league) ? "Scorecard and head-to-head." : isSoccerLeague(league) ? "Line-ups, timeline, team stats, box score and head-to-head." : "Scoring summary, win probability, team stats, box score and head-to-head.";
-  const extras = game.completed ? `${scorersLine(details)} ${covers}` : isCricketLeague(league) ? " Head-to-head record and recent form." : " Team form, head-to-head record and pre-match win probability.";
+  const description = gameDescription(league, game, date, where, game.completed ? scorersLine(details) : "");
   // A Test's two-innings score line ("254 & 258 (95.2 ov, target 271)") is too long
   // for a title; the month names the match and the description carries the result.
   if (isFirstClassCricket(league)) {
     const month = new Date(game.date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    const result = game.completed && game.status_summary ? ` ${teamDisplayName(game.status_summary)}.` : "";
-    return pageMeta(
-      `${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`,
-      `${teamDisplayName(first)} v ${teamDisplayName(second)}${where}, ${date}.${result} Full scorecard of all four innings and head-to-head.`,
-      `/${league}/games/${id}`,
-      { ownImage: true }
-    );
+    return pageMeta(`${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`, description, `/${league}/games/${id}`, { ownImage: true });
   }
-  return pageMeta(
-    `${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`,
-    `${LEAGUE_LABEL[league]}: ${teamDisplayName(first)} ${awayFirst ? "at" : "v"} ${teamDisplayName(second)}${where}, ${date}.${extras}`,
-    `/${league}/games/${id}`,
-    { ownImage: true }
-  );
+  return pageMeta(`${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`, description, `/${league}/games/${id}`, { ownImage: true });
 }
 
 export default async function GameDetailPage({ params }: { params: Promise<{ league: string; id: string }> }) {
@@ -146,12 +134,16 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   // per-game averages (entering the matchup) — there's no real box score yet since
   // nothing's been played. Labeling that "Team Stats" the same way a completed game's
   // real box score is labeled reads as if these numbers are from this game, which
-  // they aren't — so call it out explicitly instead of leaving it ambiguous.
-  const notYetStarted = game.status_state === "pre";
+  // they aren't — so call it out explicitly instead of leaving it ambiguous. A game
+  // ESPN closed without playing (state "post", not completed) keeps sending those
+  // averages, so it gets the same treatment with wording that says it was called off.
+  const statsFraming = teamStatsFraming(game);
+  const show = gameSections(game);
+  const contextView = matchContextView(league, game);
   const events = details?.events ?? [];
-  const lineups = details?.lineups ?? [];
-  const winProb = details?.win_probability ?? [];
-  const leaders = details?.leaders ?? [];
+  const lineups = show.lineups ? (details?.lineups ?? []) : [];
+  const winProb = show.winProbability ? (details?.win_probability ?? []) : [];
+  const leaders = show.leaders ? (details?.leaders ?? []) : [];
 
   const awayFirst = league === "nfl" || league === "nba";
   const matchName = awayFirst ? `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}` : `${teamDisplayName(game.home_name)} vs ${teamDisplayName(game.away_name)}`;
@@ -180,18 +172,17 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
       {context && (
         <section>
-          <SectionHeader description={game.completed ? "Ratings, form and standing before and after this game, from every result on record." : "Ratings and form going into this game, from every result on record."}>
-            {game.completed ? "Before and after" : "Going in"}
-          </SectionHeader>
-          <MatchContextCard league={league} game={game} context={context} />
+          <SectionHeader description={contextView.description}>{contextView.title}</SectionHeader>
+          <MatchContextCard league={league} game={game} context={context} view={contextView} />
         </section>
       )}
 
       {!isCricket && <HeadToHeadStrip league={league} homeSlug={game.home_slug} awaySlug={game.away_slug} excludeGameId={game.completed ? game.espn_id : null} />}
 
-      {!details && <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Match details aren&apos;t available right now.</p>}
+      {!details && show.detailsMissingNote && <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Match details aren&apos;t available right now.</p>}
 
-      {(game.broadcast_network || game.weather_display) && (
+      {/* The broadcast and forecast belong to the slot the game was scheduled for; once it is called off they are stale. */}
+      {show.broadcastStrip && (game.broadcast_network || game.weather_display) && (
         <div className="card flex flex-wrap gap-x-6 gap-y-1 px-4 py-3 text-sm text-[var(--text-muted)]">
           {game.broadcast_network && (
             <span>
@@ -238,19 +229,19 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         </section>
       )}
 
-      {awayStats && homeStats && (
+      {awayStats && homeStats && hasTeamStats(awayStats, homeStats) && (
         <section>
           <SectionHeader
-            description={notYetStarted ? "Season averages coming into this game. It hasn't been played yet." : undefined}
+            description={statsFraming.description}
             tools={
               <ImageActions
                 filename={`${id}-team-stats-${league}`}
-                shareTitle={`${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)} ${notYetStarted ? "season comparison" : "team stats"}`}
-                card={<TeamStatsExportCard league={league} game={game} away={awayStats} home={homeStats} title={notYetStarted ? "Season comparison" : "Team stats"} />}
+                shareTitle={`${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)} ${statsFraming.shareLabel}`}
+                card={<TeamStatsExportCard league={league} game={game} away={awayStats} home={homeStats} title={statsFraming.cardTitle} />}
               />
             }
           >
-            {notYetStarted ? "Season Comparison" : "Team Stats"}
+            {statsFraming.heading}
           </SectionHeader>
           <TeamStatsComparison away={awayStats} home={homeStats} />
         </section>
@@ -281,7 +272,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         </section>
       )}
 
-      {!isCricket && hasPlayerStats && (
+      {!isCricket && show.playerStats && hasPlayerStats && (
         <section className="flex flex-col gap-4">
           <SectionHeader tools={<ImageActions filename={`${id}-box-score-${league}`} width={900} shareTitle={`${matchName} box score`} card={<PlayerBoxScoreExportCard league={league} game={game} playerBox={playerBox} />} />}>Player Stats</SectionHeader>
           {playerBox.map((team) => (
