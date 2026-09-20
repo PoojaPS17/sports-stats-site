@@ -6,6 +6,7 @@
 //   - NFL: the official week number stored from the feed, then the playoff rounds
 //   - NBA: seven-day periods from opening night, then the playoff rounds
 import { pool } from "./db";
+import { isRegularSeasonGame } from "./gameStage";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
 import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
@@ -263,8 +264,9 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
   }
 
   // Week buckets for the regular season, then playoff rounds in date order.
-  const regular = sorted.filter((g) => !g.round);
-  const playoffs = sorted.filter((g) => g.round);
+  // The play-in, preseason and other games that do not count belong to neither.
+  const regular = sorted.filter(isRegularSeasonGame);
+  const playoffs = sorted.filter((g) => (g.stage ? g.stage === "playoffs" : Boolean(g.round)));
   const groups: { label: string; shortLabel: string; games: GameRow[]; playoff: boolean }[] = [];
 
   if (regular.length && regular.every((g) => g.week != null)) {
@@ -366,6 +368,7 @@ function toResults(games: GameRow[]): ResultRow[] {
       date: g.date,
       season_year: g.season_year,
       round: g.round,
+      stage: g.stage,
       home_team_espn_id: g.home_team_espn_id,
       away_team_espn_id: g.away_team_espn_id,
       home_score: g.home_score!,

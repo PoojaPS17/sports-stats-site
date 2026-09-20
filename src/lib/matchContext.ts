@@ -3,6 +3,7 @@
 // side's form, and where the game left both teams (table position for football,
 // win-loss record for the NFL and NBA). Nothing here needs the feed.
 import { pool } from "./db";
+import { isRegularSeasonGame } from "./gameStage";
 import { computeElo, computeTable, getTeamMap, isSoccer, type ResultRow } from "./analytics";
 import { matchProbabilities } from "./simulator";
 import { buildMatchweeks, getSeasonGames, supportsMatchweeks, weekPath } from "./matchweeks";
@@ -60,9 +61,10 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
   if (isCricketLeague(league)) return null;
   const [{ rows: upTo }, teams] = await Promise.all([
     pool.query<ResultRow>(
-      `select espn_id, date, season_year, round, home_team_espn_id, away_team_espn_id, home_score, away_score
+      `select espn_id, date, season_year, round, stage, home_team_espn_id, away_team_espn_id, home_score, away_score
        from games
        where league = $1 and completed = true and home_score is not null and away_score is not null and date <= $2
+         and stage <> 'excluded'
        order by date asc`,
       [league, game.date]
     ),
@@ -70,8 +72,9 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
   ]);
   const before = upTo.filter((g) => g.espn_id !== game.espn_id);
   const played = game.completed && game.home_score != null && game.away_score != null;
-  const thisGame: ResultRow | null = played
-    ? { espn_id: game.espn_id, date: game.date, season_year: game.season_year, round: game.round, home_team_espn_id: game.home_team_espn_id, away_team_espn_id: game.away_team_espn_id, home_score: game.home_score!, away_score: game.away_score! }
+  // A game that says nothing about strength (preseason, All-Star, the NBA Cup final) does not move Elo either.
+  const thisGame: ResultRow | null = played && game.stage !== "excluded"
+    ? { espn_id: game.espn_id, date: game.date, season_year: game.season_year, round: game.round, stage: game.stage, home_team_espn_id: game.home_team_espn_id, away_team_espn_id: game.away_team_espn_id, home_score: game.home_score!, away_score: game.away_score! }
     : null;
   const after = thisGame ? [...before, thisGame] : null;
 
@@ -82,9 +85,9 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
   const a = game.away_team_espn_id;
   const probabilities = hasHistory(h) && hasHistory(a) ? matchProbabilities(league, eloBefore.get(h)!, eloBefore.get(a)!) : null;
 
-  // Regular-season games only: playoff rounds and cup knockouts sit outside the table.
-  const inTable = game.round == null && game.season_year != null && (!isCupCompetition(league) || game.season_year >= UCL_LEAGUE_PHASE_FROM);
-  const seasonBefore = inTable ? before.filter((g) => g.season_year === game.season_year && g.round == null) : [];
+  // Regular-season games only: playoffs, the play-in and cup knockouts sit outside the table.
+  const inTable = isRegularSeasonGame(game) && game.season_year != null && (!isCupCompetition(league) || game.season_year >= UCL_LEAGUE_PHASE_FROM);
+  const seasonBefore = inTable ? before.filter((g) => g.season_year === game.season_year && isRegularSeasonGame(g)) : [];
   const seasonAfter = inTable && thisGame ? [...seasonBefore, thisGame] : null;
   let tableSize: number | null = null;
   const position = (id: string) => {

@@ -139,7 +139,7 @@ export async function getSeasonProjection(league: League): Promise<SeasonProject
   if (!season) return null;
 
   const [{ rows: games }, { ratings, teams: teamMap, lastResult }, { rows: groups }] = await Promise.all([
-    pool.query<GameRow>(`${GAME_SELECT} where g.league = $1 and g.season_year = $2 and g.round is null order by g.date asc`, [league, season]),
+    pool.query<GameRow>(`${GAME_SELECT} where g.league = $1 and g.season_year = $2 and g.stage = 'regular' order by g.date asc`, [league, season]),
     getEloRatings(league),
     pool.query(
       `select team_espn_id, conference, division from standings

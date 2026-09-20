@@ -4,6 +4,7 @@
 // scrapers already store — nothing is fetched from ESPN.
 import { pool } from "./db";
 import { isCricketLeague, SOCCER_LEAGUES, type League } from "./leagues";
+import type { GameStage } from "./gameStage";
 import type { GameRow } from "./queries";
 
 /* ------------------------------------------------------------------------ */
@@ -15,6 +16,8 @@ export interface ResultRow {
   date: string;
   season_year: number | null;
   round: string | null;
+  /** games.stage; absent on a result built from a query that does not select it. */
+  stage?: GameStage | null;
   home_team_espn_id: string;
   away_team_espn_id: string;
   home_score: number;
@@ -43,27 +46,31 @@ export function supportsInjuryTracker(league: League): boolean {
   return league === "nfl" || league === "nba";
 }
 
-// Regular-season only (round is null for every league-phase game; playoff rounds and
-// cricket's "Match N"/"Final" labels are the exceptions). Computed tables should match
-// the official league table, which never includes postseason results.
+// Regular-season only: stage = 'regular' (see db/schema.sql). Playoff rounds, the NBA
+// play-in, preseason and cup finals are other stages, as are a knockout league's round
+// games. Computed tables should match the official league table, which never includes
+// them. Cricket keeps every game: its "Match N"/"Final" labels are rounds too.
 async function getSeasonResults(league: League, season: number, regularSeasonOnly: boolean): Promise<ResultRow[]> {
   const { rows } = await pool.query(
-    `select espn_id, date, season_year, round, home_team_espn_id, away_team_espn_id, home_score, away_score
+    `select espn_id, date, season_year, round, stage, home_team_espn_id, away_team_espn_id, home_score, away_score
      from games
      where league = $1 and season_year = $2 and completed = true
        and home_score is not null and away_score is not null
-       ${regularSeasonOnly && !isCricketLeague(league) ? "and round is null" : ""}
+       ${regularSeasonOnly && !isCricketLeague(league) ? "and stage = 'regular'" : ""}
      order by date asc`,
     [league, season]
   );
   return rows;
 }
 
+// Every result Elo and the records read: playoffs and the play-in stay, but a game that
+// says nothing about strength (preseason, All-Star, the NBA Cup final) is skipped.
 async function getAllResults(league: League): Promise<ResultRow[]> {
   const { rows } = await pool.query(
-    `select espn_id, date, season_year, round, home_team_espn_id, away_team_espn_id, home_score, away_score
+    `select espn_id, date, season_year, round, stage, home_team_espn_id, away_team_espn_id, home_score, away_score
      from games
      where league = $1 and completed = true and home_score is not null and away_score is not null
+       and stage <> 'excluded'
      order by date asc`,
     [league]
   );
@@ -298,7 +305,7 @@ export async function getPowerRankings(league: League, nextN = 5): Promise<Power
   // Upcoming fixtures for the difficulty run.
   const { rows: upcoming } = await pool.query(
     `select espn_id, date, home_team_espn_id, away_team_espn_id from games
-     where league = $1 and completed = false and date > now() and round is null
+     where league = $1 and completed = false and date > now() and stage = 'regular'
      order by date asc`,
     [league]
   );

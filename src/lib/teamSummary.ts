@@ -30,14 +30,24 @@ function resultFor(game: GameRow, teamEspnId: string): ResultLetter | null {
   return "D";
 }
 
+// The record and form are the regular season's. Only the NBA and NFL split a season into stages
+// (playoffs, play-in, preseason and other games that do not count), so those are what is left out;
+// every other league's games count as they always have, round labels or not (a cricket "Match 5"
+// or "Final", a cup knockout is a game the team played).
+function countsTowardRecord(g: GameRow): boolean {
+  return g.stage !== "playoffs" && g.stage !== "playin" && g.stage !== "excluded";
+}
+
 // Record, recent form and next fixture derived from a team's season game list
-// (which getTeamGamesBySeason returns newest first).
+// (which getTeamGamesBySeason returns newest first). The next fixture comes from every game,
+// since the schedule lists them all; the record and form count regular-season games only.
 export function summarizeTeamSeason(games: GameRow[], teamEspnId: string): TeamSeasonSummary {
   let wins = 0;
   let losses = 0;
   let draws = 0;
   const form: ResultLetter[] = [];
   for (const g of games) {
+    if (!countsTowardRecord(g)) continue;
     const r = resultFor(g, teamEspnId);
     if (!r) continue;
     if (r === "W") wins++;
