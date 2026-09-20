@@ -253,8 +253,9 @@ create table if not exists game_views (
 create index if not exists game_views_lookup_idx on game_views (league, game_espn_id, viewed_at desc);
 create index if not exists game_views_time_idx on game_views (viewed_at desc);
 
--- Country: from Vercel's edge-injected geolocation header (real visitor IP geolocation
--- — null locally/off-Vercel, which is an honest gap, not a bug). Platform: parsed from
+-- Country: from the host edge's geolocation header (Cloudflare's cf-ipcountry, or Vercel's on
+-- the review copy; real visitor IP geolocation — null locally or when the edge could not place
+-- the visitor, which is an honest gap, not a bug). Platform: parsed from
 -- the request's own User-Agent (iOS/Android/Desktop), not fetched from any app store.
 alter table game_views add column if not exists country text;
 alter table game_views add column if not exists platform text;
