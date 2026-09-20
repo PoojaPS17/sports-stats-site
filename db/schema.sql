@@ -124,6 +124,29 @@ alter table games add column if not exists week int;
 alter table games add column if not exists first_seen_date timestamptz;
 update games set first_seen_date = date where first_seen_date is null;
 
+-- ESPN's own classification of a game, filled from both feeds (scoreboard `season.type`,
+-- team schedule `seasonType.type`) for NBA and NFL only: 1 preseason, 2 regular season,
+-- 3 postseason, 5 play-in. `competition_type` is the competition's abbreviation: STD normal,
+-- ALLSTAR (NBA All-Star, NFL Pro Bowl), CC (NBA Cup final), playoff rounds RD16/QTR/SEMI/FINAL.
+alter table games add column if not exists season_type int;
+alter table games add column if not exists competition_type text;
+-- The one rule for "what kind of game is this". ESPN's headline player totals count regular-season
+-- games only: they leave out preseason, play-in, All-Star and the NBA Cup final. A game with no
+-- known type falls back to the old `round is null` reading so nothing changes until it is typed.
+-- Generated, so it can never drift from the columns it is derived from.
+alter table games add column if not exists stage text generated always as (
+  case
+    when league not in ('nba', 'nfl') then case when round is null then 'regular' else 'other' end
+    when competition_type in ('ALLSTAR', 'CC') then 'excluded'
+    when season_type = 1 then 'excluded'
+    when season_type = 2 then 'regular'
+    when season_type = 3 then 'playoffs'
+    when season_type = 5 then 'playin'
+    when round is null then 'regular'
+    else 'playoffs'
+  end
+) stored;
+
 create index if not exists games_league_date_idx on games (league, date);
 create index if not exists games_league_season_idx on games (league, season_year);
 
