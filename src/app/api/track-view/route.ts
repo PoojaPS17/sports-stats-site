@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { visitorCountry } from "@/lib/country";
 import { pool } from "@/lib/db";
 import { isLeague } from "@/lib/queries";
 
-// Vercel's edge/proxy layer injects this header with the visitor's real IP-geolocated
-// country — nothing fetched from a third party at request time. Absent off-Vercel
-// (e.g. local dev), which just means country stays untracked there.
+// The host's edge (Cloudflare, or Vercel on the review copy) adds a header with the
+// visitor's IP-geolocated country — nothing fetched from a third party at request
+// time. When there is no usable header (e.g. local dev, or a country the edge could
+// not place), country stays untracked and is stored as null.
 function detectCountry(req: NextRequest): string | null {
-  return req.headers.get("x-vercel-ip-country");
+  return visitorCountry(req.headers);
 }
 
 // Coarse device classification from the request's own User-Agent — not app-store data,
