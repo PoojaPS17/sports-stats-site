@@ -1,6 +1,6 @@
 import { before, test } from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -26,17 +26,26 @@ esac
 exit 0
 `
   );
-  writeFileSync(join(bin, "git"), `#!/bin/sh\necho "git $*" >> "$STUB_LOG"\n[ -n "$STUB_GIT_FAIL" ] && exit 1\nexit 0\n`);
+  // Stub git: log the call; STUB_GIT_REWRITE makes a pull overwrite that file in place (like a pull that ships a new scrape.sh).
+  writeFileSync(
+    join(bin, "git"),
+    `#!/bin/sh
+echo "git $*" >> "$STUB_LOG"
+[ -n "$STUB_GIT_FAIL" ] && exit 1
+[ -n "$STUB_GIT_REWRITE" ] && printf '#!/usr/bin/env bash\\n# rewritten by git pull\\n' > "$STUB_GIT_REWRITE"
+exit 0
+`
+  );
   chmodSync(join(bin, "npm"), 0o755);
   chmodSync(join(bin, "git"), 0o755);
 });
 
-function run(job: string, env: Record<string, string> = {}) {
+function run(job: string, env: Record<string, string> = {}, runner: string = RUNNER) {
   const log = join(dir, `${job}-${Math.random().toString(36).slice(2)}.log`);
   writeFileSync(log, "");
-  const res = spawnSync("bash", [RUNNER, job], {
+  const res = spawnSync("bash", [runner, job], {
     // NODE_ENV is only here because Next's type augmentation makes it required on ProcessEnv.
-    env: { NODE_ENV: "test", PATH: `${bin}:/usr/bin:/bin`, SCRAPE_DIR: dir, STUB_LOG: log, STUB_SHOULD: "false", STUB_LEAGUES: "", STUB_FAIL: "", STUB_GIT_FAIL: "", ...env },
+    env: { NODE_ENV: "test", PATH: `${bin}:/usr/bin:/bin`, SCRAPE_DIR: dir, STUB_LOG: log, STUB_SHOULD: "false", STUB_LEAGUES: "", STUB_FAIL: "", STUB_GIT_FAIL: "", STUB_GIT_REWRITE: "", ...env },
     encoding: "utf8",
   });
   const calls = readFileSync(log, "utf8").split("\n").filter(Boolean);
@@ -145,4 +154,14 @@ test("the check:live temp file is removed after a tick", () => {
   mkdirSync(tmp);
   run("tick", { TMPDIR: tmp });
   assert.deepEqual(readdirSync(tmp), []);
+});
+
+test("a daily job still exits 1 when its own git pull rewrites scrape.sh mid-run", () => {
+  // bash reads a script by offset, so a pull that replaces it must not change the exit status.
+  const copy = join(dir, "scrape-copy.sh");
+  copyFileSync(RUNNER, copy);
+  const { status, calls } = run("daily", { STUB_FAIL: "migrate", STUB_GIT_REWRITE: copy }, copy);
+  assert.ok(calls.includes("git pull --ff-only --quiet"));
+  assert.ok(readFileSync(copy, "utf8").includes("rewritten by git pull"), "the stub pull should have replaced the script");
+  assert.equal(status, 1);
 });

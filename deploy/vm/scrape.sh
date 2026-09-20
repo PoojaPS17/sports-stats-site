@@ -83,11 +83,15 @@ job_hourly() {
   run check:stale
 }
 
-case "${1:-}" in
-  tick) job_tick ;;
-  daily) job_daily ;;
-  hourly) job_hourly ;;
-  *) echo "usage: scrape.sh <tick|daily|hourly>" >&2; exit 2 ;;
-esac
+main() {
+  case "${1:-}" in
+    tick) job_tick ;;
+    daily) job_daily ;;
+    hourly) job_hourly ;;
+    *) echo "usage: scrape.sh <tick|daily|hourly>" >&2; exit 2 ;;
+  esac
+}
 
-exit "$failed"
+# Keep this the last line, on one line: bash reads a script by offset and parses this whole line
+# before running it, so the daily job's `git pull` replacing this file cannot change the exit.
+main "$@"; exit "$failed"
