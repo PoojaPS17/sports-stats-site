@@ -14,14 +14,19 @@
 // mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
 // gives no games played), NFL "games short (no stat line)" (the page shows the logged count, with a
 // `*`, because no ESPN games figure is stored for the season; site games below ESPN's, every figure
-// equal). --strict makes the last two fail too.
+// equal), NBA "explained (no box score)" (ESPN published no box score for some of the team's games,
+// so its GP and PPG cover games the site's average cannot; the games figure matches ESPN's or our
+// listed count is within 2 of it, and the average is inside what those games could hold). --strict
+// makes "games not verified" and "games short" fail too, and never the explained class: a real
+// mismatch, an average outside those bounds included, fails the run either way.
 //
 // NFL games: the site side is the page's own figure (the regular profile is built with the stored ESPN
 // games map, as the player page does: ESPN's games played where stored, else the logged count). The
 // ESPN side is the loader's figure, not the first-stint category GP: player_season_stats.games_played
 // (stored mode) or seasonGamesPlayed on the payload (live mode), the categories' GP only as a fallback.
 // A page showing a stored ESPN figure that is below ESPN's is a MISMATCH (stale or wrong), as is any
-// page figure above ESPN's.
+// page figure above ESPN's. NBA: the site side is built the same way (ESPN's stored games played for a
+// season with games that have no box score, else the games listed); see compareSeason for the bounds.
 //
 // `select` only. The database is imported after the arguments are validated, so a usage error never
 // opens a connection. The live read uses the loader's own row selection (season-row.ts, pure).
@@ -59,6 +64,9 @@ interface Finding {
   differences: Difference[];
   /** Stored mode, and the player's regular-season games span several teams that season. */
   traded: boolean;
+  /** "explained (no box score)" only: ESPN's games played, and the games of them with a stat line. */
+  espnGames?: number;
+  recorded?: number;
 }
 
 const TRADED_NOTE = "traded: stored row is one stint";
@@ -91,6 +99,7 @@ async function main() {
   const noEspn: Finding[] = [];
   const unverified: Finding[] = [];
   const short: Finding[] = [];
+  const explained: Finding[] = [];
   const failures: string[] = [];
   let compared = 0;
   let matched = 0;
@@ -117,7 +126,7 @@ async function main() {
       for (const player of players) {
         try {
           const log = await fetchPlayerLog(pool, league, player.id);
-          // The page's own build: for the NFL with ESPN's stored games played per season (an empty map otherwise).
+          // The page's own build: with ESPN's stored games played per season (NFL; NBA seasons with games that have no box score).
           const regular = buildStagedProfile(sport, log, await fetchReportedGames(pool, league, player.id)).regular;
           const site = siteSeasons(sport, regular);
           const traded = args.live ? new Set<number>() : tradedSeasons(regular);
@@ -162,6 +171,10 @@ async function main() {
               unverified.push(finding);
             } else if (result.verdict === "games short (no stat line)") {
               short.push(finding);
+            } else if (result.verdict === "explained (no box score)") {
+              // Both sides have the season, but it is not a match: the average is only explained.
+              compared += 1;
+              explained.push({ ...finding, espnGames: espnLine?.games ?? 0, recorded: siteLine.noBoxScore?.recorded ?? 0 });
             } else {
               nothing += 1;
             }
@@ -178,6 +191,7 @@ async function main() {
 
   const note = (f: Finding) => (f.traded ? `  [${TRADED_NOTE}]` : "");
   const gapOf = (f: Finding) => (f.differences[0]?.espn ?? 0) - (f.differences[0]?.site ?? 0);
+  const boxlessOf = (f: Finding) => (f.espnGames ?? 0) - (f.recorded ?? 0);
 
   console.log("\n[audit-player-totals] summary");
   console.log(`  compared:                   ${compared} player-seasons (site and ESPN both have the season)`);
@@ -187,6 +201,7 @@ async function main() {
   console.log(`  no ESPN row:                ${noEspn.length}   (the site has regular-season games, ESPN has no row; ${args.live ? "outside the loader's window only, inside it is a mismatch" : "stored rows exist only for current-roster players"})`);
   console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  games short (no stat line): ${short.length}   (NFL: the page shows the logged count because no ESPN games figure is stored for the season; every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
+  console.log(`  explained (no box score):   ${explained.length}   (ESPN published no box score for some of the team's games; the games figure matches ESPN or is within 2, the average is inside what those games could hold; never fails the run)`);
   console.log(`  nothing to compare:         ${nothing}   (neither side has anything for the season)`);
   if (!args.live && args.leagues.includes("nfl")) {
     console.log("  Note: in stored mode an NFL season with a stored games figure matches on games by construction (the page and this audit read the same column); only --live checks that figure against ESPN.");
@@ -208,6 +223,17 @@ async function main() {
   section("no ESPN row", "site games", noEspn, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
   section("games not verified (ESPN gives no games played)", "site games", unverified, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
   section("games short (no stat line)", "games short", short, gapOf, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: site ${f.differences[0]?.site} / ESPN ${f.differences[0]?.espn} games, ${gapOf(f)} short${note(f)}`);
+
+  section(
+    "explained: ESPN published no box score for some of the team's games",
+    "games without a box score",
+    explained,
+    boxlessOf,
+    (f) => {
+      const ppg = f.differences.find((d) => d.field === "ppg");
+      return `${f.league} ${f.playerId} ${f.name} ${f.season}: ESPN ${f.espnGames} games, ${f.recorded} with a box score, ${boxlessOf(f)} without; ppg site ${fmt(ppg?.site ?? null)} / ESPN ${fmt(ppg?.espn ?? null)}${note(f)}`;
+    }
+  );
 
   if (failures.length > 0) {
     console.log("\n[audit-player-totals] players that could not be read (not verified)");
