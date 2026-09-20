@@ -3,6 +3,7 @@
 import { pool } from "./db";
 import type { League } from "./espn";
 import { isSoccerLeague, slugify } from "./espn";
+import { isPseudoAthleteId } from "../../src/lib/pseudoAthlete";
 
 export type PlayerStats = Map<string, { athlete: any; teamId: string; stats: Record<string, Record<string, string>> }>;
 
@@ -64,6 +65,20 @@ export function extractPlayerStats(league: League, summary: any): PlayerStats {
   return isSoccerLeague(league) ? extractSoccer(summary) : extractAmericanSports(summary);
 }
 
+// ESPN lists a team-credited line ("Team", a negative athlete id such as -8801) in some NFL box-score tables. It stays
+// in the box score below, as ESPN publishes it: the game page reads its rows from the match report itself, and
+// consults `players` only to decide whether a line links to a player page, so nothing needs a players row for it.
+// It is not a person, so no players row is created or updated for it, and no season totals are fetched for it.
+// (The stat rows are keyed by the id alone, so a game's Team line is stored exactly as before.)
+export function realAthletes(perPlayer: PlayerStats): PlayerStats {
+  return new Map([...perPlayer].filter(([id]) => !isPseudoAthleteId(id)));
+}
+
+/** The players whose season totals are worth an ESPN athlete request after a game: player id -> team id, real athletes only. */
+export function seasonStatTargets(perPlayer: PlayerStats): Map<string, string> {
+  return new Map([...realAthletes(perPlayer)].map(([id, { teamId }]) => [id, teamId]));
+}
+
 // Writes the players (creating any we have never seen) and their stat rows for one
 // game, in two batched statements rather than one round trip per player — the
 // historical backfill touches tens of thousands of rows, and the database is remote.
@@ -73,16 +88,17 @@ export function extractPlayerStats(league: League, summary: any): PlayerStats {
 export async function storeGameStats(league: League, gameEspnId: string, perPlayer: PlayerStats, updateTeam: boolean): Promise<number> {
   if (perPlayer.size === 0) return 0;
 
-  const { rows: existing } = await pool.query(`select espn_id from players where league = $1 and espn_id = any($2)`, [
-    league,
-    [...perPlayer.keys()],
-  ]);
+  // Only real athletes become (or update) players; every box-score line, the Team line included, gets its stat row below.
+  const people = realAthletes(perPlayer);
+  const { rows: existing } = people.size
+    ? await pool.query(`select espn_id from players where league = $1 and espn_id = any($2)`, [league, [...people.keys()]])
+    : { rows: [] as { espn_id: string }[] };
   const known = new Set(existing.map((r) => r.espn_id as string));
 
   // New players need a unique slug each; existing ones keep theirs. Slug clashes are
   // checked in one query for the whole batch (a historical backfill meets dozens of
   // new players per game, and one round trip each was the bottleneck).
-  const fresh = [...perPlayer].filter(([id]) => !known.has(id));
+  const fresh = [...people].filter(([id]) => !known.has(id));
   const bases = new Map(fresh.map(([id, { athlete }]) => [id, slugify(athlete.displayName ?? athlete.fullName ?? `Player ${id}`)]));
   const { rows: taken } = fresh.length
     ? await pool.query(`select slug from players where league = $1 and slug = any($2)`, [league, [...new Set(bases.values())]])
@@ -120,7 +136,7 @@ export async function storeGameStats(league: League, gameEspnId: string, perPlay
     );
   }
   if (updateTeam) {
-    for (const [id, { athlete, teamId }] of perPlayer) {
+    for (const [id, { athlete, teamId }] of people) {
       if (!known.has(id)) continue;
       await pool.query(
         `update players set team_espn_id = $3, name = $4, headshot_url = coalesce($5, headshot_url) where league = $1 and espn_id = $2`,

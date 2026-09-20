@@ -64,6 +64,7 @@ import { classifyGamelog, gamelogRegularSeason, type GamelogSeason } from "./lib
 import { getJson } from "./lib/espn";
 import { seasonRow, seasonWindowStart } from "./lib/season-row";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
+import { notPseudoAthleteSql } from "../src/lib/pseudoAthlete";
 import { buildStagedProfile, playerSport } from "../src/lib/playerProfile";
 
 const LIVE_PAUSE_MS = 150;
@@ -158,7 +159,7 @@ async function main() {
         `select pgs.player_espn_id as id, coalesce(max(p.name), pgs.player_espn_id) as name
          from player_game_stats pgs
          left join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
-         where pgs.league = $1
+         where pgs.league = $1 and ${notPseudoAthleteSql("pgs.player_espn_id")}
          group by pgs.player_espn_id
          order by pgs.player_espn_id
          limit $2::int`,

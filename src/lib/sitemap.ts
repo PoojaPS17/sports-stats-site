@@ -12,6 +12,7 @@ import { h2hPath } from "./h2h";
 import { supportsProjections } from "./simulator";
 import { playerSport } from "./playerProfile";
 import { noStatLineGameSql } from "./playerLog";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 
 type Entry = MetadataRoute.Sitemap[number];
 
@@ -127,7 +128,7 @@ async function playerSeasons(league: League): Promise<Entry[]> {
     `select distinct p.slug, g.season_year from player_game_stats s
      join games g on g.league = s.league and g.espn_id = s.game_espn_id
      join players p on p.league = s.league and p.espn_id = s.player_espn_id
-     where s.league = $1 and g.season_year is not null and g.completed and ${playedSql(league)}
+     where s.league = $1 and g.season_year is not null and g.completed and ${notPseudoAthleteSql()} and ${playedSql(league)}
      order by p.slug, g.season_year desc`,
     [league]
   );
@@ -172,7 +173,7 @@ async function tennisPlayers(): Promise<Entry[]> {
 async function players(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
     `select p.slug from players p
-     where p.league = $1
+     where p.league = $1 and ${notPseudoAthleteSql()}
        and (exists (select 1 from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
                     where s.league = p.league and s.player_espn_id = p.espn_id and g.completed and ${playedSql(league)})
             or exists (select 1 from player_season_stats s where s.league = p.league and s.player_espn_id = p.espn_id))

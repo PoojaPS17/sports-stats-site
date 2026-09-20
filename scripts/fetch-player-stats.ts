@@ -1,7 +1,7 @@
 import { pool } from "./lib/db";
 import { fetchSummary, type League } from "./lib/espn";
 import { upsertPlayerSeasonStats } from "./lib/season-stats";
-import { extractPlayerStats, storeGameStats } from "./lib/game-stats";
+import { extractPlayerStats, seasonStatTargets, storeGameStats } from "./lib/game-stats";
 import { rebuildSeasonStatsFromBoxScores, seasonStatsFromBoxScores } from "./lib/boxscore-season-stats";
 import { isLiveTick, scopedLeagues } from "./lib/scope";
 import { detailsFromSummary, storeGameDetails } from "./lib/game-details";
@@ -13,7 +13,8 @@ async function processGame(league: League, game: { espn_id: string; home_team_es
   const perPlayer = extractPlayerStats(league, data);
   const stored = await storeGameStats(league, game.espn_id, perPlayer, true);
   await storeGameDetails(league, game.espn_id, detailsFromSummary(league, data, game.home_team_espn_id, game.away_team_espn_id));
-  for (const [id, { teamId }] of perPlayer) touched.set(id, teamId);
+  // A box score's "Team" line is not an athlete: it has no season-stats page to ask ESPN for.
+  for (const [id, teamId] of seasonStatTargets(perPlayer)) touched.set(id, teamId);
   return stored;
 }
 

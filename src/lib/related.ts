@@ -4,6 +4,7 @@
 // every render.
 import { pool } from "./db";
 import { isSoccerLeague, type League } from "./leagues";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { ON_ROSTER_SQL } from "./queries";
 
 export interface RelatedLink {
@@ -69,7 +70,7 @@ export async function getTeammates(league: League, teamEspnId: string, excludeEs
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      ${SEASON_JOIN}
-     where p.league = $1 and p.team_espn_id = $2 and p.espn_id <> $3 and (${ON_ROSTER_SQL})
+     where p.league = $1 and p.team_espn_id = $2 and p.espn_id <> $3 and ${notPseudoAthleteSql()} and (${ON_ROSTER_SQL})
      order by ${metricSql(league)} desc, p.name
      limit $4`,
     [league, teamEspnId, excludeEspnId, limit]
@@ -114,7 +115,7 @@ export async function getPositionPeers(league: League, position: string | null |
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      ${SEASON_JOIN}
-     where p.league = $1 and p.position = any($2) and p.espn_id <> $3 and ${metricSql(league)} > 0
+     where p.league = $1 and p.position = any($2) and p.espn_id <> $3 and ${notPseudoAthleteSql()} and ${metricSql(league)} > 0
      order by ${metricSql(league)} desc, p.name
      limit $4`,
     [league, positions, excludeEspnId, limit]
@@ -133,7 +134,7 @@ export async function getTeamTopPlayers(league: League, teamEspnId: string, seas
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      join player_season_stats ps on ps.league = p.league and ps.player_espn_id = p.espn_id
        and ps.season = coalesce($3::int, (select max(season) from player_season_stats where league = p.league))
-     where p.league = $1 and ps.team_espn_id = $2 and ${metricSql(league)} > 0
+     where p.league = $1 and ps.team_espn_id = $2 and ${notPseudoAthleteSql()} and ${metricSql(league)} > 0
      order by ${metricSql(league)} desc, p.name
      limit $4`,
     [league, teamEspnId, season, limit]

@@ -11,6 +11,7 @@ import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
 import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 
 export interface Matchweek {
   /** 1-based position in the season; doubles as the URL segment. */
@@ -495,7 +496,7 @@ export async function getWeekPerformers(league: League, week: Matchweek, limit =
      from player_game_stats pgs
      join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
      left join teams t on t.league = pgs.league and t.espn_id = pgs.team_espn_id
-     where pgs.league = $1 and pgs.game_espn_id = any($2)`,
+     where pgs.league = $1 and pgs.game_espn_id = any($2) and ${notPseudoAthleteSql()}`,
     [league, ids]
   );
   if (rows.length === 0) return [];
