@@ -46,7 +46,7 @@ import {
   type StoredCategories,
 } from "./lib/audit-player-totals";
 import { seasonRow, seasonWindowStart } from "./lib/season-row";
-import { fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
+import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
 import { buildStagedProfile, playerSport } from "../src/lib/playerProfile";
 
 const LIVE_PAUSE_MS = 150;
@@ -124,8 +124,9 @@ async function main() {
       for (const player of players) {
         try {
           const log = await fetchPlayerLog(pool, league, player.id);
-          // The page's own build: with ESPN's stored games played per season (NFL; NBA seasons with games that have no box score).
-          const regular = buildStagedProfile(sport, log, await fetchReportedGames(pool, league, player.id)).regular;
+          // The page's own build: with ESPN's stored games played per season (NFL; NBA seasons with games that have no box score)
+          // and, for the NBA, ESPN's stored season line where the game rows are short of it.
+          const regular = buildStagedProfile(sport, log, await fetchReportedGames(pool, league, player.id), await fetchEspnSeasons(pool, league, player.id)).regular;
           const site = siteSeasons(sport, regular);
           const traded = args.live ? new Set<number>() : tradedSeasons(regular);
 

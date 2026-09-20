@@ -11,6 +11,7 @@ import {
   getPlayerBySlug,
   getPlayerLog,
   getPlayerReportedGames,
+  getPlayerEspnSeasons,
   getPlayerGoalClocks,
   getPlayerSeasonStatsBySeason,
   getPlayerSeasons,
@@ -75,12 +76,13 @@ function profileSummary(league: League, player: PlayerRow, profile: PlayerProfil
 const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(league, slug));
 const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
 const cachedReportedGames = cache((league: League, espnId: string) => getPlayerReportedGames(league, espnId));
+const cachedEspnSeasons = cache((league: League, espnId: string) => getPlayerEspnSeasons(league, espnId));
 
 async function loadStaged(league: League, player: PlayerRow): Promise<StagedProfile | null> {
   const sport = playerSport(league);
   if (!sport) return null;
-  const [log, reportedGames] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id)]);
-  return buildStagedProfile(sport, log, reportedGames);
+  const [log, reportedGames, espnSeasons] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id), cachedEspnSeasons(league, player.espn_id)]);
+  return buildStagedProfile(sport, log, reportedGames, espnSeasons);
 }
 
 // Any appearance at all: a player with only playoff or play-in games still has a page to show.

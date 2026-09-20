@@ -1,11 +1,24 @@
 // fetchReportedGames: ESPN's NFL and NBA games played per season, straight from player_season_stats.
+// fetchEspnSeasons: ESPN's whole NBA season line, from the stored categories.
 // fetchPlayerLog: the no_box_score flag on an NBA game in which no player has a stat line.
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { startTestDb, type TestDb } from "./helpers/testDb";
-import { fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
+import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
 
 let db: TestDb;
+
+// ESPN's stored NBA season row (Knicks 2022 in the sample payload).
+const ESPN_ROW = {
+  averages: {
+    labels: ["GP", "GS", "MIN", "FG", "FG%", "3PT", "3P%", "FT", "FT%", "OR", "DR", "REB", "AST", "BLK", "STL", "PF", "TO", "PTS"],
+    values: ["26", "4", "24.5", "4.7-10.5", "44.5", "1.4-3.5", "40.2", "1.2-1.2", "96.8", "0.8", "2.2", "3.0", "4.0", "0.5", "0.8", "0.6", "1.5", "12.0"],
+  },
+  totals: {
+    labels: ["FG", "FG%", "3PT", "3P%", "FT", "FT%", "OR", "DR", "REB", "AST", "BLK", "STL", "PF", "TO", "PTS"],
+    values: ["122-274", "44.5", "37-92", "40.2", "30-31", "96.8", "21", "57", "78", "103", "12", "22", "15", "39", "311"],
+  },
+};
 
 before(async () => {
   db = await startTestDb();
@@ -21,6 +34,13 @@ before(async () => {
   await insert("nba", 2023, "p1", null);
   await insert("nba", 2025, "p2", 61);
   await insert("epl", 2025, "p1", 38);
+  const withCategories = (league: string, season: number, player: string, categories: object) =>
+    db.pool.query(`insert into player_season_stats (league, season, player_espn_id, categories) values ($1, $2, $3, $4)`, [league, season, player, JSON.stringify(categories)]);
+  await withCategories("nba", 2026, "e1", ESPN_ROW);
+  await withCategories("nba", 2025, "e1", { averages: ESPN_ROW.averages });
+  await withCategories("nba", 2024, "e1", { ...ESPN_ROW, averages: { ...ESPN_ROW.averages, values: ["0", ...ESPN_ROW.averages.values.slice(1)] } });
+  await withCategories("nfl", 2026, "e1", ESPN_ROW);
+  await withCategories("epl", 2026, "e1", ESPN_ROW);
   await seedGames();
 });
 
@@ -86,6 +106,30 @@ test("fetchReportedGames returns an empty map for a league that is neither the N
   } as unknown as Parameters<typeof fetchReportedGames>[0];
   assert.equal((await fetchReportedGames(stub, "epl", "p1")).size, 0);
   assert.equal((await fetchReportedGames(stub, "bundesliga", "p1")).size, 0);
+});
+
+test("fetchEspnSeasons returns the NBA seasons whose stored row ESPN's line can be read from, and no others", async () => {
+  const map = await fetchEspnSeasons(db.pool, "nba", "e1");
+  // 2025 has no totals, 2024 has GP 0: neither is a line.
+  assert.deepEqual([...map.keys()], [2026]);
+  assert.equal(map.get(2026)?.games, 26);
+  assert.equal(map.get(2026)?.pts, 311);
+  assert.equal(map.get(2026)?.fga, 274);
+  // Rows without categories (the default) and players with no rows give nothing.
+  assert.equal((await fetchEspnSeasons(db.pool, "nba", "p1")).size, 0);
+  assert.equal((await fetchEspnSeasons(db.pool, "nba", "nobody")).size, 0);
+});
+
+test("fetchEspnSeasons returns an empty map for a league that is not the NBA without querying", async () => {
+  const stub = {
+    query: () => {
+      throw new Error("must not query");
+    },
+  } as unknown as Parameters<typeof fetchEspnSeasons>[0];
+  assert.equal((await fetchEspnSeasons(stub, "nfl", "e1")).size, 0);
+  assert.equal((await fetchEspnSeasons(stub, "epl", "e1")).size, 0);
+  // Stored NFL and soccer rows with the same shape are never read.
+  assert.equal((await fetchEspnSeasons(db.pool, "nfl", "e1")).size, 0);
 });
 
 test("fetchPlayerLog flags an NBA row in a game where nobody has a numeric MIN or PTS above zero", async () => {

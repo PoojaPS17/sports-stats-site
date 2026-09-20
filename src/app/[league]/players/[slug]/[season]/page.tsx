@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { isLeague, isCricketLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerLog, getPlayerReportedGames, getPlayerSeasonStatsBySeason, getPlayerSeasons, formatSeasonLabel, type League } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerLog, getPlayerEspnSeasons, getPlayerReportedGames, getPlayerSeasonStatsBySeason, getPlayerSeasons, formatSeasonLabel, type League } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
@@ -14,6 +14,7 @@ import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SeasonTabs } from "@/components/SeasonTabs";
+import type { EspnSeasonTotals } from "@/lib/espnSeason";
 import { buildStagedProfile, formatStat, noBoxScoreGames, playerMeta, playerSport, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
@@ -31,6 +32,7 @@ export const revalidate = 86400;
 const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(league, slug));
 const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
 const cachedReportedGames = cache((league: League, espnId: string) => getPlayerReportedGames(league, espnId));
+const cachedEspnSeasons = cache((league: League, espnId: string) => getPlayerEspnSeasons(league, espnId));
 
 // Any appearance that season: a player with only playoff or play-in games still has a page to show.
 function hasGames(staged: StagedProfile): boolean {
@@ -47,8 +49,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   let figures = "";
   let empty = false;
   if (sport) {
-    const [log, reportedGames] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id)]);
-    const staged = buildStagedProfile(sport, log.filter((r) => r.season_year === Number(season)), reportedGames);
+    const [log, reportedGames, espnSeasons] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id), cachedEspnSeasons(league, player.espn_id)]);
+    const staged = buildStagedProfile(sport, log.filter((r) => r.season_year === Number(season)), reportedGames, espnSeasons);
     const p = staged.regular;
     if (p.games > 0) {
       const headline = p.profile.specs.filter((s) => s.headline).slice(0, 3);
@@ -74,12 +76,13 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
   const player = (await cachedPlayer(league, slug)) ?? (await playerNotFound(league, slug, (s) => `/${league}/players/${s}/${season}`));
 
   const sport = playerSport(league);
-  const [log, reportedGames, feedSeasons] = await Promise.all([
+  const [log, reportedGames, espnSeasons, feedSeasons] = await Promise.all([
     sport ? cachedLog(league, player.espn_id) : [],
     sport ? cachedReportedGames(league, player.espn_id) : new Map<number, number>(),
+    sport ? cachedEspnSeasons(league, player.espn_id) : new Map<number, EspnSeasonTotals>(),
     getPlayerSeasons(league, player.espn_id),
   ]);
-  const staged = sport ? buildStagedProfile(sport, log.filter((r) => r.season_year === season), reportedGames) : null;
+  const staged = sport ? buildStagedProfile(sport, log.filter((r) => r.season_year === season), reportedGames, espnSeasons) : null;
   // Regular season (for soccer, every appearance) drives the strip and the splits; best games read
   // every counted game.
   const profile = staged?.regular ?? null;

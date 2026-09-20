@@ -280,7 +280,8 @@ export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<num
       out.set(season.season, {
         games: season.games,
         figures: { ppg: season.line.pts ?? null },
-        ...(season.unrecorded > 0 && {
+        // A season that shows ESPN's own line has no recorded-versus-missing gap to explain: its figures are ESPN's.
+        ...(season.unrecorded > 0 && season.lineSource !== "espn" && {
           noBoxScore: { listed: season.recorded + season.unrecorded, recorded: season.recorded, points: points.reduce((a, b) => a + b, 0), bestGame: Math.max(0, ...points) },
         }),
       });

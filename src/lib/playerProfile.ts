@@ -3,6 +3,7 @@
 // landmarks and recent form. All of it is computed from the stored game log rather
 // than maintained as running totals, so a re-run of the backfill can never
 // double-count and every number on the page traces back to a game you can open.
+import type { EspnSeasonTotals } from "./espnSeason";
 import type { GameStage } from "./gameStage";
 import { isSoccerLeague, type League } from "./leagues";
 
@@ -306,7 +307,24 @@ export interface Record3 {
   l: number;
 }
 
-export function aggregate(rows: PlayerLogRow[], specs: StatSpec[]): Line {
+type EspnPart = { total: number; n: number };
+
+/** What one ESPN season adds to a stat's total and to the games it is divided by; null where ESPN
+ * publishes no figure (plus/minus). ESPN's minutes are a per-game average, so they are scaled back to games. */
+function espnPart(t: EspnSeasonTotals, key: string): EspnPart | null {
+  const g = t.games;
+  switch (key) {
+    case "gs": return t.starts === null ? null : { total: t.starts, n: g };
+    case "min": return t.minutesPerGame === null ? null : { total: t.minutesPerGame * g, n: g };
+    case "pts": case "reb": case "ast": case "stl": case "blk": case "to": return { total: t[key], n: g };
+    case "fgm": case "fga": case "tpm": case "tpa": case "ftm": case "fta": return { total: t[key], n: g };
+    default: return null; // pm has no ESPN figure
+  }
+}
+
+/** A line over game rows plus whole ESPN seasons: each stat is the rows' values plus ESPN's totals, over the
+ * rows with a value plus ESPN's games. A stat ESPN gives no figure for is null once any ESPN season is in. */
+export function aggregateWithEspn(rows: PlayerLogRow[], espn: EspnSeasonTotals[], specs: StatSpec[]): Line {
   const line: Line = {};
   for (const spec of specs) {
     if (spec.rate) continue;
@@ -324,7 +342,17 @@ export function aggregate(rows: PlayerLogRow[], specs: StatSpec[]): Line {
       n += 1;
       max = max === null ? v : Math.max(max, v);
     }
-    line[spec.key] = n === 0 ? null : spec.agg === "avg" ? total / n : spec.agg === "max" ? max : total;
+    let missing = false;
+    for (const t of espn) {
+      const part = espnPart(t, spec.key);
+      if (part === null) {
+        missing = true;
+        continue;
+      }
+      total += part.total;
+      n += part.n;
+    }
+    line[spec.key] = missing || n === 0 ? null : spec.agg === "avg" ? total / n : spec.agg === "max" ? max : total;
   }
   for (const spec of specs) {
     if (!spec.rate) continue;
@@ -333,6 +361,10 @@ export function aggregate(rows: PlayerLogRow[], specs: StatSpec[]): Line {
     line[spec.key] = num === null || num === undefined || !den ? null : (spec.rate.pct ? 100 : 1) * (num / den);
   }
   return line;
+}
+
+export function aggregate(rows: PlayerLogRow[], specs: StatSpec[]): Line {
+  return aggregateWithEspn(rows, [], specs);
 }
 
 export function formatStat(spec: StatSpec, v: number | null | undefined): string {
@@ -365,6 +397,9 @@ export function record(rows: PlayerLogRow[]): Record3 {
  * plus the players listed in games with no box score (no ESPN figure to go by). */
 export type GamesSource = "espn" | "logged" | "listed";
 
+/** Where a season's per-game line comes from: ESPN's own season row, or the box-score rows stored here. */
+export type LineSource = "espn" | "box";
+
 export interface SeasonLine {
   season: number;
   teams: { espn_id: string; name: string; slug: string; logo: string | null }[];
@@ -380,6 +415,9 @@ export interface SeasonLine {
   /** Null when `games` exceeds the logged games, so a W-L would contradict the games count. */
   record: Record3 | null;
   line: Line;
+  /** Whether `line` is ESPN's own season row (NBA regular season where the game rows are short of ESPN's games)
+   * or is built from the box-score rows. */
+  lineSource: LineSource;
 }
 
 export interface Split {
@@ -417,6 +455,9 @@ export interface PlayerProfile {
   record: Record3 | null;
   /** True when at least one listed season's `games` is ESPN's figure. */
   gamesFromEspn: boolean;
+  /** Seasons with games beyond the recorded ones whose line is still built from the box-score rows: ESPN's
+   * season row was missing or failed a guard. */
+  boxOnlyShort: number;
   career: Line;
   seasons: SeasonLine[];
   teams: SeasonLine["teams"];
@@ -532,8 +573,17 @@ export function noBoxScoreGames(sport: PlayerSport, games: number, recorded: num
  * games played) applies to the NFL, where ESPN's box scores omit players without a stat line so the log
  * undercounts games played, and to an NBA season with games ESPN published no box score for (`no_box_score`
  * rows: listed players with zeros, no stat line). Those games are counted as played but sit in no average:
- * the season's games are ESPN's figure when stored, else the logged games plus the listed ones. */
-export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRows: PlayerLogRow[] = allRows, reportedGames?: ReadonlyMap<number, number>): PlayerProfile {
+ * the season's games are ESPN's figure when stored, else the logged games plus the listed ones.
+ * `espnSeasons` (season year to ESPN's whole-season line; NBA regular season) replaces a season's line, games and career
+ * share when ESPN counts more games than are logged and the row passes two guards: its points are at least the
+ * recorded points, and a season with more than one team has ESPN games covering the logged and listed games. */
+export function buildProfile(
+  sport: PlayerSport,
+  allRows: PlayerLogRow[],
+  specRows: PlayerLogRow[] = allRows,
+  reportedGames?: ReadonlyMap<number, number>,
+  espnSeasons?: ReadonlyMap<number, EspnSeasonTotals>,
+): PlayerProfile {
   const reported = sport === "nfl" || sport === "nba" ? reportedGames : undefined;
   const profile = sportProfile(sport, specRows);
   const newestFirst = (a: PlayerLogRow, b: PlayerLogRow) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
@@ -549,12 +599,30 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
   };
   for (const r of rows) if (r.season_year !== null) inSeason(r.season_year).played.push(r);
   for (const r of unrecordedRows) if (r.season_year !== null) inSeason(r.season_year).unrecorded.push(r);
+  const espnUsed = new Map<number, EspnSeasonTotals>();
   const seasons: SeasonLine[] = [...bySeason.entries()]
     .sort((a, b) => b[0] - a[0])
     .map(([season, { played: rs, unrecorded: us }]) => {
       const teams = new Map<string, SeasonLine["teams"][number]>();
       for (const r of [...rs, ...us].sort(newestFirst).reverse()) teams.set(r.team_espn_id, { espn_id: r.team_espn_id, name: r.team_name, slug: r.team_slug, logo: r.team_logo });
       const logged = rs.length;
+      const espn = sport === "nba" ? espnSeasons?.get(season) : undefined;
+      const recordedPoints = rs.reduce((n, r) => n + (cell(r.stats, "box", "PTS") ?? 0), 0);
+      const useEspn = espn !== undefined && espn.games > logged && espn.pts >= recordedPoints && (teams.size <= 1 || espn.games >= logged + us.length);
+      if (useEspn) {
+        espnUsed.set(season, espn);
+        return {
+          season,
+          teams: [...teams.values()],
+          games: espn.games,
+          gamesSource: "espn",
+          recorded: logged,
+          unrecorded: us.length,
+          record: null,
+          line: aggregateWithEspn([], [espn], specs),
+          lineSource: "espn",
+        };
+      }
       // An NBA season is ESPN's figure only when it has games with no box score; NFL uses it for every season.
       const figure = sport === "nba" && us.length === 0 ? undefined : reported?.get(season);
       // A stat line proves the player played, so a stale stored figure never shows fewer games than the log.
@@ -568,6 +636,7 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
         unrecorded: us.length,
         record: games > logged ? null : record(rs),
         line: aggregate(rs, specs),
+        lineSource: "box",
       };
     });
   const unrecorded = unrecordedRows.length;
@@ -605,14 +674,16 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
     profile,
     rows,
     // Rows with no season year are in no season line but are still in the career line and W-L, so they count here.
-    games: reported || unrecorded > 0 ? seasons.reduce((n, s) => n + s.games, 0) + [...rows, ...unrecordedRows].filter((r) => r.season_year === null).length : rows.length,
+    games: reported || espnUsed.size > 0 || unrecorded > 0 ? seasons.reduce((n, s) => n + s.games, 0) + [...rows, ...unrecordedRows].filter((r) => r.season_year === null).length : rows.length,
     // Every played row is in a season or has no season year, and both are in the career line.
     recorded: rows.length,
     unrecorded,
     // A game with no box score and no season year is in no season, but the W-L still cannot cover it.
     record: seasons.some((s) => s.record === null) || unrecordedRows.some((r) => r.season_year === null) ? null : record(rows),
     gamesFromEspn: seasons.some((s) => s.gamesSource === "espn"),
-    career: aggregate(rows, specs),
+    boxOnlyShort: seasons.filter((s) => s.games > s.recorded && s.lineSource === "box").length,
+    // A season that shows ESPN's line is in the career as ESPN's totals over ESPN's games, not as its rows.
+    career: aggregateWithEspn(rows.filter((r) => r.season_year === null || !espnUsed.has(r.season_year)), [...espnUsed.values()], specs),
     seasons,
     teams: [...teams.values()],
     homeAway,
@@ -644,7 +715,13 @@ export interface StagedProfile {
 // the game log but in no total.
 // `reportedGames` is ESPN's games played per season (NFL and NBA); it feeds the regular-season profile alone, since
 // the stored figure is regular season only: a playoff or play-in season with games that have no box score is listed.
-export function buildStagedProfile(sport: PlayerSport, allRows: PlayerLogRow[], reportedGames?: ReadonlyMap<number, number>): StagedProfile {
+// `espnSeasons` is ESPN's whole-season NBA line per season; it too feeds the NBA regular-season profile alone.
+export function buildStagedProfile(
+  sport: PlayerSport,
+  allRows: PlayerLogRow[],
+  reportedGames?: ReadonlyMap<number, number>,
+  espnSeasons?: ReadonlyMap<number, EspnSeasonTotals>,
+): StagedProfile {
   if (sport === "soccer") {
     const regular = buildProfile(sport, allRows);
     return { split: false, regular, playoffs: null, playin: null, counted: regular, log: regular.rows };
@@ -656,7 +733,7 @@ export function buildStagedProfile(sport: PlayerSport, allRows: PlayerLogRow[], 
   const countedRows = [...regularRows, ...playoffRows, ...playinRows];
   const specRows = regularRows.length > 0 ? regularRows : countedRows;
   const build = (rows: PlayerLogRow[]) => buildProfile(sport, rows, specRows);
-  const regular = buildProfile(sport, regularRows, specRows, sport === "nfl" || sport === "nba" ? reportedGames : undefined);
+  const regular = buildProfile(sport, regularRows, specRows, sport === "nfl" || sport === "nba" ? reportedGames : undefined, sport === "nba" ? espnSeasons : undefined);
   const playoffs = build(playoffRows);
   const playin = build(playinRows);
   return {

@@ -16,6 +16,7 @@ import {
 } from "../scripts/lib/audit-player-totals";
 import { seasonRow } from "../scripts/lib/season-row";
 import { buildStagedProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
+import type { EspnSeasonTotals } from "../src/lib/espnSeason";
 import type { GameStage } from "../src/lib/gameStage";
 
 const nbaSite = (games: number, ppg: number | null): SeasonFigures => ({ games, figures: { ppg } });
@@ -526,6 +527,26 @@ test("siteSeasons sets noBoxScore on an NBA season with games ESPN published no 
   // A season with games listed and none recorded: no figure stored, so the listed count is shown.
   const only = siteSeasons("nba", buildStagedProfile("nba", [noBoxRow("x", "2025-01-09", "regular", 2025), noBoxRow("y", "2025-01-11", "regular", 2025)]).regular);
   assert.deepEqual(only.get(2025), { games: 2, figures: { ppg: null }, noBoxScore: { listed: 2, recorded: 0, points: 0, bestGame: 0 } });
+});
+
+test("siteSeasons gives an NBA season that shows ESPN's own line no noBoxScore, so it is compared as a plain season", () => {
+  const box = (pts: number): Stats => ({ box: { MIN: "30", PTS: String(pts) } });
+  const blank: Stats = { box: { MIN: "--", PTS: "--" } };
+  const rows = [
+    row("a", "2025-01-01", "regular", 2025, box(10)),
+    row("b", "2025-01-03", "regular", 2025, box(16)),
+    { ...row("x", "2025-01-09", "regular", 2025, blank), no_box_score: true },
+    // 2026: a listed game too, but ESPN's row fails the points guard (30 < 40 recorded), so the box reading stays.
+    row("c", "2026-01-01", "regular", 2026, box(40)),
+    { ...row("y", "2026-01-09", "regular", 2026, blank), no_box_score: true },
+  ];
+  const line = (games: number, pts: number): EspnSeasonTotals => ({ games, starts: 0, minutesPerGame: 20, pts, reb: 10, ast: 10, stl: 1, blk: 1, to: 1, fgm: 5, fga: 10, tpm: 1, tpa: 2, ftm: 1, fta: 2 });
+  const seasons = siteSeasons("nba", buildStagedProfile("nba", rows, undefined, new Map([[2025, line(3, 78)], [2026, line(2, 30)]])).regular);
+  // ESPN's line: games and ppg are ESPN's own (78 / 3 = 26.0), and there is nothing recorded-versus-missing to explain.
+  assert.deepEqual(seasons.get(2025), { games: 3, figures: { ppg: 26 } });
+  assert.equal(compareSeason(seasons.get(2025)!, nbaEspn(3, 26.0), nba).verdict, "match");
+  // A season kept on its box rows still carries noBoxScore.
+  assert.deepEqual(seasons.get(2026)?.noBoxScore, { listed: 2, recorded: 1, points: 40, bestGame: 40 });
 });
 
 test("siteSeasons and compareSeason together: a season the page shows with ESPN's games and the recorded average is explained", () => {

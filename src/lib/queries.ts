@@ -5,7 +5,8 @@ import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 import type { GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
-import { fetchPlayerLog, fetchReportedGames } from "./playerLog";
+import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
+import type { EspnSeasonTotals } from "./espnSeason";
 import type { PlayerLogRow } from "./playerProfile";
 
 export type { League } from "./leagues";
@@ -648,6 +649,12 @@ export async function getPlayerLog(league: League, playerEspnId: string): Promis
 // holds games in which the player had a stat line, so it undercounts games played.
 export async function getPlayerReportedGames(league: League, playerEspnId: string): Promise<Map<number, number>> {
   return fetchReportedGames(pool, league, playerEspnId);
+}
+
+// ESPN's whole-season line per season for an NBA player (empty for every other league), from the stored
+// season row: what a season's figures show where the game rows are short of ESPN's games.
+export async function getPlayerEspnSeasons(league: League, playerEspnId: string): Promise<Map<number, EspnSeasonTotals>> {
+  return fetchEspnSeasons(pool, league, playerEspnId);
 }
 
 // Clock of every goal this player scored in the stored match reports for the given

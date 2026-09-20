@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { espnSeasonTotals, type EspnSeasonTotals } from "./espnSeason";
 import type { League } from "./leagues";
 import type { PlayerLogRow } from "./playerProfile";
 
@@ -55,4 +56,22 @@ export async function fetchReportedGames(db: Pick<Pool, "query">, league: League
     [league, playerEspnId]
   );
   return new Map(rows.map((r) => [r.season, r.games_played]));
+}
+
+/** ESPN's whole-season NBA line per season (season year to its totals), read from the row the loader stores in
+ * player_season_stats.categories. A season whose stored row cannot be read as a full line (`espnSeasonTotals`
+ * gives null) is left out. The profile uses it where the game rows are short of ESPN's games. Other leagues
+ * get an empty map without a query. */
+export async function fetchEspnSeasons(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<Map<number, EspnSeasonTotals>> {
+  const out = new Map<number, EspnSeasonTotals>();
+  if (league !== "nba") return out;
+  const { rows } = await db.query<{ season: number; categories: unknown }>(
+    `select season, categories from player_season_stats where league = $1 and player_espn_id = $2`,
+    [league, playerEspnId]
+  );
+  for (const r of rows) {
+    const totals = espnSeasonTotals(r.categories);
+    if (totals) out.set(r.season, totals);
+  }
+  return out;
 }
