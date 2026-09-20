@@ -3,6 +3,7 @@
 // landmarks and recent form. All of it is computed from the stored game log rather
 // than maintained as running totals, so a re-run of the backfill can never
 // double-count and every number on the page traces back to a game you can open.
+import type { GameStage } from "./gameStage";
 import { isSoccerLeague, type League } from "./leagues";
 
 export type PlayerSport = "soccer" | "nfl" | "nba";
@@ -23,6 +24,10 @@ export interface PlayerLogRow {
   season_year: number | null;
   round: string | null;
   week: number | null;
+  /** The game's stage (games.stage): regular season, playoffs, play-in, excluded or other. */
+  stage: GameStage;
+  season_type: number | null;
+  competition_type: string | null;
   is_home: boolean;
   team_espn_id: string;
   team_name: string;
@@ -470,8 +475,10 @@ function milestonesFor(sport: PlayerSport, profile: SportProfile, chrono: Player
   return out;
 }
 
-export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[]): PlayerProfile {
-  const profile = sportProfile(sport, allRows);
+/** NFL picks its columns from the rows it is given; the staged tables pass the regular-season rows
+ * as `specRows` so every table for a player has the same columns. */
+export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRows: PlayerLogRow[] = allRows): PlayerProfile {
+  const profile = sportProfile(sport, specRows);
   const rows = allRows.filter(profile.played).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const chrono = [...rows].reverse();
   const specs = profile.specs;
@@ -534,6 +541,47 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[]): Playe
     form: rows.slice(0, 10).reverse().map((row) => ({ row, value: profile.form.value(row) })),
     firstDate: chrono[0]?.date ?? null,
     lastDate: rows[0]?.date ?? null,
+  };
+}
+
+export interface StagedProfile {
+  /** True for NBA and NFL: the games are split by stage. Soccer keeps one table. */
+  split: boolean;
+  /** Regular season (career strip, season table, splits, milestones); for soccer, every appearance. */
+  regular: PlayerProfile;
+  playoffs: PlayerProfile | null;
+  playin: PlayerProfile | null;
+  /** Every counted game (regular season, playoffs, play-in): best games and recent form. */
+  counted: PlayerProfile;
+  /** Every appearance, newest first, including games that are not counted: the game log. */
+  log: PlayerLogRow[];
+}
+
+// NBA and NFL: ESPN's headline totals are regular-season games only, so the regular season, the
+// playoffs and the play-in are separate tables. Preseason, All-Star and Cup-final games are in
+// the game log but in no total.
+export function buildStagedProfile(sport: PlayerSport, allRows: PlayerLogRow[]): StagedProfile {
+  if (sport === "soccer") {
+    const regular = buildProfile(sport, allRows);
+    return { split: false, regular, playoffs: null, playin: null, counted: regular, log: regular.rows };
+  }
+  const of = (...stages: GameStage[]) => allRows.filter((r) => stages.includes(r.stage));
+  const regularRows = of("regular", "other");
+  const playoffRows = of("playoffs");
+  const playinRows = of("playin");
+  const countedRows = [...regularRows, ...playoffRows, ...playinRows];
+  const specRows = regularRows.length > 0 ? regularRows : countedRows;
+  const build = (rows: PlayerLogRow[]) => buildProfile(sport, rows, specRows);
+  const regular = build(regularRows);
+  const playoffs = build(playoffRows);
+  const playin = build(playinRows);
+  return {
+    split: true,
+    regular,
+    playoffs: playoffs.games > 0 ? playoffs : null,
+    playin: playin.games > 0 ? playin : null,
+    counted: build(countedRows),
+    log: allRows.filter(regular.profile.played).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
   };
 }
 
