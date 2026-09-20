@@ -1,7 +1,7 @@
 // Which of ESPN's per-season rows the season-stats loader stores. Pure: no database, no network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isTotalsRow, seasonGamesPlayed, seasonRow } from "../scripts/lib/season-row";
+import { isTotalsRow, SEASON_YEARS_BACK, seasonGamesPlayed, seasonRow, seasonWindowStart } from "../scripts/lib/season-row";
 
 // Luka Doncic's 2025 in ESPN's athlete /stats: one row per team plus a whole-season "Totals" row.
 const luka = {
@@ -182,6 +182,11 @@ test("a team in only some categories counts at its largest GP, summed, when the 
   assert.equal(seasonGamesPlayed(categories, 2022), 11);
 });
 
+test("a Totals row with no team rows gives the Totals GP", () => {
+  const categories = [nflCategory("rushing", [nflRow(2022, "2022 Totals", "17", "2022  Totals")])];
+  assert.equal(seasonGamesPlayed(categories, 2022), 17);
+});
+
 test("a traded player with no Totals row gets the sum of the teams' GP", () => {
   // McCaffrey's 2022 rows without the Totals row: CAR 6 + SF 11.
   const mccaffrey = [
@@ -263,4 +268,24 @@ test("a comma-formatted GP parses", () => {
 
 test("a GP of 0 is returned as 0, for the loader to decide", () => {
   assert.equal(seasonGamesPlayed([nflCategory("passing", [nflRow(2025, "a", "0")])], 2025), 0);
+});
+
+// The season window is pinned to the games history (2015), not to today's date: every case passes the
+// current year, so nothing here depends on when the test runs. Every League has a HISTORY_START entry,
+// so the fallback (`currentYear - SEASON_YEARS_BACK`) is reached only through the Math.min, not by a
+// league without an entry; only the pinned leagues are tested.
+test("NBA, NFL and the pinned soccer leagues start at 2015 in any current year, so 2015 is never dropped", () => {
+  for (const league of ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl"] as const) {
+    for (const currentYear of [2026, 2027, 2035]) {
+      assert.equal(seasonWindowStart(league, currentYear), 2015, `${league} ${currentYear}`);
+    }
+  }
+});
+
+test("the window reaches further back than the pin when the relative window does", () => {
+  // Cricket's competitions are pinned earlier than 2015; the window is the earlier of the two.
+  assert.equal(seasonWindowStart("ipl", 2026), 2008);
+  assert.equal(seasonWindowStart("cwc", 2035), 1975);
+  // A pin later than the relative window does not shorten it: WPL is pinned to 2023, the window is 2015 in 2026.
+  assert.equal(seasonWindowStart("wpl", 2026), 2026 - SEASON_YEARS_BACK);
 });

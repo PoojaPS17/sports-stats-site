@@ -1,5 +1,6 @@
 // Which of ESPN's per-season rows the season-stats loader stores. Pure: no database import, so the
 // tests and the audit can use it without a connection (season-stats.ts opens the pool on import).
+import { HISTORY_START, type League } from "./espn";
 
 /** One row of a category in ESPN's athlete /stats payload. */
 export interface SeasonStatRow {
@@ -15,11 +16,21 @@ export interface SeasonCategory {
   statistics?: SeasonStatRow[];
 }
 
-/** How many seasons back from the current year the season-stats loader keeps (`currentYear - SEASON_YEARS_BACK`
- * on). The site's game history starts one season before `currentYear - 10` (`backfill-games.ts` uses
- * `currentYear - YEARS_BACK - 1`), so this window must reach that far too, or those seasons have games
- * but no stored ESPN games figure and fall back to the box-score count, which misses games with no stat line. */
+/** The relative window of the season-stats loader, `currentYear - SEASON_YEARS_BACK`, used only as the
+ * fallback for a league with no `HISTORY_START` entry: `seasonWindowStart` is the rule, and it pins the
+ * major leagues to 2015. The site's game history starts one season before `currentYear - 10`
+ * (`backfill-games.ts` uses `currentYear - YEARS_BACK - 1`), so the window must reach that far too, or
+ * those seasons have games but no stored ESPN games figure and fall back to the box-score count, which
+ * misses games with no stat line. */
 export const SEASON_YEARS_BACK = 11;
+
+/** The first season the season-stats loader (and the audit's live read) keeps for a league. It is the
+ * earlier of the relative window and the league's `HISTORY_START` pin, so a pinned league (NBA and NFL
+ * from 2015) does not silently lose its oldest season when the current year advances, and stays in step
+ * with the games history that starts there. */
+export function seasonWindowStart(league: League, currentYear: number): number {
+  return Math.min(currentYear - SEASON_YEARS_BACK, HISTORY_START[league] ?? Infinity);
+}
 
 /** ESPN's whole-season row for a player who changed teams: `teamSlug` like "2024-25 Totals" and
  * `displayName` "2024-25  Totals". */

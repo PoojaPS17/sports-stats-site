@@ -23,6 +23,9 @@ function sleep(ms: number) {
 // Over-cover by one extra year label on each side rather than get the NBA
 // ending-year vs NFL/soccer starting-year convention exactly right — an
 // out-of-range season just returns 0 events (harmless).
+// The `- 1` below is also what makes the games history start one season before `currentYear - YEARS_BACK`;
+// HISTORY_START (scripts/lib/espn.ts) and the season-stats window (seasonWindowStart in
+// scripts/lib/season-row.ts) depend on that history reaching 2015.
 function seasonsToTry(): number[] {
   const currentYear = new Date().getUTCFullYear();
   const years: number[] = [];

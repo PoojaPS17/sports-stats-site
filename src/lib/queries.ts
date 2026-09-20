@@ -499,9 +499,9 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
 const LEADER_COLUMNS = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) => cats.map((c) => c.column)));
 
 // Every column here is a season total (or season average, for NBA) sourced from
-// player_season_stats, which now holds up to 10 years of history per player — so this
+// player_season_stats, which now holds many years of history per player — so this
 // must pin to the most recent season, or it'd silently pick whichever of a player's
-// last 10 years happened to be their best, mixed arbitrarily across different players.
+// seasons on file happened to be their best, mixed arbitrarily across different players.
 // `season` pins a specific year (the off-season recap wants the season just played,
 // not the new one whose zero rows may already exist); default is the latest on file.
 export async function getLeaders(league: League, column: string, limit = 10, season?: number): Promise<LeaderRow[]> {

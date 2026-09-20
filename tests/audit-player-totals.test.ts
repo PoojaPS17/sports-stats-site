@@ -371,7 +371,8 @@ test("gamesPlayedFromPayload gives the loader's games per year: a traded player 
   assert.equal(espnFigures("nfl", seasonsFromPayload(tradedNoTotals, seasonRow, 2016).get(2025)!, games.get(2025))?.games, 4);
 });
 
-test("gamesPlayedFromPayload takes the Totals row's GP when the payload has one, and only years from minYear", () => {
+test("gamesPlayedFromPayload takes the larger of the Totals GP and the teams' sum, and only years from minYear", () => {
+  // ESPN's Totals GP is the first team's only (here 6, CAR's), so the teams' sum 6 + 11 = 17 wins.
   const withTotals = [
     {
       name: "rushing",
@@ -380,11 +381,24 @@ test("gamesPlayedFromPayload takes the Totals row's GP when the payload has one,
         { season: { year: 2009 }, teamSlug: "a", stats: ["16", "1", "1", "0"] },
         { season: { year: 2022 }, teamSlug: "car", stats: ["6", "5", "30", "0"] },
         { season: { year: 2022 }, teamSlug: "sf", stats: ["11", "9", "60", "1"] },
-        { season: { year: 2022 }, teamSlug: "2022 Totals", displayName: "2022  Totals", stats: ["17", "14", "90", "1"] },
+        { season: { year: 2022 }, teamSlug: "2022 Totals", displayName: "2022  Totals", stats: ["6", "14", "90", "1"] },
       ],
     },
   ];
   assert.deepEqual([...gamesPlayedFromPayload(withTotals, 2016).entries()], [[2022, 17]]);
+  // A Totals GP above the sum (17 against 6 + 10) stays.
+  const totalsAbove = [
+    {
+      name: "rushing",
+      labels: ["GP", "CAR", "YDS", "TD"],
+      statistics: [
+        { season: { year: 2022 }, teamSlug: "car", stats: ["6", "5", "30", "0"] },
+        { season: { year: 2022 }, teamSlug: "sf", stats: ["10", "9", "60", "1"] },
+        { season: { year: 2022 }, teamSlug: "2022 Totals", displayName: "2022  Totals", stats: ["17", "14", "90", "1"] },
+      ],
+    },
+  ];
+  assert.deepEqual([...gamesPlayedFromPayload(totalsAbove, 2016).entries()], [[2022, 17]]);
 });
 
 test("gamesPlayedFromPayload is null for a year with no readable GP, and for a GP of 0 (the loader stores neither)", () => {

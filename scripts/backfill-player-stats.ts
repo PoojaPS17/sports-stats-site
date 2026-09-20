@@ -1,6 +1,6 @@
 // One-time historical backfill of player season stats (points/goals/yards per year,
-// the last SEASON_YEARS_BACK years, see season-row.ts) for every player currently on a roster. The athlete season-stats
-// endpoint already returns a player's whole career history in one response, so this
+// back to seasonWindowStart in season-row.ts) for every player currently on a roster. The athlete
+// season-stats endpoint already returns a player's whole career history in one response, so this
 // costs exactly one request per player — same as the recurring scraper's per-player
 // call, just storing every season in the response instead of only the latest one.
 // No per-player-match boxscore backfill here (that's a much larger scrape — one
