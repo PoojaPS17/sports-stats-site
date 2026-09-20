@@ -45,11 +45,12 @@ export interface PlayerLogRow {
   stats: Stats;
 }
 
-/** One number from a box-score cell: "23/33" or "3-11" → first part (or second with part=1). */
+/** One number from a box-score cell: "23/33" or "3-11" → first part (or second with part=1). A "/" or "-"
+ * separates only when it sits between two digits, so a leading minus stays a sign ("-3" is -3). */
 export function cell(stats: Stats, category: string, label: string, part: 0 | 1 = 0): number | null {
   const raw = stats[category]?.[label];
   if (raw === undefined || raw === null || raw === "" || raw === "--") return null;
-  const parts = String(raw).split(/[/-](?=\d)/);
+  const parts = String(raw).split(/(?<=\d)[/-](?=\d)/);
   const n = Number(parts[part] ?? parts[0]);
   return Number.isFinite(n) ? n : null;
 }
