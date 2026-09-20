@@ -4,7 +4,7 @@ import { fetchAthleteSeasonStats, type League } from "./espn";
 // Soccer's stats endpoint is sport-wide, not league-scoped — a season row for the
 // right year could still be from a different league/competition entirely (e.g. a
 // player's stint at a French club), so `leagueSlug` narrows it to actual EPL rows.
-function seasonRow(category: any, seasonYear: number, leagueSlug?: string): { labels: string[]; values: string[] } | null {
+export function seasonRow(category: any, seasonYear: number, leagueSlug?: string): { labels: string[]; values: string[] } | null {
   const stats: any[] = category.statistics ?? [];
   const row = stats.find((s) => s.season?.year === seasonYear && (!leagueSlug || s.leagueSlug === leagueSlug));
   if (!row) return null;
