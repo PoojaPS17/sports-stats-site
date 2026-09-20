@@ -6,6 +6,7 @@ import { isCricketLeague, type League } from "./leagues";
 import { getF1Calendar, getF1Seasons } from "./f1";
 import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
+import { calledOffLabel, isGameCalledOff } from "./gameStatus";
 
 const SITE = SITE_URL;
 const PRODID = "-//SportsDB//Fixtures//EN";
@@ -138,13 +139,17 @@ function gameSummary(league: League, g: GameWithVenue, perspectiveTeamId?: strin
   return soccer ? `${g.home_name} vs ${g.away_name}` : `${g.away_name} at ${g.home_name}`;
 }
 
-function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: string): IcsEvent {
+export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: string): IcsEvent {
   const start = new Date(g.date);
   const end = new Date(start.getTime() + durationMinutes(league) * 60_000);
   const label = LEAGUE_LABEL[league];
   const parts = [label];
   if (g.round) parts.push(g.round);
-  if (g.completed) parts.push(`Final${g.status_summary ? `: ${g.status_summary}` : ""}`);
+  // A postponed or cancelled game stays in the archive as its original event; the replay has its own uid. Mark it
+  // cancelled so a subscriber's calendar does not keep a fixture that is not happening.
+  const off = isGameCalledOff(g) ? calledOffLabel(g.status_detail) : null;
+  if (off) parts.push(off);
+  else if (g.completed) parts.push(`Final${g.status_summary ? `: ${g.status_summary}` : ""}`);
   else if (g.status_state === "in") parts.push("In progress");
   parts.push(`Match page: ${SITE}/${league}/games/${g.espn_id}`);
   const location = g.venue_name ? [g.venue_name, g.venue_city].filter(Boolean).join(", ") : undefined;
@@ -152,13 +157,14 @@ function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: string)
     uid: `${league}-${g.espn_id}@sportsdb`,
     start,
     end,
-    summary: gameSummary(league, g, perspectiveTeamId),
+    summary: off ? `${gameSummary(league, g, perspectiveTeamId)} (${off})` : gameSummary(league, g, perspectiveTeamId),
     description: parts.join("\n"),
     location,
     url: `${SITE}/${league}/games/${g.espn_id}`,
     // The summary changes when the score lands, so bump the sequence on completion
     // and let calendar apps pick the update up on their next refresh.
-    sequence: g.completed ? 1 : 0,
+    sequence: g.completed || off ? 1 : 0,
+    ...(off ? { status: "CANCELLED" as const } : {}),
     lastModified: g.updated_at ? new Date(g.updated_at) : undefined,
   };
 }

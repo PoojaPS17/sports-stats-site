@@ -12,6 +12,7 @@ let analytics: typeof import("../src/lib/analytics");
 let queries: typeof import("../src/lib/queries");
 let homeFeed: typeof import("../src/lib/homeFeed");
 let gamesLive: typeof import("../src/lib/gamesLive");
+let ics: typeof import("../src/lib/ics");
 let pickSpotlight: typeof import("../src/components/SpotlightCard").pickSpotlight;
 
 before(async () => {
@@ -20,6 +21,7 @@ before(async () => {
   queries = await import("../src/lib/queries");
   homeFeed = await import("../src/lib/homeFeed");
   gamesLive = await import("../src/lib/gamesLive");
+  ics = await import("../src/lib/ics");
   pickSpotlight = (await import("../src/components/SpotlightCard")).pickSpotlight;
 });
 after(async () => {
@@ -186,4 +188,22 @@ test("the spotlight skips a future postponed game and falls back to the recent r
 test("the spotlight still prefers a normal game inside 36 hours, and a live game over everything", () => {
   assert.equal(pickSpotlight([pp("pp", 6), spot("soon", 20), done("result", -20)])?.espn_id, "soon");
   assert.equal(pickSpotlight([pp("pp", 6), spot("soon", 20), done("result", -20), spot("live", -1, { status_state: "in" })])?.espn_id, "live");
+});
+
+/* ------------------------------------------------------------------------ */
+/* Calendar feed                                                             */
+/* ------------------------------------------------------------------------ */
+
+test("a postponed game is a cancelled calendar event, not a confirmed fixture", () => {
+  const row = (extra: Partial<GameRow>): GameRow =>
+    ({ league: "nba", espn_id: "g", date: at(48), completed: false, status_state: "pre", status_detail: null, round: null, status_summary: null, home_name: "One", away_name: "Two", home_team_espn_id: "1", away_team_espn_id: "2", ...extra }) as GameRow;
+  const off = ics.gameEvent("nba", row({ status_state: "post", status_detail: "Postponed", home_score: 0, away_score: 0 }));
+  assert.equal(off.status, "CANCELLED");
+  assert.match(off.summary, /\(Postponed\)$/);
+  assert.match(off.description ?? "", /Postponed/);
+  const cx = ics.gameEvent("nba", row({ status_state: "post", status_detail: "Canceled" }));
+  assert.match(cx.summary, /\(Cancelled\)$/);
+  const normal = ics.gameEvent("nba", row({}));
+  assert.equal(normal.status, undefined);
+  assert.equal(normal.summary, "Two at One");
 });

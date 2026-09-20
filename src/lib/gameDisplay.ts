@@ -4,6 +4,8 @@
 import type { GameRow } from "./queries";
 import { calledOffLabel, isGameCalledOff } from "./gameStatus";
 import { teamDisplayName } from "./teamName";
+import { finishedLabel, normalizeStage } from "./stage";
+import type { League } from "./leagues";
 
 type StatusFields = Pick<GameRow, "completed" | "status_state" | "status_detail">;
 
@@ -32,4 +34,17 @@ export function gameAccessibleLabel(
   const label = `${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}, ${date}`;
   const off = isGameCalledOff(game) ? calledOffLabel(game.status_detail) : null;
   return off ? `${label}, ${off.toLowerCase()}` : label;
+}
+
+/** The status line of one tile on a scoreboard image: result, live detail, kickoff (UTC), or why a called-off game is off. */
+export function scoreboardTileStatus(league: League, g: StatusFields & Pick<GameRow, "date" | "round">, withDate: boolean): string {
+  const off = isGameCalledOff(g) ? calledOffLabel(g.status_detail) : null;
+  if (withDate) {
+    const day = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    return `${day} · ${g.completed ? (normalizeStage(g.round) ?? finishedLabel(league)) : (off ?? "Upcoming")}`;
+  }
+  if (g.completed) return normalizeStage(g.round) ?? finishedLabel(league);
+  if (off) return off;
+  if (g.status_state === "in") return g.status_detail ?? "Live";
+  return `${new Date(g.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
 }

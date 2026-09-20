@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gameAccessibleLabel, isUpcomingGame, scheduleRowHeading } from "../src/lib/gameDisplay";
+import { gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
 
 // Noon UTC, so the calendar day is the same in every timezone the tests may run in.
 const DATE = "2026-09-20T12:00:00.000Z";
@@ -60,4 +60,24 @@ test("gameAccessibleLabel: an upcoming game reads as a fixture, a called-off one
 test("gameAccessibleLabel: a finished game reads as a result", () => {
   assert.equal(gameAccessibleLabel(finished()), "Chelsea 1, Arsenal 2, final");
   assert.equal(gameAccessibleLabel(game({ completed: true, status_detail: "Abandoned", round: "Match abandoned", home_score: 1, away_score: 1 })), "Chelsea 1, Arsenal 1, Match abandoned");
+});
+
+test("scoreboardTileStatus: an upcoming game shows its kickoff, a called-off one shows why it is off", () => {
+  assert.equal(scoreboardTileStatus("nba", game({ date: "2026-09-20T18:30:00.000Z" }), false), "18:30 UTC");
+  assert.equal(scoreboardTileStatus("nba", calledOff(), false), "Postponed");
+  assert.equal(scoreboardTileStatus("nba", calledOff("Canceled"), false), "Cancelled");
+  assert.doesNotMatch(scoreboardTileStatus("nba", calledOff(), false), /UTC/);
+});
+
+test("scoreboardTileStatus: a list spanning days puts the date on the tile, and a called-off game is not Upcoming", () => {
+  assert.equal(scoreboardTileStatus("nba", game(), true), "Sep 20, 2026 · Upcoming");
+  assert.equal(scoreboardTileStatus("nba", calledOff(), true), "Sep 20, 2026 · Postponed");
+  assert.equal(scoreboardTileStatus("nba", finished(), true), "Sep 20, 2026 · Final");
+});
+
+test("scoreboardTileStatus: results and live games are unchanged", () => {
+  assert.equal(scoreboardTileStatus("nba", finished(), false), "Final");
+  assert.equal(scoreboardTileStatus("nba", game({ status_state: "in", status_detail: "Q3 4:12" }), false), "Q3 4:12");
+  // a finished abandoned match is a result
+  assert.equal(scoreboardTileStatus("ipl", game({ completed: true, status_detail: "Abandoned" }), false), "Result");
 });
