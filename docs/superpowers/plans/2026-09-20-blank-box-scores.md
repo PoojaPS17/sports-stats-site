@@ -123,3 +123,38 @@
 - `fetchReportedGames` returns the NBA figures for `nba` (seed `player_season_stats` like the existing NFL test does), and `fetchPlayerLog` sets `no_box_score` true for a row in a game where nobody has a numeric MIN or PTS above zero, false when any row in the game has one, and false for a non-NBA league (embedded test DB only, seeded through `tests/helpers/testDb.ts`, following the seeding style already in `tests/player-log.test.ts`).
 
 - [ ] **Step 1:** write the failing tests. **Step 2:** run them (`npx tsx --test tests/<file>.test.ts`), confirm they fail for the right reason. **Step 3:** implement. **Step 4:** run those files, then `npm test`, `npx tsc --noEmit`, `npm run lint`. **Step 5:** commit: `fix: NBA player seasons count games ESPN published no box score for`.
+
+### Task 3: Player pages say which games have no box score
+
+**Files:**
+- Modify: `src/lib/playerProfile.ts` (add `recorded`, teams from unrecorded rows, "First game on record" milestone)
+- Modify: `src/lib/playerCopy.ts` (NBA copy helpers)
+- Modify: `src/components/PlayerSeasonTable.tsx`, `src/components/PlayerStatsShared.tsx`, `src/components/PlayerGameLogTable.tsx` (only if needed for the empty-log line)
+- Modify: `src/app/[league]/players/[slug]/page.tsx`, `src/app/[league]/players/[slug]/[season]/page.tsx`
+- Test: `tests/player-stages.test.ts` (append), `tests/player-copy.test.ts` (create)
+
+**Interfaces:**
+- Consumes (from Task 2, exact): `PlayerLogRow.no_box_score?`, `GamesSource = "espn" | "logged" | "listed"`, `SeasonLine.unrecorded`, `PlayerProfile.unrecorded`.
+- Produces (exact names):
+  - `SeasonLine.recorded: number` = the season's played rows (games with a stat line). `PlayerProfile.recorded: number` = the sum of the seasons' `recorded` plus played rows with a null `season_year`. Games without a box score in a season are `games - recorded` (never negative; when a stale ESPN figure is below the listed count it is 0). Display code uses `games - recorded`, not `unrecorded`, for every count it prints.
+  - In `src/lib/playerCopy.ts`:
+    ```ts
+    export const NBA_NO_BOX_SCORE_NOTE = "ESPN published no box score for some of this player's games. Those games count toward GP (ESPN's own figure where it is stored) but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons.";
+    export function noBoxScoreGamesTitle(n: number, source: GamesSource): string
+    //  "espn":   `Includes ${n} ${n === 1 ? "game" : "games"} ESPN published no box score for.`
+    //  other:    `Includes ${n} ${n === 1 ? "game" : "games"} ESPN published no box score for, counted from the game rosters; ESPN's own games-played figure is not stored for this season.`
+    export function unlistedGamesNote(n: number): string
+    //  `${n} ${n === 1 ? "game" : "games"} ESPN published no box score for ${n === 1 ? "is" : "are"} not listed.`
+    ```
+
+**Behaviour to implement**
+
+1. `playerProfile.ts`: add `recorded` to `SeasonLine` and `PlayerProfile` as above. Profile-level `teams` (and the season line's teams, already done) include teams from unrecorded rows too. "First game on record" for NBA is emitted even when the earliest row is an unrecorded one (`game` is that row; `PlayerMilestones.tsx` only prints opponent and date and links the game page, which itself says ESPN has no box score). The Nth-game ordinals that land on an unrecorded row stay skipped. Also tidy two test nits from the Task 2 review: the stale `seedGames` docstring in `tests/player-log.test.ts` (names the wrong ids) and the trivial "no 30-point game" assertion in `tests/player-stages.test.ts` (give a played row 30 points and assert the milestone points at it).
+2. `PlayerSeasonTable.tsx`: `mixed` (the `*` on a season whose games figure is not ESPN's) applies to the NFL only (`profile.sport === "nfl"`), so ordinary NBA seasons never get it. For a season with `games - recorded > 0` (any sport that has such seasons, in practice NBA) the GP cell shows the number followed by `†` with `title={noBoxScoreGamesTitle(games - recorded, row.gamesSource)}`. The career row's GP likewise gets `†` and a title (`noBoxScoreGamesTitle(profile.games - profile.recorded, "espn")` when any season is `"espn"`, else with `"listed"`) when `profile.games - profile.recorded > 0`.
+3. `PlayerStatsShared.tsx` (`careerStripStats` and whatever renders the strip and the export card): the GP stat carries the same `†` and title when `profile.games - profile.recorded > 0`. Keep `careerStripStats`'s existing shape for other callers; add the marker in a way `tests/player-stages.test.ts` (which imports `careerStripStats`) still passes unchanged for ordinary profiles.
+4. Both player pages (`[slug]/page.tsx`, `[slug]/[season]/page.tsx`): for NBA, when the regular-season profile has `games - recorded > 0`, the regular-season `SectionHeader` description is the existing text followed by a space and `NBA_NO_BOX_SCORE_NOTE`; the same for the Playoffs description when the playoffs profile has `games - recorded > 0`. The wording of the footer at `[slug]/page.tsx` (the "Regular-season figures are summed from the N ... games" line for NBA) must no longer say "summed" or use `profile.games` when `games > recorded`: say the averages are over the `profile.recorded` games with a box score. The page meta descriptions stay as they are (they quote ESPN's games-played figure, which is what the page shows). A season page whose regular season has `games > 0` but no recorded games renders its table row (GP, dashes) plus the note; verify nothing throws for a profile with `rows.length === 0` and `games > 0` (`profile.career`, `firstDate`, `lastDate`, `best`, `form`, splits and the strip must all cope with empty rows).
+5. Game log: when `staged.counted.unrecorded > 0` show `unlistedGamesNote(staged.counted.unrecorded)` as the game-log section description's tail (or as a muted line under the header, following how the page already places notes); when the log is empty but the player has games, that same line is shown instead of the table's empty state.
+6. `tests/player-copy.test.ts` (new) asserts the three helpers' exact strings for n = 1 and n = 2 and both sources. `tests/player-stages.test.ts` gets tests for `recorded` (ordinary season, season with unrecorded rows and a figure, stale figure below logged, all-unrecorded season, null-season-year rows, career sum), profile `teams` from an unrecorded-only team, and the First-game-on-record milestone.
+7. JSX has no automated test. After tsc and lint pass, do this manual check and report it: render is not possible without a database, so instead re-read every changed JSX expression for `undefined`/`NaN` risks (`games - recorded` on both profiles, an empty `seasons` list, `staged.counted` when there are no counted rows).
+
+- [ ] **Step 1:** write the failing tests (copy helpers, `recorded`, teams, milestone). **Step 2:** run them, see them fail for the right reason. **Step 3:** implement `playerProfile.ts` and `playerCopy.ts`, then the components and pages. **Step 4:** `npx tsx --test tests/player-stages.test.ts tests/player-copy.test.ts tests/player-log.test.ts`, then `npm test`, `npx tsc --noEmit`, `npm run lint`. **Step 5:** commit: `fix: player pages say which games ESPN published no box score for`.
