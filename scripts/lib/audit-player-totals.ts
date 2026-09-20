@@ -246,8 +246,8 @@ export function seasonsFromPayload(
 }
 
 /** The NFL games played the loader would store for each season of a live payload (from `minYear` on),
- * for the same years `seasonsFromPayload` returns: `seasonGamesPlayed`, which takes a traded player's
- * Totals row, or sums the teams when there is none. Null where the loader stores none (no readable GP,
+ * for the same years `seasonsFromPayload` returns: `seasonGamesPlayed`, which sums a traded player's
+ * teams (ESPN's Totals row GP is only the first team's, so it is just a floor). Null where the loader stores none (no readable GP,
  * or a GP of 0, which it drops), so the caller falls back to the categories' GP. */
 export function gamesPlayedFromPayload(categories: EspnCategory[], minYear: number): Map<number, number | null> {
   const out = new Map<number, number | null>();
@@ -300,8 +300,9 @@ export function siteSeasonOrEmpty(seasons: Map<number, SeasonFigures>, season: n
 }
 
 /** Seasons in which the player's regular-season games span more than one team. A stored row for such a
- * season may still be one team's stint (rows loaded before the loader took ESPN's Totals row), so
- * findings there are tagged. */
+ * season may still be one team's stint (rows loaded before the loader took ESPN's Totals row) or, for
+ * games, only the first team's (rows loaded before the loader summed the teams' games), so findings
+ * there are tagged. */
 export function tradedSeasons(regular: PlayerProfile): Set<number> {
   return new Set(regular.seasons.filter((s) => s.teams.length > 1).map((s) => s.season));
 }

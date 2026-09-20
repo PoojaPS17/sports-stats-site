@@ -116,7 +116,7 @@ test("categories that disagree on one team's GP give the largest", () => {
   assert.equal(seasonGamesPlayed(categories, 2025), 16);
 });
 
-test("a traded player with a Totals row gets the Totals GP, not the sum, wherever the row sits", () => {
+test("a traded player with a Totals row gets the larger of the Totals GP and the sum, wherever the row sits", () => {
   const car = nflRow(2022, "carolina-panthers", "6");
   const sf = nflRow(2022, "san-francisco-49ers", "11");
   const totals = nflRow(2022, "2022 Totals", "17", "2022  Totals");
@@ -136,6 +136,50 @@ test("the Totals GP is the largest among the Totals rows, and a Totals row in on
   assert.equal(seasonGamesPlayed(both, 2022), 17);
   const onlyOne = [nflCategory("rushing", [car, sf]), nflCategory("receiving", [car, sf, nflRow(2022, "2022 Totals", "17", "2022  Totals")])];
   assert.equal(seasonGamesPlayed(onlyOne, 2022), 17);
+});
+
+// ESPN's Totals row `GP` is the first team's games only for a traded player (its other columns are
+// whole-season), so the Totals row is a floor and the sum over teams is the answer.
+test("Shiloh Keo 2016 (id 14122): Totals GP 3 is the first team's, the answer is 3 + 7", () => {
+  const defense = nflCategory("defensive", [
+    nflRow(2016, "denver-broncos", "3"),
+    nflRow(2016, "new-orleans-saints", "7"),
+    nflRow(2016, "2016 Totals", "3", "2016  Totals"),
+  ]);
+  assert.equal(seasonGamesPlayed([defense], 2016), 10);
+});
+
+test("a Totals GP above the sum over teams stays", () => {
+  const categories = [
+    nflCategory("rushing", [nflRow(2022, "team-a", "6"), nflRow(2022, "team-b", "10"), nflRow(2022, "2022 Totals", "17", "2022  Totals")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2022), 17);
+});
+
+test("a Totals GP equal to the sum over teams is that number", () => {
+  const car = nflRow(2022, "carolina-panthers", "6");
+  const sf = nflRow(2022, "san-francisco-49ers", "11");
+  const categories = [nflCategory("rushing", [car, sf, nflRow(2022, "2022 Totals", "17", "2022  Totals")])];
+  assert.equal(seasonGamesPlayed(categories, 2022), 17);
+});
+
+test("a Totals row in only one category with a smaller GP than the teams' sum gives the sum", () => {
+  const categories = [
+    nflCategory("rushing", [nflRow(2022, "team-a", "3"), nflRow(2022, "team-b", "7")]),
+    nflCategory("receiving", [nflRow(2022, "team-a", "3"), nflRow(2022, "team-b", "7")]),
+    nflCategory("defensive", [nflRow(2022, "team-a", "3"), nflRow(2022, "team-b", "7"), nflRow(2022, "2022 Totals", "3", "2022  Totals")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2022), 10);
+});
+
+test("a team in only some categories counts at its largest GP, summed, when the Totals row is smaller", () => {
+  const categories = [
+    nflCategory("rushing", [nflRow(2022, "team-a", "3"), nflRow(2022, "2022 Totals", "3", "2022  Totals")]),
+    nflCategory("receiving", [nflRow(2022, "team-a", "5"), nflRow(2022, "team-b", "4"), nflRow(2022, "2022 Totals", "5", "2022  Totals")]),
+    nflCategory("defensive", [nflRow(2022, "team-b", "6")]),
+  ];
+  // team-a 5 (largest across categories) + team-b 6 = 11, above the Totals GP of 5.
+  assert.equal(seasonGamesPlayed(categories, 2022), 11);
 });
 
 test("a traded player with no Totals row gets the sum of the teams' GP", () => {
