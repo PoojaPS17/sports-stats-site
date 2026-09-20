@@ -30,12 +30,12 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   if (!game) {
     return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1220", color: "#e8edf6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
   }
-  const played = game.completed && game.home_score != null && game.away_score != null;
+  const off = gameCalledOffLabel(game);
+  const played = !off && game.completed && game.home_score != null && game.away_score != null;
   const homeWon = played && (game.home_winner ?? game.home_score! > game.away_score!);
   const awayWon = played && (game.away_winner ?? game.away_score! > game.home_score!);
-  const off = gameCalledOffLabel(game);
   // A finished match with no scores (abandoned, no result) says how it ended instead of a bare date and "vs".
-  const note = finishedNoScoreNote(game);
+  const note = off ? null : finishedNoScoreNote(game);
   const when = new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
   return new ImageResponse(
@@ -55,7 +55,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
       >
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: "#9aa7bd", textTransform: "uppercase", letterSpacing: 3 }}>
           <span>{isLeague(league) ? LEAGUE_LABEL[league] : ""}</span>
-          <span>{played || note ? `Final · ${when}` : off ? `${off} · ${when}` : when}</span>
+          <span>{off ? `${off} · ${when}` : played || note ? `Final · ${when}` : when}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Side name={game.away_name} logo={game.away_logo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />

@@ -42,6 +42,19 @@ test("a game in play is live, whatever its status text says: it is never called 
   assert.equal(isGameCalledOff({ completed: false, status_state: "pre", status_detail: "Suspended" }), true);
 });
 
+test("a game whose status text says cancelled or postponed was never played, even if it is stored as completed", () => {
+  // cricket rows written before the writer stopped reading state post as finished, and tennis rows, can be stored completed
+  assert.equal(isGameCalledOff({ completed: true, status_state: "post", status_detail: "Canceled" }), true);
+  assert.equal(gameCalledOffLabel({ completed: true, status_state: "post", status_detail: "Canceled" }), "Cancelled");
+  assert.equal(isGameCalledOff({ completed: true, status_state: "post", status_detail: "Postponed" }), true);
+  // abandoned and suspended are results once finished; a finished game is otherwise never called off
+  assert.equal(isGameCalledOff({ completed: true, status_state: "post", status_detail: "Abandoned" }), false);
+  assert.equal(isGameCalledOff({ completed: true, status_state: "post", status_detail: "Suspended" }), false);
+  assert.equal(isGameCalledOff({ completed: true, status_state: "post", status_detail: "Final" }), false);
+  // a game in play stays live
+  assert.equal(isGameCalledOff({ completed: true, status_state: "in", status_detail: "Postponed" }), false);
+});
+
 test("gameCalledOffLabel gives the label for an unfinished called-off game and null for everything else", () => {
   assert.equal(gameCalledOffLabel({ completed: false, status_state: "post", status_detail: "Postponed" }), "Postponed");
   assert.equal(gameCalledOffLabel({ completed: false, status_detail: "Canceled" }), "Cancelled");

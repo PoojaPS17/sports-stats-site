@@ -106,7 +106,7 @@ function finish(groups: { label: string; shortLabel: string; games: GameRow[]; p
         start: new Date(Math.min(...dates)).toISOString(),
         end: new Date(Math.max(...dates)).toISOString(),
         games: g.games,
-        completed: g.games.filter((x) => x.completed).length,
+        completed: g.games.filter((x) => x.completed && !isGameCalledOff(x)).length,
         calledOff: g.games.filter(isGameCalledOff).length,
         playoff: g.playoff,
         numbered: g.numbered ?? true,

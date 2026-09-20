@@ -27,14 +27,14 @@ export function scheduleRowHeading(g: StatusFields & Pick<GameRow, "date">): str
 export function gameAccessibleLabel(
   game: StatusFields & Pick<GameRow, "date" | "round" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
 ): string {
-  if (game.completed) {
+  const off = gameCalledOffLabel(game);
+  if (game.completed && !off) {
     return `${teamDisplayName(game.away_name)} ${game.away_score_display ?? game.away_score ?? ""}, ${teamDisplayName(game.home_name)} ${
       game.home_score_display ?? game.home_score ?? ""
     }, ${game.round ?? "final"}`;
   }
   const date = new Date(game.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const label = `${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}, ${date}`;
-  const off = gameCalledOffLabel(game);
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
 
@@ -44,10 +44,10 @@ export function scoreboardTileStatus(league: League, g: StatusFields & Pick<Game
   const live = g.status_state === "in" && !g.completed;
   if (withDate) {
     const day = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-    return `${day} · ${g.completed ? (normalizeStage(g.round) ?? finishedLabel(league)) : live ? (g.status_detail ?? "Live") : (off ?? "Upcoming")}`;
+    return `${day} · ${off ?? (g.completed ? (normalizeStage(g.round) ?? finishedLabel(league)) : live ? (g.status_detail ?? "Live") : "Upcoming")}`;
   }
-  if (g.completed) return normalizeStage(g.round) ?? finishedLabel(league);
   if (off) return off;
+  if (g.completed) return normalizeStage(g.round) ?? finishedLabel(league);
   if (live) return g.status_detail ?? "Live";
   return `${new Date(g.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
 }

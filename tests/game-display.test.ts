@@ -84,6 +84,19 @@ test("scoreboardTileStatus: results and live games are unchanged", () => {
   assert.equal(scoreboardTileStatus("ipl", game({ completed: true, status_detail: "Abandoned" }), false), "Result");
 });
 
+test("a cricket match ESPN cancelled but the writer stored as finished is still shown as called off", () => {
+  // ESPN files a cancelled match under state post; older rows were stored completed
+  const stored = game({ completed: true, status_state: "post", status_detail: "Canceled", home_score: null, away_score: null });
+  assert.equal(isUpcomingGame(stored), false);
+  assert.equal(scheduleRowHeading(stored), "Sun, Sep 20 · Cancelled");
+  assert.equal(gameAccessibleLabel(stored), "Chelsea at Arsenal, Sunday, September 20, cancelled");
+  assert.equal(scoreboardTileStatus("ipl", stored, false), "Cancelled");
+  assert.equal(scoreboardTileStatus("ipl", stored, true), "Sep 20, 2026 · Cancelled");
+  // whereas a finished abandoned match is a result
+  const abandoned = game({ completed: true, status_state: "post", status_detail: "Abandoned" });
+  assert.equal(scoreboardTileStatus("ipl", abandoned, false), "Result");
+});
+
 test("a live game is live even when its status text reads like a stoppage", () => {
   const live = game({ status_state: "in", status_detail: "Suspended" });
   assert.equal(scoreboardTileStatus("ipl", live, false), "Suspended");

@@ -1,6 +1,6 @@
 import { LocalTime } from "./LocalTime";
 import { normalizeStage } from "@/lib/stage";
-import { calledOffLabel } from "@/lib/gameStatus";
+import { gameCalledOffLabel } from "@/lib/gameStatus";
 
 export function StatusPill({
   statusState,
@@ -28,6 +28,14 @@ export function StatusPill({
     );
   }
 
+  // A game the feed closed without playing ("Postponed", "Canceled") is neither
+  // upcoming nor final; showing its old date as a fixture would be wrong. This includes
+  // one stored as finished (a cancelled cricket match ESPN files under state "post").
+  const label = gameCalledOffLabel({ completed, status_state: statusState, status_detail: statusDetail });
+  if (label) {
+    return <span className="pill pill-final">{round ? `${round} · ${label}` : label}</span>;
+  }
+
   if (completed) {
     // "Final" is standard broadcast shorthand for "game over" everywhere — but for a
     // playoff stage like IPL's Qualifier 1/Eliminator, showing "Final" on every one of
@@ -36,13 +44,6 @@ export function StatusPill({
     // says "Final" — except in cricket, where "Final" is only ever the tournament
     // decider, so callers pass "Result" (Cricinfo's word) instead.
     return <span className="pill pill-final">{round ?? completedLabel ?? "Final"}</span>;
-  }
-
-  // A game the feed closed without playing ("Postponed", "Canceled") is neither
-  // upcoming nor final; showing its old date as a fixture would be wrong.
-  const label = calledOffLabel(statusDetail);
-  if (label) {
-    return <span className="pill pill-final">{round ? `${round} · ${label}` : label}</span>;
   }
 
   return (
