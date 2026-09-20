@@ -1,3 +1,5 @@
+import { normalizeStage } from "./stage";
+
 // The classification itself lives in the database (games.stage, a generated column); this is
 // the TypeScript side of it. See db/schema.sql.
 export type GameStage = "regular" | "playoffs" | "playin" | "excluded" | "other";
@@ -17,4 +19,18 @@ export function stageLabel(row: { stage?: string | null; season_type?: number | 
   if (row.competition_type === "CC") return "NBA Cup final";
   if (row.season_type === 1) return "Preseason";
   return null;
+}
+
+/** The game log's Stage/Round cell. Split sports (NBA, NFL): the stage label, then the normalised
+ * playoff round, then "Week n"; an excluded game with no label of its own reads "Not counted", so
+ * a dimmed row always says why. Other sports: the round, or the week. Empty when there is nothing. */
+export function stageCellText(
+  row: { stage?: string | null; season_type?: number | null; competition_type?: string | null; round?: string | null; week?: number | null },
+  split: boolean
+): string {
+  const round = normalizeStage(row.round);
+  const week = row.week ? `Week ${row.week}` : null;
+  if (!split) return round ?? week ?? "";
+  const label = stageLabel(row) ?? (row.stage === "excluded" ? "Not counted" : null);
+  return [label, round, week].filter(Boolean).join(" · ");
 }

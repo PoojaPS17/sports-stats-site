@@ -120,6 +120,13 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
             </section>
           )}
 
+          {profile.games === 0 && (staged.playoffs || staged.playin) && (
+            <section>
+              <SectionHeader>{label} regular season</SectionHeader>
+              <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games on record for {player.name} in {LEAGUE_LABEL[league]} yet.</p>
+            </section>
+          )}
+
           {staged.playoffs && (
             <section>
               <SectionHeader description="Playoff games only; ESPN lists these separately from the regular season.">Playoffs</SectionHeader>
@@ -177,7 +184,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
         ]}
       />
 
-      {(seasonStats || !profile || profile.games === 0) && <PlayerSeasonStats league={league} stats={seasonStats} seasons={[]} activeSeason={season} basePath={basePath} />}
+      {(seasonStats || !staged || !profile || (profile.games === 0 && !staged.playoffs && !staged.playin)) && <PlayerSeasonStats league={league} stats={seasonStats} seasons={[]} activeSeason={season} basePath={basePath} />}
     </div>
   );
 }

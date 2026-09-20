@@ -225,12 +225,12 @@ export default async function PlayerPage({
                   tools={
                     <ImageActions
                       filename={`${slug}-${league}`}
-                      shareTitle={`${player.name} career stats`}
+                      shareTitle={split ? `${player.name} career stats (regular season)` : `${player.name} career stats`}
                       card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamColor={player.team_color} meta={[...playerMeta(sport, player), ...lastClub]} stats={careerStripStats(profile)} />}
                     />
                   }
                 >
-                  Career
+                  {split ? "Career (regular season)" : "Career"}
                 </SectionHeader>
                 <PlayerCareerStrip league={league} profile={profile} />
               </section>

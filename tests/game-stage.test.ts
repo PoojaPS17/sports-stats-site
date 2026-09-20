@@ -1,7 +1,7 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { startTestDb, type TestDb } from "./helpers/testDb";
-import { stageLabel } from "../src/lib/gameStage";
+import { stageCellText, stageLabel } from "../src/lib/gameStage";
 
 let db: TestDb;
 before(async () => {
@@ -60,4 +60,17 @@ test("stageLabel is null for regular-season and playoff rows, which keep their r
   assert.equal(stageLabel({ stage: "other" }), null);
   assert.equal(stageLabel({}), null);
   assert.equal(stageLabel({ stage: null, season_type: null, competition_type: null }), null);
+});
+
+test("stageCellText: an excluded game always says why, other rows keep stage, round and week", () => {
+  assert.equal(stageCellText({ stage: "excluded", season_type: 2, competition_type: "STD" }, true), "Not counted");
+  assert.equal(stageCellText({ stage: "excluded", season_type: 1, week: 2 }, true), "Preseason · Week 2");
+  assert.equal(stageCellText({ stage: "regular", season_type: 2 }, true), "");
+  assert.equal(stageCellText({ stage: "regular", week: 7 }, true), "Week 7");
+  assert.equal(stageCellText({ stage: "playoffs", round: "Semi Final" }, true), "Semi-Final");
+  assert.equal(stageCellText({ stage: "playin", round: "East Play-In - Game 1" }, true), "Play-In · East Play-In - Game 1");
+  // Soccer and other leagues: the round, or the week; never "Not counted".
+  assert.equal(stageCellText({ stage: "other", round: "Round of 16 - 1st Leg" }, false), "Round of 16 - 1st Leg");
+  assert.equal(stageCellText({ stage: "regular", week: 12 }, false), "Week 12");
+  assert.equal(stageCellText({ stage: "excluded" }, false), "");
 });

@@ -1,23 +1,13 @@
 import { formatSeasonLabel, type League } from "@/lib/queries";
-import { normalizeStage } from "@/lib/stage";
-import { stageLabel } from "@/lib/gameStage";
+import { stageCellText } from "@/lib/gameStage";
 import { formatStat, type PlayerLogRow, type PlayerProfile } from "@/lib/playerProfile";
 import { fmtDate, OpponentCell, ResultChip } from "./PlayerStatsShared";
 
 const num = "px-2 py-2 text-right tabular-nums";
 
-// Split sports (NBA, NFL): the stage first (Play-In, Preseason, NBA Cup final, All-Star), then
-// the playoff round, then the week. Soccer: the round, or the week.
-function stageText(row: PlayerLogRow, split: boolean): string {
-  const round = normalizeStage(row.round);
-  const week = row.week ? `Week ${row.week}` : null;
-  if (!split) return round ?? week ?? "";
-  return [stageLabel(row), round, week].filter(Boolean).join(" · ");
-}
-
 function LogTable({ league, profile, rows, split }: { league: League; profile: PlayerProfile; rows: PlayerLogRow[]; split: boolean }) {
   const specs = profile.profile.specs.filter((s) => s.log !== false);
-  const showRound = rows.some((r) => stageText(r, split) !== "");
+  const showRound = rows.some((r) => stageCellText(r, split) !== "");
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] border-collapse text-sm">
@@ -41,7 +31,7 @@ function LogTable({ league, profile, rows, split }: { league: League; profile: P
               <td className="py-2 pl-2">
                 <OpponentCell league={league} row={row} />
               </td>
-              {showRound && <td className="whitespace-nowrap py-2 pl-2 text-xs text-[var(--text-muted)]">{stageText(row, split)}</td>}
+              {showRound && <td className="whitespace-nowrap py-2 pl-2 text-xs text-[var(--text-muted)]">{stageCellText(row, split)}</td>}
               <td className="py-2 pl-2">
                 <ResultChip row={row} />
               </td>
