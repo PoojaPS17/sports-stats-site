@@ -9,8 +9,11 @@
 // --live N: pick N random players and read ESPN's athlete /stats now, so a stale or wrongly
 //           stored row cannot hide (or invent) a difference.
 // --limit N: cap the players per league (lowest ESPN ids first).
-// Exits 1 when any season is a MISMATCH (or a live read failed), 2 on bad arguments. Coverage gaps
-// (ESPN has the season, the database has no regular-season box scores) are listed, and never fail.
+// Exits 1 when any season is a MISMATCH (or a live read failed), 2 on bad arguments. Listed but not
+// failing: coverage gaps (ESPN has the season, no regular-season box scores), "no ESPN row" (stored
+// mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
+// gives no games played), NFL "games short (no stat line)" (site games below ESPN's GP, every
+// figure equal). --strict makes the last two fail too.
 //
 // `select` only. The database and the loader are imported after the arguments are validated, so a
 // usage error never opens a connection.
@@ -19,12 +22,13 @@ import {
   espnFigures,
   parseArgs,
   seasonsFromPayload,
+  siteSeasonOrEmpty,
   siteSeasons,
+  tradedSeasons,
   USAGE,
   type AuditLeague,
   type Difference,
   type EspnCategory,
-  type SeasonFigures,
   type StoredCategories,
 } from "./lib/audit-player-totals";
 import { fetchPlayerLog } from "../src/lib/playerLog";
@@ -41,8 +45,13 @@ interface Finding {
   playerId: string;
   name: string;
   season: number;
+  siteGames: number;
   differences: Difference[];
+  /** Stored mode, and the player's regular-season games span several teams that season. */
+  traded: boolean;
 }
+
+const TRADED_NOTE = "traded: stored row is one stint";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const fmt = (v: number | null) => (v === null ? "none" : String(v));
@@ -70,10 +79,14 @@ async function main() {
 
   const mismatches: Finding[] = [];
   const gaps: Finding[] = [];
+  const noEspn: Finding[] = [];
+  const unverified: Finding[] = [];
+  const short: Finding[] = [];
   const failures: string[] = [];
   let compared = 0;
   let matched = 0;
-  let noEspn = 0;
+  let nothing = 0;
+  const minYear = new Date().getUTCFullYear() - YEARS_BACK;
 
   try {
     for (const league of args.leagues) {
@@ -95,12 +108,14 @@ async function main() {
       for (const player of players) {
         try {
           const log = await fetchPlayerLog(pool, league, player.id);
-          const site = siteSeasons(sport, buildStagedProfile(sport, log).regular);
+          const regular = buildStagedProfile(sport, log).regular;
+          const site = siteSeasons(sport, regular);
+          const traded = args.live ? new Set<number>() : tradedSeasons(regular);
 
           let espn: Map<number, StoredCategories>;
           if (args.live) {
             const data = await fetchAthleteSeasonStats(league, player.id);
-            espn = seasonsFromPayload((data.categories ?? []) as EspnCategory[], seasonRow, new Date().getUTCFullYear() - YEARS_BACK);
+            espn = seasonsFromPayload((data.categories ?? []) as EspnCategory[], seasonRow, minYear);
           } else {
             const { rows } = await pool.query<{ season: number; categories: StoredCategories }>(
               `select season, categories from player_season_stats where league = $1 and player_espn_id = $2`,
@@ -111,22 +126,29 @@ async function main() {
 
           const seasons = [...new Set([...site.keys(), ...espn.keys()])].sort((a, b) => a - b);
           for (const season of seasons) {
-            const siteLine: SeasonFigures = site.get(season) ?? { games: 0, figures: {} };
+            const siteLine = siteSeasonOrEmpty(site, season);
             const stored = espn.get(season);
             const espnLine = stored ? espnFigures(league, stored) : null;
-            if (!espnLine && !siteLine.games) continue; // nothing on either side
-            const result = compareSeason(siteLine, espnLine);
-            const finding: Finding = { league, playerId: player.id, name: player.name, season, differences: result.differences };
+            // Live, inside the loader's window: ESPN is authoritative, so a season it has no row for is a mismatch.
+            const result = compareSeason(siteLine, espnLine, { league, requireEspnRow: Boolean(args.live) && season >= minYear });
+            const finding: Finding = { league, playerId: player.id, name: player.name, season, siteGames: siteLine.games ?? 0, differences: result.differences, traded: traded.has(season) };
             if (result.verdict === "match") {
               compared += 1;
               matched += 1;
             } else if (result.verdict === "MISMATCH") {
-              compared += 1;
+              // A season that is a mismatch only for want of an ESPN row was not compared figure by figure.
+              if (result.differences[0]?.field !== "ESPN row") compared += 1;
               mismatches.push(finding);
             } else if (result.verdict === "no box scores") {
               gaps.push(finding);
+            } else if (result.verdict === "no ESPN row") {
+              noEspn.push(finding);
+            } else if (result.verdict === "games not verified") {
+              unverified.push(finding);
+            } else if (result.verdict === "games short (no stat line)") {
+              short.push(finding);
             } else {
-              noEspn += 1;
+              nothing += 1;
             }
           }
         } catch (err) {
@@ -139,40 +161,60 @@ async function main() {
     await pool.end();
   }
 
+  const note = (f: Finding) => (f.traded ? `  [${TRADED_NOTE}]` : "");
+  const gapOf = (f: Finding) => (f.differences[0]?.espn ?? 0) - (f.differences[0]?.site ?? 0);
+
   console.log("\n[audit-player-totals] summary");
-  console.log(`  compared:      ${compared} player-seasons (site and ESPN both have the season)`);
-  console.log(`  matched:       ${matched}`);
-  console.log(`  mismatched:    ${mismatches.length}`);
-  console.log(`  coverage gaps: ${gaps.length} (ESPN has the season, the database has no regular-season box scores; not counted as matches)`);
-  console.log(`  no ESPN row:   ${noEspn} (the site has regular-season games, ESPN has no row for that season)`);
-  if (failures.length > 0) console.log(`  failed reads:  ${failures.length}`);
+  console.log(`  compared:                   ${compared} player-seasons (site and ESPN both have the season)`);
+  console.log(`  matched:                    ${matched}`);
+  console.log(`  mismatched:                 ${mismatches.length}   (fails the run)`);
+  console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the database has no regular-season box scores; never a match)`);
+  console.log(`  no ESPN row:                ${noEspn.length}   (the site has regular-season games, ESPN has no row; ${args.live ? "outside the loader's window only, inside it is a mismatch" : "stored rows exist only for current-roster players"})`);
+  console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
+  console.log(`  games short (no stat line): ${short.length}   (NFL: site games below ESPN's GP, every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
+  console.log(`  nothing to compare:         ${nothing}   (neither side has anything for the season)`);
+  if (failures.length > 0) console.log(`  failed reads:               ${failures.length}   (fails the run)`);
 
   if (mismatches.length > 0) {
     console.log(`\n[audit-player-totals] MISMATCH (first ${Math.min(MISMATCHES_SHOWN, mismatches.length)} of ${mismatches.length})`);
     for (const m of mismatches.slice(0, MISMATCHES_SHOWN)) {
       const what = m.differences.map((d) => `${d.field} site ${fmt(d.site)} / ESPN ${fmt(d.espn)}`).join("; ");
-      console.log(`  ${m.league} ${m.playerId} ${m.name} ${m.season}: ${what}`);
+      console.log(`  ${m.league} ${m.playerId} ${m.name} ${m.season}: ${what}${note(m)}`);
     }
     if (!args.live) {
-      console.log("  Note: stored rows for a player who changed teams mid-season may hold only the first team's stint; re-check those with --live.");
+      console.log("  Note: for a player who changed teams mid-season the stored row can be the first team's stint only; re-check those with --live.");
     }
   }
 
-  if (gaps.length > 0) {
-    const bySeason = new Map<string, number>();
-    for (const g of gaps) bySeason.set(`${g.league} ${g.season}`, (bySeason.get(`${g.league} ${g.season}`) ?? 0) + 1);
-    console.log("\n[audit-player-totals] coverage gaps by season (box scores not backfilled for that season yet?)");
-    for (const [key, count] of [...bySeason.entries()].sort()) console.log(`  ${key}: ${count} players`);
-    console.log(`  first ${Math.min(GAPS_SHOWN, gaps.length)}:`);
-    for (const g of gaps.slice(0, GAPS_SHOWN)) console.log(`  ${g.league} ${g.playerId} ${g.name} ${g.season}`);
-  }
+  section("coverage gaps (box scores not backfilled for that season yet?)", "players", gaps, () => 1, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}`);
+  section("no ESPN row", "site games", noEspn, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
+  section("games not verified (ESPN gives no games played)", "site games", unverified, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
+  section("games short (no stat line)", "games short", short, gapOf, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: site ${f.differences[0]?.site} / ESPN ${f.differences[0]?.espn} games, ${gapOf(f)} short${note(f)}`);
 
   if (failures.length > 0) {
     console.log("\n[audit-player-totals] players that could not be read (not verified)");
     for (const f of failures.slice(0, MISMATCHES_SHOWN)) console.log(`  ${f}`);
   }
 
-  process.exit(mismatches.length > 0 || failures.length > 0 ? 1 : 0);
+  const strictFailures = args.strict ? unverified.length + short.length : 0;
+  process.exit(mismatches.length > 0 || failures.length > 0 || strictFailures > 0 ? 1 : 0);
+}
+
+// One listing for a class that is reported but does not fail: a per-season table, then the first few players.
+function section(title: string, unit: string, findings: Finding[], measure: (f: Finding) => number, describe: (f: Finding) => string) {
+  if (findings.length === 0) return;
+  const bySeason = new Map<string, { count: number; total: number }>();
+  for (const f of findings) {
+    const key = `${f.league} ${f.season}`;
+    const entry = bySeason.get(key) ?? { count: 0, total: 0 };
+    entry.count += 1;
+    entry.total += measure(f);
+    bySeason.set(key, entry);
+  }
+  console.log(`\n[audit-player-totals] ${title}: ${findings.length} player-seasons, by season`);
+  for (const [key, { count, total }] of [...bySeason.entries()].sort()) console.log(`  ${key}: ${count} players, ${total} ${unit}`);
+  console.log(`  first ${Math.min(GAPS_SHOWN, findings.length)}:`);
+  for (const f of findings.slice(0, GAPS_SHOWN)) console.log(`  ${describe(f)}`);
 }
 
 main().catch((err) => {

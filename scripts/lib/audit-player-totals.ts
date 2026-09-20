@@ -12,11 +12,19 @@ export interface SeasonFigures {
   figures: Record<string, number | null>;
 }
 
-export type Verdict = "match" | "MISMATCH" | "no box scores" | "no ESPN row";
+export type Verdict =
+  | "match"
+  | "MISMATCH"
+  | "no box scores"
+  | "no ESPN row"
+  | "games not verified"
+  | "games short (no stat line)"
+  | "nothing to compare";
 
 export interface Difference {
   field: string;
   site: number | null;
+  /** ESPN's value; null when ESPN has no row (or does not list the figure). */
   espn: number | null;
 }
 
@@ -28,35 +36,66 @@ export interface Comparison {
 /** Per-game averages are compared at one decimal (the precision ESPN publishes); everything else exactly. */
 const ONE_DECIMAL_FIELDS = new Set(["ppg"]);
 
-// The small epsilon keeps a value that is a half in exact arithmetic (27.05) from falling to the
-// wrong side of the rounding because of binary floating point.
-const oneDecimal = (v: number) => Math.round(v * 10 + 1e-9);
+// The very formatter the player page uses for a one-decimal figure (formatStat in playerProfile.ts:
+// toLocaleString with one fraction digit), so the audit rounds exactly as the page displays: 27.05 and
+// 27.15 show as 27.1 and 27.2 although 27.15 is 27.149999... in binary.
+const oneDecimal = new Intl.NumberFormat("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
 
 function differs(field: string, site: number | null, espn: number | null): boolean {
   // A figure ESPN does not list (a receiver has no passing category) is a zero, as it is on the site.
   const a = site ?? 0;
   const b = espn ?? 0;
-  return ONE_DECIMAL_FIELDS.has(field) ? oneDecimal(a) !== oneDecimal(b) : a !== b;
+  return ONE_DECIMAL_FIELDS.has(field) ? oneDecimal.format(a) !== oneDecimal.format(b) : a !== b;
+}
+
+export interface CompareOptions {
+  /** NFL only: fewer site games than ESPN with every figure equal is "games short (no stat line)",
+   * not a mismatch (a player who played without a line in the box score is in ESPN's GP and not on
+   * the site). Every other case, and every NBA games difference, stays a MISMATCH. */
+  league?: AuditLeague;
+  /** ESPN is authoritative for this season (a live read inside the loader's window): a season where
+   * the site has regular-season games and ESPN has no row is a MISMATCH, not a listed class. */
+  requireEspnRow?: boolean;
 }
 
 /** Compares the site's regular-season line for one season with ESPN's headline line.
- * `match` and `MISMATCH` need both sides. `no box scores` (ESPN has the season, the database has no
- * regular-season game) is a coverage gap, never a match. `no ESPN row`: ESPN has nothing for it. */
-export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null): Comparison {
+ *   match               both sides agree (games and every figure)
+ *   MISMATCH            games or a figure differ (differences carry both values)
+ *   no box scores       ESPN has the season, the site has no regular-season game: a coverage gap
+ *   no ESPN row         the site has regular-season games, ESPN has nothing (a MISMATCH under requireEspnRow)
+ *   games not verified  every figure agrees but ESPN's games played is absent, so games are unchecked
+ *   games short (no stat line)  NFL: site games below ESPN's GP, every figure equal
+ *   nothing to compare  neither side has anything for the season
+ * Only `match` is a match. */
+export function compareSeason(site: SeasonFigures, espn: SeasonFigures | null, options: CompareOptions = {}): Comparison {
   const espnHasData = espn !== null && (espn.games !== null || Object.values(espn.figures).some((v) => v !== null));
-  if (!espn || !espnHasData) return { verdict: "no ESPN row", differences: [] };
+  if (!espn || !espnHasData) {
+    if (!site.games) return { verdict: "nothing to compare", differences: [] };
+    if (options.requireEspnRow) return { verdict: "MISMATCH", differences: [{ field: "ESPN row", site: site.games, espn: null }] };
+    return { verdict: "no ESPN row", differences: [] };
+  }
   if (!site.games) return { verdict: "no box scores", differences: [] };
 
-  const differences: Difference[] = [];
-  // ESPN's games played is only known where its categories carry it.
-  if (espn.games !== null && site.games !== espn.games) differences.push({ field: "games", site: site.games, espn: espn.games });
+  const figureDifferences: Difference[] = [];
   const fields = [...new Set([...Object.keys(site.figures), ...Object.keys(espn.figures)])];
   for (const field of fields) {
     const s = site.figures[field] ?? null;
     const e = espn.figures[field] ?? null;
-    if (differs(field, s, e)) differences.push({ field, site: s, espn: e });
+    if (differs(field, s, e)) figureDifferences.push({ field, site: s, espn: e });
   }
-  return { verdict: differences.length > 0 ? "MISMATCH" : "match", differences };
+
+  if (espn.games === null) {
+    // ESPN's games played is absent for this season: the figures can still fail, but games can not pass.
+    return figureDifferences.length > 0 ? { verdict: "MISMATCH", differences: figureDifferences } : { verdict: "games not verified", differences: [] };
+  }
+  if (site.games === espn.games) {
+    return figureDifferences.length > 0 ? { verdict: "MISMATCH", differences: figureDifferences } : { verdict: "match", differences: [] };
+  }
+  const games: Difference = { field: "games", site: site.games, espn: espn.games };
+  if (options.league === "nfl" && site.games < espn.games && figureDifferences.length === 0) {
+    return { verdict: "games short (no stat line)", differences: [games] };
+  }
+  return { verdict: "MISMATCH", differences: [games, ...figureDifferences] };
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +221,17 @@ export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<num
   return out;
 }
 
+/** A season the profile has no regular-season games for (none stored, or playoffs only). */
+export function siteSeasonOrEmpty(seasons: Map<number, SeasonFigures>, season: number): SeasonFigures {
+  return seasons.get(season) ?? { games: 0, figures: {} };
+}
+
+/** Seasons in which the player's regular-season games span more than one team. ESPN's stored row for
+ * such a season may be one team's stint (the loader reads the first row), so findings there are tagged. */
+export function tradedSeasons(regular: PlayerProfile): Set<number> {
+  return new Set(regular.seasons.filter((s) => s.teams.length > 1).map((s) => s.season));
+}
+
 // ---------------------------------------------------------------------------
 // Command line
 // ---------------------------------------------------------------------------
@@ -191,26 +241,38 @@ export interface Args {
   live: number | null;
   /** Cap the number of players per league. */
   limit: number | null;
+  /** Also fail (exit 1) on "games not verified" and "games short (no stat line)". */
+  strict: boolean;
 }
 
-export const USAGE = "usage: tsx scripts/audit-player-totals.ts [nba|nfl] [--live N] [--limit N]   (N a positive whole number)";
+export const MAX_COUNT = 100000;
+
+export const USAGE = [
+  "usage: tsx scripts/audit-player-totals.ts [nba|nfl] [--live N] [--limit N] [--strict]   (N a whole number from 1 to 100000)",
+  "  --live N --limit M samples the N random players from the first M players by ESPN id.",
+  "  --strict also exits 1 on 'games not verified' and NFL 'games short (no stat line)'.",
+].join("\n");
 
 export function parseArgs(argv: string[]): Args | { error: string } {
   let leagues: AuditLeague[] | null = null;
   let live: number | null = null;
   let limit: number | null = null;
-  const positive = (flag: string, raw: string | undefined): number | { error: string } => {
+  let strict = false;
+  const count = (flag: string, raw: string | undefined): number | { error: string } => {
     if (raw === undefined || !/^\d+$/.test(raw) || Number(raw) < 1) return { error: `${flag} needs a positive whole number, got ${raw === undefined ? "nothing" : `"${raw}"`}` };
+    if (Number(raw) > MAX_COUNT) return { error: `${flag} must be at most ${MAX_COUNT}, got ${raw}` };
     return Number(raw);
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--live" || arg === "--limit") {
-      const n = positive(arg, argv[i + 1]);
+      const n = count(arg, argv[i + 1]);
       if (typeof n !== "number") return n;
       if (arg === "--live") live = n;
       else limit = n;
       i += 1;
+    } else if (arg === "--strict") {
+      strict = true;
     } else if (arg === "nba" || arg === "nfl") {
       if (leagues) return { error: "give at most one league" };
       leagues = [arg];
@@ -218,5 +280,5 @@ export function parseArgs(argv: string[]): Args | { error: string } {
       return { error: `unknown argument "${arg}"` };
     }
   }
-  return { leagues: leagues ?? ["nba", "nfl"], live, limit };
+  return { leagues: leagues ?? ["nba", "nfl"], live, limit, strict };
 }
