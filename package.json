@@ -41,6 +41,8 @@
     "backfill:f1-standings": "tsx scripts/backfill-f1-standings.ts",
     "fetch:trending-wikipedia": "tsx scripts/fetch-trending-wikipedia.ts",
     "fetch:trending-appstore": "tsx scripts/fetch-trending-appstore.ts",
+    "audit:freshness": "tsx scripts/audit-freshness.ts",
+    "test": "tsx --test tests/*.test.ts",
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {
