@@ -98,8 +98,8 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
   const regularNoBoxScore = staged && profile ? noBoxScoreGames(staged.regular.sport, profile.games, profile.recorded) : 0;
   const playoffsNoBoxScore = staged?.playoffs ? noBoxScoreGames(staged.playoffs.sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
   const playinNoBoxScore = staged?.playin ? noBoxScoreGames(staged.playin.sport, staged.playin.games, staged.playin.recorded) : 0;
-  const unlistedCount = staged ? unlistedGameCount(staged) : 0;
-  const unlisted = unlistedCount > 0 ? unlistedGamesNote(unlistedCount) : null;
+  const countedNoBoxScore = staged ? unlistedGameCount(staged) : 0;
+  const unlisted = countedNoBoxScore > 0 ? unlistedGamesNote(countedNoBoxScore) : null;
   // The sections built from game rows say so: the splits by the regular season's games without a box score, best
   // games (which reads every counted game) by all of them.
   const regularRowsNote = regularNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
@@ -164,7 +164,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
 
           {staged.counted.best.length > 0 && (
             <section>
-              <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, unlistedCount)}>Best games</SectionHeader>
+              <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, countedNoBoxScore)}>Best games</SectionHeader>
               <PlayerBestGames league={league} profile={staged.counted} />
             </section>
           )}

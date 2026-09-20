@@ -256,10 +256,13 @@ export function seasonsFromPayload(
   return out;
 }
 
-/** The NFL games played the loader would store for each season of a live payload (from `minYear` on),
- * for the same years `seasonsFromPayload` returns: `seasonGamesPlayed`, which sums a traded player's
- * teams (ESPN's Totals row GP is only the first team's, so it is just a floor). Null where the loader stores none (no readable GP,
- * or a GP of 0, which it drops), so the caller falls back to the categories' GP. */
+/** The games played `seasonGamesPlayed` reads from each season of a live payload (from `minYear` on), for the same
+ * years `seasonsFromPayload` returns: the larger of the Totals row's GP and the sum of a traded player's teams' GPs
+ * (a Totals row's GP can be only the first team's, so it is just a floor). It is what the loader stores as
+ * games_played for the NFL; the NBA loader stores the row's own GP instead, so in live mode this figure can be above an
+ * NBA row's GP, and `espnFigures` then reports it as ESPN's games, which flags a first-team-only Totals GP for the NBA
+ * as well. Null where there is none (no readable GP, or a GP of 0, which the loader drops), so the caller falls back to
+ * the categories' GP. */
 export function gamesPlayedFromPayload(categories: EspnCategory[], minYear: number): Map<number, number | null> {
   const out = new Map<number, number | null>();
   for (const year of payloadYears(categories, minYear)) {
@@ -309,7 +312,8 @@ export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<num
 
 /** Whether ESPN's stored season row is one the site cannot use though ESPN counts more games than the site has
  * logged: `averages.GP` is above `loggedGames` (the games with a stat line) but `espnSeasonTotals` rejects the
- * row (its points fail `pts = 2 x FGM + 3PM + FTM`, a made count exceeds its attempts, or a figure is missing).
+ * row (its points fail `pts = 2 x FGM + 3PM + FTM`, a made count exceeds its attempts, its averages' PTS is not the
+ * totals' PTS over GP to within 0.06, or a figure is missing).
  * The season then falls back to the box-derived line, silently short of ESPN's games; this is how the audit
  * lists it. A row with no readable GP, or whose GP is not above the logged games, is not flagged. */
 export function unusableEspnRow(categories: unknown, loggedGames: number): boolean {

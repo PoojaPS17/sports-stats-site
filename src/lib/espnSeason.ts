@@ -66,9 +66,9 @@ export function espnSeasonTotals(categories: unknown): EspnSeasonTotals | null {
   const ft = pairAt(totals, "FT");
   if (pts === null || reb === null || ast === null || stl === null || blk === null || to === null || !fg || !tp || !ft) return null;
   if (pts !== 2 * fg[0] + tp[0] + ft[0] || fg[0] > fg[1] || tp[0] > tp[1] || ft[0] > ft[1]) return null;
-  // The averages' PTS, when there is one, is the totals' PTS over GP rounded to one decimal (an error of up to 0.05,
-  // and a little more from the totals' own rounding here): a row where they part is not one season, e.g. GP and averages
-  // of one stint next to the totals of the whole season.
+  // The averages' PTS, when there is one, is the totals' PTS over GP rounded to one decimal, so it is off by up to 0.05 in a
+  // sound row (the totals are whole numbers); 0.06 leaves room for floating-point error. A row where they part is not one
+  // season, e.g. the GP and averages of one stint next to the totals of the whole season.
   const averagePts = numberAt(averages, "PTS");
   if (averagePts !== null && Math.abs(averagePts - pts / games) > 0.06) return null;
   return {

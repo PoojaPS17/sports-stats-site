@@ -5,8 +5,8 @@ import { formatSeasonLabel, LEAGUE_LABEL, type League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
 import { careerStripStats } from "./PlayerStatsShared";
 
-// The numbers a reader came for, in one row: appearances and record on record,
-// then the sport's headline figures — all summed from the game log below.
+// The numbers a reader came for, in one row: games and record, then the sport's headline figures,
+// as the profile has them (summed from the game log, or ESPN's own season figures for a season the log is short of).
 export function PlayerCareerStrip({ league, profile }: { league: League; profile: PlayerProfile }) {
   const from = profile.seasons[profile.seasons.length - 1]?.season ?? null;
   const to = profile.seasons[0]?.season ?? null;
@@ -20,7 +20,7 @@ export function PlayerCareerStrip({ league, profile }: { league: League; profile
       </div>
       <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
         <span>
-          {LEAGUE_LABEL[league]} games on record{span ? `, ${span}` : ""}.
+          {LEAGUE_LABEL[league]}{span ? `, ${span}` : ""}.
         </span>
         {profile.teams.length > 0 && (
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">

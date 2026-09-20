@@ -313,9 +313,9 @@ test("ESPN line: a row that is inconsistent with itself is never a line, so the 
   assert.equal(p.seasons[0].games, 7);
 });
 
-test("ESPN line: a stored games figure above the row's GP means the row is one stint, so the season keeps its box behaviour", () => {
-  // The loader's games_played is the whole-season floor (the larger of ESPN's Totals GP and the sum of the teams' GPs);
-  // the stored row's GP is only the first team's games here (30 of 70), so its per-game line would be wrong.
+test("ESPN line: the defensive guard refuses the row when a stored games figure (70) is above the row's GP (30)", () => {
+  // A state the NBA loader does not produce today (it stores the row's own GP as games_played); the guard is there in case
+  // a whole-season figure ever comes from elsewhere, and then the row's per-game line (1000 points over 30 games) is not used.
   const rows = games(20, 10); // one team, 200 recorded points, no listed game
   const stint = espnFor(espnLine({ games: 30, pts: 1000, fgm: 400, fga: 900, tpm: 100, tpa: 300, ftm: 100, fta: 120 }));
   const reported = new Map([[2025, 70]]);
@@ -323,11 +323,11 @@ test("ESPN line: a stored games figure above the row's GP means the row is one s
   assert.equal(p.seasons[0].lineSource, "box");
   assert.equal(p.seasons[0].line.pts, 10);
   assert.deepEqual(plain(p), plain(buildProfile("nba", rows, rows, reported)));
-  // The same row with no stored games figure has nothing to contradict it (the reader's own check still may).
+  // The same row with no stored games figure has nothing to contradict it here (the reader's own checks are tested apart).
   assert.equal(buildProfile("nba", rows, rows, undefined, stint).seasons[0].lineSource, "espn");
 });
 
-test("ESPN line: a stored games figure above the row's GP never lowers the games the page showed before", () => {
+test("ESPN line: the defensive guard, with a stored games figure (82) above the row's GP (75), keeps the games the page showed before", () => {
   const rows = [...games(20, 10), ...listed(3)];
   const reported = new Map([[2025, 82]]);
   const p = buildProfile("nba", rows, rows, reported, espnFor(espnLine({ games: 75, pts: 900 })));
