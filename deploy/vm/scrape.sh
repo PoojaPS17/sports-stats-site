@@ -3,11 +3,20 @@
 # (GitHub's cron ran it about every 3 hours instead of every 15 minutes); systemd timers call
 # `scrape.sh <tick|daily|hourly>`. A failing step is recorded but never stops later, independent
 # steps; the job exits 1 if any step failed so systemd and journalctl show it.
+# `migrate` runs only in the daily job (after its git pull), so after any manual `git pull` on
+# the VM, run `npm run migrate` yourself.
 set -uo pipefail
 
-cd "${SCRAPE_DIR:-/opt/sportsdb/scrapers}"
+scrape_dir="${SCRAPE_DIR:-/opt/sportsdb/scrapers}"
+cd "$scrape_dir" || { echo "[scrape] cannot cd to $scrape_dir" >&2; exit 1; }
 
 failed=0
+check_out=""
+
+# Remove the check:live temp file however the job ends; a SIGTERM (systemd stop or timeout) turns
+# into a normal exit so the EXIT trap still runs.
+trap 'rm -f "$check_out"' EXIT
+trap 'exit 143' TERM INT HUP
 
 # run <npm-script> [-- args]: run one scraper step, remember a failure, keep going.
 run() {
@@ -29,13 +38,16 @@ update_code() {
 
 # Two scoreboard requests per league decide whether the real fetch runs, and for which leagues.
 job_tick() {
-  local out should_scrape mode leagues
-  out="$(mktemp)"
-  GITHUB_OUTPUT="$out" FORCE_SCRAPE=false run check:live
-  should_scrape="$(sed -n 's/^should_scrape=//p' "$out")"
-  mode="$(sed -n 's/^mode=//p' "$out")"
-  leagues="$(sed -n 's/^leagues=//p' "$out")"
-  rm -f "$out"
+  local should_scrape mode leagues
+  # A stray SCRAPE_MODE / SCRAPE_LEAGUES from systemd or .env.local must never narrow a run;
+  # only the values computed below are passed, per step.
+  unset SCRAPE_MODE SCRAPE_LEAGUES
+  check_out="$(mktemp "${TMPDIR:-/tmp}/scrape-check.XXXXXX")"
+  GITHUB_OUTPUT="$check_out" FORCE_SCRAPE=false run check:live
+  should_scrape="$(sed -n 's/^should_scrape=//p' "$check_out")"
+  mode="$(sed -n 's/^mode=//p' "$check_out")"
+  leagues="$(sed -n 's/^leagues=//p' "$check_out")"
+  rm -f "$check_out"
   if [ "$should_scrape" = "true" ]; then
     SCRAPE_LEAGUES="$leagues" run seed:teams
     SCRAPE_MODE="$mode" SCRAPE_LEAGUES="$leagues" run fetch:all
@@ -47,6 +59,7 @@ job_tick() {
 
 # Full update of every league, plus the once-a-day sweeps.
 job_daily() {
+  unset SCRAPE_MODE SCRAPE_LEAGUES
   update_code
   run migrate
   run seed:teams
@@ -63,6 +76,7 @@ job_daily() {
 
 # Feeds the old workflow never scheduled, then the alarm for any scraper that stopped.
 job_hourly() {
+  unset SCRAPE_MODE SCRAPE_LEAGUES
   run fetch:injuries
   run fetch:f1-scores
   run fetch:f1-standings
