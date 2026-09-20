@@ -158,3 +158,41 @@
 7. JSX has no automated test. After tsc and lint pass, do this manual check and report it: render is not possible without a database, so instead re-read every changed JSX expression for `undefined`/`NaN` risks (`games - recorded` on both profiles, an empty `seasons` list, `staged.counted` when there are no counted rows).
 
 - [ ] **Step 1:** write the failing tests (copy helpers, `recorded`, teams, milestone). **Step 2:** run them, see them fail for the right reason. **Step 3:** implement `playerProfile.ts` and `playerCopy.ts`, then the components and pages. **Step 4:** `npx tsx --test tests/player-stages.test.ts tests/player-copy.test.ts tests/player-log.test.ts`, then `npm test`, `npx tsc --noEmit`, `npm run lint`. **Step 5:** commit: `fix: player pages say which games ESPN published no box score for`.
+
+### Task 4: The player-totals audit tells "no box score" from a real mismatch
+
+**Files:**
+- Modify: `scripts/lib/audit-player-totals.ts` (`SeasonFigures`, `Verdict`, `compareSeason`, `siteSeasons`, doc comments)
+- Modify: `scripts/audit-player-totals.ts` (summary, listing, header comment)
+- Test: `tests/audit-player-totals.test.ts` (append; existing tests keep passing untouched)
+
+**Why.** `audit:player-totals nba` on production reported 1,343 MISMATCH because ESPN's headline GP and PPG count Bulls and Pelicans games (2014-15 to 2017-18) that ESPN published no box score for, so the site's own per-game average covers fewer games than ESPN's. After Tasks 2 and 3 the site shows ESPN's games played for such seasons, and averages over the games with a box score. The audit must (a) keep failing a real mismatch and (b) list the expected shortfall separately, with the reason. Read-only script; nothing here writes.
+
+**Interfaces:**
+- Consumes (from Tasks 2 and 3): `SeasonLine.games`, `SeasonLine.recorded`, `SeasonLine.unrecorded`, `SeasonLine.gamesSource` (`"espn" | "logged" | "listed"`), `PlayerProfile.rows` (played rows, each with `stats.box.PTS`).
+- Produces (exact names):
+  - `SeasonFigures.noBoxScore?: { listed: number; recorded: number; points: number; bestGame: number }` (site side, NBA only, present only when the season's `unrecorded > 0`): `listed` = `recorded + unrecorded` (the player's own count from our rows, before ESPN's figure is applied); `recorded` = games with a stat line; `points` = the sum of PTS over those recorded games; `bestGame` = the largest PTS in one recorded game that season (0 when none).
+  - `Verdict` gains `"explained (no box score)"`.
+  - `export const MAX_LISTED_DRIFT = 2` (the largest gap between our listed count and ESPN's games played that was seen in production: 1,502 affected player-seasons, 1,294 exact, the other 66 within 1 or 2 games; causes seen: a game with no player rows at all, a listed player who did not play).
+
+**Behaviour to implement (`compareSeason`, only when `options.league === "nba"` and `site.noBoxScore` is present and ESPN has data with `espn.games !== null`)**
+
+1. `games`: the site's shown `site.games` is compared with `espn.games` exactly as now (with the stored ESPN figure it is equal by construction; a `"listed"` season has no ESPN row and stays `no ESPN row` through the existing branch). In addition `Math.abs(site.noBoxScore.listed - espn.games) > MAX_LISTED_DRIFT` is a `MISMATCH` with a difference `{ field: "games (listed)", site: listed, espn: espn.games }`.
+2. `ppg`: ESPN's PPG covers all of `espn.games`, the site's average covers `recorded`. Let `missingGames = espn.games - recorded`. If `missingGames <= 0`, compare `ppg` as now (nothing is missing, so it must match). Otherwise, unless the one-decimal `ppg` values are equal (then no difference), the ppg difference is **explained** when `espnTotal = espn.ppg * espn.games` satisfies `espnTotal - points >= -tol` and `espnTotal - points <= bestGame * missingGames + tol`, with `tol = 0.05 * espn.games` (ESPN publishes PPG to one decimal). Outside those bounds the ppg difference stays a real `MISMATCH` difference. `espn.ppg === null` is treated as 0, as `differs` does now.
+3. Verdict: no real differences and at least one explained ppg difference → `"explained (no box score)"` (its `differences` carry the ppg difference for the listing). No differences at all → `match`. Any real difference → `MISMATCH`, listing only real ones (plus an explained ppg one is NOT listed there). NFL, and NBA seasons without `noBoxScore`, behave exactly as today.
+4. `siteSeasons("nba", regular)` sets `noBoxScore` on the season's figures when `season.unrecorded > 0`, computing `points` and `bestGame` from `regular.rows` of that season with the same `cell(r.stats, "box", "PTS")` reader the page uses (null counts as 0). Its `ppg` figure is unchanged (`season.line.pts`).
+
+**CLI (`scripts/audit-player-totals.ts`)**: an `explained` list; summary line `  explained (no box score):   N   (ESPN published no box score for some of the team's games; the games figure matches ESPN or is within 2, the average is inside what those games could hold; never fails the run)`. Counted in `compared` (both sides have the season) but not in `matched`. A listing via the existing `section(...)` helper titled `explained: ESPN published no box score for some of the team's games` (measure: games without a box score = `espn games - recorded`; use the finding's differences to get what you need, add fields to `Finding` if required). `--strict` does not fail on it. The header comment and `USAGE` text mention the new class. Exit codes are unchanged.
+
+**Tests (write first).** In `tests/audit-player-totals.test.ts`, with `SeasonFigures` literals:
+- games equal ESPN's and ppg lower than ESPN's but inside the bound → `"explained (no box score)"`.
+- ppg exactly equal at one decimal → `match`.
+- ppg drift above the bound (`bestGame * missingGames + tol`) → `MISMATCH` with a `ppg` difference; ppg below the lower bound (site total above ESPN's total by more than `tol`) → `MISMATCH`.
+- rounding: a drift that is inside `tol` only → explained.
+- `listed` differs from ESPN by `MAX_LISTED_DRIFT` → not a mismatch on games; by `MAX_LISTED_DRIFT + 1` → `MISMATCH` with field `games (listed)`.
+- `missingGames <= 0` with a ppg difference → `MISMATCH` (nothing is missing, so it must match).
+- a season with no `noBoxScore` and every existing case (NBA and NFL): unchanged (the existing tests are the guard).
+- `siteSeasons("nba", …)` built from `buildStagedProfile` rows with `no_box_score: true` rows sets `noBoxScore` with the right `listed`, `recorded`, `points`, `bestGame`, and leaves it unset for an ordinary season.
+- a `"listed"` season with no ESPN row is `no ESPN row`.
+
+- [ ] **Step 1:** write the failing tests. **Step 2:** run `npx tsx --test tests/audit-player-totals.test.ts`, see them fail for the right reason. **Step 3:** implement. **Step 4:** that file, then `npm test`, `npx tsc --noEmit`, `npm run lint`. **Step 5:** commit: `fix: the player-totals audit lists games ESPN published no box score for as explained`.
