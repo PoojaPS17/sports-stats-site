@@ -36,10 +36,19 @@ const DYNAMIC_ON_PURPOSE: Record<string, string> = {
   "calendar/[league]/[slug]/route.ts": "reads ?download from the request",
 };
 
-// The two routes whose figures cannot go out of date, so the five-minute cap does not apply.
-const LONG_LIVED: Record<string, string> = {
-  "[league]/teams/[slug]/about/page.tsx": "home venue, city and head coach only",
+// Every file under src/app allowed to keep a copy for longer than the cap, and why. A page that
+// reads the request is on this list only where that read is unconditional: /[league]/injuries 404s
+// for a league with no injury tracker before it ever looks at the query, and that render *is*
+// cached (measured: `x-nextjs-cache: REVALIDATED`, `s-maxage`), which is why it is not here.
+const ABOVE_CAP: Record<string, string> = {
+  "[league]/teams/[slug]/about/page.tsx": "home venue, city and head coach only — nothing that moves",
   "[league]/teams/[slug]/opengraph-image.tsx": "crest, club name and competition label only",
+  "[league]/compare/page.tsx": "reads ?a and ?b in generateMetadata, so every render is per request",
+  "[league]/compare/players/page.tsx": "reads ?a and ?b in generateMetadata, so every render is per request",
+  "calendar/[league]/route.ts": "reads ?download from the request, so every render is per request",
+  "calendar/[league]/[slug]/route.ts": "reads ?download from the request, so every render is per request",
+  "sitemap.ts": "a day-old list of addresses is not a wrong figure; see the fix round 2 report",
+  "sitemap-index.xml/route.ts": "names the section sitemaps, which change when a section is added",
 };
 
 // The exact window each cached route keeps. Listed so that changing one is deliberate and the
@@ -125,6 +134,26 @@ function scan(): RouteModule[] {
 const MODULES = scan();
 const DYNAMIC_SEGMENT_MODULES = MODULES.filter((m) => m.uncovered.length > 0);
 
+/** Every file under src/app that sets a cache window, route module or not (sitemap.ts, layouts). */
+function revalidateFiles(): { rel: string; revalidate: number }[] {
+  const out: { rel: string; revalidate: number }[] = [];
+  const walk = (dir: string, rel: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(path, relPath);
+        continue;
+      }
+      if (!/\.tsx?$/.test(entry.name)) continue;
+      const revalidate = revalidateOf(code(path));
+      if (revalidate !== null) out.push({ rel: relPath, revalidate });
+    }
+  };
+  walk(APP, "");
+  return out;
+}
+
 test("the scan finds the app's route modules", () => {
   assert.ok(MODULES.length > 40, `found ${MODULES.length} route modules`);
   assert.ok(DYNAMIC_SEGMENT_MODULES.length > 20, `found ${DYNAMIC_SEGMENT_MODULES.length} with an unenumerated dynamic segment`);
@@ -155,20 +184,21 @@ test("a route that reads the request cannot claim to be cacheable", () => {
   }
 });
 
-test("no cached route outlives the site-wide age cap", () => {
+test("no window anywhere in the app outlives the site-wide age cap", () => {
   const cap = expireTime();
   assert.equal(cap, 300, "the cap in next.config.ts is five minutes");
-  for (const mod of MODULES.filter((m) => hasStaticParams(m.src))) {
-    const revalidate = revalidateOf(mod.src);
-    if (revalidate === null) continue; // layouts set no window of their own
-    if (mod.rel in LONG_LIVED) {
-      assert.ok(revalidate > cap, `${mod.rel} is listed as long-lived, so it should say so with a longer window`);
-      continue;
-    }
-    assert.ok(
-      revalidate <= cap,
-      `${mod.rel} keeps a copy for ${revalidate}s but the cap is ${cap}s, so Cloudflare would serve it longer than the origin allows: lower it, or add it to LONG_LIVED with a reason`
-    );
+  // Every file, not only the ones with generateStaticParams: `expireTime` bounds how old a served
+  // copy may be at the origin, but `revalidate` is what Cloudflare is told in `s-maxage`, so a
+  // window above the cap would let the edge serve something older than the origin ever would.
+  const over = revalidateFiles()
+    .filter(({ rel, revalidate }) => revalidate > cap && !(rel in ABOVE_CAP))
+    .map(({ rel, revalidate }) => `${rel} (${revalidate}s)`);
+  assert.deepEqual(over, [], `lower these to ${cap} or under, or add them to ABOVE_CAP with a reason`);
+
+  for (const rel of Object.keys(ABOVE_CAP)) {
+    const found = revalidateFiles().find((f) => f.rel === rel);
+    assert.ok(found, `${rel} still exports a revalidate (the ABOVE_CAP list is stale otherwise)`);
+    assert.ok(found.revalidate > cap, `${rel} is listed as long-lived but now sits at or under the cap: drop it from ABOVE_CAP`);
   }
 });
 

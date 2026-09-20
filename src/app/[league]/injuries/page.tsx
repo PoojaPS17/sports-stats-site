@@ -10,7 +10,9 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { ImageActions } from "@/components/ImageActions";
 import { InjuriesExportCard } from "@/components/InjuriesExportCard";
 
-export const revalidate = 900;
+// The filtered views read the query, so those renders are per request; a league with no injury
+// tracker 404s before that and is cached, so this window is held to the cap (next.config.ts).
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
