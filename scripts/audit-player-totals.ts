@@ -188,6 +188,9 @@ async function main() {
   console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  games short (no stat line): ${short.length}   (NFL: the page shows the logged count because no ESPN games figure is stored for the season; every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  nothing to compare:         ${nothing}   (neither side has anything for the season)`);
+  if (!args.live && args.leagues.includes("nfl")) {
+    console.log("  Note: in stored mode an NFL season with a stored games figure matches on games by construction (the page and this audit read the same column); only --live checks that figure against ESPN.");
+  }
   if (failures.length > 0) console.log(`  failed reads:               ${failures.length}   (fails the run)`);
 
   if (mismatches.length > 0) {

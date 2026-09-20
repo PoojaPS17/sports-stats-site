@@ -152,7 +152,7 @@ export function espnFigures(league: AuditLeague, categories: StoredCategories, g
   const figures: Record<string, number | null> = {};
   for (const f of NFL_FIGURES) figures[f.field] = figureAt(categories[f.category], f.label);
   const fromCategories = gps.length > 0 ? Math.max(...gps) : null;
-  return { games: typeof gamesPlayed === "number" ? gamesPlayed : fromCategories, figures };
+  return { games: typeof gamesPlayed === "number" && gamesPlayed > 0 ? gamesPlayed : fromCategories, figures };
 }
 
 export interface EspnCategory {
