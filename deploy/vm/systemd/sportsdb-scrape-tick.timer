@@ -1,0 +1,10 @@
+[Unit]
+Description=SportsDB live-game tick (every 15 minutes)
+
+[Timer]
+OnCalendar=*:0/15
+AccuracySec=10s
+Unit=sportsdb-scrape@tick.service
+
+[Install]
+WantedBy=timers.target

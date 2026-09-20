@@ -1,0 +1,16 @@
+[Unit]
+Description=SportsDB scraper job %i
+After=network-online.target pgbouncer.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/sportsdb/scrapers
+EnvironmentFile=/opt/sportsdb/scrape.env
+# NODE_ENV is left unset on purpose: the scripts run through tsx, a dev dependency installed by npm ci.
+# systemd does not start a running oneshot instance twice, but tick, daily and hourly are different instances,
+# so all three wait their turn on one shared lock (a waiting instance stays activating, so its own timer re-triggers are no-ops).
+ExecStart=/usr/bin/flock /run/lock/sportsdb-scrape.lock /opt/sportsdb/scrapers/deploy/vm/scrape.sh %i
+TimeoutStartSec=4h
+Nice=10

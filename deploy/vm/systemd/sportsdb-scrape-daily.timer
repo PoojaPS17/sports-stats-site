@@ -1,0 +1,10 @@
+[Unit]
+Description=SportsDB daily full update (06:07 UTC)
+
+[Timer]
+OnCalendar=*-*-* 06:07:00 UTC
+Persistent=true
+Unit=sportsdb-scrape@daily.service
+
+[Install]
+WantedBy=timers.target
