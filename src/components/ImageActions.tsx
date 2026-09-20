@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { toBlob } from "html-to-image";
 import { CARD, CARD_FONT } from "@/lib/exportTheme";
 
 type Busy = "share" | "download" | null;
@@ -28,6 +27,8 @@ export function ImageActions({ filename, card, width = 720, shareTitle }: { file
   const [copied, setCopied] = useState(false);
 
   const render = async (): Promise<Blob> => {
+    // Loaded on the first click rather than shipped with every page that has a share button.
+    const { toBlob } = await import("html-to-image");
     const blob = ref.current ? await toBlob(ref.current, { pixelRatio: 2, cacheBust: true, backgroundColor: CARD.bg }) : null;
     if (!blob) throw new Error("render failed");
     return blob;

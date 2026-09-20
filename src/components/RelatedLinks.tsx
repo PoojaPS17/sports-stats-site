@@ -23,7 +23,7 @@ export function RelatedLinks({ groups, title = "Related pages", description }: {
             <ul className="flex flex-col gap-1.5 text-sm">
               {g.links.map((l) => (
                 <li key={l.href + l.label}>
-                  <Link href={l.href} className="flex items-center gap-2 hover:text-[var(--accent)]">
+                  <Link href={l.href} prefetch={false} className="flex items-center gap-2 hover:text-[var(--accent)]">
                     {(l.image || l.imageName) && <TeamLogo name={l.imageName ?? l.label} logoUrl={l.image ?? null} size={18} />}
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{l.label}</span>

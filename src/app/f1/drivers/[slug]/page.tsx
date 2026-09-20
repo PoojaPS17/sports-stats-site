@@ -46,7 +46,7 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
     <div className="flex flex-col gap-6">
       <JsonLd data={breadcrumbSchema([{ label: "Formula 1", href: "/f1" }, { label: "Standings", href: "/f1/standings" }, { label: driver.name }])} />
       <div className="flex items-center gap-3">
-        <TeamLogo name={driver.name} logoUrl={driver.headshot_url} size={56} />
+        <TeamLogo name={driver.name} logoUrl={driver.headshot_url} size={56} priority />
         <div>
           <h1 className="page-title">{driver.name}</h1>
           <p className="text-sm text-[var(--text-muted)]">F1{currentTeam && ` · ${currentTeam}`}</p>

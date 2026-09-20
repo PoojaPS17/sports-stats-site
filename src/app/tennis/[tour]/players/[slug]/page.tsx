@@ -76,7 +76,7 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
     <div className="flex flex-col gap-6">
       <div className="card flex items-center gap-4 overflow-hidden px-6 py-6">
         <div className="shrink-0 overflow-hidden rounded-full border-2 border-[var(--surface)] bg-[var(--surface-muted)]">
-          <TeamLogo name={player.name} logoUrl={player.headshot_url} size={72} />
+          <TeamLogo name={player.name} logoUrl={player.headshot_url} size={72} priority />
         </div>
         <div className="min-w-0">
           <h1 className="page-title flex items-center gap-2">

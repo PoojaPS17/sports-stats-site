@@ -48,7 +48,7 @@ export default async function F1ConstructorPage({ params }: { params: Promise<{ 
     <div className="flex flex-col gap-6">
       <JsonLd data={breadcrumbSchema([{ label: "Formula 1", href: "/f1" }, { label: "Standings", href: "/f1/standings" }, { label: team.name }])} />
       <div className="flex items-center gap-3">
-        <TeamLogo name={team.name} logoUrl={team.logo_url} color={team.color} size={56} />
+        <TeamLogo name={team.name} logoUrl={team.logo_url} color={team.color} size={56} priority />
         <div>
           <h1 className="page-title">{team.name}</h1>
           <p className="text-sm text-[var(--text-muted)]">F1 Constructor</p>

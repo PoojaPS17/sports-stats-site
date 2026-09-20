@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { pageMeta } from "@/lib/metadata";
-import Link from "next/link";
 import { isLeague, LEAGUE_LABEL, getAllPlayers } from "@/lib/queries";
 import { AdSlot } from "@/components/AdSlot";
-import { TeamLogo } from "@/components/TeamLogo";
+import { PlayerIndexList } from "@/components/PlayerIndexList";
+import { packPlayers } from "@/lib/playerIndex";
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
@@ -31,21 +30,7 @@ export default async function PlayersIndexPage({ params }: { params: Promise<{ l
           No player stats yet. They appear once the first games of the season are in.
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {players.map((p) => (
-            <Link
-              key={p.espn_id}
-              href={`/${league}/players/${p.slug}`}
-              className="card flex items-center gap-2 px-3 py-2 text-sm"
-            >
-              <TeamLogo name={p.name} logoUrl={p.headshot_url} color={p.team_color} size={24} />
-              <span className="truncate">
-                <span className="font-medium">{p.name}</span>
-                {p.team_name && <span className="block text-xs text-[var(--text-muted)]">{teamDisplayName(p.team_name)}</span>}
-              </span>
-            </Link>
-          ))}
-        </div>
+        <PlayerIndexList league={league} {...packPlayers(players)} />
       )}
     </div>
   );

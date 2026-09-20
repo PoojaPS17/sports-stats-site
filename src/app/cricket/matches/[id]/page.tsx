@@ -85,7 +85,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const sideRow = ({ name, score, winner, logo }: (typeof sides)[number]) => {
     return (
       <div className="flex items-center gap-3">
-        <TeamLogo name={name} logoUrl={logo} size={40} />
+        <TeamLogo name={name} logoUrl={logo} size={40} priority />
         <span className={`min-w-0 flex-1 truncate text-lg ${state === "post" && !winner ? "text-[var(--text-muted)]" : "font-bold"}`}>{name}</span>
         <span className={`shrink-0 text-lg tabular-nums ${state === "post" && !winner ? "text-[var(--text-muted)]" : "font-bold"}`}>{score}</span>
       </div>

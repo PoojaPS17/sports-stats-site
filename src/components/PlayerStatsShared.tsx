@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
-import { TeamLogo } from "./TeamLogo";
 import type { League } from "@/lib/queries";
 import { gamesHeader, headlineCareerStats, noBoxScoreGames, type PlayerLogRow, type PlayerProfile, type Record3 } from "@/lib/playerProfile";
 import { noBoxScoreGamesTitle } from "@/lib/playerCopy";
@@ -55,12 +54,12 @@ export function ResultChip({ row }: { row: PlayerLogRow }) {
   );
 }
 
-/** Opponent with venue marker, linking to the match page. */
+/** Opponent with venue marker, linking to the match page. Text only: a crest per row of a long game log would add an image to every one
+ * of hundreds of rows, and the name says who it was. The link is not prefetched, for the same reason. */
 export function OpponentCell({ league, row, withDate = false }: { league: League; row: PlayerLogRow; withDate?: boolean }) {
   return (
-    <Link href={`/${league}/games/${row.game_espn_id}`} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
+    <Link href={`/${league}/games/${row.game_espn_id}`} prefetch={false} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
       <span className="w-5 text-[11px] font-semibold uppercase text-[var(--text-faint)]">{row.is_home ? "vs" : "at"}</span>
-      <TeamLogo name={teamDisplayName(row.opponent_name)} logoUrl={row.opponent_logo} size={18} />
       <span className="truncate font-medium">{teamDisplayName(row.opponent_name)}</span>
       {withDate && <span className="text-xs text-[var(--text-muted)]">{fmtDate(row.date)}</span>}
     </Link>

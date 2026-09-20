@@ -127,7 +127,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         <section className="card overflow-hidden">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-6 sm:px-8">
             <Link href={`/${league}/teams/${teamA.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-              <TeamLogo name={teamDisplayName(teamA.name)} logoUrl={teamA.logo_url} color={teamA.color} size={64} />
+              <TeamLogo name={teamDisplayName(teamA.name)} logoUrl={teamA.logo_url} color={teamA.color} size={64} priority />
               <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamA.name)}</span>
             </Link>
             <div className="flex flex-col items-center">
@@ -140,7 +140,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
               {soccer && <span className="mt-1 text-xs text-[var(--text-muted)]">{h2h.draws} draws</span>}
             </div>
             <Link href={`/${league}/teams/${teamB.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-              <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} />
+              <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} priority />
               <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamB.name)}</span>
             </Link>
           </div>
