@@ -376,7 +376,7 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
     `select
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-       g.status_state, g.status_detail, g.status_summary, g.round, g.completed,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.completed,
        g.home_team_espn_id, g.away_team_espn_id,
        ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
        at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
@@ -389,7 +389,11 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
     [league, teamA.espn_id, teamB.espn_id]
   );
 
+  // Every completed meeting is listed; the tally (meetings, wins, goals, biggest wins, the current
+  // run) leaves out games that say nothing about the rivalry (preseason, All-Star, the NBA Cup final)
+  // and keeps playoffs and the play-in, as Elo does.
   const completed = games.filter((g) => g.completed && g.home_score != null && g.away_score != null);
+  const counted = completed.filter((g) => g.stage !== "excluded");
   const upcoming = [...games].reverse().find((g) => !g.completed) ?? null;
 
   let winsA = 0;
@@ -407,7 +411,7 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
     return { gf: isHome ? g.home_score! : g.away_score!, ga: isHome ? g.away_score! : g.home_score! };
   }
 
-  for (const g of completed) {
+  for (const g of counted) {
     const a = sideOf(g, teamA.espn_id);
     goalsA += a.gf;
     goalsB += a.ga;
@@ -427,11 +431,11 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
   }
 
   let streak: HeadToHead["streak"] = null;
-  if (completed.length > 0) {
-    const first = sideOf(completed[0], teamA.espn_id);
+  if (counted.length > 0) {
+    const first = sideOf(counted[0], teamA.espn_id);
     const kind: "A" | "B" | null = first.gf > first.ga ? "A" : first.gf < first.ga ? "B" : null;
     let length = 0;
-    for (const g of completed) {
+    for (const g of counted) {
       const s = sideOf(g, teamA.espn_id);
       const k = s.gf > s.ga ? "A" : s.gf < s.ga ? "B" : null;
       if (k !== kind) break;
@@ -440,12 +444,12 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
     streak = { team: kind, length };
   }
 
-  const seasons = completed.map((g) => g.season_year).filter((s): s is number => s != null);
+  const seasons = counted.map((g) => g.season_year).filter((s): s is number => s != null);
 
   return {
     teamA,
     teamB,
-    meetings: completed.length,
+    meetings: counted.length,
     winsA,
     winsB,
     draws,

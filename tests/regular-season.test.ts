@@ -75,10 +75,11 @@ test("matchweeks fall back to round when a row has no stage", () => {
   assert.deepEqual(weeks.filter((w) => w.playoff).flatMap((w) => w.games.map((g) => g.espn_id)), ["po"]);
 });
 
-// A team page's record and form are the regular season's: playoff, play-in and games that do not
-// count leave them alone, while a league without split stages (rounds are 'other') keeps counting
-// every completed game as before.
-test("an NBA team's record and form count regular-season games only", () => {
+// A team page's record is the regular season's: playoff, play-in and games that do not count leave it
+// alone. Recent form is a trajectory, so it also takes playoff and play-in results and skips only
+// games that do not count. A league without split stages (rounds are 'other') counts every completed
+// game as before.
+test("an NBA team's record is regular-season only; its form adds playoffs and the play-in", () => {
   const games = [
     game("po", "2026-04-25T00:00:00Z", { stage: "playoffs", round: "East 1st Round - Game 1", home_winner: false, away_winner: true }),
     game("pi", "2026-04-15T00:00:00Z", { stage: "playin", home_winner: false, away_winner: true }),
@@ -88,7 +89,8 @@ test("an NBA team's record and form count regular-season games only", () => {
   ];
   const s = summarizeTeamSeason(games, "1");
   assert.deepEqual({ w: s.wins, l: s.losses, d: s.draws }, { w: 1, l: 1, d: 0 });
-  assert.deepEqual(s.form, ["L", "W"]);
+  // Newest first: playoff L, play-in L, r2 L, r1 W; the preseason game is skipped.
+  assert.deepEqual(s.form, ["L", "L", "L", "W"]);
 });
 
 test("a team's next game still comes from every game, including the play-in", () => {
@@ -214,7 +216,6 @@ test("a play-in game is not in the table: no position or record context", async 
   const ctx = await matchContext.getMatchContext("nba", pi!);
   assert.equal(ctx?.home.record, null);
   assert.equal(ctx?.away.record, null);
-  assert.equal(ctx?.home.position, null);
 });
 
 test("a regular-season game keeps its record, counted from regular-season games only", async () => {
@@ -225,9 +226,49 @@ test("a regular-season game keeps its record, counted from regular-season games 
 });
 
 test("a game that does not count leaves Elo alone", async () => {
-  const pre = await queries.getGameByEspnId("nba", "pre");
-  assert.equal(pre?.stage, "excluded");
-  const ctx = await matchContext.getMatchContext("nba", pre!);
+  // The Cup final comes after r1 and r2, so both teams have Elo history going in: the only reason
+  // there is no rating after it is that the game is skipped, not that the teams are new.
+  const cc = await queries.getGameByEspnId("nba", "cc");
+  assert.equal(cc?.stage, "excluded");
+  assert.equal(cc?.completed, true);
+  const ctx = await matchContext.getMatchContext("nba", cc!);
+  assert.notEqual(ctx?.home.elo, null);
+  assert.notEqual(ctx?.away.elo, null);
   assert.equal(ctx?.home.eloAfter, null);
+  assert.equal(ctx?.away.eloAfter, null);
   assert.equal(ctx?.home.record, null);
+});
+
+test("a soccer league game is in the table but a round game is not", async () => {
+  const league = await queries.getGameByEspnId("epl", "m1");
+  const first = await matchContext.getMatchContext("epl", league!);
+  assert.equal(first?.home.position?.before, null);
+  assert.notEqual(first?.home.position?.after, null);
+  const knockout = await queries.getGameByEspnId("epl", "cup");
+  const ko = await matchContext.getMatchContext("epl", knockout!);
+  assert.equal(ko?.home.position, null);
+});
+
+test("head-to-head totals skip games that do not count but the meetings list keeps them", async () => {
+  await seed("nfl", [
+    { id: "h-pre", date: "2025-08-10T00:00:00Z", seasonType: 1, scores: [40, 0] },
+    { id: "h-reg", date: "2025-10-05T00:00:00Z", seasonType: 2, scores: [30, 10] },
+    { id: "h-po", date: "2026-01-11T00:00:00Z", seasonType: 3, round: "AFC Wild Card Playoffs", scores: [17, 20] },
+  ]);
+  const h2h = await analytics.getHeadToHead("nfl", "one", "two");
+  assert.ok(h2h);
+  // The regular-season and playoff games count; the 40-0 preseason win is nowhere in the totals.
+  assert.equal(h2h.meetings, 2);
+  assert.deepEqual({ a: h2h.winsA, b: h2h.winsB, d: h2h.draws }, { a: 1, b: 1, d: 0 });
+  assert.deepEqual({ a: h2h.goalsA, b: h2h.goalsB }, { a: 47, b: 30 });
+  assert.equal(h2h.biggestWinA?.espn_id, "h-reg");
+  assert.equal(h2h.firstSeason, 2025);
+  // The list is every meeting on record, newest first.
+  assert.deepEqual(h2h.games.map((g) => g.espn_id), ["h-po", "h-reg", "h-pre"]);
+});
+
+test("head-to-head in a league without split stages is unchanged", async () => {
+  const h2h = await analytics.getHeadToHead("epl", "one", "two");
+  assert.equal(h2h?.meetings, 2);
+  assert.deepEqual(h2h?.games.map((g) => g.espn_id), ["cup", "m1"]);
 });

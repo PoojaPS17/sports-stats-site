@@ -30,29 +30,32 @@ function resultFor(game: GameRow, teamEspnId: string): ResultLetter | null {
   return "D";
 }
 
-// The record and form are the regular season's. Only the NBA and NFL split a season into stages
-// (playoffs, play-in, preseason and other games that do not count), so those are what is left out;
-// every other league's games count as they always have, round labels or not (a cricket "Match 5"
-// or "Final", a cup knockout is a game the team played).
+// The record is the regular season's. Only the NBA and NFL split a season into stages (playoffs,
+// play-in, preseason and other games that do not count), so those are what is left out; every
+// other league's games count as they always have, round labels or not (a cricket "Match 5" or
+// "Final", a cup knockout is a game the team played).
 function countsTowardRecord(g: GameRow): boolean {
   return g.stage !== "playoffs" && g.stage !== "playin" && g.stage !== "excluded";
 }
 
 // Record, recent form and next fixture derived from a team's season game list
 // (which getTeamGamesBySeason returns newest first). The next fixture comes from every game,
-// since the schedule lists them all; the record and form count regular-season games only.
+// since the schedule lists them all. The record counts regular-season games only; recent form is a
+// trajectory, so it also takes playoff and play-in results and skips only games that do not count.
 export function summarizeTeamSeason(games: GameRow[], teamEspnId: string): TeamSeasonSummary {
   let wins = 0;
   let losses = 0;
   let draws = 0;
   const form: ResultLetter[] = [];
   for (const g of games) {
-    if (!countsTowardRecord(g)) continue;
+    if (g.stage === "excluded") continue;
     const r = resultFor(g, teamEspnId);
     if (!r) continue;
-    if (r === "W") wins++;
-    else if (r === "L") losses++;
-    else draws++;
+    if (countsTowardRecord(g)) {
+      if (r === "W") wins++;
+      else if (r === "L") losses++;
+      else draws++;
+    }
     if (form.length < 5) form.push(r);
   }
   const upcoming = games.filter((g) => !g.completed && g.status_state !== "in");
