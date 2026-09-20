@@ -200,12 +200,14 @@ export default async function PlayerPage({
   const regularNoBoxScore = noBoxScoreGames(sport, profile.games, profile.recorded);
   const playoffsNoBoxScore = staged.playoffs ? noBoxScoreGames(sport, staged.playoffs.games, staged.playoffs.recorded) : 0;
   const playinNoBoxScore = staged.playin ? noBoxScoreGames(sport, staged.playin.games, staged.playin.recorded) : 0;
-  const unlistedCount = unlistedGameCount(staged);
-  const unlisted = unlistedCount > 0 ? unlistedGamesNote(unlistedCount) : null;
+  // Games without a box score across the regular season, playoffs and play-in (what best games and recent form read), not to be
+  // confused with `regularNoBoxScore`, the regular season's alone.
+  const countedNoBoxScore = unlistedGameCount(staged);
+  const unlisted = countedNoBoxScore > 0 ? unlistedGamesNote(countedNoBoxScore) : null;
   // The sections built from game rows say so: the regular-season ones by the regular season's games without a box score,
   // the ones that read every counted game (best games, recent form) by all of them.
   const regularRowsNote = regularNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
-  const countedRowsNote = unlistedCount > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
+  const countedRowsNote = countedNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
   const bands = goals ? goalBands(goals.clocks) : [];
   const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
 
@@ -290,7 +292,7 @@ export default async function PlayerPage({
 
           {staged.counted.best.length > 0 && (
             <section>
-              <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, unlistedCount)}>Best games</SectionHeader>
+              <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, countedNoBoxScore)}>Best games</SectionHeader>
               <PlayerBestGames league={league} profile={staged.counted} />
             </section>
           )}
