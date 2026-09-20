@@ -130,7 +130,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
 
       {calledOff.length > 0 && (
         <section>
-          <SectionHeader description="Not being played as scheduled">Called off</SectionHeader>
+          <SectionHeader description="Not played as scheduled. A suspended match may resume.">Postponed, cancelled or suspended</SectionHeader>
           <SeriesMatchList matches={calledOff} />
         </section>
       )}

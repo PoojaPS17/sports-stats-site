@@ -66,7 +66,7 @@ export function finishedNoScoreNote(g: Pick<GameRow, "completed" | "home_score" 
  * listed on the page with its pill but is mentioned as postponed, cancelled or called off, never counted as played
  * or described as having a final score; games still to come are not counted either.
  */
-export function scoresDayDescription(league: League, dayLabel: string, games: StatusFields[]): string {
+export function scoresDayDescription(league: League, dayLabel: string, games: (StatusFields & Pick<GameRow, "home_score" | "away_score">)[]): string {
   const label = LEAGUE_LABEL[league];
   const american = league === "nba" || league === "nfl";
   const noun = american ? "game" : "match";
@@ -74,14 +74,18 @@ export function scoresDayDescription(league: League, dayLabel: string, games: St
   const finished = games.filter((g) => g.completed).length;
   const off = games.map(gameCalledOffLabel).filter((l): l is string => l !== null);
   const toPlay = games.length - finished - off.length;
+  const inPlay = games.filter((g) => !g.completed && g.status_state === "in").length;
+  // A finished match with no scores (abandoned, no result) has a result but no final score to promise.
+  const unscored = games.some((g) => g.completed && !isGameCalledOff(g) && (g.home_score == null || g.away_score == null));
   const links = american ? "box score" : isCricketLeague(league) ? "scorecard" : "match report";
 
   let text: string;
   if (finished > 0) {
     const count = finished === games.length ? (finished === 1 ? "The one" : `All ${finished}`) : String(finished);
-    text = `${count} ${label} ${finished === 1 ? noun : nouns} played on ${dayLabel}, with final scores and a link to each ${links}.`;
+    text = `${count} ${label} ${finished === 1 ? noun : nouns} played on ${dayLabel}, with ${unscored ? "results" : "final scores"} and a link to each ${links}.`;
   } else if (toPlay > 0) {
-    text = `${toPlay} ${label} ${toPlay === 1 ? noun : nouns} to be played on ${dayLabel}, with scores as they finish.`;
+    const when = inPlay === toPlay ? "in play" : inPlay > 0 ? "in play or to be played" : "to be played";
+    text = `${toPlay} ${label} ${toPlay === 1 ? noun : nouns} ${when} on ${dayLabel}, with scores as they finish.`;
   } else {
     text = `No ${label} ${nouns} were played on ${dayLabel}.`;
   }
@@ -90,4 +94,15 @@ export function scoresDayDescription(league: League, dayLabel: string, games: St
     text += ` ${off.length} ${off.length === 1 ? noun : nouns} ${off.length === 1 ? "was" : "were"} ${reason}.`;
   }
   return text;
+}
+
+/**
+ * The status word over a game's share image: the reason for a called-off game, "Final" for a scored result,
+ * "Result" for a finished match with no scores (abandoned, no result), null for a fixture or a game in play.
+ */
+export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary">): string | null {
+  const off = gameCalledOffLabel(g);
+  if (off) return off;
+  if (!g.completed) return null;
+  return finishedNoScoreNote(g) ? "Result" : "Final";
 }

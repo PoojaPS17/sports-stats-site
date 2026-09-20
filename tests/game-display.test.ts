@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { scoresDayDescription, finishedNoScoreNote, gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
+import { scoresDayDescription, finishedNoScoreNote, shareImageStatus, gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
 
 // scheduleRowHeading and gameAccessibleLabel format in the machine's own time zone (the schedule image is rendered
 // where the viewer is), so the tests pin the zone rather than depend on where they run. New York: 12:00 UTC is
@@ -145,9 +145,30 @@ test("scoresDayDescription: a day where every game was called off says nothing w
   assert.equal(scoresDayDescription("epl", DAY, [calledOff("Postponed")]), "No Premier League matches were played on Sunday, September 20, 2026. 1 match was postponed.");
 });
 
-test("scoresDayDescription: a finished abandoned cricket match is played (a result), not called off", () => {
-  const abandoned = game({ completed: true, status_detail: "Abandoned" });
-  assert.equal(scoresDayDescription("ipl", DAY, [abandoned]), "The one IPL match played on Sunday, September 20, 2026, with final scores and a link to each scorecard.");
+test("scoresDayDescription: a finished abandoned cricket match is played (a result, not called off) but has no final score to promise", () => {
+  const abandoned = game({ completed: true, status_detail: "Abandoned", home_score: null, away_score: null });
+  assert.equal(scoresDayDescription("ipl", DAY, [abandoned]), "The one IPL match played on Sunday, September 20, 2026, with results and a link to each scorecard.");
+  // a day of scored results and one without is still "with results"
+  assert.equal(scoresDayDescription("ipl", DAY, [finished(), abandoned]), "All 2 IPL matches played on Sunday, September 20, 2026, with results and a link to each scorecard.");
+});
+
+test("scoresDayDescription: games in play are in play, not still to be played", () => {
+  const inPlay = game({ status_state: "in", status_detail: "Q3 4:12" });
+  assert.equal(scoresDayDescription("nba", DAY, [inPlay, inPlay]), "2 NBA games in play on Sunday, September 20, 2026, with scores as they finish.");
+  assert.equal(scoresDayDescription("nba", DAY, [inPlay, game()]), "2 NBA games in play or to be played on Sunday, September 20, 2026, with scores as they finish.");
+  assert.equal(scoresDayDescription("nba", DAY, [game()]), "1 NBA game to be played on Sunday, September 20, 2026, with scores as they finish.");
+  // a live game that says suspended is still in play
+  assert.match(scoresDayDescription("ipl", DAY, [game({ status_state: "in", status_detail: "Suspended" })]), /^1 IPL match in play on /);
+});
+
+test("shareImageStatus: the label over a game's share image: Final for a scored result, Result for a no-score match, the reason when called off", () => {
+  const noScore = { completed: true, status_state: "post", status_detail: "Abandoned", home_score: null, away_score: null, status_summary: "Match abandoned without a ball bowled" };
+  assert.equal(shareImageStatus(noScore), "Result");
+  assert.equal(shareImageStatus({ ...noScore, home_score: 2, away_score: 1, status_summary: null }), "Final");
+  assert.equal(shareImageStatus({ ...noScore, completed: false, status_detail: "Postponed", home_score: 0, away_score: 0 }), "Postponed");
+  assert.equal(shareImageStatus({ ...noScore, completed: true, status_detail: "Canceled" }), "Cancelled");
+  assert.equal(shareImageStatus({ ...noScore, completed: false, status_state: "pre", status_detail: "Scheduled", status_summary: null }), null);
+  assert.equal(shareImageStatus({ ...noScore, completed: false, status_state: "in", status_detail: "Suspended" }), null);
 });
 
 test("scoresDayDescription: games still to come are not counted as played", () => {
