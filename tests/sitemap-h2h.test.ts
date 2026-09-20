@@ -175,3 +175,28 @@ test("the twin and the page rule are one definition: countedMeetingSql selects e
   for (const g of rows) assert.equal(g.sql_counted, analytics.isCountedMeeting(g), `game ${g.espn_id}`);
   assert.ok(rows.some((g) => g.sql_counted) && rows.some((g) => !g.sql_counted), "both outcomes are exercised");
 });
+
+test("the 'most faced' chips use the head-to-head page's meeting count, and list only pairs with a counted meeting", async () => {
+  const { getMostFacedOpponents } = await import("../src/lib/related");
+  const idOf = (slug: string) => String(TEAMS.indexOf(slug) + 1);
+  let withChip = 0;
+  for (const team of TEAMS) {
+    const chips = await getMostFacedOpponents("nba", idOf(team), 50);
+    for (const other of TEAMS.filter((t) => t !== team)) {
+      const h2h = await analytics.getHeadToHead("nba", team, other);
+      assert.ok(h2h);
+      const chip = chips.find((c) => c.slug === other);
+      if (h2h.meetings > 0) {
+        withChip++;
+        assert.equal(chip?.games, h2h.meetings, `${team} vs ${other}: chip figure equals the page's meetings`);
+      } else {
+        assert.equal(chip, undefined, `${team} vs ${other}: no counted meeting, so no chip (page says 0 and is noindex)`);
+      }
+    }
+  }
+  assert.equal(withChip, 2 * pairs.filter(([a, b]) => EXPECTED[`${a}-${b}`]).length, "every counted pair is a chip on both teams");
+  // bravo-delta has only a preseason game (2 fixtures counted differently: completed, but excluded), alpha-bravo has 2 meetings.
+  const bravo = await getMostFacedOpponents("nba", idOf("bravo"), 50);
+  assert.equal(bravo.find((c) => c.slug === "alpha")?.games, 2);
+  assert.equal(bravo.find((c) => c.slug === "delta"), undefined);
+});

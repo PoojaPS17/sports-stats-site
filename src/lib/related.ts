@@ -2,6 +2,7 @@
 // a player page, most-faced rivals and top players on a team page. Each helper is
 // one indexed query against the latest season's stats, cheap enough to run on
 // every render.
+import { countedMeetingSql } from "./analytics";
 import { pool } from "./db";
 import { isSoccerLeague, type League } from "./leagues";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
@@ -150,13 +151,17 @@ export interface OpponentCount {
   games: number;
 }
 
-/** Opponents met most often on record, for head-to-head links. */
+/**
+ * Opponents met most often on record, for head-to-head links. `games` is the head-to-head page's own `meetings`
+ * (countedMeetingSql is the SQL twin of isCountedMeeting, so preseason and other excluded games are left out) and a
+ * pair with no counted meeting is not listed: its page says 0 meetings and is noindex, so it must not be offered.
+ */
 export async function getMostFacedOpponents(league: League, teamEspnId: string, limit = 8): Promise<OpponentCount[]> {
   const { rows } = await pool.query(
     `select t.espn_id, t.slug, t.name, t.logo_url, count(*)::int as games
      from games g
      join teams t on t.league = g.league and t.espn_id = case when g.home_team_espn_id = $2 then g.away_team_espn_id else g.home_team_espn_id end
-     where g.league = $1 and g.completed and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2)
+     where g.league = $1 and ${countedMeetingSql("g")} and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2)
      group by t.espn_id, t.slug, t.name, t.logo_url
      order by games desc, t.name
      limit $3`,
