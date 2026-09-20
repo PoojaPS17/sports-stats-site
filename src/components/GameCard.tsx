@@ -5,6 +5,7 @@ import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { LocalTime } from "./LocalTime";
 import { finishedLabel } from "@/lib/stage";
+import { gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
 
 function TeamRow({
   name,
@@ -60,26 +61,17 @@ function TeamRow({
   );
 }
 
-function accessibleLabel(game: GameRow): string {
-  if (game.completed) {
-    return `${teamDisplayName(game.away_name)} ${game.away_score_display ?? game.away_score ?? ""}, ${teamDisplayName(game.home_name)} ${
-      game.home_score_display ?? game.home_score ?? ""
-    }, ${game.round ?? "final"}`;
-  }
-  const date = new Date(game.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  return `${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}, ${date}`;
-}
-
 export function GameCard({ league, game }: { league: League; game: GameRow }) {
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
   const live = game.status_state === "in";
-  const upcoming = !game.completed && !live;
+  // A called-off game is not upcoming: it has no kickoff time to show.
+  const upcoming = isUpcomingGame(game);
 
   return (
     <Link
       href={`/${league}/games/${game.espn_id}`}
-      aria-label={accessibleLabel(game)}
+      aria-label={gameAccessibleLabel(game)}
       className={`card block px-4 py-3 ${live ? "border-[var(--live)]/40" : ""}`}
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
