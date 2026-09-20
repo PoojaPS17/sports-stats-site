@@ -313,6 +313,39 @@ test("ESPN line: a row that is inconsistent with itself is never a line, so the 
   assert.equal(p.seasons[0].games, 7);
 });
 
+test("ESPN line: a stored games figure above the row's GP means the row is one stint, so the season keeps its box behaviour", () => {
+  // The loader's games_played is the whole-season floor (the larger of ESPN's Totals GP and the sum of the teams' GPs);
+  // the stored row's GP is only the first team's games here (30 of 70), so its per-game line would be wrong.
+  const rows = games(20, 10); // one team, 200 recorded points, no listed game
+  const stint = espnFor(espnLine({ games: 30, pts: 1000, fgm: 400, fga: 900, tpm: 100, tpa: 300, ftm: 100, fta: 120 }));
+  const reported = new Map([[2025, 70]]);
+  const p = buildProfile("nba", rows, rows, reported, stint);
+  assert.equal(p.seasons[0].lineSource, "box");
+  assert.equal(p.seasons[0].line.pts, 10);
+  assert.deepEqual(plain(p), plain(buildProfile("nba", rows, rows, reported)));
+  // The same row with no stored games figure has nothing to contradict it (the reader's own check still may).
+  assert.equal(buildProfile("nba", rows, rows, undefined, stint).seasons[0].lineSource, "espn");
+});
+
+test("ESPN line: a stored games figure above the row's GP never lowers the games the page showed before", () => {
+  const rows = [...games(20, 10), ...listed(3)];
+  const reported = new Map([[2025, 82]]);
+  const p = buildProfile("nba", rows, rows, reported, espnFor(espnLine({ games: 75, pts: 900 })));
+  assert.equal(p.seasons[0].games, 82);
+  assert.equal(p.seasons[0].gamesSource, "espn");
+  assert.equal(p.seasons[0].lineSource, "box");
+  assert.deepEqual(plain(p), plain(buildProfile("nba", rows, rows, reported)));
+});
+
+test("ESPN line: a stored games figure equal to or below the row's GP leaves the row in use", () => {
+  const rows = games(7, 6);
+  for (const stored of [37, 30]) {
+    const p = buildProfile("nba", rows, rows, new Map([[2025, stored]]), espnFor(espnLine()));
+    assert.equal(p.seasons[0].lineSource, "espn", `games_played ${stored}`);
+    assert.equal(p.seasons[0].games, 37);
+  }
+});
+
 test("ESPN line: guard (a) takes ESPN's points equal to the recorded points, and refuses one below", () => {
   const rows = games(7, 6); // 42 recorded points
   assert.equal(buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ pts: 42 }))).seasons[0].lineSource, "espn");

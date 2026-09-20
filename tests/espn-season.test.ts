@@ -43,6 +43,7 @@ test("espnSeasonTotals strips thousands separators", () => {
   c.totals.values[c.totals.labels.indexOf("PTS")] = "1,080";
   c.totals.values[c.totals.labels.indexOf("FG")] = "480-1,000";
   c.totals.values[c.totals.labels.indexOf("FT")] = "83-90";
+  c.averages.values[c.averages.labels.indexOf("PTS")] = "41.5"; // 1,080 / 26 = 41.54: the averages agree with the totals
   const t = espnSeasonTotals(c);
   assert.equal(t?.pts, 1080);
   assert.equal(t?.fgm, 480);
@@ -110,4 +111,36 @@ test("espnSeasonTotals is null when a made count exceeds its attempts", () => {
   assert.equal(espnSeasonTotals(withPair("FT", "31-30", "312")), null);
   // Made equal to attempted is fine.
   assert.equal(espnSeasonTotals(withPair("FT", "31-31", "312"))?.ftm, 31);
+});
+
+// averages.PTS is ESPN's own per-game figure, rounded to one decimal; a row whose totals do not divide to it is not one season.
+test("espnSeasonTotals is null when the averages' PTS disagrees with the totals' PTS over GP (a stint's GP against a season's totals)", () => {
+  // GP 30 and 14.3 a game are one stint (about 429 points); the totals hold the whole season (1,000, itself consistent).
+  const stint = {
+    averages: { labels: ["GP", "GS", "MIN", "PTS"], values: ["30", "10", "28.0", "14.3"] },
+    totals: {
+      labels: ["FG", "3PT", "FT", "REB", "AST", "BLK", "STL", "TO", "PTS"],
+      values: ["400-900", "100-300", "100-120", "300", "200", "20", "40", "100", "1000"],
+    },
+  };
+  assert.equal(espnSeasonTotals(stint), null);
+});
+
+test("espnSeasonTotals still reads a row whose averages' PTS is the totals' PTS over GP correctly rounded", () => {
+  // 311 / 26 = 11.96 shows as 12.0 (the Knicks row above); 89 / 37 = 2.405 shows as 2.4; the rounding error is at most 0.05.
+  assert.equal(espnSeasonTotals(knicks2022())?.pts, 311);
+  const c = knicks2022();
+  const setAverage = (v: string) => { c.averages.values[c.averages.labels.indexOf("PTS")] = v; };
+  setAverage("12.0"); // 0.04 off, as published
+  assert.equal(espnSeasonTotals(c)?.pts, 311);
+  setAverage("11.9"); // 0.06 off, not what one-decimal rounding produces
+  assert.equal(espnSeasonTotals(c), null);
+  setAverage("12.1");
+  assert.equal(espnSeasonTotals(c), null);
+  // A row with no averages PTS has nothing to compare and is read as before.
+  const noAverage = knicks2022();
+  const i = noAverage.averages.labels.indexOf("PTS");
+  noAverage.averages.labels.splice(i, 1);
+  noAverage.averages.values.splice(i, 1);
+  assert.equal(espnSeasonTotals(noAverage)?.pts, 311);
 });

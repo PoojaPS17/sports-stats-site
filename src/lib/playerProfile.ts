@@ -590,8 +590,10 @@ export function noBoxScoreGames(sport: PlayerSport, games: number, recorded: num
  * rows: listed players with zeros, no stat line). Those games are counted as played but sit in no average:
  * the season's games are ESPN's figure when stored, else the logged games plus the listed ones.
  * `espnSeasons` (season year to ESPN's whole-season line; NBA regular season) replaces a season's line, games and career
- * share when ESPN counts more games than are logged and the row passes two guards: its points are at least the
- * recorded points, and a season with more than one team has ESPN games covering the logged and listed games. */
+ * share when ESPN counts more games than are logged and the row passes three guards: its points are at least the
+ * recorded points, a season with more than one team has ESPN games covering the logged and listed games, and the
+ * stored games figure for the season (`reportedGames`), when there is one, is not above the row's games (then the
+ * row is one stint, not the season). */
 export function buildProfile(
   sport: PlayerSport,
   allRows: PlayerLogRow[],
@@ -622,8 +624,12 @@ export function buildProfile(
       for (const r of [...rs, ...us].sort(newestFirst).reverse()) teams.set(r.team_espn_id, { espn_id: r.team_espn_id, name: r.team_name, slug: r.team_slug, logo: r.team_logo });
       const logged = rs.length;
       const espn = sport === "nba" ? espnSeasons?.get(season) : undefined;
+      // The loader's games figure is the whole-season floor (the larger of ESPN's Totals GP and the sum of the teams' GPs), so one
+      // above the row's GP says the stored row is a single stint (or the first team's GP): it does not cover the season.
+      const storedGames = reported?.get(season);
+      const rowCoversSeason = espn !== undefined && (storedGames === undefined || espn.games >= storedGames);
       // Guard (a) sums the recorded points only when ESPN has a row for the season that counts more games than are logged.
-      const useEspn = espn !== undefined && espn.games > logged && espn.pts >= rs.reduce((n, r) => n + (cell(r.stats, "box", "PTS") ?? 0), 0) && (teams.size <= 1 || espn.games >= logged + us.length);
+      const useEspn = espn !== undefined && rowCoversSeason && espn.games > logged && espn.pts >= rs.reduce((n, r) => n + (cell(r.stats, "box", "PTS") ?? 0), 0) && (teams.size <= 1 || espn.games >= logged + us.length);
       if (useEspn) {
         espnUsed.set(season, espn);
         return {

@@ -48,7 +48,8 @@ function pairAt(cat: unknown, label: string): [number, number] | null {
 
 /** ESPN's season line, or null unless GP is a positive number and every one of PTS, REB, AST, STL, BLK,
  * TO, FG, 3PT and FT is readable in the totals, and the row is consistent with itself: points are
- * 2 x FGM + 3PM + FTM, and no made count is above its attempts. */
+ * 2 x FGM + 3PM + FTM, no made count is above its attempts, and the averages' PTS (when present) is the
+ * totals' PTS over GP to within 0.06. */
 export function espnSeasonTotals(categories: unknown): EspnSeasonTotals | null {
   if (typeof categories !== "object" || categories === null) return null;
   const { averages, totals } = categories as { averages?: unknown; totals?: unknown };
@@ -65,6 +66,11 @@ export function espnSeasonTotals(categories: unknown): EspnSeasonTotals | null {
   const ft = pairAt(totals, "FT");
   if (pts === null || reb === null || ast === null || stl === null || blk === null || to === null || !fg || !tp || !ft) return null;
   if (pts !== 2 * fg[0] + tp[0] + ft[0] || fg[0] > fg[1] || tp[0] > tp[1] || ft[0] > ft[1]) return null;
+  // The averages' PTS, when there is one, is the totals' PTS over GP rounded to one decimal (an error of up to 0.05,
+  // and a little more from the totals' own rounding here): a row where they part is not one season, e.g. GP and averages
+  // of one stint next to the totals of the whole season.
+  const averagePts = numberAt(averages, "PTS");
+  if (averagePts !== null && Math.abs(averagePts - pts / games) > 0.06) return null;
   return {
     games,
     starts: numberAt(averages, "GS"),
