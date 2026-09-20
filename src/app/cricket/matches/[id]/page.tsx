@@ -4,6 +4,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
+import { absoluteUrl } from "@/lib/site";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -30,7 +31,9 @@ export const revalidate = 10;
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const m = await getCricketSeriesMatch(id);
-  if (!m) return {};
+  // A match ESPN lists that is not stored yet still renders from ESPN's live summary (the page), so it
+  // keeps the address as its canonical; the title and description stay the site's.
+  if (!m) return { alternates: { canonical: absoluteUrl(`/cricket/matches/${id}`) } };
   // Name, stage and series when they fit a search result's title; otherwise the month
   // stands in for the series, which the description still names.
   const stage = m.description ? `, ${m.description}` : "";

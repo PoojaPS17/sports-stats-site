@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  return pageMeta(`${label} Players`, `All ${label} players with season stats and game logs.`);
+  return pageMeta(`${label} Players`, `All ${label} players with season stats and game logs.`, `/${league}/players`);
 }
 
 export const revalidate = 300;

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LEAGUE_LABEL, leagueNameWithArticle, SOCCER_LEAGUES, formatSeasonLabel } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
@@ -9,6 +10,11 @@ import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
 import { MyFollows } from "@/components/MyFollows";
 import { getHomeData, type HomeSection } from "@/lib/homeData";
+import { absoluteUrl } from "@/lib/site";
+
+// Title, description and share card come from the root layout. The canonical lives here and not
+// in the layout, so no page can inherit the home address by accident.
+export const metadata: Metadata = { alternates: { canonical: absoluteUrl("/") } };
 
 // Regenerated every 10 seconds so in-play scores stay current; the stored data
 // behind the page is cached in longer tiers (see getHomeData) so each regeneration
