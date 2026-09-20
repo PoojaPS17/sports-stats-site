@@ -9,6 +9,7 @@
 // Safe to re-run/resume — all writes are upserts.
 import { pool } from "./lib/db";
 import { HISTORY_START, fetchScoreboardBySeason, fetchTeamSchedule, type League } from "./lib/espn";
+import { seasonTypesFor } from "./lib/stage-backfill";
 import { upsertEvent } from "./lib/games";
 
 const YEARS_BACK = 10;
@@ -36,10 +37,11 @@ async function backfillViaTeamSchedules(league: League) {
   let gameCount = 0;
   // The default (unparameterized) team-schedule call only returns the regular season
   // — postseason games (and their round names, e.g. "NBA Finals - Game 6", "Super Bowl
-  // LVIII") need an explicit seasontype=3 request. Not meaningful for EPL (no playoffs
-  // in the league itself) or IPL (handled separately, and its scoreboard-by-season
-  // already includes its own playoff stage within the one request).
-  const seasonTypes = league === "nba" || league === "nfl" ? [undefined, 3] : [undefined];
+  // LVIII") need an explicit seasontype=3 request, and the NBA's play-in tournament needs
+  // seasontype=5. Not meaningful for EPL (no playoffs in the league itself) or IPL (handled
+  // separately, and its scoreboard-by-season already includes its own playoff stage within
+  // the one request).
+  const seasonTypes = seasonTypesFor(league);
 
   // A competition's clubs change every season (cup entrants, promotion and relegation),
   // and only the current edition's clubs are seeded. Each game upserts both its clubs,
@@ -65,7 +67,7 @@ async function backfillViaTeamSchedules(league: League) {
           }
         } catch (err) {
           console.error(
-            `[backfill-games] ${league} team ${teamId} season ${season}${seasontype ? ` (postseason)` : ""} failed:`,
+            `[backfill-games] ${league} team ${teamId} season ${season}${seasontype ? ` (seasontype ${seasontype})` : ""} failed:`,
             err instanceof Error ? err.message : err
           );
         }

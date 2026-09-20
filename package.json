@@ -26,6 +26,7 @@
     "backfill:standings": "tsx scripts/backfill-standings.ts",
     "backfill:player-stats": "tsx scripts/backfill-player-stats.ts",
     "backfill:game-stats": "tsx scripts/backfill-game-stats.ts",
+    "backfill:game-stages": "tsx scripts/backfill-game-stages.ts",
     "rebuild:season-stats": "tsx scripts/rebuild-season-stats.ts",
     "fetch:team-info": "tsx scripts/fetch-team-info.ts",
     "backfill:cricket-player-stats": "tsx scripts/backfill-cricket-player-stats.ts",
@@ -44,6 +45,7 @@
     "fetch:trending-wikipedia": "tsx scripts/fetch-trending-wikipedia.ts",
     "fetch:trending-appstore": "tsx scripts/fetch-trending-appstore.ts",
     "audit:freshness": "tsx scripts/audit-freshness.ts",
+    "audit:game-stages": "tsx scripts/audit-game-stages.ts",
     "test": "tsx --test tests/*.test.ts",
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
