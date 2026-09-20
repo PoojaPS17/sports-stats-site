@@ -4,11 +4,9 @@ import { startTestDb, type TestDb } from "./helpers/testDb";
 
 let db: TestDb;
 let lib: typeof import("../scripts/lib/stage-backfill");
-let games: typeof import("../scripts/lib/games");
 before(async () => {
   db = await startTestDb();
   lib = await import("../scripts/lib/stage-backfill");
-  games = await import("../scripts/lib/games");
 });
 after(async () => {
   await db?.stop();
@@ -58,15 +56,15 @@ test("an already-stored untyped All-Star row is typed in place, without upsertin
      values ('nba', 'as1', '2026-02-16T01:00:00Z', 'x', '901', '902', true)`
   );
   await db.pool.query(`delete from teams where league = 'nba' and espn_id in ('901', '902')`);
-  const { rows: before } = await db.pool.query(`select count(*)::int as n from games`);
+  const { rows: gamesBefore } = await db.pool.query(`select count(*)::int as n from games`);
   const allStar = ev("as1", "2026-02-16T01:00:00Z", 2);
   allStar.competitions[0].type.abbreviation = "ALLSTAR";
   for (const c of allStar.competitions[0].competitors) c.team = { id: c.homeAway === "home" ? "901" : "902", displayName: `Team ${c.homeAway}` };
   const res = await lib.classifyUntypedGames(db.pool, "nba", async (_l, day) => (day === "20260215" ? { events: [allStar] } : { events: [] }));
   const { rows } = await db.pool.query(`select espn_id, season_type, competition_type, stage from games`);
   assert.deepEqual(rows, [{ espn_id: "as1", season_type: 2, competition_type: "ALLSTAR", stage: "excluded" }]);
-  const { rows: after } = await db.pool.query(`select count(*)::int as n from games`);
-  assert.equal(after[0].n, before[0].n);
+  const { rows: gamesAfter } = await db.pool.query(`select count(*)::int as n from games`);
+  assert.equal(gamesAfter[0].n, gamesBefore[0].n);
   const { rows: teams } = await db.pool.query(`select 1 from teams where league = 'nba' and espn_id in ('901', '902')`);
   assert.equal(teams.length, 0);
   assert.equal(res.typed, 1);

@@ -7,7 +7,12 @@ import { fetchScoreboard, type League } from "./lib/espn";
 import { classifyUntypedGames } from "./lib/stage-backfill";
 
 async function main() {
-  const target = process.argv[2] as League | undefined;
+  const target = process.argv[2];
+  // Only leagues whose games carry a season type: for any other league every game would read as untyped.
+  if (target !== undefined && target !== "nba" && target !== "nfl") {
+    console.error("usage: tsx scripts/backfill-game-stages.ts [nba|nfl]");
+    process.exit(1);
+  }
   const leagues: League[] = target ? [target] : ["nba", "nfl"];
   let stillUntyped = 0;
   for (const league of leagues) {
