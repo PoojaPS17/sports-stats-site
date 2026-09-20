@@ -52,12 +52,17 @@ function run(job: string, env: Record<string, string> = {}, runner: string = RUN
   return { status: res.status, calls, stderr: res.stderr };
 }
 
-test("idle tick: checks live games, then only the always-on tennis and cricket feeds", () => {
+test("idle tick: checks live games, then only the always-on tennis and cricket feeds, then the heartbeat", () => {
   const { status, calls } = run("tick");
   assert.equal(status, 0);
   assert.deepEqual(
     calls.map((c) => c.split(" | ")[0]),
-    ["npm run --silent check:live", "npm run --silent fetch:tennis-daily", "npm run --silent fetch:cricket-series -- --days 1 --ahead 2"]
+    [
+      "npm run --silent check:live",
+      "npm run --silent fetch:tennis-daily",
+      "npm run --silent fetch:cricket-series -- --days 1 --ahead 2",
+      "npm run --silent record:run -- scrape-tick",
+    ]
   );
   assert.match(calls[0], /FORCE=false/);
 });
@@ -67,6 +72,7 @@ test("live tick: scopes seed and fetch to the flagged leagues in live mode", () 
   assert.equal(status, 0);
   assert.ok(calls.includes("npm run --silent seed:teams | MODE= LEAGUES=nba,epl FORCE="));
   assert.ok(calls.includes("npm run --silent fetch:all | MODE=live LEAGUES=nba,epl FORCE="));
+  assert.match(calls[calls.length - 1], /^npm run --silent record:run -- scrape-tick \|/);
 });
 
 test("daily: updates code, migrates first, runs a full unscoped fetch, then the daily-only steps", () => {
@@ -164,4 +170,24 @@ test("a daily job still exits 1 when its own git pull rewrites scrape.sh mid-run
   assert.ok(calls.includes("git pull --ff-only --quiet"));
   assert.ok(readFileSync(copy, "utf8").includes("rewritten by git pull"), "the stub pull should have replaced the script");
   assert.equal(status, 1);
+});
+
+test("a tick records its heartbeat last, and only when no step failed", () => {
+  const clean = run("tick", { STUB_SHOULD: "true", STUB_LEAGUES: "nba" });
+  assert.equal(clean.status, 0);
+  const cleanSteps = clean.calls.map((c) => c.split(" | ")[0]);
+  assert.equal(cleanSteps[cleanSteps.length - 1], "npm run --silent record:run -- scrape-tick");
+  assert.equal(cleanSteps.filter((s) => s.includes("record:run")).length, 1);
+
+  for (const fail of ["check:live", "seed:teams", "fetch:all", "fetch:tennis-daily", "fetch:cricket-series"]) {
+    const res = run("tick", { STUB_SHOULD: "true", STUB_LEAGUES: "nba", STUB_FAIL: fail });
+    assert.equal(res.status, 1, `${fail} failing should fail the tick`);
+    assert.ok(!res.calls.some((c) => c.includes("record:run")), `no heartbeat when ${fail} fails`);
+  }
+});
+
+test("only ticks record a heartbeat", () => {
+  for (const job of ["daily", "hourly"]) {
+    assert.ok(!run(job).calls.some((c) => c.includes("record:run")), `${job} must not record scrape-tick`);
+  }
 });

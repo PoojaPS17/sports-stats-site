@@ -2,9 +2,11 @@ import type { Pool } from "pg";
 
 /** Longest a scraper may go without a successful run before check:stale fails, in minutes. */
 export const MAX_AGE_MINUTES: Record<string, number> = {
-  "fetch-injuries": 180,
-  "fetch-f1-scores": 180,
-  "fetch-f1-standings": 180,
+  "fetch-injuries": 120,
+  "fetch-f1-scores": 120,
+  "fetch-f1-standings": 120,
+  // A tick can legitimately wait behind the daily job's lock for ~100 minutes.
+  "scrape-tick": 150,
 };
 
 /** Record a successful run. last_changed_at only moves when the caller knows rows really changed. */

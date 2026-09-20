@@ -55,6 +55,8 @@ job_tick() {
   # Tennis and cricket run all day in every time zone, so these feeds are read on every tick.
   run fetch:tennis-daily
   run fetch:cricket-series -- --days 1 --ahead 2
+  # Heartbeat for check:stale, only when every step above succeeded (an idle tick counts too).
+  if [ "$failed" -eq 0 ]; then run record:run -- scrape-tick; fi
 }
 
 # Full update of every league, plus the once-a-day sweeps.

@@ -60,3 +60,25 @@ test("last_changed_at moves only when changed is true", async () => {
   row = (await db.pool.query("select last_changed_at from scrape_runs where scraper = 'job-a'")).rows[0];
   assert.equal((row.last_changed_at as Date).getTime(), first.getTime());
 });
+
+test("the default limits cover the tick and the hourly feeds; a missing row is stale with a null age", async () => {
+  assert.deepEqual(
+    (await hb.findStale(db.pool)).map((s) => s.scraper).sort(),
+    ["fetch-f1-scores", "fetch-f1-standings", "fetch-injuries", "scrape-tick"]
+  );
+  assert.deepEqual((await hb.findStale(db.pool)).find((s) => s.scraper === "scrape-tick"), { scraper: "scrape-tick", ageMinutes: null });
+  assert.equal(hb.MAX_AGE_MINUTES["scrape-tick"], 150);
+  assert.equal(hb.MAX_AGE_MINUTES["fetch-injuries"], 120);
+});
+
+test("default limits: a 4h-old fetch-injuries run is stale, a 90-minute-old one is not", async () => {
+  for (const name of Object.keys(hb.MAX_AGE_MINUTES)) await hb.recordRun(db.pool, name);
+  assert.deepEqual(await hb.findStale(db.pool), []);
+  await db.pool.query(`update scrape_runs set last_ok_at = now() - interval '90 minutes' where scraper = 'fetch-injuries'`);
+  assert.deepEqual(await hb.findStale(db.pool), []);
+  await db.pool.query(`update scrape_runs set last_ok_at = now() - interval '4 hours' where scraper = 'fetch-injuries'`);
+  const stale = await hb.findStale(db.pool);
+  assert.equal(stale.length, 1);
+  assert.equal(stale[0].scraper, "fetch-injuries");
+  assert.ok((stale[0].ageMinutes ?? 0) >= 239);
+});
