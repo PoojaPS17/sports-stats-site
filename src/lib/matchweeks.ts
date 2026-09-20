@@ -53,6 +53,16 @@ export function weekIndexPath(league: League, season?: number | null): string {
   return season ? `/${league}/${seg}/${season}` : `/${league}/${seg}`;
 }
 
+/**
+ * The address a season's index answers to when search engines are told which copy to keep. The latest
+ * season's index is the bare hub (/epl/matchweek), which is where the sub-nav, the season pills and the
+ * sitemap point; /epl/matchweek/<that year> shows the same list, so it names the hub. Older seasons
+ * have only their own address. `seasons` is newest first, as getSeasonsWithGames returns it.
+ */
+export function canonicalWeekIndexPath(league: League, season: number, seasons: number[]): string {
+  return weekIndexPath(league, season === seasons[0] ? null : season);
+}
+
 export async function getSeasonGames(league: League, season: number): Promise<GameRow[]> {
   const { rows } = await pool.query(`${GAME_SELECT} where g.league = $1 and g.season_year = $2 order by g.date asc, g.espn_id asc`, [league, season]);
   return rows;

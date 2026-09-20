@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
-import { weekDateRange, weekIndexPath, weekNoun, weekPath } from "@/lib/matchweeks";
+import { canonicalWeekIndexPath, getSeasonsWithGames, weekDateRange, weekNoun, weekPath } from "@/lib/matchweeks";
 import { isSeasonSegment, loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 import { WeekHub, WeekIndex } from "@/components/WeekHub";
@@ -13,7 +13,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
   if (isSeasonSegment(n)) {
-    return pageMeta(`${label} ${weekNoun(league)}s ${formatSeasonLabel(league, Number(n))}`, `Every ${label} round of the ${formatSeasonLabel(league, Number(n))} season with results and tables.`, weekIndexPath(league, Number(n)));
+    // The latest season's list is also the hub at /[league]/matchweek, which is the canonical copy.
+    const canonical = canonicalWeekIndexPath(league, Number(n), await getSeasonsWithGames(league));
+    return pageMeta(`${label} ${weekNoun(league)}s ${formatSeasonLabel(league, Number(n))}`, `Every ${label} round of the ${formatSeasonLabel(league, Number(n))} season with results and tables.`, canonical);
   }
   const ctx = await loadWeeks(league);
   const week = ctx?.weeks.find((w) => w.index === Number(n));
