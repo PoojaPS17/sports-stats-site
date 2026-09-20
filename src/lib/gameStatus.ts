@@ -23,3 +23,15 @@ export const isGameCalledOff = (g: { completed: boolean; status_state?: string |
 /** The label to show for a game that must be shown as called off (see isGameCalledOff); null for every other game. */
 export const gameCalledOffLabel = (g: { completed: boolean; status_state?: string | null; status_detail: string | null | undefined }): string | null =>
   isGameCalledOff(g) ? calledOffLabel(g.status_detail) : null;
+
+/**
+ * schema.org's status for a game: EventPostponed for a postponed or suspended one, EventCancelled for a cancelled
+ * or abandoned one, EventScheduled for everything else (it has no "finished" status, so results and games in play
+ * are scheduled too).
+ */
+export function schemaEventStatus(g: { completed: boolean; status_state?: string | null; status_detail: string | null | undefined }): string {
+  const label = gameCalledOffLabel(g);
+  if (label === "Postponed" || label === "Suspended") return "https://schema.org/EventPostponed";
+  if (label === "Cancelled" || label === "Abandoned") return "https://schema.org/EventCancelled";
+  return "https://schema.org/EventScheduled";
+}

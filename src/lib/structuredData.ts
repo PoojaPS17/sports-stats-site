@@ -1,4 +1,5 @@
 import { isSoccerLeague } from "./leagues";
+import { schemaEventStatus } from "./gameStatus";
 // schema.org builders for the structured data blocks on key pages.
 import { LEAGUE_LABEL, type GameRow, type League } from "./queries";
 import { CONTACT_EMAIL, SITE_NAME, SITE_URL, absoluteUrl } from "./site";
@@ -77,8 +78,7 @@ export function athleteSchema(
 }
 
 export function gameSchema(league: League, game: GameRow, venue?: string | null) {
-  // schema.org has no "finished" status; scheduled covers played and in-play games.
-  const status = /postponed/i.test(game.status_detail ?? "") ? "https://schema.org/EventPostponed" : /cancel/i.test(game.status_detail ?? "") ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled";
+  const status = schemaEventStatus(game);
   const team = (name: string, slug: string, logo: string | null) => ({
     "@type": "SportsTeam",
     name,

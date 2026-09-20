@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calledOffLabel, gameCalledOffLabel, isCalledOff, isGameCalledOff } from "../src/lib/gameStatus";
+import { calledOffLabel, gameCalledOffLabel, schemaEventStatus, isCalledOff, isGameCalledOff } from "../src/lib/gameStatus";
 
 test("isCalledOff recognises postponed, cancelled, abandoned and suspended games", () => {
   for (const s of ["Postponed", "postponed", "Canceled", "Cancelled", "Abandoned", "Suspended"]) {
@@ -47,4 +47,17 @@ test("gameCalledOffLabel gives the label for an unfinished called-off game and n
   assert.equal(gameCalledOffLabel({ completed: false, status_detail: "Canceled" }), "Cancelled");
   assert.equal(gameCalledOffLabel({ completed: true, status_state: "post", status_detail: "Abandoned" }), null);
   assert.equal(gameCalledOffLabel({ completed: false, status_state: "pre", status_detail: "Scheduled" }), null);
+});
+
+test("schemaEventStatus: called-off games are postponed or cancelled to a crawler, everything else scheduled", () => {
+  const g = (completed: boolean, status_state: string | null, status_detail: string | null) => ({ completed, status_state, status_detail });
+  assert.equal(schemaEventStatus(g(false, "post", "Postponed")), "https://schema.org/EventPostponed");
+  assert.equal(schemaEventStatus(g(false, "post", "Suspended")), "https://schema.org/EventPostponed");
+  assert.equal(schemaEventStatus(g(false, "post", "Canceled")), "https://schema.org/EventCancelled");
+  assert.equal(schemaEventStatus(g(false, "post", "Abandoned")), "https://schema.org/EventCancelled");
+  // fixtures, live games and results (schema.org has no "finished" status) are scheduled
+  assert.equal(schemaEventStatus(g(false, "pre", "Scheduled")), "https://schema.org/EventScheduled");
+  assert.equal(schemaEventStatus(g(false, "in", "Suspended")), "https://schema.org/EventScheduled");
+  assert.equal(schemaEventStatus(g(true, "post", "Abandoned")), "https://schema.org/EventScheduled");
+  assert.equal(schemaEventStatus(g(true, "post", "Final")), "https://schema.org/EventScheduled");
 });
