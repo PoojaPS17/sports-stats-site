@@ -33,9 +33,10 @@ const neverPlayed = (game: Status): boolean => isGameCalledOff(game) && isNeverP
 /**
  * The meta description of a game page. `where` is " at <venue>" or ""; `scorers` is the soccer goals line (with its
  * leading space) or "". A called-off game says it was called off and keeps the parts that stay true (form and
- * head-to-head); a finished cricket match reports its result, including "Match abandoned without a ball bowled".
+ * head-to-head); a finished cricket match reports its result, including "Match abandoned without a ball bowled". A
+ * finished game ESPN published no player statistics for (`boxScore` false) says so where it would list a box score.
  */
-export function gameDescription(league: League, game: Status & { status_summary: string | null; home_name: string; away_name: string }, date: string, where: string, scorers = ""): string {
+export function gameDescription(league: League, game: Status & { status_summary: string | null; home_name: string; away_name: string }, date: string, where: string, scorers = "", boxScore = true): string {
   const { first, second, awayFirst } = gameSides(league, game);
   const off = offWord(game);
   const cricket = isCricketLeague(league);
@@ -46,7 +47,8 @@ export function gameDescription(league: League, game: Status & { status_summary:
     const covers = off ? "Head-to-head record." : "Full scorecard of all four innings and head-to-head.";
     return `${teamDisplayName(first)} v ${teamDisplayName(second)}${where}, ${date}.${state} ${covers}`;
   }
-  const covers = cricket ? "Scorecard and head-to-head." : isSoccerLeague(league) ? "Line-ups, timeline, team stats, box score and head-to-head." : "Scoring summary, win probability, team stats, box score and head-to-head.";
+  const noBoxScore = !boxScore && game.completed && !off;
+  const covers = noBoxScore ? `${NO_BOX_SCORE} Head-to-head record.` : cricket ? "Scorecard and head-to-head." : isSoccerLeague(league) ? "Line-ups, timeline, team stats, box score and head-to-head." : "Scoring summary, win probability, team stats, box score and head-to-head.";
   let extras: string;
   if (off) extras = ` This ${noun(league)} was ${off}. ${cricket ? "Head-to-head record and recent form." : "Team form and head-to-head record."}`;
   else if (game.completed) extras = `${cricket ? result : scorers} ${covers}`;
@@ -79,6 +81,33 @@ export function teamStatsFraming(league: League, game: Status): {
     cardTitle: "Season comparison",
     shareLabel: "season comparison",
   };
+}
+
+/** The visitor-facing sentence for a finished game ESPN published no player statistics for. */
+export const NO_BOX_SCORE = "ESPN has no box score for this game.";
+export const NO_BOX_SCORE_NOTE = "ESPN has no box score for this game, so there are no player statistics to show. The final score above is unaffected.";
+
+/** The part of a parsed player box that decides whether it is blank: the cells of every player row. */
+export interface PlayerBoxLike {
+  categories: { rows: { stats: unknown[] }[] }[];
+}
+
+/** Nothing, dashes only ("-", "--"), or a zero in any of the box score's forms ("0", "0.0", "0-0", "0/0"). "-3" and "1-2" are figures. */
+const EMPTY_CELL = /^(?:[-–]*|0+(?:[./-]0+)*)$/;
+
+/**
+ * True when the box lists players and every cell of every row is empty. ESPN publishes no statistics for some
+ * finished games (every Bulls and Pelicans game of 2014-15 to 2017-18): each player who played has minutes "--"
+ * and all-zero figures. With no rows at all there is nothing to call blank, so the page keeps its behaviour.
+ */
+export function playerBoxIsBlank(playerBox: PlayerBoxLike[]): boolean {
+  const rows = playerBox.flatMap((team) => team.categories.flatMap((cat) => cat.rows));
+  return rows.length > 0 && rows.every((row) => row.stats.every((cell) => EMPTY_CELL.test(String(cell ?? "").trim())));
+}
+
+/** True for a finished game whose player box is blank. A live game legitimately starts with zeros, so it never is. */
+export function hasNoBoxScore(game: { completed: boolean }, playerBox: PlayerBoxLike[]): boolean {
+  return game.completed && playerBoxIsBlank(playerBox);
 }
 
 /** True when there is something to compare: a team-stats section over two empty lists is a heading with nothing under it. */
