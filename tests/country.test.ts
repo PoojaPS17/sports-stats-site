@@ -24,6 +24,15 @@ test("visitorCountry upper-cases and trims", () => {
   assert.equal(visitorCountry(hdrs({ "cf-ipcountry": "  de  " })), "DE");
 });
 
+// Headers already strips surrounding whitespace, so trimming is only exercised through a plain stub.
+test("visitorCountry trims whitespace itself, for any source of headers", () => {
+  const stub = (value: string) => ({ get: (name: string) => (name === "cf-ipcountry" ? value : null) });
+  assert.equal(visitorCountry(stub(" de ")), "DE");
+  assert.equal(visitorCountry(stub("\t fr\n")), "FR");
+  assert.equal(visitorCountry(stub("   ")), null);
+  assert.equal(visitorCountry(stub("\u00a0de\u00a0")), "DE");
+});
+
 test("visitorCountry treats XX as unknown and falls through to the Vercel header", () => {
   assert.equal(visitorCountry(hdrs({ "cf-ipcountry": "XX", "x-vercel-ip-country": "US" })), "US");
   assert.equal(visitorCountry(hdrs({ "cf-ipcountry": "XX" })), null);
