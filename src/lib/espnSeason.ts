@@ -47,7 +47,8 @@ function pairAt(cat: unknown, label: string): [number, number] | null {
 }
 
 /** ESPN's season line, or null unless GP is a positive number and every one of PTS, REB, AST, STL, BLK,
- * TO, FG, 3PT and FT is readable in the totals. */
+ * TO, FG, 3PT and FT is readable in the totals, and the row is consistent with itself: points are
+ * 2 x FGM + 3PM + FTM, and no made count is above its attempts. */
 export function espnSeasonTotals(categories: unknown): EspnSeasonTotals | null {
   if (typeof categories !== "object" || categories === null) return null;
   const { averages, totals } = categories as { averages?: unknown; totals?: unknown };
@@ -63,6 +64,7 @@ export function espnSeasonTotals(categories: unknown): EspnSeasonTotals | null {
   const tp = pairAt(totals, "3PT");
   const ft = pairAt(totals, "FT");
   if (pts === null || reb === null || ast === null || stl === null || blk === null || to === null || !fg || !tp || !ft) return null;
+  if (pts !== 2 * fg[0] + tp[0] + ft[0] || fg[0] > fg[1] || tp[0] > tp[1] || ft[0] > ft[1]) return null;
   return {
     games,
     starts: numberAt(averages, "GS"),

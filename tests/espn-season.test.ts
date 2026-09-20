@@ -39,12 +39,14 @@ test("espnSeasonTotals reads the Knicks 2022 row", () => {
 
 test("espnSeasonTotals strips thousands separators", () => {
   const c = knicks2022();
+  // 2 * 480 + 37 + 83 = 1,080 keeps the row consistent.
   c.totals.values[c.totals.labels.indexOf("PTS")] = "1,080";
-  c.totals.values[c.totals.labels.indexOf("FG")] = "1,122-2,274";
+  c.totals.values[c.totals.labels.indexOf("FG")] = "480-1,000";
+  c.totals.values[c.totals.labels.indexOf("FT")] = "83-90";
   const t = espnSeasonTotals(c);
   assert.equal(t?.pts, 1080);
-  assert.equal(t?.fgm, 1122);
-  assert.equal(t?.fga, 2274);
+  assert.equal(t?.fgm, 480);
+  assert.equal(t?.fga, 1000);
 });
 
 test("espnSeasonTotals is null without totals", () => {
@@ -85,4 +87,27 @@ test("espnSeasonTotals gives starts null when GS is blank", () => {
   const t = espnSeasonTotals(c);
   assert.equal(t?.starts, null);
   assert.equal(t?.games, 26);
+});
+
+// An internally inconsistent row is not a line: points are 2 x FGM + 3PM + FTM, and no made count exceeds its attempts.
+test("espnSeasonTotals is null when points are not 2 x FGM + 3PM + FTM", () => {
+  for (const pts of ["310", "312"]) {
+    const c = knicks2022();
+    c.totals.values[c.totals.labels.indexOf("PTS")] = pts;
+    assert.equal(espnSeasonTotals(c), null, `PTS ${pts}`);
+  }
+});
+
+test("espnSeasonTotals is null when a made count exceeds its attempts", () => {
+  const withPair = (label: string, pair: string, pts: string) => {
+    const c = knicks2022();
+    c.totals.values[c.totals.labels.indexOf(label)] = pair;
+    c.totals.values[c.totals.labels.indexOf("PTS")] = pts; // keep the points consistent so only the made > attempted rule fails
+    return c;
+  };
+  assert.equal(espnSeasonTotals(withPair("FG", "275-274", "617")), null);
+  assert.equal(espnSeasonTotals(withPair("3PT", "93-92", "367")), null);
+  assert.equal(espnSeasonTotals(withPair("FT", "31-30", "312")), null);
+  // Made equal to attempted is fine.
+  assert.equal(espnSeasonTotals(withPair("FT", "31-31", "312"))?.ftm, 31);
 });

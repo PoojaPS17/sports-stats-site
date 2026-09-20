@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { aggregate, aggregateWithEspn, buildProfile, buildStagedProfile, cell, noBoxScoreGames, sportProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
-import type { EspnSeasonTotals } from "../src/lib/espnSeason";
+import { espnSeasonTotals, type EspnSeasonTotals } from "../src/lib/espnSeason";
 
 const one = (category: string, label: string, value: string | undefined): Stats => ({ [category]: value === undefined ? {} : { [label]: value } });
 
@@ -155,10 +155,10 @@ test("ESPN line: a season short of ESPN's games shows ESPN's figures", () => {
   assert.equal(s.lineSource, "espn");
   assert.equal(s.record, null);
   assert.equal(s.recorded, 7);
-  near(s.line.pts, 89 / 37);
-  near(s.line.reb, 40 / 37);
+  assert.equal(s.line.pts, 89 / 37);
+  assert.equal(s.line.reb, 40 / 37);
   assert.equal(s.line.gs, 3);
-  near(s.line.min, 10.5);
+  assert.equal(s.line.min, 10.5);
   near(s.line.fg_pct, (100 * 30) / 70);
   near(s.line.tp_pct, (100 * 10) / 30);
   near(s.line.ft_pct, (100 * 19) / 25);
@@ -173,7 +173,7 @@ test("ESPN line: ESPN's points below the recorded points fail the guard, and the
   const p = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ pts: 30 })));
   const s = p.seasons[0];
   assert.equal(s.lineSource, "box");
-  near(s.line.pts, 42 / 7);
+  assert.equal(s.line.pts, 42 / 7);
   // Today's games: the logged games plus the two listed.
   assert.equal(s.games, 9);
   assert.equal(s.gamesSource, "listed");
@@ -222,9 +222,9 @@ test("ESPN line: the career combines the seasons' totals over their games", () =
   const rows = [...espnSeason, ...boxSeason];
   const p = buildProfile("nba", rows, rows, undefined, espnFor(espnLine()));
   assert.deepEqual(p.seasons.map((s) => [s.season, s.lineSource]), [[2025, "espn"], [2024, "box"]]);
-  near(p.career.pts, (89 + 200) / (37 + 10));
+  assert.equal(p.career.pts, (89 + 200) / (37 + 10));
   assert.equal(p.career.gs, 10 + 3);
-  near(p.career.min, (10 * 30 + 10.5 * 37) / 47);
+  assert.equal(p.career.min, (10 * 30 + 10.5 * 37) / 47);
   near(p.career.fg_pct, (100 * (40 + 30)) / (80 + 70));
   // A box season has +/- and the ESPN season has none: the career figure would cover only some games.
   assert.notEqual(p.seasons[1].line.pm, null);
@@ -290,4 +290,71 @@ test("ESPN line: a player in ESPN's log but with no athlete id has no rows liste
   assert.equal(s.games - s.recorded, 30);
   assert.equal(noBoxScoreGames("nba", p.games, p.recorded), 30);
   assert.equal(p.recorded, 7);
+});
+
+test("ESPN line: a row that is inconsistent with itself is never a line, so the season stays on its box rows", () => {
+  const categories = (pts: string) => ({
+    averages: { labels: ["GP", "GS", "MIN"], values: ["37", "3", "10.5"] },
+    totals: {
+      labels: ["FG", "3PT", "FT", "REB", "AST", "BLK", "STL", "TO", "PTS"],
+      values: ["30-70", "10-30", "19-25", "40", "20", "3", "5", "11", pts],
+    },
+  });
+  // 2 * 30 + 10 + 19 = 89: consistent. One point more is not.
+  assert.equal(espnSeasonTotals(categories("89"))?.pts, 89);
+  const bad = espnSeasonTotals(categories("90"));
+  assert.equal(bad, null);
+  const rows = games(7, 6);
+  const fromReader = new Map<number, EspnSeasonTotals>();
+  if (bad) fromReader.set(2025, bad);
+  const p = buildProfile("nba", rows, rows, undefined, fromReader);
+  assert.equal(p.seasons[0].lineSource, "box");
+  assert.equal(p.seasons[0].line.pts, 6);
+  assert.equal(p.seasons[0].games, 7);
+});
+
+test("ESPN line: guard (a) takes ESPN's points equal to the recorded points, and refuses one below", () => {
+  const rows = games(7, 6); // 42 recorded points
+  assert.equal(buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ pts: 42 }))).seasons[0].lineSource, "espn");
+  assert.equal(buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ pts: 41 }))).seasons[0].lineSource, "box");
+});
+
+test("ESPN line: a season with ESPN starts or minutes missing has no gs or min, and neither has a career that includes it", () => {
+  const espnSeason = games(7, 6);
+  const boxSeason = games(10, 20, { season: 2024, prefix: "h" });
+  const rows = [...espnSeason, ...boxSeason];
+  const noStarts = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ starts: null })));
+  assert.equal(noStarts.seasons[0].lineSource, "espn");
+  assert.equal(noStarts.seasons[0].line.gs, null);
+  assert.notEqual(noStarts.seasons[0].line.min, null);
+  assert.equal(noStarts.career.gs, null);
+  assert.notEqual(noStarts.career.min, null);
+  const noMinutes = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ minutesPerGame: null })));
+  assert.equal(noMinutes.seasons[0].line.min, null);
+  assert.notEqual(noMinutes.seasons[0].line.gs, null);
+  assert.equal(noMinutes.career.min, null);
+  assert.notEqual(noMinutes.career.gs, null);
+});
+
+test("ESPN line: a game row with no season year stays in the career beside an ESPN season", () => {
+  const undated: PlayerLogRow = { ...nbaRow("nosn", "2025-03-01", full(20)), season_year: null };
+  const rows = [...games(7, 6), undated];
+  const p = buildProfile("nba", rows, rows, undefined, espnFor(espnLine()));
+  assert.equal(p.seasons[0].lineSource, "espn");
+  // ESPN's 89 points over its 37 games, plus the undated game's 20 over one.
+  assert.equal(p.career.pts, (89 + 20) / (37 + 1));
+  assert.equal(p.games, 38);
+});
+
+test("ESPN line: a two-team season that passes guard (b) is the whole of its career", () => {
+  const rows = [
+    ...games(2, 6, { team: "1", prefix: "a" }),
+    ...games(2, 6, { team: "3", prefix: "b" }).map((r, i) => ({ ...r, date: `2025-01-${20 + i}` })),
+    ...listed(1, { team: "1", prefix: "ua" }),
+    ...listed(1, { team: "3", prefix: "ub" }),
+  ];
+  const p = buildProfile("nba", rows, rows, undefined, espnFor(espnLine({ games: 6 })));
+  assert.equal(p.seasons[0].lineSource, "espn");
+  assert.equal(p.seasons[0].teams.length, 2);
+  assert.deepEqual(p.career, p.seasons[0].line);
 });

@@ -455,8 +455,8 @@ export interface PlayerProfile {
   record: Record3 | null;
   /** True when at least one listed season's `games` is ESPN's figure. */
   gamesFromEspn: boolean;
-  /** Seasons with games beyond the recorded ones whose line is still built from the box-score rows: ESPN's
-   * season row was missing or failed a guard. */
+  /** NBA figure (for NFL the field is not used): seasons with games beyond the recorded ones whose line is
+   * still built from the box-score rows, because ESPN's season row was missing or failed a guard. */
   boxOnlyShort: number;
   career: Line;
   seasons: SeasonLine[];
@@ -607,8 +607,8 @@ export function buildProfile(
       for (const r of [...rs, ...us].sort(newestFirst).reverse()) teams.set(r.team_espn_id, { espn_id: r.team_espn_id, name: r.team_name, slug: r.team_slug, logo: r.team_logo });
       const logged = rs.length;
       const espn = sport === "nba" ? espnSeasons?.get(season) : undefined;
-      const recordedPoints = rs.reduce((n, r) => n + (cell(r.stats, "box", "PTS") ?? 0), 0);
-      const useEspn = espn !== undefined && espn.games > logged && espn.pts >= recordedPoints && (teams.size <= 1 || espn.games >= logged + us.length);
+      // Guard (a) sums the recorded points only when ESPN has a row for the season that counts more games than are logged.
+      const useEspn = espn !== undefined && espn.games > logged && espn.pts >= rs.reduce((n, r) => n + (cell(r.stats, "box", "PTS") ?? 0), 0) && (teams.size <= 1 || espn.games >= logged + us.length);
       if (useEspn) {
         espnUsed.set(season, espn);
         return {
