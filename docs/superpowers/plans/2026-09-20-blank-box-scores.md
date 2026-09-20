@@ -63,3 +63,63 @@
 - [ ] **Step 3: Implement** in `src/lib/gamePage.ts`, then wire `page.tsx` as items 4 and 5.
 - [ ] **Step 4: Run** `npx tsx --test tests/game-page.test.ts`, then `npm test`, `npx tsc --noEmit`, `npm run lint`. Expected: all pass.
 - [ ] **Step 5: Commit** on `fix/blank-box-scores`: `fix: a finished game with no player statistics says so instead of showing zeros`.
+
+---
+
+## Player side (added 2026-09-20 after the production check)
+
+**Evidence (production database, read-only, 2016-2018 NBA regular seasons, 1,502 affected player-seasons):** counting each player's rows in a no-box-score game as a game played gives ESPN's own games-played figure exactly for 1,294 of 1,358 affected player-seasons (95%). Every one of the other 66 differs by 1 or 2 games, never more. Causes seen: a game with no player rows at all (the site is 1 short), and a player listed as a non-DNP participant who did not play (the site is 1 over; e.g. a player whose whole season is blank games, 68 listed against ESPN's 67). So: where ESPN's figure is stored, show it (never above it); where it is not stored (2015 and earlier, retired players, playoffs), show the listed count and mark it. Player pages keep showing per-game averages over the games that have a box score only, and say so.
+
+### Task 2: Player log flag and season games logic
+
+**Files:**
+- Modify: `src/lib/playerLog.ts` (`fetchPlayerLog` flag, `fetchReportedGames` for NBA)
+- Modify: `src/lib/playerProfile.ts` (`PlayerLogRow`, `GamesSource`, `SeasonLine`, `PlayerProfile`, `buildProfile`, `buildStagedProfile`, `milestonesFor`)
+- Test: `tests/player-profile.test.ts` or `tests/player-stages.test.ts` (append; reuse the existing `row()` helper there), `tests/player-log.test.ts` (append; update the one test that names the NFL-only rule)
+
+**Interfaces:**
+- Consumes: the existing `PlayerLogRow`, `SeasonLine`, `buildProfile(sport, allRows, specRows, reportedGames?)`, `buildStagedProfile(sport, allRows, reportedGames?)`, NBA `played` rule (`playerProfile.ts`, `nbaProfile()`).
+- Produces (later tasks rely on these exact names):
+  - `PlayerLogRow.no_box_score?: boolean` (optional, so existing fixtures still compile). Doc comment: NBA only; true when no player in the game has a real stat line (ESPN published none), so this row is a listed participant with zeros.
+  - `export type GamesSource = "espn" | "logged" | "listed"` (`"listed"` = logged games plus the rows listed in no-box-score games, no ESPN figure available).
+  - `SeasonLine.unrecorded: number`: how many of the player's rows in that season sit in no-box-score games (0 for every other sport and for ordinary seasons).
+  - `PlayerProfile.unrecorded: number`: the sum of the seasons' `unrecorded` for that profile.
+
+**Behaviour to implement**
+
+1. **SQL flag** in `fetchPlayerLog`: add a selected column `no_box_score`:
+   ```sql
+   (pgs.league = 'nba' and not exists (
+      select 1 from player_game_stats q
+      where q.league = pgs.league and q.game_espn_id = pgs.game_espn_id
+        and (coalesce(q.stats->'box'->>'MIN', '') ~ '^[0-9]+$' or coalesce(q.stats->'box'->>'PTS', '') ~ '^[1-9]')
+   )) as no_box_score
+   ```
+   This mirrors the NBA `played` rule (numeric MIN, or PTS above zero), so a game is "no box score" exactly when nobody in it counts as having played. Do not add a migration and do not change the schema. Check whether `player_game_stats` has an index or primary key that serves the lookup by `(league, game_espn_id)` (look under `supabase/migrations` or wherever the schema lives, with `git grep`); if it does not, say so in your report as a concern (do not add one).
+2. **`fetchReportedGames`** now returns ESPN's stored games played for `nfl` and `nba`; any other league still gets an empty map without a query. Update its doc comment and the one test that says "any league but the NFL" so it uses a league that is neither (for example a soccer league id) and still asserts no query is made.
+3. **`buildProfile`** (NBA only in effect, because only NBA rows carry the flag):
+   - `unrecordedRows = allRows.filter((r) => r.no_box_score === true && !profile.played(r))`. A flagged row that is nonetheless `played` counts as an ordinary played row and is not in `unrecordedRows`.
+   - A season exists in `seasons` if it has played rows OR unrecorded rows (a player whose every game that season is a no-box-score game still gets a season line). Its `teams` include teams from unrecorded rows too.
+   - Per season, `unrecorded` = number of unrecorded rows in it. `figure` = the reported figure, but for NBA only when `unrecorded > 0` (NFL keeps using it for every season exactly as now). Then:
+     - `unrecorded > 0`, figure present: `games = Math.max(figure, logged)`, `gamesSource = "espn"`.
+     - `unrecorded > 0`, figure absent: `games = logged + unrecorded`, `gamesSource = "listed"`.
+     - `unrecorded === 0`: exactly the current behaviour (NFL: figure rules; everything else: `logged`, `"logged"`).
+   - `record` stays `games > logged ? null : record(rs)` (a season with unrecorded games never shows a W-L that contradicts its games count). `line` is `aggregate(playedRows)`: averages are over the games that have a box score; with no played rows the values are null (check `aggregate` returns nulls for empty input).
+   - `PlayerProfile.games` is the sum of the seasons' `games` plus the rows with a null `season_year`, whenever `reported` is defined OR any season has `unrecorded > 0`; otherwise `rows.length` as now. `gamesFromEspn` stays "some season's `gamesSource` is `espn`". `PlayerProfile.unrecorded` is the sum of the seasons' `unrecorded` (unrecorded rows with a null `season_year` are added too).
+   - `rows`, `best`, `form`, the home/away, win/loss and opponent splits and the career line keep using played rows only. Nothing else about them changes.
+4. **`buildStagedProfile`**: pass `reportedGames` to the regular profile for `nfl` and `nba` (was `nfl` only). The playoffs and play-in profiles get no reported figure (ESPN's stored figure is regular season only), so a playoff season with unrecorded rows is `"listed"`. `playoffs`/`playin` are non-null when `games > 0`, which now includes a stage whose games are all unrecorded. `log` and `counted` are unchanged.
+5. **Milestones (`milestonesFor`)**: for NBA, the "Nth game" ordinals (50, 100, ...) and "First game on record" are positions in the chronological list of played rows PLUS unrecorded rows (a game with no box score is still a game the player played). The milestone's `game` is the row at that position; when that row is an unrecorded row, that ordinal milestone is skipped (no stat line to point at, and the game page says it has no box score). All other milestones (30-point game and the rest) use played rows only, as now. Other sports are unchanged: `milestonesFor` receives the extra list and it is empty for them.
+
+**Tests (write first, see them fail, then implement).** In the stages/profile test file, using the existing `row()` helper extended with an optional `no_box_score`, and a blank row's stats `{ box: { MIN: "--", PTS: "0", REB: "0", AST: "0" } }`:
+- three played rows plus two unrecorded rows in one regular season, no figure: `games` 5, `gamesSource` "listed", `unrecorded` 2, `record` null, `rows.length` 3, the PPG line averaged over the 3 played rows only.
+- the same with reported `Map([[2026, 6]])`: `games` 6, `gamesSource` "espn". With `Map([[2026, 4]])`: 4 (ESPN wins, never the listed 5). With `Map([[2026, 2]])`: 3 (`max` with logged).
+- a season whose rows are all unrecorded (0 played, 4 unrecorded, figure 4): the season exists, `games` 4, `record` null, every `line` value null, `rows` empty.
+- an ordinary NBA season (no unrecorded rows) with a reported map: the figure is ignored, `games` = logged, `gamesSource` "logged".
+- a flagged row that is `played` (MIN "12") is counted as an ordinary played row, `unrecorded` 0.
+- career `games` and `unrecorded` on the profile across two seasons, one of them unrecorded-heavy; a row with a null season year still counted.
+- staged: a playoff stage with only unrecorded rows gives a non-null `playoffs` profile whose `games` equals the unrecorded count and `gamesSource` "listed"; `log` still excludes the unrecorded rows.
+- milestones: 49 played rows then 1 unrecorded then more played rows: the 50th game milestone is skipped, the 100th points at the row in position 100 (counting the unrecorded one); with no unrecorded rows the existing 50th-game behaviour is unchanged.
+- NFL behaviour unchanged (the existing NFL tests keep passing untouched).
+- `fetchReportedGames` returns the NBA figures for `nba` (seed `player_season_stats` like the existing NFL test does), and `fetchPlayerLog` sets `no_box_score` true for a row in a game where nobody has a numeric MIN or PTS above zero, false when any row in the game has one, and false for a non-NBA league (embedded test DB only, seeded through `tests/helpers/testDb.ts`, following the seeding style already in `tests/player-log.test.ts`).
+
+- [ ] **Step 1:** write the failing tests. **Step 2:** run them (`npx tsx --test tests/<file>.test.ts`), confirm they fail for the right reason. **Step 3:** implement. **Step 4:** run those files, then `npm test`, `npx tsc --noEmit`, `npm run lint`. **Step 5:** commit: `fix: NBA player seasons count games ESPN published no box score for`.
