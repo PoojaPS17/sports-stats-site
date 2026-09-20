@@ -14,7 +14,8 @@ import { LocalTime } from "@/components/LocalTime";
 import { ImageActions } from "@/components/ImageActions";
 import { ProjectionTableExportCard, UpcomingProbabilityExportCard } from "@/components/ProjectionsExportCards";
 
-export const revalidate = 1800;
+// Simulated from the table as it stands (and a week's horizon from the clock), so it moves.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;

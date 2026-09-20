@@ -25,9 +25,9 @@ import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, seasonFiguresText, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
-// A past season's stat line is static (it never changes once the season is over), so
-// this can be cached far longer than the live current-season player page.
-export const revalidate = 86400;
+// `[season]` is any season the player has, the one in progress included, so this is live data
+// for as long as that season runs. Held to the site-wide five-minute cap (next.config.ts).
+export const revalidate = 300;
 
 // An empty list, so nothing is built up front: each address is rendered on the first request and
 // then served from the cache above until it goes stale. Without this export the page would be

@@ -17,7 +17,8 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getMostFacedOpponents } from "@/lib/related";
 
-export const revalidate = 600;
+// The meeting count and the record include this season's games, so this is live data.
+export const revalidate = 300;
 
 // An empty list, so nothing is built up front: each address is rendered on the first request and
 // then served from the cache above until it goes stale. Without this export the page would be

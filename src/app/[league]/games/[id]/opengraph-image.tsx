@@ -9,13 +9,11 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const revalidate = 300;
 
-// An empty list, so nothing is built up front: each address is rendered on the first request and
-// then served from the cache above until it goes stale. Without this export the page would be
-// rendered again on every request and the revalidate above would never apply. Addresses that do
-// not exist still render on demand and 404 (dynamicParams is left at its default).
-export function generateStaticParams() {
-  return [];
-}
+// Dynamic on purpose: no generateStaticParams here, so the score on the share image is read on every request.
+// Measured (fix round 1): a cached copy is handed to the first visitor after a quiet spell with
+// no upper bound on its age, and a copy rendered before play started carries LiveRefresh
+// switched off, so that page would never catch up on its own. The window above still sets the
+// default for the cached fetches inside this render.
 
 function Side({ name, logo, score, muted }: { name: string; logo: string | null; score: string | null; muted: boolean }) {
   return (

@@ -83,9 +83,55 @@ test("the splits are no longer separate addresses to crawl", () => {
   assert.doesNotMatch(markup(), /href="[^"]*split=/);
 });
 
-test("career figures are unchanged by the tabs", () => {
+/** The career tiles as rendered, in order: [label, value]. */
+function careerTiles(html: string): [string, string][] {
+  return [...html.matchAll(/<p class="text-lg font-extrabold tabular-nums">([^<]*)<\/p><p class="[^"]*">([^<]*)<\/p>/g)].map((m) => [m[2], m[1]]);
+}
+
+// Every figure the career block shows, for the fixture above. Averages and rates are derived in the
+// component, so these pin the arithmetic as well as the plumbing: batting average 430/(11-2),
+// bowling average 70/3, economy 70 runs over 8.2 overs.
+const CAREER = [
+  ["Matches", "12"],
+  ["Innings", "11"],
+  ["Runs", "430"],
+  ["Highest", "104"],
+  ["Average", "47.77"],
+  ["Strike Rate", "143.3"],
+  ["100s", "1"],
+  ["50s", "3"],
+  ["Innings", "4"],
+  ["Overs", "8.2"],
+  ["Wickets", "3"],
+  ["Average", "23.33"],
+  ["Economy", "8.40"],
+  ["5w", "0"],
+  ["Catches", "5"],
+];
+
+test("the career figures are exactly the ones the data gives", () => {
+  assert.deepEqual(careerTiles(markup()), CAREER);
+});
+
+test("no tab can change the career figures: they are rendered once, outside every panel", () => {
   const html = markup();
-  for (const figure of ["430", "104", "47.77", "143.3", "3"]) {
-    assert.ok(html.includes(figure), `the career strip still shows ${figure}`);
+  const firstPanel = html.indexOf("data-split=");
+  assert.ok(firstPanel > 0, "the panels are in the markup");
+  // Same figures whichever split a visitor came for, because the block sits above the tabs and the
+  // server render does not read the query at all.
+  assert.deepEqual(careerTiles(html.slice(0, firstPanel)), CAREER);
+  assert.deepEqual(careerTiles(html.slice(firstPanel)), []);
+});
+
+test("each split panel carries its own row's figures", () => {
+  const html = markup();
+  const panels = html.split(/(?=<div data-split=")/).filter((s) => s.startsWith("<div data-split="));
+  assert.equal(panels.length, 3);
+  for (const [i, key] of ["team", "opponent", "venue"].entries()) {
+    const row = splits[key as keyof typeof splits][0];
+    assert.match(panels[i], new RegExp(`data-split="${key}"`));
+    const figures = [...panels[i].matchAll(/tabular-nums[^>]*">([^<]*)<\/td>/g)].map((m) => m[1]);
+    assert.deepEqual(figures, [String(row.matches), String(row.runs), String(row.wickets)], `${key} panel figures`);
+    assert.ok(panels[i].includes(row.label), `${key} panel names ${row.label}`);
   }
 });

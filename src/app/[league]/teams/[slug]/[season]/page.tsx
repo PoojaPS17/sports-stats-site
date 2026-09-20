@@ -13,9 +13,9 @@ import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeamTopPlayers } from "@/lib/related";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 
-// Historical seasons are static (a completed season's results never change), so these
-// pages can be cached far longer than the live current-season team page.
-export const revalidate = 86400;
+// A past season's results never change, but `[season]` also serves the season in progress, whose
+// results change by the day. Held to the site-wide five-minute cap (next.config.ts).
+export const revalidate = 300;
 
 // An empty list, so nothing is built up front: each address is rendered on the first request and
 // then served from the cache above until it goes stale. Without this export the page would be

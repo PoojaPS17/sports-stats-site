@@ -6,8 +6,9 @@ import { isSeasonSegment, loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 import { WeekHub } from "@/components/WeekHub";
 
-// A completed season's rounds never change.
-export const revalidate = 86400;
+// A completed season's rounds never change, but the same route serves the season in progress,
+// where results and the table after the round move. Held to the five-minute cap (next.config.ts).
+export const revalidate = 300;
 
 // An empty list, so nothing is built up front: each address is rendered on the first request and
 // then served from the cache above until it goes stale. Without this export the page would be

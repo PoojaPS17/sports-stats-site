@@ -17,7 +17,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   return pageMeta(`${label} Centuries`, `Every century scored in the ${label}, most recent first.`, `/${league}/centuries`);
 }
 
-export const revalidate = 3600;
+// A new century joins this list the moment a match is ingested.
+export const revalidate = 300;
 
 export default async function CenturiesPage({ params }: { params: Promise<{ league: string }> }) {
   const { league } = await params;

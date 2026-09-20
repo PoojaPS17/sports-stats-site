@@ -33,7 +33,7 @@ export function CricketSplitTabs({ tabs }: { tabs: { key: string; label: string;
 
   return (
     <>
-      <div className="mb-3 flex gap-1.5">
+      <div className="mb-3 flex gap-1.5" role="group" aria-label="Split by">
         {tabs.map((t) => (
           <button
             key={t.key}

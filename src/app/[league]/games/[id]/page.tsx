@@ -47,13 +47,11 @@ import type { League } from "@/lib/queries";
 // 10 seconds while live, and finished games are served from stored details anyway.
 export const revalidate = 10;
 
-// An empty list, so nothing is built up front: each address is rendered on the first request and
-// then served from the cache above until it goes stale. Without this export the page would be
-// rendered again on every request and the revalidate above would never apply. Addresses that do
-// not exist still render on demand and 404 (dynamicParams is left at its default).
-export function generateStaticParams() {
-  return [];
-}
+// Dynamic on purpose: no generateStaticParams here, so the state of the match is read on every request.
+// Measured (fix round 1): a cached copy is handed to the first visitor after a quiet spell with
+// no upper bound on its age, and a copy rendered before play started carries LiveRefresh
+// switched off, so that page would never catch up on its own. The window above still sets the
+// default for the cached fetches inside this render.
 
 function sportOf(league: League): MatchSport {
   return isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "american";

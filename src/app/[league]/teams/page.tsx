@@ -8,7 +8,8 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 
-export const revalidate = 3600;
+// Reads the current standings beside the club list, so it moves with the season.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;

@@ -15,7 +15,9 @@ import { PositionChart } from "@/components/PositionChart";
 import { ImageActions } from "@/components/ImageActions";
 import { TeamHistoryExportCard } from "@/components/TeamHistoryExportCard";
 
-export const revalidate = 3600;
+// Every season in the standings, the one in progress included, so the finishes and the
+// best/worst/average tiles move during a season. Held to the five-minute cap (next.config.ts).
+export const revalidate = 300;
 
 // An empty list, so nothing is built up front: each address is rendered on the first request and
 // then served from the cache above until it goes stale. Without this export the page would be
