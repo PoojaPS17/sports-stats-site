@@ -1,6 +1,7 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { startTestDb, type TestDb } from "./helpers/testDb";
+import { stageLabel } from "../src/lib/gameStage";
 
 let db: TestDb;
 before(async () => {
@@ -42,4 +43,21 @@ test("every other league: no round is regular, anything else is 'other'", async 
   assert.equal(await stageOf("epl", null, null, null), "regular");
   assert.equal(await stageOf("ucl", null, null, "Round of 16 - 1st Leg"), "other");
   assert.equal(await stageOf("ipl", null, null, "Match 12"), "other");
+});
+
+test("stageLabel names the stages that are not a plain regular-season or playoff-round game", () => {
+  assert.equal(stageLabel({ stage: "playin" }), "Play-In");
+  assert.equal(stageLabel({ stage: "excluded", season_type: 1 }), "Preseason");
+  assert.equal(stageLabel({ stage: "excluded", season_type: 2, competition_type: "CC" }), "NBA Cup final");
+  assert.equal(stageLabel({ stage: "excluded", season_type: 3, competition_type: "ALLSTAR" }), "All-Star");
+  // Play-in wins over the raw types; a preseason game is never a play-in.
+  assert.equal(stageLabel({ stage: "playin", season_type: 5, competition_type: "STD" }), "Play-In");
+});
+
+test("stageLabel is null for regular-season and playoff rows, which keep their round label", () => {
+  assert.equal(stageLabel({ stage: "regular", season_type: 2, competition_type: "STD" }), null);
+  assert.equal(stageLabel({ stage: "playoffs", season_type: 3, competition_type: "QTR" }), null);
+  assert.equal(stageLabel({ stage: "other" }), null);
+  assert.equal(stageLabel({}), null);
+  assert.equal(stageLabel({ stage: null, season_type: null, competition_type: null }), null);
 });

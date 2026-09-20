@@ -7,9 +7,27 @@ import { recordText } from "./PlayerStatsShared";
 
 const num = "px-2 py-2 text-right tabular-nums";
 
-export function PlayerSeasonTable({ league, profile, basePath, activeSeason }: { league: League; profile: PlayerProfile; basePath: string; activeSeason?: number | null }) {
+export function PlayerSeasonTable({
+  league,
+  profile,
+  basePath,
+  activeSeason,
+  careerLabel = "Career on record",
+  baseSeason,
+}: {
+  league: League;
+  profile: PlayerProfile;
+  basePath: string;
+  activeSeason?: number | null;
+  /** The label of the totals row: "Career playoffs" and "Career play-in" for the other stages' tables. */
+  careerLabel?: string;
+  /** The season whose link is the player page itself (the latest). Defaults to this table's first
+   * row; the playoffs and play-in tables pass the regular season's, since their first row can be an older year. */
+  baseSeason?: number | null;
+}) {
   const soccer = profile.sport === "soccer";
   const specs = profile.profile.specs.filter((s) => s.table !== false);
+  const latest = baseSeason === undefined ? (profile.seasons[0]?.season ?? null) : baseSeason;
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
@@ -28,10 +46,10 @@ export function PlayerSeasonTable({ league, profile, basePath, activeSeason }: {
             </tr>
           </thead>
           <tbody>
-            {profile.seasons.map((row, i) => (
+            {profile.seasons.map((row) => (
               <tr key={row.season} className={`table-row ${row.season === activeSeason ? "bg-[var(--accent-soft)]" : ""}`}>
                 <td className="py-2 pl-4 font-medium">
-                  <Link href={i === 0 ? basePath : `${basePath}/${row.season}`} className="hover:text-[var(--accent)]">
+                  <Link href={row.season === latest ? basePath : `${basePath}/${row.season}`} className="hover:text-[var(--accent)]">
                     {formatSeasonLabel(league, row.season)}
                   </Link>
                 </td>
@@ -57,7 +75,7 @@ export function PlayerSeasonTable({ league, profile, basePath, activeSeason }: {
             {profile.seasons.length > 1 && (
               <tr className="table-row font-semibold">
                 <td className="py-2 pl-4" colSpan={2}>
-                  Career on record
+                  {careerLabel}
                 </td>
                 <td className={num}>{profile.games}</td>
                 <td className={`${num} whitespace-nowrap text-[var(--text-muted)]`}>{recordText(profile.record, soccer)}</td>

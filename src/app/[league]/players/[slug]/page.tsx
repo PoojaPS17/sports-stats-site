@@ -30,7 +30,7 @@ import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
-import { buildProfile, goalBands, formatStat, playerMeta, playerSport, positionLabel, type PlayerProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, goalBands, formatStat, playerMeta, playerSport, positionLabel, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { ImageActions } from "@/components/ImageActions";
 import { PlayerExportCard } from "@/components/PlayerExportCard";
@@ -71,10 +71,15 @@ function profileSummary(league: League, player: PlayerRow, profile: PlayerProfil
 const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(league, slug));
 const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
 
-async function loadProfile(league: League, player: PlayerRow): Promise<PlayerProfile | null> {
+async function loadStaged(league: League, player: PlayerRow): Promise<StagedProfile | null> {
   const sport = playerSport(league);
   if (!sport) return null;
-  return buildProfile(sport, await cachedLog(league, player.espn_id));
+  return buildStagedProfile(sport, await cachedLog(league, player.espn_id));
+}
+
+// Any appearance at all: a player with only playoff or play-in games still has a page to show.
+function hasGames(staged: StagedProfile | null): boolean {
+  return staged !== null && (staged.log.length > 0 || staged.counted.games > 0);
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; slug: string }> }): Promise<Metadata> {
@@ -86,9 +91,10 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     const team = player.team_name ? ` (${player.team_name})` : "";
     return pageMeta(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`, `/${league}/players/${slug}`);
   }
-  const profile = await loadProfile(league, player);
-  const seasons = profile?.games ? [] : await getPlayerSeasons(league, player.espn_id);
-  const empty = !profile?.games && seasons.length === 0;
+  const staged = await loadStaged(league, player);
+  const profile = staged?.regular ?? null;
+  const seasons = hasGames(staged) ? [] : await getPlayerSeasons(league, player.espn_id);
+  const empty = !hasGames(staged) && seasons.length === 0;
   // The competition is named because a player has a page in each one he plays in.
   const longTitle = `${player.name} ${LEAGUE_LABEL[league]} Stats, Game Log & Career`;
   return pageMeta(longTitle.length <= 60 ? longTitle : `${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player, profile, true), `/${league}/players/${slug}`, { noindex: empty });
@@ -163,19 +169,26 @@ export default async function PlayerPage({
     );
   }
 
-  const [profile, feedSeasons] = await Promise.all([loadProfile(league, player), getPlayerSeasons(league, player.espn_id)]);
-  if (!profile) notFound();
-  const seasons = [...new Set([...profile.seasons.map((s) => s.season), ...feedSeasons])].sort((a, b) => b - a);
+  const [staged, feedSeasons] = await Promise.all([loadStaged(league, player), getPlayerSeasons(league, player.espn_id)]);
+  if (!staged) notFound();
+  // Regular season (for soccer, every appearance) drives the career strip, the season table, the
+  // splits and the summary; best games and recent form read every counted game.
+  const profile = staged.regular;
+  const anyGames = hasGames(staged);
+  const split = staged.split;
+  const latestRegular = profile.seasons[0]?.season ?? null;
+  const seasons = [...new Set([...staged.counted.seasons.map((s) => s.season), ...feedSeasons])].sort((a, b) => b - a);
   const latest = seasons[0] ?? null;
   const [feedStats, goals] = await Promise.all([
     latest ? getPlayerSeasonStatsBySeason(league, player.espn_id, latest) : null,
-    sport === "soccer" && profile.games > 0 && !profile.profile.specs.some((s) => s.key === "cs")
+    sport === "soccer" && anyGames && !profile.profile.specs.some((s) => s.key === "cs")
       ? getPlayerGoalClocks(league, player.espn_id, profile.rows.map((r) => r.game_espn_id))
       : null,
   ]);
   const summary = profileSummary(league, player, profile);
   const soccer = sport === "soccer";
   const bands = goals ? goalBands(goals.clocks) : [];
+  const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
 
   // The link mesh: squad-mates, the league's best at this position, and the
   // head-to-head pages behind the opponents this player has faced most.
@@ -183,8 +196,8 @@ export default async function PlayerPage({
     player.team_espn_id && onRoster ? getTeammates(league, player.team_espn_id, player.espn_id) : [],
     getPositionPeers(league, player.position, player.espn_id),
   ]);
-  const teamSlug = player.team_slug ?? profile.teams[0]?.slug ?? null;
-  const teamName = player.team_name ?? profile.teams[0]?.name ?? null;
+  const teamSlug = player.team_slug ?? staged.counted.teams[0]?.slug ?? null;
+  const teamName = player.team_name ?? staged.counted.teams[0]?.name ?? null;
   const rivals =
     teamSlug && teamName
       ? profile.opponents
@@ -198,84 +211,111 @@ export default async function PlayerPage({
     <div className="flex flex-col gap-6">
       {header(playerMeta(sport, player), summary)}
 
-      {profile.games === 0 ? (
+      {!anyGames ? (
         <>
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games on record for {player.name} in {LEAGUE_LABEL[league]} yet.</p>
           <PlayerSeasonStats league={league} stats={feedStats} seasons={seasons} activeSeason={latest} basePath={basePath} />
         </>
       ) : (
         <>
-          <section>
-            <SectionHeader
-              tools={
-                <ImageActions
-                  filename={`${slug}-${league}`}
-                  shareTitle={`${player.name} career stats`}
-                  card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamColor={player.team_color} meta={[...playerMeta(sport, player), ...lastClub]} stats={careerStripStats(profile)} />}
-                />
-              }
-            >
-              Career
-            </SectionHeader>
-            <PlayerCareerStrip league={league} profile={profile} />
-          </section>
+          {profile.games > 0 ? (
+            <>
+              <section>
+                <SectionHeader
+                  tools={
+                    <ImageActions
+                      filename={`${slug}-${league}`}
+                      shareTitle={`${player.name} career stats`}
+                      card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamColor={player.team_color} meta={[...playerMeta(sport, player), ...lastClub]} stats={careerStripStats(profile)} />}
+                    />
+                  }
+                >
+                  Career
+                </SectionHeader>
+                <PlayerCareerStrip league={league} profile={profile} />
+              </section>
 
-          <section>
-            <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : "Totals from the box score of every game on record."}>Season by season</SectionHeader>
-            <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
-          </section>
+              <section>
+                <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
+              </section>
+            </>
+          ) : (
+            <section>
+              <SectionHeader>Regular season</SectionHeader>
+              <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games on record for {player.name} in {LEAGUE_LABEL[league]} yet.</p>
+            </section>
+          )}
 
-          {profile.form.length > 1 && (
+          {staged.playoffs && (
+            <section>
+              <SectionHeader description="Playoff games only; ESPN lists these separately from the regular season.">Playoffs</SectionHeader>
+              <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} careerLabel="Career playoffs" baseSeason={latestRegular} />
+            </section>
+          )}
+
+          {staged.playin && (
+            <section>
+              <SectionHeader description="Play-in tournament games, listed separately from the regular season and the playoffs.">Play-In</SectionHeader>
+              <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} careerLabel="Career play-in" baseSeason={latestRegular} />
+            </section>
+          )}
+
+          {staged.counted.form.length > 1 && (
             <section>
               <SectionHeader>Recent form</SectionHeader>
-              <PlayerFormChart league={league} profile={profile} />
+              <PlayerFormChart league={league} profile={staged.counted} />
             </section>
           )}
 
-          {profile.best.length > 0 && (
+          {staged.counted.best.length > 0 && (
             <section>
-              <SectionHeader description={profile.profile.rankNote}>Best games</SectionHeader>
-              <PlayerBestGames league={league} profile={profile} />
+              <SectionHeader description={staged.counted.profile.rankNote}>Best games</SectionHeader>
+              <PlayerBestGames league={league} profile={staged.counted} />
             </section>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <section>
-              <SectionHeader>Home and away</SectionHeader>
-              <PlayerSplitsTable league={league} profile={profile} rows={profile.homeAway} firstColumn="Venue" />
-            </section>
-            {profile.byResult.length > 0 && (
+          {profile.games > 0 && (
+            <>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <section>
+                  <SectionHeader>Home and away</SectionHeader>
+                  <PlayerSplitsTable league={league} profile={profile} rows={profile.homeAway} firstColumn="Venue" />
+                </section>
+                {profile.byResult.length > 0 && (
+                  <section>
+                    <SectionHeader>By result</SectionHeader>
+                    <PlayerSplitsTable league={league} profile={profile} rows={profile.byResult} firstColumn="Team result" />
+                  </section>
+                )}
+              </div>
+
+              {goals && goals.clocks.length > 0 && (
+                <section>
+                  <SectionHeader>Goals by minute</SectionHeader>
+                  <GoalMinutesChart bands={bands} reports={goals.reports} games={profile.games} />
+                </section>
+              )}
+
               <section>
-                <SectionHeader>By result</SectionHeader>
-                <PlayerSplitsTable league={league} profile={profile} rows={profile.byResult} firstColumn="Team result" />
+                <SectionHeader description="Every opponent faced, most often first.">Against each opponent</SectionHeader>
+                <PlayerSplitsTable league={league} profile={profile} rows={profile.opponents} firstColumn="Opponent" linkTeams />
               </section>
-            )}
-          </div>
 
-          {goals && goals.clocks.length > 0 && (
-            <section>
-              <SectionHeader>Goals by minute</SectionHeader>
-              <GoalMinutesChart bands={bands} reports={goals.reports} games={profile.games} />
-            </section>
-          )}
-
-          <section>
-            <SectionHeader description="Every opponent faced, most often first.">Against each opponent</SectionHeader>
-            <PlayerSplitsTable league={league} profile={profile} rows={profile.opponents} firstColumn="Opponent" linkTeams />
-          </section>
-
-          {profile.milestones.length > 0 && (
-            <section>
-              <SectionHeader description="Landmarks within the games on record, pinned to the game they came in.">Milestones</SectionHeader>
-              <PlayerMilestones league={league} profile={profile} />
-            </section>
+              {profile.milestones.length > 0 && (
+                <section>
+                  <SectionHeader description="Landmarks within the games on record, pinned to the game they came in.">Milestones</SectionHeader>
+                  <PlayerMilestones league={league} profile={profile} />
+                </section>
+              )}
+            </>
           )}
 
           <AdSlot label="Player page middle" />
 
           <section>
             <SectionHeader description={`Every ${LEAGUE_LABEL[league]} game on record, latest season open.`}>Game log</SectionHeader>
-            <PlayerGameLogTable league={league} profile={profile} />
+            <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={split} />
           </section>
 
           {feedStats && <PlayerSeasonStats league={league} stats={feedStats} seasons={seasons} activeSeason={latest} basePath={basePath} />}
@@ -289,10 +329,22 @@ export default async function PlayerPage({
             ]}
           />
 
-          <p className="text-[11px] text-[var(--text-faint)]">
-            Career figures are summed from the {profile.games} {LEAGUE_LABEL[league]} {soccer ? "appearances" : "games"} on record here
-            {profile.firstDate ? ` since ${new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : ""}; earlier games and other competitions are not included.
-          </p>
+          {split ? (
+            <p className="text-[11px] text-[var(--text-faint)]">
+              {profile.games > 0 && (
+                <>
+                  Regular-season figures are summed from the {profile.games} {LEAGUE_LABEL[league]} regular-season games on record here
+                  {since ? ` since ${since}` : ""}.{" "}
+                </>
+              )}
+              Playoff and play-in games are shown separately; preseason, All-Star and NBA Cup final games are listed in the game log but not counted, matching ESPN.
+            </p>
+          ) : (
+            <p className="text-[11px] text-[var(--text-faint)]">
+              Career figures are summed from the {profile.games} {LEAGUE_LABEL[league]} {soccer ? "appearances" : "games"} on record here
+              {since ? ` since ${since}` : ""}; earlier games and other competitions are not included.
+            </p>
+          )}
         </>
       )}
     </div>
