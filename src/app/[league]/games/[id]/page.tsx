@@ -137,7 +137,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   // they aren't — so call it out explicitly instead of leaving it ambiguous. A game
   // ESPN closed without playing (state "post", not completed) keeps sending those
   // averages, so it gets the same treatment with wording that says it was called off.
-  const statsFraming = teamStatsFraming(game);
+  const statsFraming = teamStatsFraming(league, game);
   const show = gameSections(game);
   const contextView = matchContextView(league, game);
   const events = details?.events ?? [];

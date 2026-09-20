@@ -5,7 +5,7 @@ export const CALLED_OFF = /postpon|cancel|abandon|suspend/i;
  * ESPN text of a game that was never played (postponed or cancelled), unlike an abandoned one, which is a result
  * once it is over. ESPN files both under state "post", so "post" alone does not say a game was played.
  */
-export const isNeverPlayed = (statusText: string | null | undefined): boolean => /postpon|cancel/i.test(statusText ?? "");
+export const isNeverPlayed = (statusText: string | null | undefined): boolean => /postpon|cancel/i.test(statusText ?? "") && !/abandon/i.test(statusText ?? "");
 
 /** True for a game that was postponed, cancelled, abandoned or suspended (not a fixture, not a result). */
 export const isCalledOff = (statusDetail: string | null | undefined): boolean => CALLED_OFF.test(statusDetail ?? "");
@@ -25,11 +25,11 @@ export function calledOffLabel(statusDetail: string | null | undefined): string 
  * being reported as "in"), so displays test this rather than isCalledOff alone. One rule for every card, pill,
  * image and calendar feed.
  */
-export const isGameCalledOff = (g: { completed: boolean; status_state?: string | null; status_detail: string | null | undefined }): boolean =>
+export const isGameCalledOff = (g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined }): boolean =>
   g.status_state !== "in" && (g.completed ? isNeverPlayed(g.status_detail) : isCalledOff(g.status_detail));
 
 /** The label to show for a game that must be shown as called off (see isGameCalledOff); null for every other game. */
-export const gameCalledOffLabel = (g: { completed: boolean; status_state?: string | null; status_detail: string | null | undefined }): string | null =>
+export const gameCalledOffLabel = (g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined }): string | null =>
   isGameCalledOff(g) ? calledOffLabel(g.status_detail) : null;
 
 /** schema.org's status for a called-off label: EventPostponed for postponed and suspended, EventCancelled for cancelled and abandoned, EventScheduled otherwise. */
@@ -44,5 +44,5 @@ export function schemaStatusForLabel(label: string | null): string {
  * or abandoned one, EventScheduled for everything else (it has no "finished" status, so results and games in play
  * are scheduled too).
  */
-export const schemaEventStatus = (g: { completed: boolean; status_state?: string | null; status_detail: string | null | undefined }): string =>
+export const schemaEventStatus = (g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined }): string =>
   schemaStatusForLabel(gameCalledOffLabel(g));

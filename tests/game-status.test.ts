@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calledOffLabel, gameCalledOffLabel, schemaEventStatus, isCalledOff, isGameCalledOff } from "../src/lib/gameStatus";
+import { calledOffLabel, CALLED_OFF, gameCalledOffLabel, isNeverPlayed, schemaEventStatus, isCalledOff, isGameCalledOff } from "../src/lib/gameStatus";
 
 test("isCalledOff recognises postponed, cancelled, abandoned and suspended games", () => {
   for (const s of ["Postponed", "postponed", "Canceled", "Cancelled", "Abandoned", "Suspended"]) {
@@ -26,12 +26,12 @@ test("calledOffLabel names why a called-off game was closed, and is null for any
 });
 
 test("isGameCalledOff is true only for an unfinished called-off game", () => {
-  assert.equal(isGameCalledOff({ completed: false, status_detail: "Postponed" }), true);
-  assert.equal(isGameCalledOff({ completed: false, status_detail: "Canceled" }), true);
+  assert.equal(isGameCalledOff({ completed: false, status_state: "post", status_detail: "Postponed" }), true);
+  assert.equal(isGameCalledOff({ completed: false, status_state: "post", status_detail: "Canceled" }), true);
   // a finished abandoned cricket match is a result
-  assert.equal(isGameCalledOff({ completed: true, status_detail: "Abandoned" }), false);
-  assert.equal(isGameCalledOff({ completed: false, status_detail: "Scheduled" }), false);
-  assert.equal(isGameCalledOff({ completed: false, status_detail: null }), false);
+  assert.equal(isGameCalledOff({ completed: true, status_state: "post", status_detail: "Abandoned" }), false);
+  assert.equal(isGameCalledOff({ completed: false, status_state: "pre", status_detail: "Scheduled" }), false);
+  assert.equal(isGameCalledOff({ completed: false, status_state: null, status_detail: null }), false);
 });
 
 test("a game in play is live, whatever its status text says: it is never called off", () => {
@@ -57,7 +57,7 @@ test("a game whose status text says cancelled or postponed was never played, eve
 
 test("gameCalledOffLabel gives the label for an unfinished called-off game and null for everything else", () => {
   assert.equal(gameCalledOffLabel({ completed: false, status_state: "post", status_detail: "Postponed" }), "Postponed");
-  assert.equal(gameCalledOffLabel({ completed: false, status_detail: "Canceled" }), "Cancelled");
+  assert.equal(gameCalledOffLabel({ completed: false, status_state: "post", status_detail: "Canceled" }), "Cancelled");
   assert.equal(gameCalledOffLabel({ completed: true, status_state: "post", status_detail: "Abandoned" }), null);
   assert.equal(gameCalledOffLabel({ completed: false, status_state: "pre", status_detail: "Scheduled" }), null);
 });
@@ -73,4 +73,15 @@ test("schemaEventStatus: called-off games are postponed or cancelled to a crawle
   assert.equal(schemaEventStatus(g(false, "in", "Suspended")), "https://schema.org/EventScheduled");
   assert.equal(schemaEventStatus(g(true, "post", "Abandoned")), "https://schema.org/EventScheduled");
   assert.equal(schemaEventStatus(g(true, "post", "Final")), "https://schema.org/EventScheduled");
+});
+
+test("isNeverPlayed: postponed and cancelled, never abandoned or suspended, which can have been part played", () => {
+  for (const t of ["Postponed", "Canceled", "Cancelled", "Match cancelled without a ball bowled"]) assert.equal(isNeverPlayed(t), true, t);
+  for (const t of ["Abandoned", "Match abandoned without a ball bowled", "Suspended", "Final", "", null, undefined]) assert.equal(isNeverPlayed(t), false, String(t));
+  // a text that says both is a match that was abandoned: a result once it is over
+  assert.equal(isNeverPlayed("Match abandoned, remaining play cancelled"), false);
+});
+
+test("CALLED_OFF is plain words and bars: it is inlined into SQL as a literal, so it may never gain a quote, backslash or $", () => {
+  assert.match(CALLED_OFF.source, /^[a-z|]+$/);
 });

@@ -63,7 +63,7 @@ test("gameDescription: a called-off game says so and keeps only what stays true,
   ];
   for (const [detail, word] of expected) {
     const d = gameDescription("epl", calledOff(detail), D, "");
-    assert.equal(d, `Premier League: Arsenal v Chelsea, Sep 20, 2026. This game was ${word}. Team form and head-to-head record.`, detail);
+    assert.equal(d, `Premier League: Arsenal v Chelsea, Sep 20, 2026. This match was ${word}. Team form and head-to-head record.`, detail);
     assert.doesNotMatch(d, PRE_MATCH, detail);
   }
 });
@@ -115,7 +115,7 @@ test("gameDescription: Tests keep their own description; a called-off Test says 
 
 test("teamStatsFraming: a finished or live game shows real team stats", () => {
   for (const g of [finished(), game({ status_state: "in", status_detail: "45'" })]) {
-    const f = teamStatsFraming(g);
+    const f = teamStatsFraming("epl", g);
     assert.equal(f.seasonAverages, false);
     assert.equal(f.heading, "Team Stats");
     assert.equal(f.description, undefined);
@@ -125,7 +125,7 @@ test("teamStatsFraming: a finished or live game shows real team stats", () => {
 });
 
 test("teamStatsFraming: a fixture shows season averages coming into the game", () => {
-  const f = teamStatsFraming(game());
+  const f = teamStatsFraming("epl", game());
   assert.equal(f.seasonAverages, true);
   assert.equal(f.heading, "Season Comparison");
   assert.equal(f.description, "Season averages coming into this game. It hasn't been played yet.");
@@ -134,11 +134,11 @@ test("teamStatsFraming: a fixture shows season averages coming into the game", (
 });
 
 test("teamStatsFraming: a called-off game gets the season comparison with wording that is true for it", () => {
-  for (const [detail, word] of [["Postponed", "postponed"], ["Canceled", "cancelled"], ["Abandoned", "abandoned"], ["Suspended", "suspended"]]) {
-    const f = teamStatsFraming(calledOff(detail));
+  for (const [detail, word] of [["Postponed", "postponed"], ["Canceled", "cancelled"]]) {
+    const f = teamStatsFraming("epl", calledOff(detail));
     assert.equal(f.seasonAverages, true, detail);
     assert.equal(f.heading, "Season Comparison");
-    assert.equal(f.description, `Season averages for both teams. This game was ${word}.`);
+    assert.equal(f.description, `Season averages for both teams. This match was ${word}.`);
     assert.doesNotMatch(f.description ?? "", /coming into|hasn't been played|yet/i);
     assert.equal(f.cardTitle, "Season comparison");
     assert.equal(f.shareLabel, "season comparison");
@@ -147,7 +147,7 @@ test("teamStatsFraming: a called-off game gets the season comparison with wordin
 });
 
 test("teamStatsFraming: a finished abandoned game keeps its real team stats", () => {
-  assert.equal(teamStatsFraming(finished({ status_detail: "Abandoned" })).seasonAverages, false);
+  assert.equal(teamStatsFraming("epl", finished({ status_detail: "Abandoned" })).seasonAverages, false);
 });
 
 /* ---- hasTeamStats ------------------------------------------------------- */
@@ -184,21 +184,23 @@ test("matchContextView: a called-off game has no probability and no going-in wor
     const v = matchContextView(league, calledOff("Postponed"));
     assert.equal(v.showProbability, false);
     assert.equal(v.title, "Ratings and form");
-    assert.equal(v.description, "This game was postponed. Ratings and form as of the scheduled date, from every result on record.");
+    assert.equal(v.description, `This ${league === "epl" ? "match" : "game"} was postponed. Ratings and form as of the scheduled date, from every result on record.`);
     assert.equal(v.labels.elo, "Elo rating");
     assert.equal(v.labels.form, "Recent form");
     assert.doesNotMatch(JSON.stringify(v), /going in|going into|pre-match/i);
   }
   assert.equal(matchContextView("epl", calledOff("Postponed")).labels.standing, "Position");
   assert.equal(matchContextView("nba", calledOff("Postponed")).labels.standing, "Record");
-  assert.match(matchContextView("epl", calledOff("Canceled")).description, /^This game was cancelled\./);
+  assert.match(matchContextView("epl", calledOff("Canceled")).description, /^This match was cancelled\./);
 });
 
 /* ---- gameSections ------------------------------------------------------- */
 
-test("gameSections: a called-off game hides the broadcast strip and everything that reads as this game's play", () => {
-  const off = gameSections(calledOff());
+test("gameSections: a postponed or cancelled game hides the broadcast strip and everything that reads as this game's play", () => {
+  for (const detail of ["Postponed", "Canceled"]) {
+  const off = gameSections(calledOff(detail));
   assert.deepEqual(off, { broadcastStrip: false, winProbability: false, lineups: false, leaders: false, playerStats: false, playFacts: false, detailsMissingNote: false });
+  }
 });
 
 test("gameSections: fixtures, live and finished games show everything, as before", () => {
@@ -207,4 +209,48 @@ test("gameSections: fixtures, live and finished games show everything, as before
   assert.deepEqual(gameSections(finished()), all);
   assert.deepEqual(gameSections(game({ status_state: "in", status_detail: "Suspended" })), all);
   assert.deepEqual(gameSections(finished({ status_detail: "Abandoned" })), all);
+});
+
+/* ---- a game abandoned or suspended part-way has real partial play: only the never-played games lose their play sections ---- */
+
+test("gameSections: an abandoned or suspended game keeps every play section; only the original slot's broadcast strip goes", () => {
+  for (const detail of ["Abandoned", "Suspended"]) {
+    for (const state of ["post", "pre"]) {
+      const s = gameSections(game({ status_state: state, status_detail: detail }));
+      assert.deepEqual(s, { broadcastStrip: false, winProbability: true, lineups: true, leaders: true, playerStats: true, playFacts: true, detailsMissingNote: true }, `${detail} ${state}`);
+    }
+  }
+});
+
+test("teamStatsFraming: an abandoned or suspended game that reached state post has a real box score, so it keeps Team Stats", () => {
+  for (const detail of ["Abandoned", "Suspended"]) {
+    const f = teamStatsFraming("epl", game({ status_state: "post", status_detail: detail }));
+    assert.equal(f.seasonAverages, false, detail);
+    assert.equal(f.heading, "Team Stats");
+    assert.equal(f.description, undefined);
+    assert.equal(f.cardTitle, "Team stats");
+  }
+});
+
+test("teamStatsFraming: an abandoned or suspended game still in state pre only has season averages, and says it was called off", () => {
+  for (const [detail, word] of [["Abandoned", "abandoned"], ["Suspended", "suspended"]]) {
+    const f = teamStatsFraming("epl", game({ status_state: "pre", status_detail: detail }));
+    assert.equal(f.seasonAverages, true);
+    assert.equal(f.heading, "Season Comparison");
+    assert.equal(f.description, `Season averages for both teams. This match was ${word}.`);
+  }
+});
+
+test("the header, description and ratings card still say an abandoned or suspended game was called off", () => {
+  assert.match(gameDescription("epl", calledOff("Abandoned"), D, ""), /This match was abandoned\./);
+  assert.match(matchContextView("epl", calledOff("Suspended")).description, /^This match was suspended\./);
+  assert.equal(matchContextView("epl", calledOff("Suspended")).showProbability, false);
+});
+
+test("nouns: the US leagues say game, football and cricket say match", () => {
+  assert.match(gameDescription("nba", calledOff("Postponed"), D, ""), /This game was postponed\./);
+  assert.match(gameDescription("nfl", calledOff("Postponed"), D, ""), /This game was postponed\./);
+  assert.match(teamStatsFraming("nba", calledOff("Postponed")).description ?? "", /This game was postponed\./);
+  assert.match(teamStatsFraming("ipl", calledOff("Postponed")).description ?? "", /This match was postponed\./);
+  assert.match(gameDescription("seriea", calledOff("Postponed"), D, ""), /This match was postponed\./);
 });

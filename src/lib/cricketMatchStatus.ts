@@ -27,8 +27,7 @@ export function classifyCricketMatch(m: StatusFields): CricketMatchKind {
   const summary = m.status_summary ?? "";
   if (m.status_state === "in") return "live";
   if (m.status_state === "post") {
-    const never = isNeverPlayed(summary) && !/abandon/i.test(summary);
-    return never ? { calledOff: calledOffLabel(summary) ?? "Postponed" } : "result";
+    return isNeverPlayed(summary) ? { calledOff: calledOffLabel(summary) ?? "Postponed" } : "result";
   }
   return CALLED_OFF.test(summary) ? { calledOff: calledOffLabel(summary) ?? "Postponed" } : "fixture";
 }

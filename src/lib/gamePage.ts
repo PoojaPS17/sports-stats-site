@@ -2,7 +2,7 @@
 // played, finished or called off. Pure, so tests need no React and no database. A game ESPN closed without playing
 // (postponed, cancelled, abandoned, suspended) must not read like a preview of a match that will be played: no
 // "pre-match win probability", no "going into this game", no season averages "coming into" it, no broadcast slot.
-import { gameCalledOffLabel } from "./gameStatus";
+import { gameCalledOffLabel, isGameCalledOff, isNeverPlayed } from "./gameStatus";
 import { isCricketLeague, isFirstClassCricket, isSoccerLeague, LEAGUE_LABEL, type League } from "./leagues";
 import { teamDisplayName } from "./teamName";
 
@@ -21,7 +21,14 @@ export function gameSides(league: League, game: { home_name: string; away_name: 
 /** Why a game is off in a sentence: "postponed", "cancelled", "abandoned" or "suspended"; null for any other game. */
 const offWord = (game: Status): string | null => gameCalledOffLabel(game)?.toLowerCase() ?? null;
 
-const noun = (league: League): string => (isCricketLeague(league) ? "match" : "game");
+/** The US leagues say "game"; football and cricket say "match", as the rest of their copy does. */
+const noun = (league: League): string => (league === "nfl" || league === "nba" ? "game" : "match");
+
+/**
+ * True for a game that was never played: postponed or cancelled. An abandoned or suspended game may have been
+ * part played and still has its own line-ups, leaders and box score, so it is not "never played".
+ */
+const neverPlayed = (game: Status): boolean => isGameCalledOff(game) && isNeverPlayed(game.status_detail);
 
 /**
  * The meta description of a game page. `where` is " at <venue>" or ""; `scorers` is the soccer goals line (with its
@@ -53,7 +60,7 @@ export function gameDescription(league: League, game: Status & { status_summary:
  * both get the season comparison, each with wording that is true for it; only a live or finished game has a real
  * "Team Stats" box score.
  */
-export function teamStatsFraming(game: Status): {
+export function teamStatsFraming(league: League, game: Status): {
   seasonAverages: boolean;
   heading: string;
   description: string | undefined;
@@ -61,12 +68,14 @@ export function teamStatsFraming(game: Status): {
   shareLabel: string;
 } {
   const off = offWord(game);
-  const seasonAverages = off !== null || game.status_state === "pre";
+  // Season averages only where there is no play to report: a game not yet started, or one never played. An
+  // abandoned or suspended game that reached state post has its real (partial) box score.
+  const seasonAverages = neverPlayed(game) || game.status_state === "pre";
   if (!seasonAverages) return { seasonAverages, heading: "Team Stats", description: undefined, cardTitle: "Team stats", shareLabel: "team stats" };
   return {
     seasonAverages,
     heading: "Season Comparison",
-    description: off ? `Season averages for both teams. This game was ${off}.` : "Season averages coming into this game. It hasn't been played yet.",
+    description: off ? `Season averages for both teams. This ${noun(league)} was ${off}.` : "Season averages coming into this game. It hasn't been played yet.",
     cardTitle: "Season comparison",
     shareLabel: "season comparison",
   };
@@ -93,7 +102,7 @@ export function matchContextView(league: League, game: Status): {
   if (off) {
     return {
       title: "Ratings and form",
-      description: `This game was ${off}. Ratings and form as of the scheduled date, from every result on record.`,
+      description: `This ${noun(league)} was ${off}. Ratings and form as of the scheduled date, from every result on record.`,
       showProbability: false,
       labels: { elo: "Elo rating", form: "Recent form", standing: soccer ? "Position" : "Record" },
     };
@@ -114,9 +123,11 @@ export function matchContextView(league: League, game: Status): {
 }
 
 /**
- * Which parts of a game page may show. ESPN's details for a game it closed without playing carry the original
- * slot's broadcast and forecast, and season leaders, squad lists or empty lists where a game's own would be; none
- * of it is this game's play, so a called-off game hides it all.
+ * Which parts of a game page may show. ESPN's details for a game that was never played (postponed or cancelled)
+ * carry the original slot's broadcast and forecast, and season leaders, squad lists or empty lists where a game's
+ * own would be; none of it is this game's play, so those games hide it. An abandoned or suspended game may have
+ * real partial play, so it keeps every play section (each still renders only when it has data); only the
+ * broadcast and forecast, which belong to the original slot, are hidden for any called-off game.
  */
 export function gameSections(game: Status): {
   broadcastStrip: boolean;
@@ -128,6 +139,6 @@ export function gameSections(game: Status): {
   playFacts: boolean;
   detailsMissingNote: boolean;
 } {
-  const show = offWord(game) === null;
-  return { broadcastStrip: show, winProbability: show, lineups: show, leaders: show, playerStats: show, playFacts: show, detailsMissingNote: show };
+  const play = !neverPlayed(game);
+  return { broadcastStrip: offWord(game) === null, winProbability: play, lineups: play, leaders: play, playerStats: play, playFacts: play, detailsMissingNote: play };
 }
