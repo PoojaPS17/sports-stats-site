@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/LocalTime";
+import { tennisMatchStatus } from "@/lib/tennisDisplay";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type TennisMatch, type TennisSide, type TennisTournament } from "@/lib/tennis";
 
 /* ------------------------------------------------------------------------ */
@@ -104,7 +105,8 @@ function SideRow({ tour, side, won, decided, setCount }: { tour: string; side: T
 
 export function TennisMatchLine({ match, showTournament = false }: { match: TennisMatch; showTournament?: boolean }) {
   const decided = match.winner_side != null;
-  const live = match.status_state === "in";
+  // Live, a result, called off (postponed, cancelled...: the reason, never a start time) or upcoming.
+  const status = tennisMatchStatus(match);
   const setCount = Math.max(match.side1.sets?.length ?? 0, match.side2.sets?.length ?? 0);
   const where = [match.round, match.court].filter(Boolean).join(" · ");
   const tourForLinks = match.tour;
@@ -113,10 +115,10 @@ export function TennisMatchLine({ match, showTournament = false }: { match: Tenn
     <div className="flex flex-col px-4 py-2.5">
       <div className="mb-1 flex items-center justify-between gap-2 text-xs">
         <span className="flex min-w-0 items-center gap-2">
-          {live ? (
-            <span className="pill pill-live">{match.status_detail ?? "Live"}</span>
-          ) : match.completed ? (
-            <span className="pill pill-final">{match.status_detail && match.status_detail !== "Final" ? match.status_detail : "Final"}</span>
+          {status.kind === "live" ? (
+            <span className="pill pill-live">{status.label}</span>
+          ) : status.kind === "result" || status.kind === "called-off" ? (
+            <span className="pill pill-final">{status.label}</span>
           ) : (
             <span className="pill pill-upcoming">
               <LocalTime iso={match.date} format="time" />
@@ -132,7 +134,7 @@ export function TennisMatchLine({ match, showTournament = false }: { match: Tenn
       </div>
       <SideRow tour={tourForLinks} side={match.side1} won={match.winner_side === 1} decided={decided} setCount={setCount} />
       <SideRow tour={tourForLinks} side={match.side2} won={match.winner_side === 2} decided={decided} setCount={setCount} />
-      {!decided && match.completed && match.status_detail && match.status_detail !== "Final" && (
+      {!decided && status.kind === "result" && match.status_detail && match.status_detail !== "Final" && (
         <p className="mt-1 text-xs text-[var(--text-muted)]">{match.status_detail}</p>
       )}
     </div>

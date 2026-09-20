@@ -316,7 +316,8 @@ export async function getTennisPlayerRivals(tour: Tour, playerEspnId: string, li
     `select p.espn_id, p.name, p.slug, count(*)::int as matches, count(*) filter (where m.winner_espn_id = $2)::int as wins
      from tennis_matches m
      join players p on p.league = m.tour and p.espn_id = case when m.player1_espn_id = $2 then m.player2_espn_id else m.player1_espn_id end
-     where m.tour = $1 and m.completed and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
+     -- a match with no winner (postponed or cancelled, which the scraper can store as completed) is not one played
+     where m.tour = $1 and m.completed and m.winner_espn_id is not null and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
        and (m.competition_type is null or m.competition_type like '%singles')
      group by 1, 2, 3 order by matches desc, wins desc limit $3`,
     [tour, playerEspnId, limit]

@@ -14,6 +14,7 @@ let homeFeed: typeof import("../src/lib/homeFeed");
 let gamesLive: typeof import("../src/lib/gamesLive");
 let ics: typeof import("../src/lib/ics");
 let cricketSeries: typeof import("../src/lib/cricketSeries");
+let tennis: typeof import("../src/lib/tennis");
 let pickSpotlight: typeof import("../src/components/SpotlightCard").pickSpotlight;
 
 before(async () => {
@@ -24,6 +25,7 @@ before(async () => {
   gamesLive = await import("../src/lib/gamesLive");
   ics = await import("../src/lib/ics");
   cricketSeries = await import("../src/lib/cricketSeries");
+  tennis = await import("../src/lib/tennis");
   pickSpotlight = (await import("../src/components/SpotlightCard")).pickSpotlight;
 });
 after(async () => {
@@ -34,6 +36,8 @@ beforeEach(async () => {
   await db.pool.query(`delete from games`);
   await db.pool.query(`delete from cricket_series_matches`);
   await db.pool.query(`delete from cricket_series`);
+  await db.pool.query(`delete from tennis_matches`);
+  await db.pool.query(`delete from players where league = 'atp'`);
 });
 
 const at = (hours: number) => new Date(Date.now() + hours * 3600_000).toISOString();
@@ -323,4 +327,31 @@ test("a series counts a called-off match as neither played nor still to play", a
   assert.equal(s?.match_count, 3);
   assert.equal(s?.completed_count, 2);
   assert.equal(s?.called_off_count, 1);
+});
+
+/* ------------------------------------------------------------------------ */
+/* Tennis                                                                    */
+/* ------------------------------------------------------------------------ */
+
+// The scraper stores ESPN's state "post" as completed, so a postponed match can sit in tennis_matches completed,
+// with no winner. It is not a match the player lost.
+test("a postponed tennis match is not counted as a played match or a loss in a player's rivals", async () => {
+  for (const id of ["1", "2", "3"]) {
+    await db.pool.query(`insert into players (league, espn_id, name, slug) values ('atp', $1, $1, $1)`, [id]);
+  }
+  const insert = (id: string, opp: string, winner: string | null, completed: boolean, detail: string) =>
+    db.pool.query(
+      `insert into tennis_matches (tour, espn_id, tournament_name, date, player1_espn_id, player2_espn_id, winner_espn_id, completed, status_state, status_detail)
+       values ('atp', $1, 'T', now() - interval '1 day', '1', $2, $3, $4, 'post', $5)`,
+      [id, opp, winner, completed, detail]
+    );
+  await insert("m1", "2", "1", true, "Final");
+  await insert("m2", "2", "2", true, "Retired");
+  await insert("m3", "2", null, true, "Postponed");
+  await insert("m4", "3", null, false, "Canceled");
+  const rivals = await tennis.getTennisPlayerRivals("atp", "1");
+  assert.deepEqual(
+    rivals.map((r) => [r.espn_id, r.matches, r.wins]),
+    [["2", 2, 1]]
+  );
 });

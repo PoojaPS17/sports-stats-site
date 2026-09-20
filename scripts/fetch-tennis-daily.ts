@@ -19,6 +19,7 @@
 import { pool } from "./lib/db";
 import { fetchTennisDay, fetchTennisEvent, fetchTennisSeasonEventRefs, fetchTennisAthlete, fetchByRef, type Tour } from "./lib/tennis";
 import { uniqueSlugFor } from "./lib/players";
+import { isCalledOff } from "../src/lib/gameStatus";
 
 const REQUEST_DELAY_MS = 120;
 const LEAGUE_TOUR: Record<string, Tour> = { "851": "atp", "900": "wta" };
@@ -161,7 +162,9 @@ function parseEvent(leagueId: string, e: any): ParsedMatch | null {
   const noteType: string = typeof note?.type === "string" ? note.type : "";
   const [round, court] = noteType.includes(" - ") ? noteType.split(/\s+-\s+/, 2) : [noteType || null, null];
   const state: string | null = e.fullStatus?.type?.state ?? e.status ?? null;
-  const completed = e.fullStatus?.type?.completed === true || state === "post";
+  // ESPN files a called-off match under state "post" too, so "post" alone does not make a match finished: a
+  // postponed or cancelled one has completed false and is not a result (same rule as src/lib/tennisFeed.ts).
+  const completed = e.fullStatus?.type?.completed === true || (state === "post" && !isCalledOff(e.fullStatus?.type?.detail ?? e.summary));
   const winnerSide: 1 | 2 | null = home.winner === true ? 1 : away.winner === true ? 2 : null;
 
   // Full names and both countries from the result note, when there is one.

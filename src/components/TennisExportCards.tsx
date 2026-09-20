@@ -4,11 +4,7 @@ import { MatchBox } from "./TennisTournamentExportCards";
 import { ExportShell, ExportTitle, ExportTable, ExportList, ExportMore, EXPORT_ROW_LIMIT } from "./ExportShell";
 import { COMPETITION_LABEL, type TennisMatch, type TennisRankingRow } from "@/lib/tennis";
 import { CARD } from "@/lib/exportTheme";
-
-function caption(m: TennisMatch): string {
-  const state = m.status_state === "in" ? (m.status_detail ?? "Live") : m.completed ? (m.status_detail && m.status_detail !== "Final" ? m.status_detail : "Final") : `${new Date(m.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
-  return [state, m.round, m.court].filter(Boolean).join(" · ");
-}
+import { tennisMatchCaption } from "@/lib/tennisDisplay";
 
 // Matches grouped by tournament and draw, each with set scores and the winner ticked.
 // Stops at 25 matches and says how many more there were.
@@ -33,7 +29,7 @@ export function TennisScoresExportCard({ title, subtitle, matches, eyebrow = "Te
                 <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, color: CARD.textMuted }}>{d.type ? COMPETITION_LABEL[d.type] : "Singles"}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {d.matches.map((m) => (
-                    <MatchBox key={m.espn_id} m={m} caption={caption(m)} />
+                    <MatchBox key={m.espn_id} m={m} caption={tennisMatchCaption(m)} />
                   ))}
                 </div>
               </div>

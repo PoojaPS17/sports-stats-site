@@ -1,6 +1,7 @@
 import { ExportShell, ExportLabel } from "./ExportShell";
 import { COMPETITION_LABEL, type CompetitionType, type TennisMatch, type TennisSide } from "@/lib/tennis";
 import { CARD } from "@/lib/exportTheme";
+import { tennisMatchStatus } from "@/lib/tennisDisplay";
 
 type TournamentInfo = { name: string; season: number; tourLabel: string; major: boolean; location: string | null; range: string | null };
 
@@ -48,7 +49,7 @@ export function MatchBox({ m, caption }: { m: TennisMatch; caption?: string | nu
       {caption && <div style={{ marginBottom: 2, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: m.status_state === "in" ? CARD.loss : CARD.textFaint }}>{caption}</div>}
       <SideRow side={m.side1} won={m.winner_side === 1} decided={decided} setCount={setCount} />
       <SideRow side={m.side2} won={m.winner_side === 2} decided={decided} setCount={setCount} />
-      {!decided && m.completed && m.status_detail && m.status_detail !== "Final" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{m.status_detail}</div>}
+      {!decided && tennisMatchStatus(m).kind === "result" && m.status_detail && m.status_detail !== "Final" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{m.status_detail}</div>}
     </div>
   );
 }

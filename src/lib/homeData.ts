@@ -9,6 +9,7 @@ import { overlayLiveGames } from "@/lib/gamesLive";
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { isFeaturedCricket, isFeaturedSeriesId } from "@/lib/cricketFeatured";
 import { overlayLiveTennis } from "@/lib/tennisLive";
+import { tennisMatchStatus } from "@/lib/tennisDisplay";
 import type { F1EventRow } from "@/lib/f1";
 
 // Everything the homepage shows, read once per request and cached in tiers by how
@@ -158,7 +159,8 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
     .filter((m) => !nextCricketIds.has(m.espn_id))
     .sort(byPriority)
     .slice(0, 4);
-  const nextTennis = tennis.matches.filter((m) => m.status_state !== "in" && !m.completed && m.major).slice(0, 2);
+  // Still to be played: not finished, not in play, and not called off (a postponed match is not "coming up").
+  const nextTennis = tennis.matches.filter((m) => tennisMatchStatus(m).kind === "upcoming" && m.major).slice(0, 2);
 
   const now = Date.now();
   const sections: HomeSection[] = [];
