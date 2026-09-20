@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
 
-// Noon UTC, so the calendar day is the same in every timezone the tests may run in.
+// scheduleRowHeading and gameAccessibleLabel format in the machine's own time zone (the schedule image is rendered
+// where the viewer is), so the tests pin the zone rather than depend on where they run. New York: 12:00 UTC is
+// 8:00 AM on Sunday, September 20. Node re-reads TZ when it is assigned, and each test file runs in its own process.
+process.env.TZ = "America/New_York";
 const DATE = "2026-09-20T12:00:00.000Z";
 
 const game = (over: Record<string, unknown> = {}) => ({
@@ -34,8 +37,7 @@ test("isUpcomingGame: only a scheduled game that is not live and not called off"
 });
 
 test("scheduleRowHeading: an upcoming game shows its date and kickoff time", () => {
-  const h = scheduleRowHeading(game());
-  assert.match(h, /^Sun, Sep 20 · \d{1,2}:\d{2} [AP]M$/);
+  assert.equal(scheduleRowHeading(game()), "Sun, Sep 20 · 8:00 AM");
 });
 
 test("scheduleRowHeading: a called-off game shows the reason and no kickoff time", () => {
