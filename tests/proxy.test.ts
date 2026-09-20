@@ -105,6 +105,30 @@ describe("sports-db.live after launch", () => {
   });
 });
 
+describe("host spellings after launch (SITE_LAUNCHED=1)", () => {
+  beforeEach(() => {
+    process.env.SITE_LAUNCHED = "1";
+  });
+
+  for (const host of ["sports-db.live.", "SPORTS-DB.LIVE:443"]) {
+    test(`${host} is the apex and stays indexable`, () => {
+      const res = proxy(req(host, "/nba"));
+      assert.ok(isPassThrough(res));
+      assert.equal(res.headers.get("x-robots-tag"), null);
+    });
+  }
+
+  for (const host of ["sports-db.live.evil.com", "evilsports-db.live", "203.0.113.7", "203.0.113.7:8080", "[2001:db8::1]:443"]) {
+    test(`${host} is not the site and gets noindex`, async () => {
+      const res = proxy(req(host, "/nba"));
+      assert.ok(isPassThrough(res));
+      assert.equal(res.headers.get("x-robots-tag"), NOINDEX);
+      const robots = proxy(req(host, "/robots.txt"));
+      assert.equal(await robots.text(), ROBOTS_BODY);
+    });
+  }
+});
+
 describe("sports-db.live before launch", () => {
   test("rewrites every page to the holding page, noindex and uncached", () => {
     const res = proxy(req("sports-db.live", "/nba/players/lebron-james?x=1"));
