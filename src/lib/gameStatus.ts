@@ -12,8 +12,14 @@ export function calledOffLabel(statusDetail: string | null | undefined): string 
 }
 
 /**
- * True when a game must be shown as called off: unfinished, with a called-off status. A finished game is never
- * one (a finished abandoned cricket match is a result), so displays test this rather than isCalledOff alone.
+ * True when a game must be shown as called off: unfinished, not in play, with a called-off status. A finished game
+ * is never one (a finished abandoned cricket match is a result), and neither is a game in play (a rain-suspended
+ * match still being reported as "in" is live), so displays test this rather than isCalledOff alone. One rule for
+ * every card, pill, image and calendar feed.
  */
-export const isGameCalledOff = (g: { completed: boolean; status_detail: string | null | undefined }): boolean =>
-  !g.completed && isCalledOff(g.status_detail);
+export const isGameCalledOff = (g: { completed: boolean; status_state?: string | null; status_detail: string | null | undefined }): boolean =>
+  !g.completed && g.status_state !== "in" && isCalledOff(g.status_detail);
+
+/** The label to show for a game that must be shown as called off (see isGameCalledOff); null for every other game. */
+export const gameCalledOffLabel = (g: { completed: boolean; status_state?: string | null; status_detail: string | null | undefined }): string | null =>
+  isGameCalledOff(g) ? calledOffLabel(g.status_detail) : null;

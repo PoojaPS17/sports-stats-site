@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calledOffLabel, isCalledOff, isGameCalledOff } from "../src/lib/gameStatus";
+import { calledOffLabel, gameCalledOffLabel, isCalledOff, isGameCalledOff } from "../src/lib/gameStatus";
 
 test("isCalledOff recognises postponed, cancelled, abandoned and suspended games", () => {
   for (const s of ["Postponed", "postponed", "Canceled", "Cancelled", "Abandoned", "Suspended"]) {
@@ -32,4 +32,19 @@ test("isGameCalledOff is true only for an unfinished called-off game", () => {
   assert.equal(isGameCalledOff({ completed: true, status_detail: "Abandoned" }), false);
   assert.equal(isGameCalledOff({ completed: false, status_detail: "Scheduled" }), false);
   assert.equal(isGameCalledOff({ completed: false, status_detail: null }), false);
+});
+
+test("a game in play is live, whatever its status text says: it is never called off", () => {
+  assert.equal(isGameCalledOff({ completed: false, status_state: "in", status_detail: "Suspended" }), false);
+  assert.equal(gameCalledOffLabel({ completed: false, status_state: "in", status_detail: "Suspended" }), null);
+  // the same text on a game that is not in play is called off
+  assert.equal(isGameCalledOff({ completed: false, status_state: "post", status_detail: "Suspended" }), true);
+  assert.equal(isGameCalledOff({ completed: false, status_state: "pre", status_detail: "Suspended" }), true);
+});
+
+test("gameCalledOffLabel gives the label for an unfinished called-off game and null for everything else", () => {
+  assert.equal(gameCalledOffLabel({ completed: false, status_state: "post", status_detail: "Postponed" }), "Postponed");
+  assert.equal(gameCalledOffLabel({ completed: false, status_detail: "Canceled" }), "Cancelled");
+  assert.equal(gameCalledOffLabel({ completed: true, status_state: "post", status_detail: "Abandoned" }), null);
+  assert.equal(gameCalledOffLabel({ completed: false, status_state: "pre", status_detail: "Scheduled" }), null);
 });

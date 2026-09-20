@@ -404,7 +404,7 @@ export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
      join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
      join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
      where g.date > now() - interval '3 days' and g.date < now() + interval '10 days'
-       and (g.completed or coalesce(g.status_detail, '') !~* $2)
+       and (g.completed or g.status_state = 'in' or coalesce(g.status_detail, '') !~* $2)
      order by g.completed desc, case when g.completed then g.date end desc, g.date asc
      limit $1`,
     [limit, CALLED_OFF.source]

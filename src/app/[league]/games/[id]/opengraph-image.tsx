@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { PixelBall } from "@/components/Logo";
 import { isLeague, LEAGUE_LABEL, getGameByEspnId } from "@/lib/queries";
-import { calledOffLabel, isGameCalledOff } from "@/lib/gameStatus";
+import { gameCalledOffLabel } from "@/lib/gameStatus";
 
 export const alt = "Match page";
 export const size = { width: 1200, height: 630 };
@@ -32,7 +32,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const played = game.completed && game.home_score != null && game.away_score != null;
   const homeWon = played && (game.home_winner ?? game.home_score! > game.away_score!);
   const awayWon = played && (game.away_winner ?? game.away_score! > game.home_score!);
-  const off = isGameCalledOff(game) ? calledOffLabel(game.status_detail) : null;
+  const off = gameCalledOffLabel(game);
   const when = new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
   return new ImageResponse(

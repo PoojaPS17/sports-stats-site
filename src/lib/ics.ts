@@ -6,7 +6,7 @@ import { isCricketLeague, type League } from "./leagues";
 import { getF1Calendar, getF1Seasons } from "./f1";
 import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
-import { calledOffLabel, isGameCalledOff } from "./gameStatus";
+import { gameCalledOffLabel } from "./gameStatus";
 
 const SITE = SITE_URL;
 const PRODID = "-//SportsDB//Fixtures//EN";
@@ -147,7 +147,7 @@ export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: 
   if (g.round) parts.push(g.round);
   // A postponed or cancelled game stays in the archive as its original event; the replay has its own uid. Mark it
   // cancelled so a subscriber's calendar does not keep a fixture that is not happening.
-  const off = isGameCalledOff(g) ? calledOffLabel(g.status_detail) : null;
+  const off = gameCalledOffLabel(g);
   if (off) parts.push(off);
   else if (g.completed) parts.push(`Final${g.status_summary ? `: ${g.status_summary}` : ""}`);
   else if (g.status_state === "in") parts.push("In progress");

@@ -114,6 +114,15 @@ test("the ticker keeps a finished cricket match that was abandoned: it is a resu
   assert.deepEqual(ids, ["ab"]);
 });
 
+test("the ticker keeps a game in play whose status text says suspended: live wins over called off", async () => {
+  await seed([
+    { id: "rain", league: "ipl", date: at(-1), state: "in", detail: "Suspended" },
+    calledOff("pp", at(24), "Postponed", { league: "ipl" }),
+  ]);
+  const ids = (await queries.getTickerGames(12)).map((g) => g.espn_id);
+  assert.deepEqual(ids, ["rain"]);
+});
+
 test("the ticker still fills its limit when a called-off game sits ahead of the fixtures", async () => {
   await seed([
     { id: "result", date: at(-24), scores: [100, 90] },
@@ -206,4 +215,41 @@ test("a postponed game is a cancelled calendar event, not a confirmed fixture", 
   const normal = ics.gameEvent("nba", row({}));
   assert.equal(normal.status, undefined);
   assert.equal(normal.summary, "Two at One");
+});
+
+/** The VEVENT of one game as serialized in a feed, so the STATUS and SEQUENCE lines are what a calendar app reads. */
+function feedLines(g: Partial<GameRow>): string[] {
+  const row = { league: "nba", espn_id: "g", date: at(48), completed: false, status_state: "pre", status_detail: null, round: null, status_summary: null, home_name: "One", away_name: "Two", home_team_espn_id: "1", away_team_espn_id: "2", ...g } as GameRow;
+  return ics.buildIcs("t", "d", [ics.gameEvent("nba", row)]).split("\r\n");
+}
+
+test("the serialized feed marks a postponed game STATUS:CANCELLED with SEQUENCE:1", () => {
+  const lines = feedLines({ status_state: "post", status_detail: "Postponed", home_score: 0, away_score: 0 });
+  assert.ok(lines.includes("STATUS:CANCELLED"));
+  assert.ok(lines.includes("SEQUENCE:1"));
+  assert.ok(lines.some((l) => l.startsWith("SUMMARY:") && l.endsWith("(Postponed)")));
+  assert.ok(!lines.includes("STATUS:CONFIRMED"));
+});
+
+test("the serialized feed keeps a normal fixture CONFIRMED at SEQUENCE:0 and a result CONFIRMED at SEQUENCE:1", () => {
+  const fixture = feedLines({});
+  assert.ok(fixture.includes("STATUS:CONFIRMED"));
+  assert.ok(fixture.includes("SEQUENCE:0"));
+  const result = feedLines({ completed: true, status_state: "post", status_detail: "Final", home_score: 100, away_score: 90 });
+  assert.ok(result.includes("STATUS:CONFIRMED"));
+  assert.ok(result.includes("SEQUENCE:1"));
+});
+
+test("a finished abandoned match stays a CONFIRMED event with its result, never cancelled", () => {
+  const lines = feedLines({ league: "ipl", completed: true, status_state: "post", status_detail: "Abandoned", status_summary: "Match abandoned without a ball bowled", home_score: 0, away_score: 0 });
+  assert.ok(lines.includes("STATUS:CONFIRMED"));
+  assert.ok(!lines.some((l) => /CANCELLED|\(Abandoned\)/.test(l)));
+  assert.ok(lines.some((l) => l.startsWith("DESCRIPTION:") && /Final: Match abandoned without a ball bowled/.test(l.replace(/\\/g, ""))));
+});
+
+test("a live game is never emitted as cancelled, even when its status text says suspended", () => {
+  const lines = feedLines({ status_state: "in", status_detail: "Suspended" });
+  assert.ok(lines.includes("STATUS:CONFIRMED"));
+  assert.ok(!lines.some((l) => /CANCELLED|\(Suspended\)/.test(l)));
+  assert.ok(lines.some((l) => l.startsWith("DESCRIPTION:") && /In progress/.test(l)));
 });

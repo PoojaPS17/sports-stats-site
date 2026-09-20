@@ -83,3 +83,12 @@ test("scoreboardTileStatus: results and live games are unchanged", () => {
   // a finished abandoned match is a result
   assert.equal(scoreboardTileStatus("ipl", game({ completed: true, status_detail: "Abandoned" }), false), "Result");
 });
+
+test("a live game is live even when its status text reads like a stoppage", () => {
+  const live = game({ status_state: "in", status_detail: "Suspended" });
+  assert.equal(scoreboardTileStatus("ipl", live, false), "Suspended");
+  assert.equal(scoreboardTileStatus("ipl", live, true), "Sep 20, 2026 · Suspended");
+  assert.equal(isUpcomingGame(live), false);
+  assert.equal(scheduleRowHeading(live), "Sun, Sep 20");
+  assert.equal(gameAccessibleLabel(live), "Chelsea at Arsenal, Sunday, September 20");
+});

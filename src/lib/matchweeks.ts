@@ -10,7 +10,7 @@ import { isRegularSeasonGame } from "./gameStage";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
 import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
-import { calledOffLabel, isGameCalledOff } from "./gameStatus";
+import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
 
 export interface Matchweek {
   /** 1-based position in the season; doubles as the URL segment. */
@@ -362,16 +362,16 @@ export function summarizeWeek(week: Matchweek): WeekSummary {
     if (!biggest || Math.abs(h - a) > Math.abs(biggest.home_score! - biggest.away_score!)) biggest = g;
     if (!highest || h + a > highest.home_score! + highest.away_score!) highest = g;
   }
-  const calledOff = week.games.filter(isGameCalledOff).length;
+  const calledOff = week.calledOff;
   return { played: done.length, scheduled: week.games.length - done.length - calledOff, calledOff, totalScore, homeWins, awayWins, draws, biggest, highest };
 }
 
 /** "1 postponed", "2 cancelled", or "2 called off" when the reasons differ; null when nothing in the week was called off. */
 export function calledOffNote(week: Matchweek): string | null {
-  const labels = new Set(week.games.filter(isGameCalledOff).map((g) => calledOffLabel(g.status_detail)));
-  const n = week.games.filter(isGameCalledOff).length;
-  if (n === 0) return null;
-  return labels.size === 1 ? `${n} ${[...labels][0]!.toLowerCase()}` : `${n} called off`;
+  const labels = week.games.map(gameCalledOffLabel).filter((l): l is string => l !== null);
+  if (labels.length === 0) return null;
+  const same = new Set(labels).size === 1;
+  return same ? `${labels.length} ${labels[0].toLowerCase()}` : `${labels.length} called off`;
 }
 
 /**
