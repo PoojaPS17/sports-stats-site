@@ -74,9 +74,10 @@ export default function PrivacyPage() {
       </p>
       <h3>Hosting and security logs</h3>
       <p>
-        Like every website, the site is served by a hosting provider (currently Vercel) whose infrastructure keeps
-        short-lived technical logs, such as request timestamps and network addresses, for security, abuse prevention and
-        reliability. These are governed by the provider&apos;s own policies and are not used by us to identify visitors.
+        Like every website, the site is served through Cloudflare, in front of a server we run on Oracle Cloud
+        Infrastructure, and those providers&apos; infrastructure keeps short-lived technical logs, such as request
+        timestamps and network addresses, for security, abuse prevention and reliability. These are governed by the
+        providers&apos; own policies and are not used by us to identify visitors.
       </p>
       <h3>Search</h3>
       <p>
@@ -127,8 +128,8 @@ export default function PrivacyPage() {
       <h2>Data retention</h2>
       <p>
         Anonymous page-view counts are kept indefinitely as aggregate statistics; because they contain no personal
-        identifier, they cannot be traced back to an individual.{GA_ID && " Google Analytics keeps visit-level data for no more than 14 months; totals are kept longer."} Hosting logs are retained by the provider for a short
-        period under its own retention rules.
+        identifier, they cannot be traced back to an individual.{GA_ID && " Google Analytics keeps visit-level data for no more than 14 months; totals are kept longer."} Hosting logs are retained by the providers for a short
+        period under their own retention rules.
       </p>
 
       <h2>Your rights</h2>
