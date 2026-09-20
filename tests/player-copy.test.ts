@@ -106,7 +106,7 @@ test("the milestones note: game numbers count every game, the counts only games 
 test("the page footnote is true whether or not the site could use ESPN's row for a season", () => {
   assert.equal(
     NBA_REGULAR_SEASON_FOOTNOTE,
-    "Where the site can use ESPN's row for a season, that season's figures are ESPN's own; otherwise the games played include them and the per-game averages cover only games with a box score. The game log, best games, splits and milestones count only games with a box score."
+    "Where the site can use ESPN's row for a season, that season's figures are ESPN's own; otherwise the games played include games without a box score and the per-game averages cover only games with a box score. The game log, best games, splits and milestones count only games with a box score."
   );
 });
 

@@ -61,7 +61,7 @@ export const withMilestonesNote = (text: string, n: number): string => (n <= 0 ?
 /** The regular-season footnote at the foot of the player page when some games have no box score. Both halves hold
  * whether or not a season is shown from ESPN's row. */
 export const NBA_REGULAR_SEASON_FOOTNOTE =
-  "Where the site can use ESPN's row for a season, that season's figures are ESPN's own; otherwise the games played include them and the per-game averages cover only games with a box score. The game log, best games, splits and milestones count only games with a box score.";
+  "Where the site can use ESPN's row for a season, that season's figures are ESPN's own; otherwise the games played include games without a box score and the per-game averages cover only games with a box score. The game log, best games, splits and milestones count only games with a box score.";
 
 /** The season page's section description: "every game" is not true when some of the season's games have no box score. */
 export const seasonFiguresText = (label: string, split: boolean, noBoxScore: number): string =>
