@@ -71,7 +71,7 @@ export function scoresDayDescription(league: League, dayLabel: string, games: (S
   const american = league === "nba" || league === "nfl";
   const noun = american ? "game" : "match";
   const nouns = american ? "games" : "matches";
-  const finished = games.filter((g) => g.completed).length;
+  const finished = games.filter((g) => g.completed && !isGameCalledOff(g)).length;
   const off = games.map(gameCalledOffLabel).filter((l): l is string => l !== null);
   const toPlay = games.length - finished - off.length;
   const inPlay = games.filter((g) => !g.completed && g.status_state === "in").length;

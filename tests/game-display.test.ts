@@ -140,6 +140,12 @@ test("scoresDayDescription: a postponed game is not counted as played, and is me
   assert.match(scoresDayDescription("nba", DAY, [finished(), calledOff("Canceled"), calledOff("Postponed")]), / 2 games were called off\.$/);
 });
 
+test("scoresDayDescription: a game stored as finished but cancelled is called off, not counted as played", () => {
+  const storedFinished = game({ completed: true, status_detail: "Canceled", home_score: 0, away_score: 0 });
+  assert.equal(scoresDayDescription("nba", DAY, [finished(), storedFinished]), "1 NBA game played on Sunday, September 20, 2026, with final scores and a link to each box score. 1 game was cancelled.");
+  assert.equal(scoresDayDescription("nba", DAY, [storedFinished]), "No NBA games were played on Sunday, September 20, 2026. 1 game was cancelled.");
+});
+
 test("scoresDayDescription: a day where every game was called off says nothing was played", () => {
   assert.equal(scoresDayDescription("nba", DAY, [calledOff("Postponed"), calledOff("Postponed")]), "No NBA games were played on Sunday, September 20, 2026. 2 games were postponed.");
   assert.equal(scoresDayDescription("epl", DAY, [calledOff("Postponed")]), "No Premier League matches were played on Sunday, September 20, 2026. 1 match was postponed.");
