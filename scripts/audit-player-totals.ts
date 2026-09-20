@@ -341,8 +341,8 @@ async function main() {
     for (const g of gamelogIncomplete.slice(0, MISMATCHES_SHOWN)) console.log(`  ${gamelogLine(g)}`);
   }
   if (gamelogInternal.length > 0) {
-    console.log(`\n[audit-player-totals] game log ESPN internal (${gamelogInternal.length}): within 3 games of ESPN's own season row (its game log also lists the All-Star Game); not a failure`);
-    for (const g of gamelogInternal) console.log(`  ${gamelogLine(g)}`);
+    console.log(`\n[audit-player-totals] game log ESPN internal (first ${Math.min(MISMATCHES_SHOWN, gamelogInternal.length)} of ${gamelogInternal.length}): within 3 games of ESPN's own season row (its game log also lists the All-Star Game); not a failure`);
+    for (const g of gamelogInternal.slice(0, MISMATCHES_SHOWN)) console.log(`  ${gamelogLine(g)}`);
   }
   if (gamelogFailures.length > 0) {
     console.log(`\n[audit-player-totals] game logs that could not be read (not verified; first ${Math.min(MISMATCHES_SHOWN, gamelogFailures.length)} of ${gamelogFailures.length})`);
