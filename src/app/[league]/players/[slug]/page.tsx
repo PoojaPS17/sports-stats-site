@@ -341,7 +341,9 @@ export default async function PlayerPage({
                   {since ? ` since ${since}` : ""}.{" "}
                 </>
               )}
-              Playoff and play-in games are shown separately; preseason, All-Star and NBA Cup final games are listed in the game log but not counted, matching ESPN.
+              {sport === "nfl"
+                ? "Playoff games are shown separately; preseason and Pro Bowl games are listed in the game log but not counted, matching ESPN."
+                : "Playoff and play-in games are shown separately; preseason, All-Star and NBA Cup final games are listed in the game log but not counted, matching ESPN."}
             </p>
           ) : (
             <p className="text-[11px] text-[var(--text-faint)]">
