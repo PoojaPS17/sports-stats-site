@@ -2,6 +2,7 @@
 // same season on ESPN. Nothing here opens a database connection or calls ESPN, so the tests can
 // import it freely (the loader in season-stats.ts, which the CLI uses, opens the pool on import).
 import { cell, type PlayerProfile, type PlayerSport } from "../../src/lib/playerProfile";
+import type { SeasonStatRow } from "./season-row";
 
 export type AuditLeague = "nba" | "nfl";
 
@@ -144,35 +145,17 @@ export function espnFigures(league: AuditLeague, categories: StoredCategories): 
   return { games: gps.length > 0 ? Math.max(...gps) : null, figures };
 }
 
-interface EspnStatRow {
-  season?: { year?: number };
-  teamSlug?: string;
-  displayName?: string;
-}
-
-const isTotalsRow = (s: EspnStatRow) => /\btotals?\b/i.test(`${s.teamSlug ?? ""} ${s.displayName ?? ""}`);
-
-/** A category from the live athlete /stats payload, narrowed to one season's row. A player who
- * changed teams has one row per team plus a "Totals" row that is ESPN's headline for the season;
- * the totals row is kept when there is one. (The loader's seasonRow takes the first row it finds,
- * which for a traded player is the first team's stint; the audit must not inherit that.) */
-export function withTotalsRow<C extends { statistics?: EspnStatRow[] }>(category: C, year: number): C {
-  const rows = (category.statistics ?? []).filter((s) => s.season?.year === year);
-  const totals = rows.find(isTotalsRow);
-  return { ...category, statistics: totals ? [totals] : rows };
-}
-
 export interface EspnCategory {
   name?: string;
   displayName?: string;
   labels?: string[];
-  statistics?: (EspnStatRow & { stats?: string[] })[];
+  statistics?: SeasonStatRow[];
 }
 
 /** Every season of a live athlete /stats payload (from `minYear` on) as the stored-categories shape,
  * so a live read and a stored row go through the same `espnFigures`. `readRow` is the loader's
- * `seasonRow`, applied to the totals-preferring narrowing of each category; the category key is
- * the loader's (`name`, then `displayName`). */
+ * `seasonRow` (which takes ESPN's Totals row for a traded player); the category key is the
+ * loader's (`name`, then `displayName`). */
 export function seasonsFromPayload(
   categories: EspnCategory[],
   readRow: (category: EspnCategory, year: number) => StoredCategory | null,
@@ -189,7 +172,7 @@ export function seasonsFromPayload(
   for (const year of years) {
     const stored: StoredCategories = {};
     for (const category of categories) {
-      const row = readRow(withTotalsRow(category, year), year);
+      const row = readRow(category, year);
       if (row) stored[category.name ?? category.displayName ?? "stats"] = row;
     }
     out.set(year, stored);
@@ -226,8 +209,9 @@ export function siteSeasonOrEmpty(seasons: Map<number, SeasonFigures>, season: n
   return seasons.get(season) ?? { games: 0, figures: {} };
 }
 
-/** Seasons in which the player's regular-season games span more than one team. ESPN's stored row for
- * such a season may be one team's stint (the loader reads the first row), so findings there are tagged. */
+/** Seasons in which the player's regular-season games span more than one team. A stored row for such a
+ * season may still be one team's stint (rows loaded before the loader took ESPN's Totals row), so
+ * findings there are tagged. */
 export function tradedSeasons(regular: PlayerProfile): Set<number> {
   return new Set(regular.seasons.filter((s) => s.teams.length > 1).map((s) => s.season));
 }

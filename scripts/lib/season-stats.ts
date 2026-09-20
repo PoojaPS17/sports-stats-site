@@ -1,15 +1,11 @@
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
 
-// Soccer's stats endpoint is sport-wide, not league-scoped — a season row for the
-// right year could still be from a different league/competition entirely (e.g. a
-// player's stint at a French club), so `leagueSlug` narrows it to actual EPL rows.
-export function seasonRow(category: any, seasonYear: number, leagueSlug?: string): { labels: string[]; values: string[] } | null {
-  const stats: any[] = category.statistics ?? [];
-  const row = stats.find((s) => s.season?.year === seasonYear && (!leagueSlug || s.leagueSlug === leagueSlug));
-  if (!row) return null;
-  return { labels: category.labels ?? [], values: row.stats ?? [] };
-}
+import { seasonRow } from "./season-row";
+
+// Which of a category's rows a season stores (ESPN's Totals row for a traded player, and the
+// league filter for soccer) lives in season-row.ts, which has no database import.
+export { seasonRow } from "./season-row";
 
 function categoryKey(category: any): string {
   return category.name ?? category.displayName ?? "stats";

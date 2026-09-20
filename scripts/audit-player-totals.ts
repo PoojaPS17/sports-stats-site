@@ -15,8 +15,8 @@
 // gives no games played), NFL "games short (no stat line)" (site games below ESPN's GP, every
 // figure equal). --strict makes the last two fail too.
 //
-// `select` only. The database and the loader are imported after the arguments are validated, so a
-// usage error never opens a connection.
+// `select` only. The database is imported after the arguments are validated, so a usage error never
+// opens a connection. The live read uses the loader's own row selection (season-row.ts, pure).
 import {
   compareSeason,
   espnFigures,
@@ -31,6 +31,7 @@ import {
   type EspnCategory,
   type StoredCategories,
 } from "./lib/audit-player-totals";
+import { seasonRow } from "./lib/season-row";
 import { fetchPlayerLog } from "../src/lib/playerLog";
 import { buildStagedProfile, playerSport } from "../src/lib/playerProfile";
 
@@ -72,7 +73,6 @@ async function main() {
     process.exit(2);
   }
   const { pool } = await import("./lib/db");
-  const { seasonRow } = await import("./lib/season-stats");
   const { fetchAthleteSeasonStats } = await import("./lib/espn");
   const mode = args.live ? `live (${args.live} random players per league, read from ESPN now)` : "stored player_season_stats rows";
   console.log(`[audit-player-totals] ${args.leagues.join(", ")}: comparing the site's regular-season totals with ESPN, ${mode}`);

@@ -9,10 +9,10 @@ import {
   siteSeasonOrEmpty,
   siteSeasons,
   tradedSeasons,
-  withTotalsRow,
   USAGE,
   type SeasonFigures,
 } from "../scripts/lib/audit-player-totals";
+import { seasonRow } from "../scripts/lib/season-row";
 import { buildStagedProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import type { GameStage } from "../src/lib/gameStage";
 
@@ -152,24 +152,7 @@ test("espnFigures reads NFL yards and touchdowns per category and the largest GP
   });
 });
 
-test("a traded player's ESPN season is read from its Totals row, not the first team stint", () => {
-  const category = {
-    name: "averages",
-    labels: ["GP", "PTS"],
-    statistics: [
-      { season: { year: 2024 }, teamSlug: "dallas-mavericks", stats: ["70", "33.9"] },
-      { season: { year: 2025 }, teamSlug: "dallas-mavericks", stats: ["22", "28.1"] },
-      { season: { year: 2025 }, teamSlug: "los-angeles-lakers", stats: ["28", "28.2"] },
-      { season: { year: 2025 }, teamSlug: "2024-25 Totals", displayName: "2024-25  Totals", stats: ["50", "28.2"] },
-    ],
-  };
-  assert.deepEqual(withTotalsRow(category, 2025).statistics.map((s) => s.stats[0]), ["50"]);
-  // A season with one team keeps that row; other seasons are dropped.
-  assert.deepEqual(withTotalsRow(category, 2024).statistics.map((s) => s.stats[0]), ["70"]);
-  assert.deepEqual(withTotalsRow(category, 2030).statistics, []);
-});
-
-test("seasonsFromPayload reads every season in the window through the loader's row reader", () => {
+test("seasonsFromPayload reads every season in the window through the loader's seasonRow, a traded season from its Totals row", () => {
   const payload = [
     {
       name: "averages",
@@ -183,12 +166,7 @@ test("seasonsFromPayload reads every season in the window through the loader's r
     },
     { displayName: "Totals", labels: ["PTS"], statistics: [{ season: { year: 2025 }, stats: ["1,408"] }] },
   ];
-  // The same lookup as the loader's seasonRow (first row for the year), without its league filter.
-  const readRow = (c: { labels?: string[]; statistics?: { season?: { year?: number }; stats?: string[] }[] }, year: number) => {
-    const row = (c.statistics ?? []).find((s) => s.season?.year === year);
-    return row ? { labels: c.labels ?? [], values: row.stats ?? [] } : null;
-  };
-  const seasons = seasonsFromPayload(payload, readRow, 2016);
+  const seasons = seasonsFromPayload(payload, seasonRow, 2016);
   assert.deepEqual([...seasons.keys()], [2025]);
   const stored = seasons.get(2025)!;
   assert.deepEqual(Object.keys(stored), ["averages", "Totals"]);
