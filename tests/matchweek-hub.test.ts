@@ -1,18 +1,24 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { isValidElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { startTestDb, type TestDb } from "./helpers/testDb";
 import { outcome } from "./helpers/nextErrors";
 import { absoluteUrl } from "../src/lib/site";
 import { ALL_LEAGUES, type League } from "../src/lib/leagues";
+import { LEAGUE_LABEL } from "../src/lib/leagues";
 
 // The /[league]/matchweek hub (/nfl/week, /ucl/matchday through the rewrites) is a real page: the current
 // season's round-by-round index. It is listed in the sitemap and linked from the sub-nav, so it must answer
 // 200 with its own canonical (it used to 307 to the current week). The same list is also served at
 // /[league]/matchweek/<current season>, which must therefore name the hub as its canonical.
 //
-// The sitemap and the pages must agree: a URL is listed only if the page behind it renders, and a page that
-// canonicals to another must not point at a 404. Each such rule below is tested from both sides.
+// The sitemap and the pages must agree: a URL is listed only if the page behind it renders with rounds, and a page
+// that canonicals to another must not point at a 404. Each such rule below is tested from both sides.
+//
+// The sub-nav links the hub for every league with rounds, so the hub never 404s for such a league: with no rounds
+// yet (a season that has only preseason games, or no games at all) it answers 200 with a short note, is noindex,
+// and stays out of the sitemap. Only a week or season that does not exist is a real 404.
 //
 // Fixture: NBA has 2025 and 2026 regular seasons plus a 2024 with only a preseason game (season_type 1 is
 // excluded from rounds, so 2024 has games but no weeks). NFL has only a 2026 preseason game: seasons, no weeks.
@@ -68,18 +74,20 @@ test("the hub paths use each sport's own word, so the rewrites in next.config.ts
   assert.equal(matchweeks.weekIndexPath("nba"), "/nba/week");
 });
 
-test("the hub is listed in the core sitemap only for a league whose hub page renders", async () => {
+const robotsOf = (m: { robots?: unknown }) => m.robots as { index?: boolean; follow?: boolean } | undefined;
+
+test("the hub is listed in the core sitemap exactly when its page renders with rounds (indexable)", async () => {
   const urls = (await sitemapEntries("core")).map((e) => e.url);
   assert.ok(hubLeagues().length >= 3, "sanity: football, NFL and NBA have matchweeks");
-  for (const league of ALL_LEAGUES) {
+  for (const league of hubLeagues()) {
     const hub = absoluteUrl(matchweeks.weekIndexPath(league));
     const listed = urls.filter((u) => u === hub).length;
     const page = await outcome(() => hubModule.default(params({ league })));
-    const renders = typeof page === "object" && "value" in page;
-    // A league with no games at all, or only games no round contains, 404s: it must not be listed.
-    assert.equal(listed, renders ? 1 : 0, `${league} hub ${hub}: listed ${listed}x, page ${renders ? "renders" : JSON.stringify(page)}`);
-    if (league === "nba") assert.equal(renders, true);
-    if (league === "nfl" || league === "epl") assert.equal(renders, false, `${league} has no rounds`);
+    assert.ok(typeof page === "object" && "value" in page, `${league}: the sub-nav links this hub, it must not 404 (${JSON.stringify(page, (_k, v) => (v instanceof Error ? v.message : v))})`);
+    const indexable = robotsOf(await hubModule.generateMetadata(params({ league })))?.index === true;
+    assert.equal(listed, indexable ? 1 : 0, `${league} hub ${hub}: listed ${listed}x, indexable ${indexable}`);
+    if (league === "nba") assert.equal(indexable, true);
+    if (league === "nfl" || league === "epl") assert.equal(indexable, false, `${league} has no rounds`);
   }
 });
 
@@ -90,10 +98,35 @@ test("the hub page renders the season index and does not redirect", async () => 
   assert.equal(page.value.type, WeekIndex);
   assert.equal((page.value.props as { season: number }).season, 2026);
   assert.equal((page.value.props as { isCurrentSeason: boolean }).isCurrentSeason, true);
+  const meta = await hubModule.generateMetadata(params({ league: "nba" }));
+  assert.equal(robotsOf(meta)?.index, true);
+  assert.equal(canonicalOf(meta), absoluteUrl("/nba/week"));
 });
 
-test("a league with no games, or only excluded ones, is a 404 for the hub", async () => {
-  for (const league of ["nfl", "epl", "ucl"] as const) assert.equal(await outcome(() => hubModule.default(params({ league }))), "not-found", league);
+test("a league whose newest season has only preseason games gets a 200 empty hub: noindex, with a note, unlisted", async () => {
+  // NFL has a 2026 preseason game only; EPL has no games at all. Both are linked from the sub-nav.
+  for (const league of ["nfl", "epl"] as const) {
+    const page = await outcome(() => hubModule.default(params({ league })));
+    assert.ok(typeof page === "object" && "value" in page, `${league} hub must render, got ${JSON.stringify(page, (_k, v) => (v instanceof Error ? v.message : v))}`);
+    assert.ok(isValidElement(page.value));
+    assert.equal(page.value.type, WeekIndex);
+    assert.deepEqual((page.value.props as { weeks: unknown[] }).weeks, []);
+    const html = renderToStaticMarkup(page.value);
+    assert.match(html, new RegExp(`<h1[^>]*>${LEAGUE_LABEL[league]} ${matchweeks.weekNoun(league)}s</h1>`));
+    assert.match(html, /Rounds appear here once the regular season starts\./);
+    const meta = await hubModule.generateMetadata(params({ league }));
+    assert.deepEqual(robotsOf(meta), { index: false, follow: true }, `${league} empty hub is noindex`);
+    assert.equal(canonicalOf(meta), absoluteUrl(matchweeks.weekIndexPath(league)));
+    const urls = (await sitemapEntries("core")).map((e) => e.url);
+    assert.ok(!urls.includes(absoluteUrl(matchweeks.weekIndexPath(league))), `${league} empty hub stays out of the sitemap`);
+  }
+});
+
+test("a league without rounds (or an unknown one) is still a 404 for the hub", async () => {
+  const unsupported = ALL_LEAGUES.filter((l) => !matchweeks.supportsMatchweeks(l));
+  assert.ok(unsupported.length > 0);
+  for (const league of unsupported) assert.equal(await outcome(() => hubModule.default(params({ league }))), "not-found", league);
+  assert.equal(await outcome(() => hubModule.default(params({ league: "nope" }))), "not-found");
 });
 
 test("the season index page renders for a season with rounds and is a 404 for one without", async () => {
@@ -102,9 +135,26 @@ test("the season index page renders for a season with rounds and is a 404 for on
     assert.ok(typeof page === "object" && "value" in page, `nba ${n}`);
     assert.equal((page.value as { type: unknown }).type, WeekIndex);
   }
-  // 2024 has a game but no round; 2027 has nothing.
-  assert.equal(await outcome(() => seasonModule.default(params({ league: "nba", n: "2024" }))), "not-found", "2024: games but no weeks");
+  // 2027 has nothing: that season does not exist, a real 404.
   assert.equal(await outcome(() => seasonModule.default(params({ league: "nba", n: "2027" }))), "not-found", "2027");
+  assert.equal(robotsOf(await seasonModule.generateMetadata(params({ league: "nba", n: "2026" })))?.index, true);
+});
+
+test("a season that exists but has no rounds yet (preseason games only) renders an empty, noindex index, not a 404", async () => {
+  // 2024 has a game but no round; the season pills on the other indexes link here.
+  const page = await outcome(() => seasonModule.default(params({ league: "nba", n: "2024" })));
+  assert.ok(typeof page === "object" && "value" in page, `nba 2024: ${JSON.stringify(page, (_k, v) => (v instanceof Error ? v.message : v))}`);
+  assert.equal((page.value as { type: unknown }).type, WeekIndex);
+  assert.deepEqual(robotsOf(await seasonModule.generateMetadata(params({ league: "nba", n: "2024" }))), { index: false, follow: true });
+  const urls = new Set((await sitemapEntries("weeks-nba")).map((e) => e.url));
+  assert.ok(!urls.has(absoluteUrl("/nba/week/2024")), "and it stays out of the sitemap");
+});
+
+test("a week that does not exist is a real 404, in every form", async () => {
+  assert.equal(await outcome(() => weekModule.default(params({ league: "nba", n: "2026", week: "99" }))), "not-found", "long form, no such week");
+  assert.equal(await outcome(() => weekModule.default(params({ league: "nba", n: "2024", week: "1" }))), "not-found", "long form, season with no rounds");
+  assert.equal(await outcome(() => seasonModule.default(params({ league: "nba", n: "99" }))), "not-found", "short form, no such week");
+  assert.equal(await outcome(() => seasonModule.default(params({ league: "nfl", n: "1" }))), "not-found", "short form, league with no rounds yet");
 });
 
 test("the weeks sitemap lists a past season's index only if that page renders, and no current-season duplicate of the hub", async () => {

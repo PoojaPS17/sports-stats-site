@@ -30,10 +30,11 @@ export async function loadWeeks(league: League, seasonParam?: string): Promise<W
 }
 
 /**
- * True when a season's round index has something to show. The index pages 404 otherwise, and the sitemap
- * lists an index only when this holds, so a listed URL is never a 404 (see tests/matchweek-hub.test.ts).
+ * True when a season's round index has something to show. The sitemap lists an index only when this holds,
+ * and an index without rounds is noindex (it answers 200 with a short note rather than 404, because the
+ * sub-nav and season pickers link to it), so nothing listed is ever empty (see tests/matchweek-hub.test.ts).
  * A league with games can still have no rounds: NBA preseason games belong to no round.
  */
-export function hasWeeks(ctx: WeekContext | null): ctx is WeekContext {
+export function hasWeeks(ctx: WeekContext | null): boolean {
   return ctx !== null && ctx.weeks.length > 0;
 }

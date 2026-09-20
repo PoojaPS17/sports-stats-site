@@ -23,7 +23,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (isSeasonSegment(n)) {
     // The latest season's list is also the hub at /[league]/matchweek, which is the canonical copy.
     const canonical = canonicalWeekIndexPath(league, Number(n), await getSeasonsWithGames(league));
-    return pageMeta(`${label} ${weekNoun(league)}s ${formatSeasonLabel(league, Number(n))}`, `Every ${label} round of the ${formatSeasonLabel(league, Number(n))} season with results and tables.`, canonical);
+    // A season with no rounds yet renders a short note (see the page): noindex, as at the hub.
+    const noindex = !hasWeeks(await loadWeeks(league, n));
+    return pageMeta(`${label} ${weekNoun(league)}s ${formatSeasonLabel(league, Number(n))}`, `Every ${label} round of the ${formatSeasonLabel(league, Number(n))} season with results and tables.`, canonical, { noindex });
   }
   const ctx = await loadWeeks(league);
   const week = ctx?.weeks.find((w) => w.index === Number(n));
@@ -42,8 +44,11 @@ export default async function MatchweekPage({ params }: { params: Promise<{ leag
   // /epl/matchweek/2025 → season overview
   if (isSeasonSegment(n)) {
     const ctx = await loadWeeks(league, n);
-    // No rounds is a 404 (as at the hub), so no 200 page canonicals to a missing one and the sitemap can mirror it.
-    if (!hasWeeks(ctx)) notFound();
+    // A season with no games at all does not exist: a real 404. One with games but no rounds yet (preseason
+    // only) is linked from the other seasons' pickers, so it answers 200 with a short note, noindex, and the
+    // sitemap (which lists an index only when hasWeeks) leaves it out.
+    if (!ctx) notFound();
+    if (!hasWeeks(ctx)) return <WeekIndex league={league} season={ctx.season} weeks={[]} seasons={ctx.seasons} isCurrentSeason={ctx.isCurrentSeason} />;
     return <WeekIndex league={league} season={ctx.season} weeks={ctx.weeks} seasons={ctx.seasons} isCurrentSeason={ctx.isCurrentSeason} />;
   }
 
