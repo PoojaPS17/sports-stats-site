@@ -198,11 +198,11 @@ test("matchContextView: a called-off game has no probability and no going-in wor
 
 test("gameSections: a called-off game hides the broadcast strip and everything that reads as this game's play", () => {
   const off = gameSections(calledOff());
-  assert.deepEqual(off, { broadcastStrip: false, winProbability: false, lineups: false, leaders: false, playerStats: false, detailsMissingNote: false });
+  assert.deepEqual(off, { broadcastStrip: false, winProbability: false, lineups: false, leaders: false, playerStats: false, playFacts: false, detailsMissingNote: false });
 });
 
 test("gameSections: fixtures, live and finished games show everything, as before", () => {
-  const all = { broadcastStrip: true, winProbability: true, lineups: true, leaders: true, playerStats: true, detailsMissingNote: true };
+  const all = { broadcastStrip: true, winProbability: true, lineups: true, leaders: true, playerStats: true, playFacts: true, detailsMissingNote: true };
   assert.deepEqual(gameSections(game()), all);
   assert.deepEqual(gameSections(finished()), all);
   assert.deepEqual(gameSections(game({ status_state: "in", status_detail: "Suspended" })), all);

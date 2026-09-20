@@ -4,8 +4,10 @@ import { classifyCricketMatch, cricketMatchDescription, cricketMatchWhen, cricke
 
 // ESPN's cricket listing (site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=YYYYMMDD) sends a match
 // abandoned without a ball bowled as status "post" (type id 6, description "Abandoned", longSummary "Match abandoned
-// without a ball bowled"), a match with no result as "post" ("No result"), and a match in play as "in". No sample of a
-// postponed or cancelled match turned up in 2025-10 to 2026-12, so the pre/null rule is coded from the field names.
+// without a ball bowled"), a match with no result as "post" ("No result"), a match in play as "in", and a cancelled
+// match as "post" too (type id 7, description "Canceled", longSummary "Match cancelled without a ball bowled": four
+// England Lions v Pakistan Shaheens matches, 2026-03). No sample of a postponed match, or of a pre-state match with a
+// called-off summary, turned up in 2025-10 to 2026-12, so the pre/null rule is coded from the field names.
 const m = (status_state: string | null, status_summary: string | null) => ({ status_state, status_summary });
 
 test("classifyCricketMatch: a match not yet played is a fixture", () => {
@@ -43,6 +45,9 @@ test("classifyCricketMatch: a finished match is a result, and an abandoned or no
 test("classifyCricketMatch: a match ESPN closes as postponed or cancelled is not a result, whichever state it sends", () => {
   assert.deepEqual(classifyCricketMatch(m("post", "Match postponed")), { calledOff: "Postponed" });
   assert.deepEqual(classifyCricketMatch(m("post", "Match cancelled")), { calledOff: "Cancelled" });
+  // as ESPN sends it (England Lions v Pakistan Shaheens, 2026-03: type id 7 "Canceled", state post)
+  assert.deepEqual(classifyCricketMatch(m("post", "Match cancelled without a ball bowled")), { calledOff: "Cancelled" });
+  assert.equal(cricketMatchWhen({ date: "2026-03-01T06:00:00Z", ...m("post", "Match cancelled without a ball bowled") }), "Mar 1, 2026 · Cancelled");
 });
 
 test("cricketMatchWhen: a fixture shows its start time in UTC, a called-off match its date and reason, a result its date", () => {

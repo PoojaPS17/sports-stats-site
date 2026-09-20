@@ -77,3 +77,47 @@ test("a later, sparser feed never erases the type or the round", async () => {
   await games.upsertEvent("nba", sparse);
   assert.deepEqual(await row("k"), { season_type: 3, competition_type: "QTR", round: "East 1st Round - Game 3", stage: "playoffs" });
 });
+
+// Cricket's status.type has no `completed` flag, so the writer reads state "post" as finished. ESPN files a match it
+// cancelled (2026-03: England Lions v Pakistan Shaheens, type id 7 "Canceled", summary "Match cancelled without a ball
+// bowled") under state "post" too, and a match abandoned without a ball bowled (type id 6) likewise. The abandoned one
+// is a result; the cancelled one was never played, so it must not be stored as finished.
+function cricketEvent(id: string, status: { state: string; detail: string; completed?: boolean }, summary: string) {
+  return {
+    id,
+    date: "2026-03-01T06:00:00Z",
+    name: "Alpha v Bravo",
+    season: { year: 2026 },
+    competitions: [
+      {
+        competitors: [
+          { homeAway: "home", team: { id: "1", displayName: "Alpha", abbreviation: "ALP" } },
+          { homeAway: "away", team: { id: "2", displayName: "Bravo", abbreviation: "BRA" } },
+        ],
+        status: { summary, type: { state: status.state, detail: status.detail, ...(status.completed === undefined ? {} : { completed: status.completed }) } },
+      },
+    ],
+  };
+}
+const cricketRow = async (id: string) => (await db.pool.query(`select completed, status_state, status_detail from games where league = 'ipl' and espn_id = $1`, [id])).rows[0];
+
+test("a cancelled or postponed cricket match is not stored as finished, though ESPN files it under state post", async () => {
+  await games.upsertEvent("ipl", cricketEvent("cx", { state: "post", detail: "Canceled" }, "Match cancelled without a ball bowled"));
+  await games.upsertEvent("ipl", cricketEvent("pp", { state: "post", detail: "Postponed" }, "Match postponed"));
+  assert.deepEqual(await cricketRow("cx"), { completed: false, status_state: "post", status_detail: "Canceled" });
+  assert.equal((await cricketRow("pp")).completed, false);
+});
+
+test("a finished cricket match, including one abandoned without a ball bowled, is still stored as finished", async () => {
+  await games.upsertEvent("ipl", cricketEvent("ok", { state: "post", detail: "Final" }, "Alpha won by 5 wickets"));
+  await games.upsertEvent("ipl", cricketEvent("ab", { state: "post", detail: "Final" }, "Match abandoned without a ball bowled"));
+  await games.upsertEvent("ipl", cricketEvent("ab2", { state: "post", detail: "Abandoned" }, "Match abandoned without a ball bowled"));
+  assert.equal((await cricketRow("ok")).completed, true);
+  assert.equal((await cricketRow("ab")).completed, true);
+  assert.equal((await cricketRow("ab2")).completed, true);
+});
+
+test("a feed that sends the completed flag is believed, cancelled or not", async () => {
+  await games.upsertEvent("nba", { ...event("nc", { feed: "scoreboard", type: 2, comp: "STD" }), competitions: [{ ...event("nc", { feed: "scoreboard", type: 2, comp: "STD" }).competitions[0], status: { type: { state: "post", completed: false, detail: "Postponed" } } }] });
+  assert.equal((await db.pool.query(`select completed from games where league = 'nba' and espn_id = 'nc'`)).rows[0].completed, false);
+});

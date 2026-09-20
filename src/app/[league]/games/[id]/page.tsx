@@ -166,7 +166,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         {new Date(game.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
       </h1>
       <MatchHeader league={league} game={game} />
-      {details && <MatchFacts league={league} game={game} details={details} />}
+      {details && <MatchFacts league={league} game={game} details={show.playFacts ? details : { ...details, officials: [], attendance: null, linescores: null }} />}
 
       <AdSlot label="Match detail top" />
 

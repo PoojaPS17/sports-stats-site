@@ -2,6 +2,7 @@ import { pool } from "./db";
 import { normalizeStage } from "../../src/lib/stage";
 import { isCricketLeague, isCupCompetition, slugify, type League } from "./espn";
 import { resolveCricketWinner } from "../../src/lib/cricketResult";
+import { isNeverPlayed } from "../../src/lib/gameStatus";
 import { upsertTeam } from "./teams";
 
 // The scoreboard endpoint reports a plain string/number score. The per-team schedule
@@ -250,8 +251,10 @@ export async function upsertEvent(league: League, ev: any) {
       status?.period ?? null,
       status?.displayClock ?? null,
       // Cricket's status.type has no `completed` boolean at all (unlike NBA/NFL/soccer,
-      // confirmed to have it) — state === "post" is the reliable signal there instead.
-      Boolean(status?.type?.completed ?? status?.type?.state === "post"),
+      // confirmed to have it) — state === "post" is the reliable signal there instead,
+      // except that ESPN files a cancelled or postponed match under "post" too, and that
+      // one was never played. An abandoned match is a result and stays finished.
+      Boolean(status?.type?.completed ?? (status?.type?.state === "post" && !isNeverPlayed(status?.type?.detail) && !isNeverPlayed(status?.summary))),
       odds.details,
       odds.spread,
       odds.overUnder,

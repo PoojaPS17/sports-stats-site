@@ -1,6 +1,12 @@
 /** ESPN keeps the original event of a game it closed without playing; its status text says why. */
 export const CALLED_OFF = /postpon|cancel|abandon|suspend/i;
 
+/**
+ * ESPN text of a game that was never played (postponed or cancelled), unlike an abandoned one, which is a result
+ * once it is over. ESPN files both under state "post", so "post" alone does not say a game was played.
+ */
+export const isNeverPlayed = (statusText: string | null | undefined): boolean => /postpon|cancel/i.test(statusText ?? "");
+
 /** True for a game that was postponed, cancelled, abandoned or suspended (not a fixture, not a result). */
 export const isCalledOff = (statusDetail: string | null | undefined): boolean => CALLED_OFF.test(statusDetail ?? "");
 

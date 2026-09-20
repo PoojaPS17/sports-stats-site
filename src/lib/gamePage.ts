@@ -124,8 +124,10 @@ export function gameSections(game: Status): {
   lineups: boolean;
   leaders: boolean;
   playerStats: boolean;
+  /** Officials, attendance and score by period: the parts of the facts strip that come from a game being played. The venue stays. */
+  playFacts: boolean;
   detailsMissingNote: boolean;
 } {
   const show = offWord(game) === null;
-  return { broadcastStrip: show, winProbability: show, lineups: show, leaders: show, playerStats: show, detailsMissingNote: show };
+  return { broadcastStrip: show, winProbability: show, lineups: show, leaders: show, playerStats: show, playFacts: show, detailsMissingNote: show };
 }

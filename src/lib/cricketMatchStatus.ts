@@ -2,11 +2,13 @@
 // or called off. The listing stores only ESPN's state (pre / in / post) and its summary text, no completed flag, so
 // the summary is what tells a match ESPN closed without playing from one that is merely still to come.
 //
-// What ESPN sends (site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket): a match abandoned without a ball
-// bowled is "post" (a result: "Match abandoned without a ball bowled"), a no-result match is "post", a match in play
-// is "in" (a rain stoppage stays "in"). ESPN does not send a postponed match as "post" with a result, and none was
-// found among the listings of 2025-10 to 2026-12, so a postponed or cancelled one is recognised by its summary text.
-import { calledOffLabel, CALLED_OFF, schemaStatusForLabel } from "./gameStatus";
+// What ESPN sends (site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket, listings of 2025-10 to 2026-12): a
+// match abandoned without a ball bowled is "post" (type id 6, a result: "Match abandoned without a ball bowled"), a
+// no-result match is "post" (id 5), a match in play is "in" (a rain stoppage stays "in"), and a cancelled match is
+// also "post" (id 7 "Canceled", "Match cancelled without a ball bowled"), so "post" with a postponed or cancelled
+// summary is called off, never a result. No postponed match, and no "pre" match with a called-off summary, turned up
+// in that window; those are recognised from the summary text alone.
+import { calledOffLabel, CALLED_OFF, isNeverPlayed, schemaStatusForLabel } from "./gameStatus";
 
 export type CricketMatchKind = "live" | "result" | "fixture" | { calledOff: string };
 
@@ -25,7 +27,7 @@ export function classifyCricketMatch(m: StatusFields): CricketMatchKind {
   const summary = m.status_summary ?? "";
   if (m.status_state === "in") return "live";
   if (m.status_state === "post") {
-    const never = /postpon|cancel/i.test(summary) && !/abandon/i.test(summary);
+    const never = isNeverPlayed(summary) && !/abandon/i.test(summary);
     return never ? { calledOff: calledOffLabel(summary) ?? "Postponed" } : "result";
   }
   return CALLED_OFF.test(summary) ? { calledOff: calledOffLabel(summary) ?? "Postponed" } : "fixture";
