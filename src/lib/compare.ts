@@ -3,6 +3,8 @@
 // that already exist. Nothing here fetches from ESPN.
 import { pool } from "./db";
 import { isCricketLeague, type League } from "./leagues";
+import { countRegularGames } from "./compareGames";
+import { playerSport } from "./playerProfile";
 import {
   getComputedTable,
   getCurrentSeason,
@@ -267,9 +269,16 @@ async function getComparableSeasonStats(league: League, idA: string, idB: string
   return [a[0] ?? null, b[0] ?? null];
 }
 
+// A left join, so every stored box-score row still comes back exactly as the old count(*) saw it;
+// countRegularGames decides which of them count.
 async function countGameLog(league: League, playerEspnId: string): Promise<number> {
-  const { rows } = await pool.query(`select count(*)::int as n from player_game_stats where league = $1 and player_espn_id = $2`, [league, playerEspnId]);
-  return rows[0]?.n ?? 0;
+  const { rows } = await pool.query(
+    `select g.stage, g.round from player_game_stats pgs
+     left join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+     where pgs.league = $1 and pgs.player_espn_id = $2`,
+    [league, playerEspnId]
+  );
+  return countRegularGames(rows, playerSport(league));
 }
 
 function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | null): MetricGroup[] {

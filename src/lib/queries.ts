@@ -370,32 +370,6 @@ export async function getAllPlayers(league: League): Promise<PlayerRow[]> {
   return rows;
 }
 
-export interface PlayerGameStatRow {
-  game_espn_id: string;
-  date: string;
-  opponent_name: string;
-  opponent_slug: string;
-  opponent_logo: string | null;
-  stats: Record<string, Record<string, string>>;
-}
-
-export async function getPlayerGameLog(league: League, playerEspnId: string): Promise<PlayerGameStatRow[]> {
-  const { rows } = await pool.query(
-    `select pgs.game_espn_id, g.date, pgs.stats,
-            case when g.home_team_espn_id = pgs.team_espn_id then awt.name else hmt.name end as opponent_name,
-            case when g.home_team_espn_id = pgs.team_espn_id then awt.slug else hmt.slug end as opponent_slug,
-            case when g.home_team_espn_id = pgs.team_espn_id then awt.logo_url else hmt.logo_url end as opponent_logo
-     from player_game_stats pgs
-     join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
-     join teams hmt on hmt.league = g.league and hmt.espn_id = g.home_team_espn_id
-     join teams awt on awt.league = g.league and awt.espn_id = g.away_team_espn_id
-     where pgs.league = $1 and pgs.player_espn_id = $2
-     order by g.date desc`,
-    [league, playerEspnId]
-  );
-  return rows;
-}
-
 export interface TickerGame {
   league: League;
   espn_id: string;
