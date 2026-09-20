@@ -280,7 +280,9 @@ function nbaProfile(): SportProfile {
     rank: (r) => [cell(r.stats, "box", "PTS") ?? 0, sum(cell(r.stats, "box", "REB"), cell(r.stats, "box", "AST"))],
     rankNote: "Ranked by points, then rebounds plus assists.",
     form: { label: "Points", value: (r) => cell(r.stats, "box", "PTS") },
-    played: (r) => (cell(r.stats, "box", "MIN") ?? 0) > 0 || (cell(r.stats, "box", "PTS") ?? 0) > 0,
+    // ESPN counts every game with a minutes line, a sub-minute "0" included. A "--" or missing minutes
+    // cell is a bench-sheet DNP, unless there are points on the line.
+    played: (r) => cell(r.stats, "box", "MIN") !== null || (cell(r.stats, "box", "PTS") ?? 0) > 0,
   };
 }
 

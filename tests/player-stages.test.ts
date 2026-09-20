@@ -43,6 +43,8 @@ function row(o: RowOptions): PlayerLogRow {
 }
 
 const nba = (pts: number, min = 30): Stats => ({ box: { MIN: String(min), PTS: String(pts), REB: "5", AST: "5" } });
+// ESPN's bench-sheet DNP: on the sheet, every cell dashed. (MIN "0" is a sub-minute appearance and counts as a game.)
+const nbaDnp: Stats = { box: { MIN: "--", PTS: "--", REB: "--", AST: "--" } };
 
 const NBA_ROWS: PlayerLogRow[] = [
   row({ id: "r1", date: "2026-01-10", stage: "regular", season_type: 2, competition_type: "STD", stats: nba(10), is_home: true }),
@@ -53,7 +55,7 @@ const NBA_ROWS: PlayerLogRow[] = [
   row({ id: "pi1", date: "2026-04-15", stage: "playin", season_type: 5, competition_type: "STD", stats: nba(25) }),
   row({ id: "cup", date: "2025-12-16", stage: "excluded", season_type: 2, competition_type: "CC", stats: nba(35) }),
   row({ id: "pre", date: "2025-10-05", stage: "excluded", season_type: 1, competition_type: "STD", stats: nba(15) }),
-  row({ id: "dnp", date: "2026-02-10", stage: "regular", season_type: 2, competition_type: "STD", stats: nba(0, 0) }),
+  row({ id: "dnp", date: "2026-02-10", stage: "regular", season_type: 2, competition_type: "STD", stats: nbaDnp }),
 ];
 
 test("NBA: regular season, playoffs and play-in are separate tables; the log keeps excluded games", () => {
@@ -114,7 +116,7 @@ test("NBA player with no playoffs and no play-in gets null tables", () => {
 test("NBA: playoff rows that are all DNPs do not make a playoffs table", () => {
   const s = buildStagedProfile("nba", [
     row({ id: "r1", date: "2026-01-10", stage: "regular", stats: nba(10) }),
-    row({ id: "p1", date: "2026-04-20", stage: "playoffs", stats: nba(0, 0) }),
+    row({ id: "p1", date: "2026-04-20", stage: "playoffs", stats: nbaDnp }),
   ]);
   assert.equal(s.playoffs, null);
 });
