@@ -14,10 +14,9 @@ import type { Metadata } from "next";
 export const revalidate = 15;
 
 // Dynamic on purpose: no generateStaticParams here, so the day's scores is read fresh each time.
-// It renders on every request and answers no-store: a cached render is up to 5 minutes old
-// (expireTime in next.config.ts), and a render made in the pre state ships no LiveRefresh timer,
-// so it would not catch up on its own. The window above still sets the default for the cached
-// fetches inside this render.
+// It renders on every request and answers no-store: a cached render would be up to 5 minutes old
+// (expireTime in next.config.ts), which is too old for a day's live scores. The window above still
+// sets the default for the cached fetches inside this render.
 
 function dayLabel(date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });

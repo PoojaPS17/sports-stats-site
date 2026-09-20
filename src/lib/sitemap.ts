@@ -80,7 +80,7 @@ async function core(): Promise<Entry[]> {
     }
     if (isCricketLeague(league)) out.push(entry(`/${league}/centuries`, "weekly", 0.6));
     if (supportsInjuryTracker(league)) out.push(entry(`/${league}/injuries`, "daily", 0.6));
-    // The hub 404s when the league has no rounds yet (no games, or only preseason ones), so it is listed only when it renders.
+    // The hub answers 200 noindex when the league has no rounds yet (no games, or only preseason ones), so it is listed only when it has rounds to show.
     if (supportsMatchweeks(league) && hasWeeks(await loadWeeks(league))) out.push(entry(weekIndexPath(league), "daily", 0.7));
     if (supportsProjections(league)) out.push(entry(`/${league}/projections`, "daily", 0.8));
     const { rows: seasons } = await pool.query(`select distinct season from standings where league = $1 order by season desc`, [league]);
@@ -201,7 +201,7 @@ async function weeks(league: League): Promise<Entry[]> {
   for (const [i, season] of seasons.entries()) {
     const ws = buildMatchweeks(league, await getSeasonGames(league, season));
     const current = i === 0;
-    // A past season's index 404s without rounds, so it is listed only when it renders.
+    // A past season's index answers 200 noindex without rounds, so it is listed only when it has rounds to show.
     if (!current && ws.length > 0) out.push(entry(weekIndexPath(league, season), "yearly", 0.3));
     for (const w of ws) out.push(entry(weekPath(league, w.index, current ? null : season), current ? "daily" : "yearly", current ? 0.6 : 0.3));
   }

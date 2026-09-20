@@ -42,3 +42,9 @@ test("the proxy and site.ts share one launch-host constant", async () => {
   assert.match(proxy, /import \{ PRIMARY_HOST \} from "\.\/lib\/launchHost"/);
   assert.doesNotMatch(proxy, /const PRIMARY_HOST\s*=/);
 });
+
+test("a launched site always gets the bare https origin, and http or a stray path/port/case cannot leak into canonicals", () => {
+  assert.equal(resolveSiteUrl({ SITE_LAUNCHED: "1", NEXT_PUBLIC_SITE_URL: `https://${PRIMARY_HOST.toUpperCase()}/x/?y=1` }), "https://sports-db.live");
+  assert.equal(resolveSiteUrl({ SITE_LAUNCHED: "1", NEXT_PUBLIC_SITE_URL: `https://${PRIMARY_HOST}:443` }), "https://sports-db.live");
+  assert.throws(() => resolveSiteUrl({ SITE_LAUNCHED: "1", NEXT_PUBLIC_SITE_URL: `http://${PRIMARY_HOST}` }), /NEXT_PUBLIC_SITE_URL/);
+});

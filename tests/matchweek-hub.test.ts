@@ -160,7 +160,7 @@ test("a week that does not exist is a real 404, in every form", async () => {
 test("the weeks sitemap lists a past season's index only if that page renders, and no current-season duplicate of the hub", async () => {
   const urls = new Set((await sitemapEntries("weeks-nba")).map((e) => e.url));
   assert.ok(urls.has(absoluteUrl("/nba/week/2025")), "past season with rounds");
-  assert.ok(!urls.has(absoluteUrl("/nba/week/2024")), "past season with games but no rounds is a 404");
+  assert.ok(!urls.has(absoluteUrl("/nba/week/2024")), "a past season with games but no rounds is not listed (its page is noindex)");
   assert.ok(!urls.has(absoluteUrl("/nba/week/2026")), "the current season's index is the hub, which core lists");
   assert.ok(urls.has(absoluteUrl("/nba/week/1")), "a current-season week");
   assert.ok(!urls.has(absoluteUrl("/nba/week/2026/1")), "current-season weeks are listed in their short form");

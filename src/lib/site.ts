@@ -18,15 +18,17 @@ export function resolveSiteUrl(env: { NEXT_PUBLIC_SITE_URL?: string; SITE_LAUNCH
     if (!configured) {
       throw new Error(`SITE_LAUNCHED=1 but NEXT_PUBLIC_SITE_URL is not set; it must be https://${PRIMARY_HOST}`);
     }
-    let host: string;
+    let url: URL;
     try {
-      host = new URL(configured).host;
+      url = new URL(configured);
     } catch {
       throw new Error(`NEXT_PUBLIC_SITE_URL is not a valid URL ("${configured}"); it must be https://${PRIMARY_HOST}`);
     }
-    if (host !== PRIMARY_HOST) {
+    if (url.host !== PRIMARY_HOST || url.protocol !== "https:") {
       throw new Error(`NEXT_PUBLIC_SITE_URL is "${configured}" but the launched site lives at https://${PRIMARY_HOST}; set NEXT_PUBLIC_SITE_URL=https://${PRIMARY_HOST}`);
     }
+    // The validated origin, never the raw string: a typo'd path, port or case cannot reach a canonical.
+    return `https://${PRIMARY_HOST}`;
   }
   return (configured ?? REVIEW_COPY_URL).replace(/\/$/, "");
 }
