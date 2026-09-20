@@ -103,6 +103,15 @@ test("the ticker leaves out a postponed game but keeps a fixture and a result", 
   assert.deepEqual(ids, ["result", "fixture"]);
 });
 
+test("the ticker keeps a finished cricket match that was abandoned: it is a result, not a called-off fixture", async () => {
+  await seed([
+    { id: "ab", league: "ipl", date: at(-24), completed: true, state: "post", detail: "Abandoned", scores: null },
+    calledOff("pp", at(24), "Postponed", { league: "ipl" }),
+  ]);
+  const ids = (await queries.getTickerGames(12)).map((g) => g.espn_id);
+  assert.deepEqual(ids, ["ab"]);
+});
+
 test("the ticker still fills its limit when a called-off game sits ahead of the fixtures", async () => {
   await seed([
     { id: "result", date: at(-24), scores: [100, 90] },
