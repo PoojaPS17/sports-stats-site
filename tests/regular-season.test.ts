@@ -6,6 +6,9 @@ import type { GameRow } from "../src/lib/queries";
 
 // matchweeks, analytics and friends import the shared app pool, so they load after startTestDb() (see before()).
 let buildMatchweeks: typeof import("../src/lib/matchweeks").buildMatchweeks;
+let summarizeWeek: typeof import("../src/lib/matchweeks").summarizeWeek;
+let weekProgress: typeof import("../src/lib/matchweeks").weekProgress;
+let calledOffNote: typeof import("../src/lib/matchweeks").calledOffNote;
 
 function game(id: string, date: string, extra: Partial<GameRow> = {}): GameRow {
   return {
@@ -173,6 +176,54 @@ test("a league without split stages keeps counting round games in the record", (
   assert.equal(s.wins, 2);
 });
 
+// A game ESPN closed without playing (stored not completed, 0-0, "Postponed") is neither played nor still to come;
+// its replay is a separate game, usually in another week.
+const called = (id: string, detail = "Postponed") => game(id, "2025-11-02T00:00:00Z", { stage: "regular", completed: false, home_score: 0, away_score: 0, status_detail: detail, status_state: "post" });
+const played = (id: string) => game(id, "2025-11-01T00:00:00Z", { stage: "regular" });
+const toCome = (id: string) => game(id, "2025-11-03T00:00:00Z", { stage: "regular", completed: false, home_score: null, away_score: null, status_state: "pre", status_detail: "Scheduled" });
+const weekOf = (...games: GameRow[]) => buildMatchweeks("nba", games)[0];
+
+test("a finished week with one postponed game is fully played, not 9 of 10", () => {
+  const w = weekOf(...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => played(`p${n}`)), called("off"));
+  const s = summarizeWeek(w);
+  assert.equal(s.played, 9);
+  assert.equal(s.calledOff, 1);
+  assert.equal(s.scheduled, 0);
+  // the 0-0 of the game that was not played is not a drawn game or part of the totals
+  assert.equal(s.draws, 0);
+  assert.equal(s.totalScore, 9 * 190);
+});
+
+test("a game still to come counts as scheduled, a called-off one does not", () => {
+  const s = summarizeWeek(weekOf(played("a"), played("b"), toCome("c"), called("d"), called("e", "Canceled")));
+  assert.deepEqual({ played: s.played, scheduled: s.scheduled, calledOff: s.calledOff }, { played: 2, scheduled: 1, calledOff: 2 });
+});
+
+test("a finished game with an abandoned status is a result, not called off", () => {
+  const s = summarizeWeek(weekOf(played("a"), game("ab", "2025-11-01T00:00:00Z", { stage: "regular", status_detail: "Abandoned" })));
+  assert.deepEqual({ played: s.played, scheduled: s.scheduled, calledOff: s.calledOff }, { played: 2, scheduled: 0, calledOff: 0 });
+});
+
+test("weekProgress treats a called-off game as resolved, so a finished week reads as done", () => {
+  assert.equal(weekProgress(weekOf(played("a"), played("b"), called("c"))).state, "done");
+  assert.equal(weekProgress(weekOf(played("a"), toCome("b"), called("c"))).state, "partial");
+  assert.deepEqual(
+    (({ played, toPlay }) => ({ played, toPlay }))(weekProgress(weekOf(played("a"), toCome("b"), called("c")))),
+    { played: 1, toPlay: 2 },
+  );
+  assert.equal(weekProgress(weekOf(toCome("a"), called("b"))).state, "pending");
+  assert.equal(weekProgress(weekOf(called("a"), called("b"))).state, "off");
+  assert.equal(weekProgress(weekOf(played("a"), played("b"))).state, "done");
+});
+
+test("calledOffNote names the reason when every called-off game shares it, else says called off", () => {
+  assert.equal(calledOffNote(weekOf(played("a"))), null);
+  assert.equal(calledOffNote(weekOf(played("a"), called("b"))), "1 postponed");
+  assert.equal(calledOffNote(weekOf(played("a"), called("b"), called("c"))), "2 postponed");
+  assert.equal(calledOffNote(weekOf(played("a"), called("b", "Canceled"))), "1 cancelled");
+  assert.equal(calledOffNote(weekOf(played("a"), called("b"), called("c", "Canceled"))), "2 called off");
+});
+
 // The queries, against a real games table: stage is generated there.
 let db: TestDb;
 let analytics: typeof import("../src/lib/analytics");
@@ -181,7 +232,7 @@ let queries: typeof import("../src/lib/queries");
 let matchContext: typeof import("../src/lib/matchContext");
 before(async () => {
   db = await startTestDb();
-  buildMatchweeks = (await import("../src/lib/matchweeks")).buildMatchweeks;
+  ({ buildMatchweeks, summarizeWeek, weekProgress, calledOffNote } = await import("../src/lib/matchweeks"));
   analytics = await import("../src/lib/analytics");
   simulator = await import("../src/lib/simulator");
   queries = await import("../src/lib/queries");

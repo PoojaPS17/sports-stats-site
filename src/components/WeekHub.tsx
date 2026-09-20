@@ -7,6 +7,8 @@ import {
   currentWeekIndex,
   getWeekPerformers,
   summarizeWeek,
+  calledOffNote,
+  weekProgress,
   tableAfterWeek,
   weekDateRange,
   weekIndexPath,
@@ -34,6 +36,28 @@ function groupByDay(games: Matchweek["games"]) {
   return groups;
 }
 
+// A postponed or cancelled game is resolved (its replay is another game), so it must not keep a finished week open.
+function stripCaption(w: Matchweek): string {
+  const p = weekProgress(w);
+  if (p.state === "off") return "off";
+  if (p.state === "done") return "done";
+  if (p.state === "partial") return `${p.played}/${p.toPlay}`;
+  return new Date(w.start).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function progressText(w: Matchweek, isNow: boolean): string {
+  const p = weekProgress(w);
+  if (p.state === "off") return "Called off";
+  if (p.state === "done") return "Completed";
+  if (p.state === "partial") return `${p.played} of ${p.toPlay} played`;
+  return isNow ? "Up next" : "Upcoming";
+}
+
+function progressTone(w: Matchweek): string {
+  const state = weekProgress(w).state;
+  return state === "done" || state === "off" ? "text-[var(--text-faint)]" : state === "partial" ? "text-[var(--live)]" : "text-[var(--accent)]";
+}
+
 function WeekStrip({ league, weeks, active, season, isCurrentSeason }: { league: League; weeks: Matchweek[]; active: number; season: number; isCurrentSeason: boolean }) {
   const now = isCurrentSeason ? currentWeekIndex(weeks) : -1;
   return (
@@ -56,7 +80,7 @@ function WeekStrip({ league, weeks, active, season, isCurrentSeason }: { league:
                 }`}
               >
                 <span>{w.playoff || !w.numbered ? w.shortLabel : w.index}</span>
-                <span className="text-[10px] font-medium text-[var(--text-faint)]">{w.completed === w.games.length ? "done" : w.completed > 0 ? `${w.completed}/${w.games.length}` : new Date(w.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                <span className="text-[10px] font-medium text-[var(--text-faint)]">{stripCaption(w)}</span>
               </Link>
             </li>
           );
@@ -143,7 +167,7 @@ export async function WeekHub({
       {summary.played > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Games played", value: `${summary.played}${summary.scheduled ? ` of ${week.games.length}` : ""}` },
+            { label: "Games played", value: `${summary.played}${summary.scheduled > 0 ? ` of ${summary.played + summary.scheduled}` : ""}`, sub: calledOffNote(week) ?? "" },
             { label: `Total ${scoreWord}`, value: summary.totalScore, sub: `${(summary.totalScore / summary.played).toFixed(1)} per game` },
             { label: "Home wins", value: summary.homeWins, sub: `${summary.awayWins} away${soccer ? `, ${summary.draws} drawn` : ""}` },
             {
@@ -337,9 +361,7 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
                   <span className="w-28 shrink-0 font-semibold sm:w-40">{w.label}</span>
                   <span className="w-28 shrink-0 text-[var(--text-muted)]">{weekDateRange(w)}</span>
                   <span className="hidden flex-1 text-xs text-[var(--text-faint)] sm:block">{w.games.length} games</span>
-                  <span className={`ml-auto shrink-0 text-xs font-semibold ${w.completed === w.games.length ? "text-[var(--text-faint)]" : w.completed > 0 ? "text-[var(--live)]" : "text-[var(--accent)]"}`}>
-                    {w.completed === w.games.length ? "Completed" : w.completed > 0 ? `${w.completed} of ${w.games.length} played` : w.index === now ? "Up next" : "Upcoming"}
-                  </span>
+                  <span className={`ml-auto shrink-0 text-xs font-semibold ${progressTone(w)}`}>{progressText(w, w.index === now)}</span>
                 </Link>
               </li>
             ))}

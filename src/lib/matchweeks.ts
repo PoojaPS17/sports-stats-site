@@ -10,6 +10,7 @@ import { isRegularSeasonGame } from "./gameStage";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
 import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
+import { calledOffLabel, isGameCalledOff } from "./gameStatus";
 
 export interface Matchweek {
   /** 1-based position in the season; doubles as the URL segment. */
@@ -19,7 +20,10 @@ export interface Matchweek {
   start: string;
   end: string;
   games: GameRow[];
+  /** Games finished. A postponed or cancelled game is not one of them; see calledOff and weekProgress. */
   completed: number;
+  /** Games ESPN closed without playing (postponed, cancelled, abandoned, suspended); their replay is another game. */
+  calledOff: number;
   playoff: boolean;
   /** False when the round could not be numbered reliably and is labelled by its dates instead. */
   numbered: boolean;
@@ -103,6 +107,7 @@ function finish(groups: { label: string; shortLabel: string; games: GameRow[]; p
         end: new Date(Math.max(...dates)).toISOString(),
         games: g.games,
         completed: g.games.filter((x) => x.completed).length,
+        calledOff: g.games.filter(isGameCalledOff).length,
         playoff: g.playoff,
         numbered: g.numbered ?? true,
       };
@@ -327,7 +332,10 @@ export function weekDateRange(w: Matchweek): string {
 
 export interface WeekSummary {
   played: number;
+  /** Games still to be played: neither finished nor called off. */
   scheduled: number;
+  /** Games in the week that were postponed, cancelled, abandoned or suspended. */
+  calledOff: number;
   totalScore: number;
   homeWins: number;
   awayWins: number;
@@ -354,7 +362,30 @@ export function summarizeWeek(week: Matchweek): WeekSummary {
     if (!biggest || Math.abs(h - a) > Math.abs(biggest.home_score! - biggest.away_score!)) biggest = g;
     if (!highest || h + a > highest.home_score! + highest.away_score!) highest = g;
   }
-  return { played: done.length, scheduled: week.games.length - done.length, totalScore, homeWins, awayWins, draws, biggest, highest };
+  const calledOff = week.games.filter(isGameCalledOff).length;
+  return { played: done.length, scheduled: week.games.length - done.length - calledOff, calledOff, totalScore, homeWins, awayWins, draws, biggest, highest };
+}
+
+/** "1 postponed", "2 cancelled", or "2 called off" when the reasons differ; null when nothing in the week was called off. */
+export function calledOffNote(week: Matchweek): string | null {
+  const labels = new Set(week.games.filter(isGameCalledOff).map((g) => calledOffLabel(g.status_detail)));
+  const n = week.games.filter(isGameCalledOff).length;
+  if (n === 0) return null;
+  return labels.size === 1 ? `${n} ${[...labels][0]!.toLowerCase()}` : `${n} called off`;
+}
+
+/**
+ * How far through a week is. A called-off game is resolved (its replay is another game), so it neither holds a
+ * finished week open nor counts toward the games still to play.
+ */
+export function weekProgress(week: Pick<Matchweek, "games" | "completed" | "calledOff">): {
+  played: number;
+  toPlay: number;
+  state: "done" | "partial" | "pending" | "off";
+} {
+  const toPlay = week.games.length - week.calledOff;
+  const state = toPlay === 0 ? "off" : week.completed >= toPlay ? "done" : week.completed > 0 ? "partial" : "pending";
+  return { played: week.completed, toPlay, state };
 }
 
 export interface TableMovementRow extends ComputedTableRow {
