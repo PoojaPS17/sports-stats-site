@@ -1,7 +1,7 @@
 // Which of ESPN's per-season rows the season-stats loader stores. Pure: no database, no network.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isTotalsRow, seasonRow } from "../scripts/lib/season-row";
+import { isTotalsRow, seasonGamesPlayed, seasonRow } from "../scripts/lib/season-row";
 
 // Luka Doncic's 2025 in ESPN's athlete /stats: one row per team plus a whole-season "Totals" row.
 const luka = {
@@ -89,4 +89,134 @@ test("isTotalsRow reads the team slug and the display name", () => {
   assert.equal(isTotalsRow({ teamSlug: "los-angeles-lakers", displayName: "2024-25" }), false);
   assert.equal(isTotalsRow({ teamSlug: "subtotals-fc" }), false);
   assert.equal(isTotalsRow({}), false);
+});
+
+// ESPN's NFL athlete /stats repeats the player's games played (first label, "GP") in every category
+// for a row's team, so a season's games are read from GP, not from the box-score rows the site stores.
+const nflLabels = { passing: ["GP", "CMP", "YDS"], rushing: ["GP", "CAR", "YDS"], receiving: ["GP", "REC", "YDS"], defensive: ["GP", "TOT", "SACK"] };
+const nflRow = (year: number, teamSlug: string, gp: string, displayName = String(year)) => ({ season: { year }, teamSlug, displayName, stats: [gp, "1", "2"] });
+const nflCategory = (name: keyof typeof nflLabels, statistics: ReturnType<typeof nflRow>[]) => ({ name, labels: nflLabels[name], statistics });
+
+test("a one-team NFL season is that team's GP, the same in every category", () => {
+  const categories = [
+    nflCategory("passing", [nflRow(2024, "kansas-city-chiefs", "16"), nflRow(2025, "kansas-city-chiefs", "15")]),
+    nflCategory("rushing", [nflRow(2024, "kansas-city-chiefs", "16"), nflRow(2025, "kansas-city-chiefs", "15")]),
+    nflCategory("receiving", [nflRow(2025, "kansas-city-chiefs", "15")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2025), 15);
+  assert.equal(seasonGamesPlayed(categories, 2024), 16);
+});
+
+test("categories that disagree on one team's GP give the largest", () => {
+  const categories = [
+    nflCategory("receiving", [nflRow(2025, "tampa-bay-buccaneers", "9")]),
+    nflCategory("defensive", [nflRow(2025, "tampa-bay-buccaneers", "16")]),
+    nflCategory("rushing", [nflRow(2025, "tampa-bay-buccaneers", "12")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2025), 16);
+});
+
+test("a traded player with a Totals row gets the Totals GP, not the sum, wherever the row sits", () => {
+  const car = nflRow(2022, "carolina-panthers", "6");
+  const sf = nflRow(2022, "san-francisco-49ers", "11");
+  const totals = nflRow(2022, "2022 Totals", "17", "2022  Totals");
+  const totalsLast = [nflCategory("rushing", [car, sf, totals]), nflCategory("receiving", [car, sf, totals])];
+  const totalsFirst = [nflCategory("rushing", [totals, car, sf]), nflCategory("receiving", [totals, car, sf])];
+  assert.equal(seasonGamesPlayed(totalsLast, 2022), 17);
+  assert.equal(seasonGamesPlayed(totalsFirst, 2022), 17);
+});
+
+test("the Totals GP is the largest among the Totals rows, and a Totals row in only one category still wins", () => {
+  const car = nflRow(2022, "carolina-panthers", "6");
+  const sf = nflRow(2022, "san-francisco-49ers", "11");
+  const both = [
+    nflCategory("rushing", [car, sf, nflRow(2022, "2022 Totals", "16", "2022  Totals")]),
+    nflCategory("receiving", [car, sf, nflRow(2022, "2022 Totals", "17", "2022  Totals")]),
+  ];
+  assert.equal(seasonGamesPlayed(both, 2022), 17);
+  const onlyOne = [nflCategory("rushing", [car, sf]), nflCategory("receiving", [car, sf, nflRow(2022, "2022 Totals", "17", "2022  Totals")])];
+  assert.equal(seasonGamesPlayed(onlyOne, 2022), 17);
+});
+
+test("a traded player with no Totals row gets the sum of the teams' GP", () => {
+  // McCaffrey's 2022 rows without the Totals row: CAR 6 + SF 11.
+  const mccaffrey = [
+    nflCategory("rushing", [nflRow(2022, "carolina-panthers", "6"), nflRow(2022, "san-francisco-49ers", "11")]),
+    nflCategory("receiving", [nflRow(2022, "carolina-panthers", "6"), nflRow(2022, "san-francisco-49ers", "11")]),
+  ];
+  assert.equal(seasonGamesPlayed(mccaffrey, 2022), 17);
+  // Robinson 2025 (id 4249342): per-team rows only; a team's GP is its largest across categories, then summed.
+  const robinson = [
+    nflCategory("rushing", [nflRow(2025, "new-york-giants", "3"), nflRow(2025, "new-york-jets", "1")]),
+    nflCategory("receiving", [nflRow(2025, "new-york-giants", "3"), nflRow(2025, "new-york-jets", "1")]),
+    nflCategory("defensive", [nflRow(2025, "new-york-giants", "2")]),
+  ];
+  assert.equal(seasonGamesPlayed(robinson, 2025), 4);
+});
+
+test("a team present in only some categories still counts once in the sum", () => {
+  const categories = [
+    nflCategory("rushing", [nflRow(2025, "team-a", "5")]),
+    nflCategory("receiving", [nflRow(2025, "team-a", "7"), nflRow(2025, "team-b", "2")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2025), 9);
+});
+
+test("rows with a display name but no team slug group by that name; rows with neither share one group", () => {
+  const named = [{ name: "rushing", labels: ["GP"], statistics: [
+    { season: { year: 2025 }, displayName: "Team A", stats: ["4"] },
+    { season: { year: 2025 }, displayName: "Team A", stats: ["3"] },
+    { season: { year: 2025 }, displayName: "Team B", stats: ["2"] },
+  ] }];
+  assert.equal(seasonGamesPlayed(named, 2025), 6);
+  const bare = [{ labels: ["GP"], statistics: [{ season: { year: 2025 }, stats: ["4"] }, { season: { year: 2025 }, stats: ["3"] }] }];
+  assert.equal(seasonGamesPlayed(bare, 2025), 4);
+});
+
+test("other seasons' rows, including their Totals rows, are ignored", () => {
+  const categories = [
+    nflCategory("rushing", [
+      nflRow(2021, "2021 Totals", "17", "2021  Totals"),
+      nflRow(2021, "carolina-panthers", "17"),
+      nflRow(2022, "carolina-panthers", "6"),
+      nflRow(2022, "san-francisco-49ers", "11"),
+    ]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2022), 17);
+  assert.equal(seasonGamesPlayed([nflCategory("rushing", [nflRow(2022, "carolina-panthers", "6"), nflRow(2021, "2021 Totals", "17", "2021  Totals")])], 2022), 6);
+});
+
+test("no readable GP for the season is null", () => {
+  assert.equal(seasonGamesPlayed([], 2025), null);
+  assert.equal(seasonGamesPlayed([{ labels: ["GP"] }, { labels: ["GP"], statistics: [] }], 2025), null);
+  // A season the player has no rows for.
+  assert.equal(seasonGamesPlayed([nflCategory("rushing", [nflRow(2024, "a", "16")])], 2030), null);
+  // A category without a GP label: its rows are not read, even if another column holds a number.
+  assert.equal(seasonGamesPlayed([{ labels: ["CAR", "YDS"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["120", "600"] }] }], 2025), null);
+  assert.equal(seasonGamesPlayed([{ statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["16"] }] }], 2025), null);
+  // GP position past the end of the row, or not a number.
+  assert.equal(seasonGamesPlayed([{ labels: ["CAR", "GP"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["120"] }] }], 2025), null);
+  assert.equal(seasonGamesPlayed([{ labels: ["GP"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["--"] }, { season: { year: 2025 }, teamSlug: "b", stats: [""] }] }], 2025), null);
+});
+
+test("GP is read by its position in the category's labels, not the first column", () => {
+  const category = { labels: ["YDS", "GP"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["600", "14"] }] };
+  assert.equal(seasonGamesPlayed([category], 2025), 14);
+});
+
+test("an unreadable GP in one category does not hide another category's", () => {
+  const categories = [
+    { labels: ["CAR", "YDS"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["120", "600"] }] },
+    nflCategory("receiving", [nflRow(2025, "a", "13")]),
+  ];
+  assert.equal(seasonGamesPlayed(categories, 2025), 13);
+});
+
+test("a comma-formatted GP parses", () => {
+  const category = { labels: ["GP"], statistics: [{ season: { year: 2025 }, teamSlug: "a", stats: ["1,012"] }] };
+  assert.equal(seasonGamesPlayed([category], 2025), 1012);
+});
+
+test("a GP of 0 is returned as 0, for the loader to decide", () => {
+  assert.equal(seasonGamesPlayed([nflCategory("passing", [nflRow(2025, "a", "0")])], 2025), 0);
 });

@@ -1,10 +1,11 @@
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
 
-import { seasonRow } from "./season-row";
+import { seasonGamesPlayed, seasonRow } from "./season-row";
 
 // Which of a category's rows a season stores (ESPN's Totals row for a traded player, and the
-// league filter for soccer) lives in season-row.ts, which has no database import.
+// league filter for soccer), and an NFL season's games played (ESPN's own GP, summed over teams when
+// a traded player has no Totals row), live in season-row.ts, which has no database import.
 export { seasonRow } from "./season-row";
 
 function categoryKey(category: any): string {
@@ -69,6 +70,10 @@ async function upsertOneSeason(
   }
 
   if (!found) return false;
+
+  // NBA's games played came from its `averages` category above; soccer stays null. NFL's is ESPN's
+  // own GP (the site's box-score rows list only players with a stat line, so counting them undercounts).
+  if (league === "nfl") gamesPlayed = positiveOrNull(seasonGamesPlayed(categories, seasonYear));
 
   await pool.query(
     `insert into player_season_stats (
