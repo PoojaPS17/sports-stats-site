@@ -126,6 +126,12 @@ const useEspn = espn !== undefined && espn.games > logged && espn.pts >= recorde
 - Consumes: `PlayerProfile.boxOnlyShort`, `noBoxScoreGames(sport, games, recorded)`, `unlistedGameCount(staged)`, `SeasonLine.lineSource`.
 - Produces (`playerCopy.ts`): `NBA_NO_BOX_SCORE_NOTE` (reworded, below); `BOX_ROWS_ONLY_NOTE`; `withBoxRowsNote(text: string, n: number): string`; `nbaCardNote(boxOnlyShort: number): string`.
 
+Additions found in the Task 1 review (all in scope for this task):
+- The regular-season footnote at the bottom of `players/[slug]/page.tsx` (~353-376, "per-game averages are over the N games with a box score") is false for a season shown from ESPN's line. Reword: when any season has `lineSource === "espn"`, say the season figures for those seasons are ESPN's own and the game-by-game sections count only games with a box score.
+- The † tooltip (`noBoxScoreGamesTitle`, used in `PlayerSeasonTable.tsx` ~40 and the career row) says "ESPN published no box score for" N games; reword per the copy rules below, and for a season with `lineSource === "espn"` do not claim the games are missing from the averages.
+- Meta description: quote averages only when `profile.boxOnlyShort === 0` and `profile.career.pts !== null` (today's page code quotes them when `recorded > 0`, which stays wrong for an ESPN season with no rows and for a partial box-only season). The season page's `figures` follows the same rule.
+- `milestonesFor`: the "Nth game" ordinals (50th, 100th, ...) index into recorded plus listed rows. When the profile's `games` exceeds that timeline length (some games have no row at all, e.g. a game where ESPN gave no athlete id), the Nth game cannot be located, so skip the ordinals and keep "First game on record". Pass the missing count in (`games - (recorded + unrecorded rows)`); test it with a fixture of 60 played rows: `games` 90 gives no "50th game" (and no other ordinal), `games` 60 gives "50th game", and "First game on record" is present in both.
+
 Copy (exact):
 - `NBA_NO_BOX_SCORE_NOTE`: "† ESPN's box scores have no stat line for some of this player's games. For those seasons the games, per-game averages and percentages are ESPN's own season figures where ESPN stores them (W-L is left blank). The game log, best games, splits and milestones below count only games with a box score."
 - `NBA_NO_BOX_SCORE_STAGE_NOTE` keeps its meaning; reword "ESPN published no box score" to "ESPN's box scores have no stat line" for consistency.
