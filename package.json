@@ -20,6 +20,7 @@
     "fetch:news": "tsx scripts/fetch-news.ts",
     "fetch:injuries": "tsx scripts/fetch-injuries.ts",
     "check:live": "tsx scripts/check-live.ts",
+    "check:stale": "tsx scripts/check-stale.ts",
     "backfill:games": "tsx scripts/backfill-games.ts",
     "backfill:standings": "tsx scripts/backfill-standings.ts",
     "backfill:player-stats": "tsx scripts/backfill-player-stats.ts",

@@ -489,3 +489,12 @@ alter table players add column if not exists photo_url text;
 alter table players add column if not exists photo_credit text;
 alter table players add column if not exists photo_license text;
 alter table players add column if not exists photo_source_url text;
+
+-- One row per scheduled scraper: when it last finished successfully, and when it last
+-- actually changed data. Written by scripts/lib/heartbeat.ts, read by scripts/check-stale.ts
+-- so a scraper that stops running is noticed instead of silently leaving pages stale.
+create table if not exists scrape_runs (
+  scraper text primary key,
+  last_ok_at timestamptz not null default now(),
+  last_changed_at timestamptz
+);
