@@ -16,6 +16,8 @@ let pageModule: typeof import("../src/app/[league]/h2h/[pair]/page");
 let db: TestDb;
 
 const TEAMS = ["alpha", "bravo", "charlie", "delta", "echo"]; // espn ids "1".."5"
+// An epl team that is not in the current epl standings (id "6"), who has played alpha.
+const OUTSIDER = "foxtrot";
 
 interface Fixture {
   id: string;
@@ -31,6 +33,7 @@ interface Fixture {
 // nba games (season_type 2 = regular season unless stated); each id names the pair it belongs to, see EXPECTED below.
 const NBA_GAMES: Fixture[] = [
   { id: "ab", home: "alpha", away: "bravo", scores: [100, 90], completed: true },
+  { id: "ab-2", home: "bravo", away: "alpha", scores: [97, 99], completed: true }, // both home/away orders: still one URL, two meetings
   { id: "ad-future", home: "alpha", away: "delta", scores: null, completed: false },
   { id: "ae-noscore", home: "alpha", away: "echo", scores: null, completed: true },
   { id: "bc-postponed", home: "bravo", away: "charlie", scores: [0, 0], completed: false, detail: "Postponed" },
@@ -42,7 +45,7 @@ const NBA_GAMES: Fixture[] = [
 
 // Whether each of the C(5,2) pairs has a meeting the page counts, and so is indexable and listed.
 const EXPECTED: Record<string, boolean> = {
-  "alpha-bravo": true,
+  "alpha-bravo": true, // met in both home/away orders
   "alpha-charlie": false, // they only met in the epl (league is part of the rule)
   "alpha-delta": false, // only an unplayed fixture
   "alpha-echo": false, // completed but no score
@@ -59,12 +62,13 @@ before(async () => {
   ({ sitemapEntries } = await import("../src/lib/sitemap"));
   analytics = await import("../src/lib/analytics");
   pageModule = await import("../src/app/[league]/h2h/[pair]/page");
-  const id = (slug: string) => String(TEAMS.indexOf(slug) + 1);
+  const id = (slug: string) => String([...TEAMS, OUTSIDER].indexOf(slug) + 1);
   for (const league of ["nba", "epl"]) {
     for (const slug of TEAMS) {
       await db.pool.query(`insert into teams (league, espn_id, name, slug) values ($1, $2, $3, $3)`, [league, id(slug), slug]);
     }
   }
+  await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('epl', $1, $2, $2)`, [id(OUTSIDER), OUTSIDER]);
   // nba: all five teams are in the current standings; epl: only alpha and charlie.
   for (const slug of TEAMS) await db.pool.query(`insert into standings (league, season, team_espn_id) values ('nba', 2026, $1)`, [id(slug)]);
   for (const slug of ["alpha", "charlie"]) await db.pool.query(`insert into standings (league, season, team_espn_id) values ('epl', 2026, $1)`, [id(slug)]);
@@ -76,6 +80,7 @@ before(async () => {
     );
   for (const g of NBA_GAMES) await insert("nba", g);
   await insert("epl", { id: "epl-ac", home: "alpha", away: "charlie", scores: [2, 1], completed: true });
+  await insert("epl", { id: "epl-af", home: "alpha", away: OUTSIDER, scores: [1, 1], completed: true });
 });
 
 after(async () => {
@@ -124,10 +129,30 @@ test("a pair with no counted meetings keeps its canonical, follows links and doe
   }
 });
 
+test("a pair that met in both home/away orders is listed once and counts both meetings", async () => {
+  const h2h = await analytics.getHeadToHead("nba", "alpha", "bravo");
+  assert.equal(h2h?.meetings, 2);
+  assert.deepEqual(h2h?.games.map((g) => g.espn_id).sort(), ["ab", "ab-2"]);
+  const urls = (await sitemapEntries("h2h-nba")).map((e) => e.url).filter((u) => u === absoluteUrl("/nba/h2h/alpha-vs-bravo"));
+  assert.equal(urls.length, 1, "one URL for the pair, whichever side was at home");
+});
+
 test("a pair with counted meetings is indexable and keeps its record description", async () => {
   const meta = await pageModule.generateMetadata(params({ league: "nba", pair: "alpha-vs-bravo" }));
   assert.equal(robotsIndex(meta), true);
-  assert.match(meta.description ?? "", /record \(1-0-0 in 1 meetings\)/);
+  assert.match(meta.description ?? "", /record \(2-0-0 in 2 meetings\)/);
+});
+
+test("a pair with a meeting but a team outside the current standings is not listed, though its page is indexable", async () => {
+  // The sitemap only offers pairs of clubs in the current standings (its scope, not a noindex rule): the page rule
+  // ignores standings, so a pair with a counted meeting stays indexable on the page and is merely left out of the list.
+  const h2h = await analytics.getHeadToHead("epl", "alpha", OUTSIDER);
+  assert.equal(h2h?.meetings, 1);
+  const meta = await pageModule.generateMetadata(params({ league: "epl", pair: `alpha-vs-${OUTSIDER}` }));
+  assert.equal(robotsIndex(meta), true);
+  const urls = (await sitemapEntries("h2h-epl")).map((e) => e.url);
+  assert.ok(!urls.includes(absoluteUrl(h2hPath("epl", "alpha", OUTSIDER))), "not in the epl sitemap");
+  assert.ok(urls.includes(absoluteUrl("/epl/h2h/alpha-vs-charlie")), "sanity: both-in-standings pair is listed");
 });
 
 test("a zero-meeting page still renders for visitors, and the excluded-only pair still lists its game", async () => {
@@ -143,9 +168,10 @@ test("a zero-meeting page still renders for visitors, and the excluded-only pair
 
 test("the twin and the page rule are one definition: countedMeetingSql selects exactly the games isCountedMeeting accepts", async () => {
   const { rows } = await db.pool.query(
-    `select g.*, (${analytics.countedMeetingSql("g")}) as sql_counted from games g where g.league = 'nba'`
+    `select g.*, (${analytics.countedMeetingSql("g")}) as sql_counted from games g`
   );
-  assert.equal(rows.length, NBA_GAMES.length);
+  assert.equal(rows.length, NBA_GAMES.length + 2, "every nba and epl fixture row");
+  assert.deepEqual([...new Set(rows.map((g) => g.league))].sort(), ["epl", "nba"]);
   for (const g of rows) assert.equal(g.sql_counted, analytics.isCountedMeeting(g), `game ${g.espn_id}`);
   assert.ok(rows.some((g) => g.sql_counted) && rows.some((g) => !g.sql_counted), "both outcomes are exercised");
 });
