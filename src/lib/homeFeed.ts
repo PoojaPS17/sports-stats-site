@@ -82,12 +82,12 @@ export async function getNextF1Event(withinDays = 7): Promise<F1EventRow | null>
             to_char(e.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
             to_char(e.end_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as end_date,
             e.season_year, e.circuit_name, initcap(e.circuit_city) as circuit_city, initcap(e.circuit_country) as circuit_country,
-            null::text as winner_name, null::text as winner_slug, null::text as race_status_detail, null::boolean as race_completed
+            null::text as winner_name, null::text as winner_slug, null::text as race_status_state, null::text as race_status_detail, null::boolean as race_completed
      from f1_events e
      where coalesce(e.end_date, e.date + interval '2 days') >= now() and e.date < now() + ($1 || ' days')::interval
        -- a Grand Prix ESPN cancelled or postponed is not a race weekend to look forward to
        and not exists (select 1 from f1_sessions s where s.event_espn_id = e.espn_id and s.session_type = 'Race'
-                       and not s.completed and coalesce(s.status_detail, '') ~* $2)
+                       and not s.completed and s.status_state is distinct from 'in' and coalesce(s.status_detail, '') ~* $2)
      order by e.date limit 1`,
     [withinDays, CALLED_OFF.source]
   );

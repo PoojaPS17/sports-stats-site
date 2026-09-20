@@ -13,6 +13,7 @@ export interface F1EventRow {
   winner_name: string | null;
   winner_slug: string | null;
   /** The Race session's status text ("Canceled" for a Grand Prix ESPN cancelled) and completed flag; null with no Race session on file. */
+  race_status_state: string | null;
   race_status_detail: string | null;
   race_completed: boolean | null;
 }
@@ -27,10 +28,10 @@ const EVENT_SELECT = `
   select e.espn_id, e.name, e.short_name, e.date, e.end_date, e.season_year,
          e.circuit_name, initcap(e.circuit_city) as circuit_city, initcap(e.circuit_country) as circuit_country,
          wp.name as winner_name, wp.slug as winner_slug,
-         rs.status_detail as race_status_detail, rs.completed as race_completed
+         rs.status_state as race_status_state, rs.status_detail as race_status_detail, rs.completed as race_completed
   from f1_events e
   left join lateral (
-    select s.status_detail, s.completed from f1_sessions s
+    select s.status_state, s.status_detail, s.completed from f1_sessions s
     where s.event_espn_id = e.espn_id and s.session_type = 'Race'
     order by s.date desc limit 1
   ) rs on true

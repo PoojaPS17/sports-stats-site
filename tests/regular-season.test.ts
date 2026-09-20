@@ -204,6 +204,16 @@ test("a finished game with an abandoned status is a result, not called off", () 
   assert.deepEqual({ played: s.played, scheduled: s.scheduled, calledOff: s.calledOff }, { played: 2, scheduled: 0, calledOff: 0 });
 });
 
+// A row stored finished (completed, with scores) whose status says cancelled: older rows written before the writers
+// stopped reading state post as finished. It is called off, so it is not also played and scheduled cannot go negative.
+test("a game stored completed with scores but a cancelled status is called off, not also played", () => {
+  const stored = game("cx", "2025-11-02T00:00:00Z", { stage: "regular", completed: true, home_score: 1, away_score: 0, status_detail: "Canceled", status_state: "post" });
+  const w = weekOf(played("a"), stored);
+  const s = summarizeWeek(w);
+  assert.deepEqual({ played: s.played, scheduled: s.scheduled, calledOff: s.calledOff, totalScore: s.totalScore }, { played: 1, scheduled: 0, calledOff: 1, totalScore: 190 });
+  assert.equal(weekProgress(w).state, "done");
+});
+
 test("weekProgress treats a called-off game as resolved, so a finished week reads as done", () => {
   assert.equal(weekProgress(weekOf(played("a"), played("b"), called("c"))).state, "done");
   assert.equal(weekProgress(weekOf(played("a"), toCome("b"), called("c"))).state, "partial");

@@ -62,6 +62,8 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
                       <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Winner </span>
                       <span className="font-semibold">{ev.winner_name}</span>
                     </span>
+                  ) : status.kind === "live" ? (
+                    <span className="pill pill-live shrink-0">Live</span>
                   ) : status.kind === "called-off" ? (
                     <span className="pill pill-final shrink-0">{status.label}</span>
                   ) : (

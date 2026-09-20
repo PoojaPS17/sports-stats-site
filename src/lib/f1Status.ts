@@ -4,11 +4,19 @@
 // Pure, so tests need no React and no database.
 import { calledOffLabel, isCalledOff } from "./gameStatus";
 
-export type F1EventStatus = { kind: "result" | "called-off" | "upcoming"; label: string | null };
+export type F1EventStatus = { kind: "result" | "called-off" | "live" | "upcoming"; label: string | null };
 
-/** `race_status_detail` and `race_completed` are the event's Race session (f1_sessions.status_detail / completed). */
-export function f1EventStatus(ev: { winner_name: string | null; race_completed: boolean | null; race_status_detail: string | null }): F1EventStatus {
+/** The event's Race session: f1_sessions.status_state / status_detail / completed. */
+interface RaceStatus {
+  race_status_state: string | null;
+  race_status_detail: string | null;
+  race_completed: boolean | null;
+}
+
+/** A Race in play is live, whatever its text says (a red flag reads "Suspended"), as for every other game. */
+export function f1EventStatus(ev: { winner_name: string | null } & RaceStatus): F1EventStatus {
   if (ev.winner_name) return { kind: "result", label: null };
+  if (ev.race_status_state === "in") return { kind: "live", label: "Live" };
   if (ev.race_completed !== true && isCalledOff(ev.race_status_detail)) return { kind: "called-off", label: calledOffLabel(ev.race_status_detail) };
   return { kind: "upcoming", label: null };
 }
@@ -22,16 +30,18 @@ export function f1EventStatus(ev: { winner_name: string | null; race_completed: 
 export function f1BackfillSessionStatus(status: { type?: { state?: string; detail?: string; completed?: boolean } } | null | undefined): { state: string; detail: string; completed: boolean } {
   const t = status?.type;
   if (!t || !t.state) return { state: "post", detail: "Final", completed: true };
-  return { state: t.state, detail: t.detail ?? (t.completed ? "Final" : ""), completed: t.completed === true };
+  // The live writer stores ESPN's flag, so an explicit flag is believed; where ESPN sends none, state post is finished unless the text says it was called off.
+  const detail = t.detail ?? "";
+  return { state: t.state, detail: detail || (t.completed ? "Final" : ""), completed: t.completed ?? (t.state === "post" && !isCalledOff(detail)) };
 }
 
 /** The meta description of a race weekend's page; `where` is " at <circuit>" or "". */
-export function f1EventDescription(ev: { name: string; winner_name: string | null; race_completed: boolean | null; race_status_detail: string | null }, year: number, where: string): string {
+export function f1EventDescription(ev: { name: string; winner_name: string | null } & RaceStatus, year: number, where: string): string {
   const status = f1EventStatus(ev);
   if (status.kind === "result") return `${ev.winner_name} won the ${year} ${ev.name}${where}. Classifications for the race, qualifying and practice.`;
   if (status.kind === "called-off") {
     const label = status.label ?? "Postponed";
-    return `The ${year} ${ev.name}${where} was ${label.toLowerCase()}${label === "Cancelled" ? " and no sessions were run" : ""}.`;
+    return `The ${year} ${ev.name}${where} was ${label.toLowerCase()}.`;
   }
   return `The ${year} ${ev.name}${where}: practice, qualifying and race classifications, added as each session finishes.`;
 }

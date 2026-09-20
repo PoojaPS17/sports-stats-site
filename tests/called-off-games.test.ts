@@ -410,6 +410,13 @@ test("the homepage's next race weekend is not a cancelled one", async () => {
   assert.equal(await homeFeed.getNextF1Event(7), null);
 });
 
+test("the homepage keeps a race weekend whose Race is in play even when its status text says suspended", async () => {
+  await seedF1([{ id: "red-flag", date: at(24), race: { state: "in", detail: "Suspended", completed: false } }]);
+  assert.equal((await homeFeed.getNextF1Event(7))?.espn_id, "red-flag");
+  const cal = await f1.getF1Calendar(2026);
+  assert.equal(cal[0].race_status_state, "in");
+});
+
 test("the F1 calendar feed marks a cancelled Grand Prix cancelled, not a confirmed weekend", async () => {
   await seedF1([
     { id: "cancelled", date: at(-24 * 30), race: { state: "post", detail: "Canceled", completed: false } },

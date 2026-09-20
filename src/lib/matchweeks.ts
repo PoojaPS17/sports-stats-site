@@ -345,7 +345,8 @@ export interface WeekSummary {
 }
 
 export function summarizeWeek(week: Matchweek): WeekSummary {
-  const done = week.games.filter((g) => g.completed && g.home_score != null && g.away_score != null);
+  // A game stored finished whose status says cancelled or postponed is called off, not played (same predicate as finish()).
+  const done = week.games.filter((g) => g.completed && !isGameCalledOff(g) && g.home_score != null && g.away_score != null);
   let totalScore = 0;
   let homeWins = 0;
   let awayWins = 0;
