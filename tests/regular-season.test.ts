@@ -134,6 +134,10 @@ interface Seed {
   competitionType?: string;
   round?: string | null;
   scores?: [number, number] | null;
+  /** ESPN's status text ("Postponed", "Canceled"); stored with status_state 'post'. */
+  statusDetail?: string;
+  /** Defaults to "has scores"; a called-off game has 0-0 scores and is not completed. */
+  completed?: boolean;
 }
 
 async function seed(league: string, games: Seed[]) {
@@ -141,9 +145,21 @@ async function seed(league: string, games: Seed[]) {
   for (const g of games) {
     const scores = g.scores === undefined ? [100, 90] : g.scores;
     await db.pool.query(
-      `insert into games (league, espn_id, date, name, season_year, home_team_espn_id, away_team_espn_id, home_score, away_score, completed, season_type, competition_type, round)
-       values ($1, $2, $3, 'x', 2025, '1', '2', $4, $5, $6, $7, $8, $9)`,
-      [league, g.id, g.date, scores?.[0] ?? null, scores?.[1] ?? null, scores !== null, g.seasonType ?? null, g.competitionType ?? "STD", g.round ?? null]
+      `insert into games (league, espn_id, date, name, season_year, home_team_espn_id, away_team_espn_id, home_score, away_score, completed, season_type, competition_type, round, status_state, status_detail)
+       values ($1, $2, $3, 'x', 2025, '1', '2', $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [
+        league,
+        g.id,
+        g.date,
+        scores?.[0] ?? null,
+        scores?.[1] ?? null,
+        g.completed ?? scores !== null,
+        g.seasonType ?? null,
+        g.competitionType ?? "STD",
+        g.round ?? null,
+        g.statusDetail ? "post" : null,
+        g.statusDetail ?? null,
+      ]
     );
   }
 }
@@ -271,4 +287,56 @@ test("head-to-head in a league without split stages is unchanged", async () => {
   const h2h = await analytics.getHeadToHead("epl", "one", "two");
   assert.equal(h2h?.meetings, 2);
   assert.deepEqual(h2h?.games.map((g) => g.espn_id), ["cup", "m1"]);
+});
+
+// "Next meeting": ESPN keeps the original event of a postponed or cancelled game (0-0, not
+// completed, status_state 'post'); the replay is a separate event. Each test seeds its own league
+// (none of the tests above use laliga, bundesliga, seriea or ucl), so nothing here can change
+// another test's counts and the tests do not depend on running order.
+const CALLED_OFF_GAMES: Seed[] = [
+  { id: "pp", date: "2021-12-05T00:00:00Z", scores: [0, 0], completed: false, statusDetail: "Postponed" },
+  { id: "cx", date: "2022-01-02T00:00:00Z", scores: [0, 0], completed: false, statusDetail: "Canceled" },
+];
+
+test("head-to-head next meeting skips a postponed past game and finds the real next one", async () => {
+  await seed("laliga", [
+    { id: "played", date: "2021-11-01T00:00:00Z", scores: [100, 90] },
+    ...CALLED_OFF_GAMES,
+    { id: "next", date: future(5), scores: null },
+  ]);
+  const h2h = await analytics.getHeadToHead("laliga", "one", "two");
+  assert.equal(h2h?.upcoming?.espn_id, "next");
+  // The called-off games are not in the tally and not in the list of finished meetings (unchanged).
+  assert.equal(h2h?.meetings, 1);
+  assert.deepEqual({ a: h2h?.winsA, b: h2h?.winsB, d: h2h?.draws }, { a: 1, b: 0, d: 0 });
+  assert.deepEqual({ a: h2h?.goalsA, b: h2h?.goalsB }, { a: 100, b: 90 });
+  assert.deepEqual(h2h?.games.map((g) => g.espn_id), ["played"]);
+});
+
+test("head-to-head has no next meeting when only postponed and cancelled games are left", async () => {
+  await seed("bundesliga", [{ id: "played", date: "2021-11-01T00:00:00Z", scores: [100, 90] }, ...CALLED_OFF_GAMES]);
+  const h2h = await analytics.getHeadToHead("bundesliga", "one", "two");
+  assert.equal(h2h?.upcoming, null);
+  assert.equal(h2h?.meetings, 1);
+});
+
+test("head-to-head next meeting still returns a normal upcoming game", async () => {
+  await seed("seriea", [
+    { id: "played", date: "2021-11-01T00:00:00Z", scores: [100, 90] },
+    { id: "next", date: future(5), scores: null },
+  ]);
+  const h2h = await analytics.getHeadToHead("seriea", "one", "two");
+  assert.equal(h2h?.upcoming?.espn_id, "next");
+});
+
+test("head-to-head next meeting is the earliest of several upcoming games", async () => {
+  await seed("ucl", [
+    { id: "later", date: future(20), scores: null },
+    { id: "sooner", date: future(6), scores: null },
+    ...CALLED_OFF_GAMES,
+  ]);
+  const h2h = await analytics.getHeadToHead("ucl", "one", "two");
+  assert.equal(h2h?.upcoming?.espn_id, "sooner");
+  // The same from the other team's side.
+  assert.equal((await analytics.getHeadToHead("ucl", "two", "one"))?.upcoming?.espn_id, "sooner");
 });

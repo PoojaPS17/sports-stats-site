@@ -5,6 +5,7 @@
 import { pool } from "./db";
 import { isCricketLeague, SOCCER_LEAGUES, type League } from "./leagues";
 import type { GameStage } from "./gameStage";
+import { isCalledOff } from "./gameStatus";
 import type { GameRow } from "./queries";
 
 /* ------------------------------------------------------------------------ */
@@ -394,7 +395,9 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
   // and keeps playoffs and the play-in, as Elo does.
   const completed = games.filter((g) => g.completed && g.home_score != null && g.away_score != null);
   const counted = completed.filter((g) => g.stage !== "excluded");
-  const upcoming = [...games].reverse().find((g) => !g.completed) ?? null;
+  // The next meeting is the earliest game still to play. A postponed or cancelled game is not one:
+  // ESPN keeps its original (past) event with a 0-0 score and the replay is a separate event.
+  const upcoming = [...games].reverse().find((g) => !g.completed && !isCalledOff(g.status_detail)) ?? null;
 
   let winsA = 0;
   let winsB = 0;
