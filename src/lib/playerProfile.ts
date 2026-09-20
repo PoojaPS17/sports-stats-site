@@ -562,7 +562,8 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
     sport,
     profile,
     rows,
-    games: reported ? seasons.reduce((n, s) => n + s.games, 0) : rows.length,
+    // Rows with no season year are in no season line but are still in the career line and W-L, so they count here.
+    games: reported ? seasons.reduce((n, s) => n + s.games, 0) + rows.filter((r) => r.season_year === null).length : rows.length,
     record: seasons.some((s) => s.record === null) ? null : record(rows),
     gamesFromEspn: seasons.some((s) => s.gamesSource === "espn"),
     career: aggregate(rows, specs),

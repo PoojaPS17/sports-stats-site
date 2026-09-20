@@ -46,7 +46,7 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
-import { NFL_PLAYOFFS_NOTE, NFL_REGULAR_SEASON_NOTE } from "@/lib/playerCopy";
+import { NFL_PLAYOFFS_NOTE, nflRegularSeasonNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -240,7 +240,7 @@ export default async function PlayerPage({
               </section>
 
               <section>
-                <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : profile.sport === "nfl" ? NFL_REGULAR_SEASON_NOTE : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
                 <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
               </section>
             </>

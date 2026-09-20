@@ -22,7 +22,7 @@ import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
-import { NFL_PLAYOFFS_NOTE, NFL_REGULAR_SEASON_NOTE } from "@/lib/playerCopy";
+import { NFL_PLAYOFFS_NOTE, nflRegularSeasonNote } from "@/lib/playerCopy";
 
 // A past season's stat line is static (it never changes once the season is over), so
 // this can be cached far longer than the live current-season player page.
@@ -111,7 +111,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {profile.games > 0 && (
             <section>
               <SectionHeader
-                description={sport === "nfl" ? NFL_REGULAR_SEASON_NOTE : staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`}
+                description={sport === "nfl" ? nflRegularSeasonNote(staged.regular.gamesFromEspn) : staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`}
                 tools={
                   <ImageActions
                     filename={`${slug}-${season}-${league}`}

@@ -234,6 +234,15 @@ test("NFL: ESPN's games played replaces the logged count, and a W-L that would c
   assert.equal(s.log.length, 1);
 });
 
+test("NFL: a logged row with no season year still counts in the career games, as it does in the career W-L", () => {
+  const noYear: PlayerLogRow = { ...nflGame("n1", "2025-09-21", 2025), season_year: null };
+  const s = buildStagedProfile("nfl", [nflGame("a1", "2025-09-07", 2025), noYear], new Map([[2025, 1]]));
+  assert.equal(s.regular.seasons.length, 1);
+  assert.equal(s.regular.seasons[0].games, 1);
+  assert.equal(s.regular.games, 2);
+  assert.equal(s.regular.rows.length, 2);
+});
+
 test("NFL: an ESPN figure at or below the logged count never shows fewer games than the log, and the W-L stays", () => {
   const equal = buildStagedProfile("nfl", NFL_TWO_SEASONS.slice(0, 2), new Map([[2025, 2]])).regular;
   assert.equal(equal.seasons[0].games, 2);
