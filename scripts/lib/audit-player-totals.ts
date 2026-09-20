@@ -1,7 +1,7 @@
 // The pure half of scripts/audit-player-totals.ts: how a season on the site is compared with the
 // same season on ESPN. Nothing here opens a database connection or calls ESPN, so the tests can
 // import it freely (the loader in season-stats.ts, which the CLI uses, opens the pool on import).
-import { espnSeasonTotals } from "../../src/lib/espnSeason";
+import { espnSeasonTotals, storedRowHasStats } from "../../src/lib/espnSeason";
 import { cell, type PlayerProfile, type PlayerSport } from "../../src/lib/playerProfile";
 import { seasonGamesPlayed, type SeasonStatRow } from "./season-row";
 
@@ -87,8 +87,10 @@ export interface CompareOptions {
  *   match               both sides agree (games and every figure)
  *   MISMATCH            games or a figure differ (differences carry both values)
  *   no box scores       ESPN has the season, the site has no regular-season game: a coverage gap. For the NFL that
- *                       is a season with neither box-score rows nor a stored games figure: with a stored figure
- *                       and no rows the page shows ESPN's games and zero figures, and it is compared like any other season
+ *                       is a season the page does not list: a stored games figure with no box-score row is listed (ESPN's
+ *                       games, a dash for every stat) only when ESPN's stored row has no stat but games, and is then
+ *                       compared like any other season (the dash reads as 0); a stored row with stats and no
+ *                       regular-season rows stays a gap (see `classifyGap`)
  *   no ESPN row         the site has regular-season games, ESPN has nothing (a MISMATCH under requireEspnRow)
  *   games not verified  every figure agrees but ESPN's games played is absent, so games are unchecked
  *   games short (no stat line)  NFL: site games below ESPN's GP, every figure equal, and the page shows
@@ -288,7 +290,8 @@ export function gamesPlayedFromPayload(categories: EspnCategory[], minYear: numb
  * totals are summed from the same rows with the same cell reader the page's columns use, so they are the
  * page's numbers even for a category the page hides because it is a small part of the player's game (a
  * receiver's one carry). An NFL season the profile lists from ESPN's stored games figure alone (no box-score row) has
- * those games and every figure 0, so ESPN's own non-zero stat for it is a difference. */
+ * those games and a dash for every stat, which sums to 0 here as it does for a season whose rows have no stat line,
+ * so ESPN's own non-zero stat for it is a difference and ESPN's zero is a match. */
 export function siteSeasons(sport: PlayerSport, regular: PlayerProfile): Map<number, SeasonFigures> {
   const out = new Map<number, SeasonFigures>();
   for (const season of regular.seasons) {
@@ -329,6 +332,33 @@ export function unusableEspnRow(categories: unknown, loggedGames: number): boole
 /** A season the profile has no regular-season games for (none stored, or playoffs only). */
 export function siteSeasonOrEmpty(seasons: Map<number, SeasonFigures>, season: number): SeasonFigures {
   return seasons.get(season) ?? { games: 0, figures: {} };
+}
+
+/** Why a coverage gap is a gap, for the run's listing: ESPN's stored row carries stats but the site lists no regular
+ * season for it. With playoff rows for the same season the stats are ESPN's postseason game(s) sitting in its
+ * regular-season row (ESPN lists no regular-season game for the player that year); the site has them in its Playoffs
+ * table, and listing them as a regular season would repeat ESPN's inconsistency. Null when the row has no stats (the
+ * gap is only the missing games figure). */
+export function classifyGap(categories: StoredCategories | undefined, playoffRows: number): string | null {
+  if (!categories || !storedRowHasStats(categories)) return null;
+  return playoffRows > 0
+    ? `ESPN's row has stats and the player has ${playoffRows} playoff ${playoffRows === 1 ? "row" : "rows"} that season: ESPN's postseason stats sit in its regular-season row`
+    : "ESPN's row has stats and the player has no rows that season";
+}
+
+/** The players the audit reads: everyone with a box-score row in the league, and (`includeStoredGames`) for the NFL in
+ * stored mode also everyone with a stored games figure, since a player whose every game has no stat line has no box-score
+ * row and the page still lists his seasons. Takes the league ($1) and a limit ($2, null for none). */
+export function auditPlayersSql(includeStoredGames: boolean): string {
+  return `select ids.id, coalesce(max(p.name), ids.id) as name
+         from (
+           select player_espn_id as id from player_game_stats where league = $1
+           ${includeStoredGames ? "union select player_espn_id from player_season_stats where league = $1 and games_played > 0" : ""}
+         ) ids
+         left join players p on p.league = $1 and p.espn_id = ids.id
+         group by ids.id
+         order by ids.id
+         limit $2::int`;
 }
 
 /** Seasons in which the player's regular-season games span more than one team. A stored row for such a

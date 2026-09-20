@@ -15,7 +15,8 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SeasonTabs } from "@/components/SeasonTabs";
 import type { EspnSeasonTotals } from "@/lib/espnSeason";
-import { buildStagedProfile, formatStat, metaFigures, noBoxScoreGames, playerMeta, playerSport, reportedForSeason, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, noBoxScoreGames, playerMeta, playerSport, reportedForSeason, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
+import { seasonDescription } from "@/lib/playerDescriptions";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { PlayerSeasonTable } from "@/components/PlayerSeasonTable";
 import { PlayerSplitsTable } from "@/components/PlayerSplitsTable";
@@ -23,7 +24,7 @@ import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
-import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, seasonFiguresText, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
+import { BOX_ROWS_ONLY_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, seasonFiguresText, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 // A past season's stat line is static (it never changes once the season is over), so
 // this can be cached far longer than the live current-season player page.
@@ -46,25 +47,21 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!player) return {};
   const seasonLabel = formatSeasonLabel(league, Number(season)) ?? season;
   const sport = playerSport(league);
-  let figures = "";
+  let regular: StagedProfile["regular"] | null = null;
   let empty = false;
   if (sport) {
     const [log, reportedGames, espnSeasons] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id), cachedEspnSeasons(league, player.espn_id)]);
     const staged = buildStagedProfile(sport, log.filter((r) => r.season_year === Number(season)), reportedForSeason(reportedGames, Number(season)), espnSeasons);
     const p = staged.regular;
     if (p.games > 0) {
-      const headline = p.profile.specs.filter((s) => s.headline).slice(0, 3);
-      // Averages are quoted only where they cover the games named beside them: an NBA season still short of ESPN's games
-      // on its box rows (or made only of games with no box score) gives the games and clubs alone.
-      const quoted = metaFigures(p, headline.map((s) => `${formatStat(s, p.career[s.key])} ${s.title.toLowerCase()}`).join(", "));
-      figures = ` ${gamesAndFigures(`${p.games} ${p.profile.gamesLabel === "Apps" ? "appearances" : "games"}`, quoted)} for ${p.teams.map((t) => t.name).join(" and ")}.`;
+      regular = p;
     } else {
       // Named in a squad but never used that season: nothing here worth indexing. (A season of
       // playoff or play-in games only still has a page to show.)
       empty = !hasGames(staged) && !(await getPlayerSeasonStatsBySeason(league, player.espn_id, Number(season)));
     }
   }
-  return pageMeta(`${player.name} ${seasonLabel} ${LEAGUE_LABEL[league]} Stats`, `${player.name} ${LEAGUE_LABEL[league]} statistics for the ${seasonLabel} season.${figures} Game-by-game log, splits and best games.`, `/${league}/players/${slug}/${season}`, { noindex: empty });
+  return pageMeta(`${player.name} ${seasonLabel} ${LEAGUE_LABEL[league]} Stats`, seasonDescription(league, player.name, seasonLabel, regular), `/${league}/players/${slug}/${season}`, { noindex: empty });
 }
 
 export default async function PlayerSeasonPage({ params }: { params: Promise<{ league: string; slug: string; season: string }> }) {

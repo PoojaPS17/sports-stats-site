@@ -7,7 +7,6 @@ import {
   isLeague,
   isCricketLeague,
   LEAGUE_LABEL,
-  formatSeasonLabel,
   getPlayerBySlug,
   getPlayerLog,
   getPlayerReportedGames,
@@ -32,7 +31,8 @@ import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
-import { buildStagedProfile, goalBands, formatStat, metaFigures, noBoxScoreGames, playerMeta, playerSport, positionLabel, unlistedGameCount, type PlayerProfile, type StagedProfile } from "@/lib/playerProfile";
+import { buildStagedProfile, goalBands, hasGames, noBoxScoreGames, playerMeta, playerSport, positionLabel, storedGamesOnly, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
+import { profileSummary } from "@/lib/playerDescriptions";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { ImageActions } from "@/components/ImageActions";
 import { PlayerExportCard } from "@/components/PlayerExportCard";
@@ -47,30 +47,9 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
-import { BOX_ROWS_ONLY_NOTE, gamesAndFigures, NBA_NO_BOX_SCORE_NOTE, NBA_REGULAR_SEASON_FOOTNOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withMilestonesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
+import { BOX_ROWS_ONLY_NOTE, NBA_NO_BOX_SCORE_NOTE, NBA_REGULAR_SEASON_FOOTNOTE, NFL_NO_GAME_LOG_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withMilestonesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
-
-// "Cody Gakpo Premier League stats: 89 apps, 21 goals, 12 assists for Liverpool since
-// 2022-23." — the figures are the description, so the snippet answers the search.
-// The page shows the long form; the meta description gets the short one, since search
-// results cut a description off at about 155 characters.
-function profileSummary(league: League, player: PlayerRow, profile: PlayerProfile | null, short = false): string {
-  if (!profile || profile.games === 0) return `${player.name} ${LEAGUE_LABEL[league]} stats, season by season, with a game-by-game log.`;
-  const headline = profile.profile.specs.filter((s) => s.headline).slice(0, 3);
-  const perGame = profile.sport === "nba" && headline.every((s) => s.agg === "avg");
-  const figures = headline.map((s) => `${formatStat(s, profile.career[s.key])} ${s.title.toLowerCase()}${!perGame && profile.sport === "nba" && s.agg === "avg" ? " per game" : ""}`);
-  const teams = profile.teams.map((t) => t.name);
-  const since = profile.seasons[profile.seasons.length - 1]?.season;
-  const games = `${profile.games} ${profile.profile.gamesLabel === "Apps" ? "appearances" : "games"}`;
-  // Averages are quoted only where they cover the games named beside them: an NBA career with a season still short of
-  // ESPN's games on its box rows (or made only of games with no box score) gives the games and clubs alone.
-  const quoted = metaFigures(profile, `${figures.join(", ")}${perGame ? " per game" : ""}`);
-  const lead = `${player.name} ${LEAGUE_LABEL[league]} stats: ${gamesAndFigures(games, quoted)} for ${teams.join(" and ")}${since ? ` since ${formatSeasonLabel(league, since)}` : ""}.`;
-  if (!short) return `${lead} Season-by-season totals, full game log, home and away and opponent splits, best games and milestones.`;
-  const tail = " Game log, splits and best games.";
-  return lead.length + tail.length <= 160 ? lead + tail : lead;
-}
 
 // generateMetadata and the page both need the player and the log; React's request
 // cache means each is fetched once per request.
@@ -84,11 +63,6 @@ async function loadStaged(league: League, player: PlayerRow): Promise<StagedProf
   if (!sport) return null;
   const [log, reportedGames, espnSeasons] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id), cachedEspnSeasons(league, player.espn_id)]);
   return buildStagedProfile(sport, log, reportedGames, espnSeasons);
-}
-
-// Any appearance at all: a player with only playoff or play-in games still has a page to show.
-function hasGames(staged: StagedProfile | null): boolean {
-  return staged !== null && (staged.log.length > 0 || staged.counted.games > 0);
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; slug: string }> }): Promise<Metadata> {
@@ -106,7 +80,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const empty = !hasGames(staged) && seasons.length === 0;
   // The competition is named because a player has a page in each one he plays in.
   const longTitle = `${player.name} ${LEAGUE_LABEL[league]} Stats, Game Log & Career`;
-  return pageMeta(longTitle.length <= 60 ? longTitle : `${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player, profile, true), `/${league}/players/${slug}`, { noindex: empty });
+  return pageMeta(longTitle.length <= 60 ? longTitle : `${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player.name, profile, true), `/${league}/players/${slug}`, { noindex: empty });
 }
 
 function isSplitDimension(value: string | undefined): value is CricketSplitDimension {
@@ -184,6 +158,8 @@ export default async function PlayerPage({
   // splits and the summary; best games and recent form read every counted game.
   const profile = staged.regular;
   const anyGames = hasGames(staged);
+  // No box-score row in the regular season (ESPN lists games for the player and no stat line): games only, no stats, clubs or log.
+  const storedOnly = storedGamesOnly(profile);
   const split = staged.split;
   const latestRegular = profile.seasons[0]?.season ?? null;
   const seasons = [...new Set([...staged.counted.seasons.map((s) => s.season), ...feedSeasons])].sort((a, b) => b - a);
@@ -194,7 +170,7 @@ export default async function PlayerPage({
       ? getPlayerGoalClocks(league, player.espn_id, profile.rows.map((r) => r.game_espn_id))
       : null,
   ]);
-  const summary = profileSummary(league, player, profile);
+  const summary = profileSummary(league, player.name, profile);
   const soccer = sport === "soccer";
   // NBA games without a box score: in GP, in no game-by-game section. The section notes and the log line say so.
   const regularNoBoxScore = noBoxScoreGames(sport, profile.games, profile.recorded);
@@ -208,6 +184,8 @@ export default async function PlayerPage({
   // the ones that read every counted game (best games, recent form) by all of them.
   const regularRowsNote = regularNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
   const countedRowsNote = countedNoBoxScore > 0 ? BOX_ROWS_ONLY_NOTE : undefined;
+  // Where the game log would be: the games with no box score, or (a player with no game rows at all) that there is none.
+  const logNote = staged.log.length === 0 ? (unlisted ?? (storedOnly ? NFL_NO_GAME_LOG_NOTE : null)) : null;
   const bands = goals ? goalBands(goals.clocks) : [];
   const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
 
@@ -258,7 +236,7 @@ export default async function PlayerPage({
               </section>
 
               <section>
-                <SectionHeader description={profile.sport === "nba" ? withNoBoxScoreNote("Per-game averages; shooting as made over attempted for the season.", regularNoBoxScore, "table") : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <SectionHeader description={profile.sport === "nba" ? withNoBoxScoreNote("Per-game averages; shooting as made over attempted for the season.", regularNoBoxScore, "table") : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn, storedOnly) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
                 <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
               </section>
             </>
@@ -342,8 +320,8 @@ export default async function PlayerPage({
 
           <section>
             <SectionHeader description={`Every ${LEAGUE_LABEL[league]} game on record, latest season open.${unlisted && staged.log.length > 0 ? ` ${unlisted}` : ""}`}>Game log</SectionHeader>
-            {staged.log.length === 0 && unlisted ? (
-              <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{unlisted}</p>
+            {logNote ? (
+              <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{logNote}</p>
             ) : (
               <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={split} />
             )}
@@ -362,7 +340,7 @@ export default async function PlayerPage({
 
           {split ? (
             <p className="text-[11px] text-[var(--text-faint)]">
-              {profile.games > 0 && regularNoBoxScore === 0 && (
+              {profile.games > 0 && regularNoBoxScore === 0 && !storedOnly && (
                 <>
                   Regular-season figures are summed from the {sport === "nfl" ? profile.rows.length : profile.games} {LEAGUE_LABEL[league]} regular-season games {sport === "nfl" ? "with a recorded stat line" : "on record"} here
                   {since ? ` since ${since}` : ""}.{" "}

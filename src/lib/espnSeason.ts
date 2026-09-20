@@ -89,3 +89,27 @@ export function espnSeasonTotals(categories: unknown): EspnSeasonTotals | null {
     fta: ft[1],
   };
 }
+
+/** The columns of a stored row that are a count of games, not a stat: games played and games started. */
+const GAME_COUNT_LABELS = new Set(["GP", "GS"]);
+
+/** Whether a stored season row (player_season_stats.categories, any sport) carries a stat other than games played: some
+ * value outside the game-count columns has a digit from 1 to 9 ("0", "0.0", "0-0", "--" and blank do not). A category
+ * that cannot be read counts as having stats, so a row is only ever called stat-free when every value was read. A
+ * missing or empty row has none. */
+export function storedRowHasStats(categories: unknown): boolean {
+  if (typeof categories !== "object" || categories === null) return false;
+  for (const cat of Object.values(categories as Record<string, unknown>)) {
+    if (typeof cat !== "object" || cat === null) return true;
+    const { labels, values } = cat as { labels?: unknown; values?: unknown };
+    if (!Array.isArray(labels) || !Array.isArray(values)) return true;
+    for (let i = 0; i < values.length; i += 1) {
+      if (GAME_COUNT_LABELS.has(String(labels[i]))) continue;
+      const v = values[i];
+      if (v === null || v === undefined) continue;
+      if (typeof v !== "string" && typeof v !== "number") return true;
+      if (/[1-9]/.test(String(v))) return true;
+    }
+  }
+  return false;
+}

@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  classifyGap,
   compareSeason,
   espnFigures,
   gamesPlayedFromPayload,
@@ -14,9 +15,10 @@ import {
   unusableEspnRow,
   USAGE,
   type SeasonFigures,
+  type StoredCategories,
 } from "../scripts/lib/audit-player-totals";
 import { seasonRow } from "../scripts/lib/season-row";
-import { buildStagedProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
+import { buildStagedProfile, ReportedGames, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import type { EspnSeasonTotals } from "../src/lib/espnSeason";
 import type { GameStage } from "../src/lib/gameStage";
 
@@ -522,11 +524,12 @@ test("siteSeasons carries each NFL season's gamesSource: ESPN's stored figure, o
   assert.equal(compareSeason(seasons.get(2025)!, { ...espn, figures: { ...espn.figures, rushYds: 40 } }, { league: "nfl" }).verdict, "match");
 });
 
-test("NFL: a season ESPN counts games for that has no box-score row is the stored games and zero figures, compared like any other season", () => {
+test("NFL: a season ESPN counts games for that has no box-score row and a stat-free stored row is the stored games and a dash, compared like any other season", () => {
   const line: Stats = { rushing: { CAR: "5", YDS: "20", TD: "0" } };
   const rows = [row("a", "2024-09-08", "regular", 2024, line)];
   // 2025: ESPN counts 7 games, the database has no row for the player (no stat line); 2024 has its row and a stored figure.
-  const seasons = siteSeasons("nfl", buildStagedProfile("nfl", rows, new Map([[2024, 3], [2025, 7]])).regular);
+  const seasons = siteSeasons("nfl", buildStagedProfile("nfl", rows, new ReportedGames([[2024, 3], [2025, 7]], [2025])).regular);
+  // The page shows a dash for every stat; summed for the comparison it is 0, as for a season whose rows have no stat line.
   assert.deepEqual(seasons.get(2025), { games: 7, gamesSource: "espn", figures: { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 0, recTd: 0 } });
   const site = seasons.get(2025)!;
   const espn = (games: number | null, figures: Record<string, number | null>): SeasonFigures => ({ games, figures });
@@ -543,11 +546,26 @@ test("NFL: a season ESPN counts games for that has no box-score row is the store
   assert.deepEqual(games.differences, [{ field: "games", site: 7, espn: 9 }]);
 });
 
-test("NFL: a season ESPN has with neither a box-score row nor a stored games figure is still a coverage gap", () => {
+test("NFL: a season ESPN has that the page does not list is still a coverage gap: no stored figure, or a stored row with stats", () => {
   const rows = [row("a", "2024-09-08", "regular", 2024, { rushing: { CAR: "5", YDS: "20", TD: "0" } })];
-  const seasons = siteSeasons("nfl", buildStagedProfile("nfl", rows, new Map([[2024, 3]])).regular);
-  const espn: SeasonFigures = { games: 7, figures: { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 0, recTd: 0 } };
-  assert.equal(compareSeason(siteSeasonOrEmpty(seasons, 2025), espn, { league: "nfl" }).verdict, "no box scores");
+  const espn: SeasonFigures = { games: 7, figures: { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 6, recTd: 0 } };
+  // No stored figure for 2025.
+  const noFigure = siteSeasons("nfl", buildStagedProfile("nfl", rows, new ReportedGames([[2024, 3]], [2024])).regular);
+  assert.equal(compareSeason(siteSeasonOrEmpty(noFigure, 2025), espn, { league: "nfl" }).verdict, "no box scores");
+  // A stored figure whose ESPN row has stats (not in statFree): the page lists no 2025.
+  const withStats = siteSeasons("nfl", buildStagedProfile("nfl", rows, new ReportedGames([[2024, 3], [2025, 7]], [])).regular);
+  assert.equal(withStats.has(2025), false);
+  assert.equal(compareSeason(siteSeasonOrEmpty(withStats, 2025), espn, { league: "nfl" }).verdict, "no box scores");
+});
+
+test("classifyGap says whether a gap season's ESPN stats are a postseason game's in its regular-season row", () => {
+  const stats: StoredCategories = { receiving: { labels: ["GP", "REC", "YDS", "TD"], values: ["1", "1", "6", "0"] } };
+  const none: StoredCategories = { defensive: { labels: ["GP", "TOT"], values: ["4", "0"] } };
+  assert.match(classifyGap(stats, 1)!, /1 playoff row that season: ESPN's postseason stats sit in its regular-season row/);
+  assert.match(classifyGap(stats, 2)!, /2 playoff rows/);
+  assert.equal(classifyGap(stats, 0), "ESPN's row has stats and the player has no rows that season");
+  assert.equal(classifyGap(none, 3), null);
+  assert.equal(classifyGap(undefined, 3), null);
 });
 
 test("siteSeasons leaves an NBA season's gamesSource out", () => {
