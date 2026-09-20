@@ -45,15 +45,13 @@ import {
   type EspnCategory,
   type StoredCategories,
 } from "./lib/audit-player-totals";
-import { seasonRow } from "./lib/season-row";
+import { SEASON_YEARS_BACK, seasonRow } from "./lib/season-row";
 import { fetchPlayerLog, fetchReportedGames } from "../src/lib/playerLog";
 import { buildStagedProfile, playerSport } from "../src/lib/playerProfile";
 
 const LIVE_PAUSE_MS = 150;
 const MISMATCHES_SHOWN = 50;
 const GAPS_SHOWN = 20;
-// The loader keeps ten years of history per player; a live read covers the same window.
-const YEARS_BACK = 10;
 
 interface Finding {
   league: AuditLeague;
@@ -104,7 +102,7 @@ async function main() {
   let compared = 0;
   let matched = 0;
   let nothing = 0;
-  const minYear = new Date().getUTCFullYear() - YEARS_BACK;
+  const minYear = new Date().getUTCFullYear() - SEASON_YEARS_BACK;
 
   try {
     for (const league of args.leagues) {

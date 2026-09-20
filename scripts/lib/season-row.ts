@@ -15,6 +15,12 @@ export interface SeasonCategory {
   statistics?: SeasonStatRow[];
 }
 
+/** How many seasons back from the current year the season-stats loader keeps (`currentYear - SEASON_YEARS_BACK`
+ * on). The site's game history starts one season before `currentYear - 10` (`backfill-games.ts` uses
+ * `currentYear - YEARS_BACK - 1`), so this window must reach that far too, or those seasons have games
+ * but no stored ESPN games figure and fall back to the box-score count, which misses games with no stat line. */
+export const SEASON_YEARS_BACK = 11;
+
 /** ESPN's whole-season row for a player who changed teams: `teamSlug` like "2024-25 Totals" and
  * `displayName` "2024-25  Totals". */
 export const isTotalsRow = (s: Pick<SeasonStatRow, "teamSlug" | "displayName">) => /\btotals?\b/i.test(`${s.teamSlug ?? ""} ${s.displayName ?? ""}`);

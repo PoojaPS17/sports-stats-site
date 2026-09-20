@@ -1,11 +1,11 @@
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
 
-import { seasonGamesPlayed, seasonRow } from "./season-row";
+import { SEASON_YEARS_BACK, seasonGamesPlayed, seasonRow } from "./season-row";
 
 // Which of a category's rows a season stores (ESPN's Totals row for a traded player, and the
-// league filter for soccer), and an NFL season's games played (ESPN's own GP, summed over teams when
-// a traded player has no Totals row), live in season-row.ts, which has no database import.
+// league filter for soccer), and an NFL season's games played (ESPN's own GP, summed over a traded
+// player's teams, the Totals row's first-team GP being only a floor), live in season-row.ts, which has no database import.
 export { seasonRow } from "./season-row";
 
 function categoryKey(category: any): string {
@@ -95,7 +95,7 @@ async function upsertOneSeason(
 // response (one row per season per category) — so storing the last `yearsBack` seasons
 // costs the exact same single request as storing just the current one used to. Called
 // both by the recurring scraper (keeps the current season fresh) and the one-time
-// historical backfill (populates the other ~10 years for free from the same response).
+// historical backfill (populates the earlier seasons back to SEASON_YEARS_BACK for free from the same response).
 const SOCCER_LEAGUE_SLUG: Partial<Record<League, string>> = {
   epl: "eng.1",
   laliga: "esp.1",
@@ -108,7 +108,7 @@ export async function upsertPlayerSeasonStats(
   league: League,
   playerEspnId: string,
   teamEspnId: string | null,
-  yearsBack = 10
+  yearsBack = SEASON_YEARS_BACK
 ): Promise<number> {
   const data = await fetchAthleteSeasonStats(league, playerEspnId);
   const categories: any[] = data.categories ?? [];
