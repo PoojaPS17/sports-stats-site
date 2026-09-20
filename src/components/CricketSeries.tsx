@@ -5,6 +5,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { formatSeriesDates, SERIES_KIND_LABEL, type CricketSeries, type CricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
 import { normalizeStage } from "@/lib/stage";
+import { classifyCricketMatch, seriesMatchesToPlay } from "@/lib/cricketMatchStatus";
 
 // The date formatter moved to the library (the picker's API route needs it); older importers still find it here.
 export { formatSeriesDates };
@@ -18,7 +19,7 @@ export function matchHref(m: CricketSeriesMatch): string {
 export function SeriesCard({ s, now }: { s: CricketSeries; now: number }) {
   const dates = formatSeriesDates(s.start_date, s.end_date);
   const inPlay = s.live_count > 0 || (s.start_date && s.end_date && new Date(s.start_date).getTime() <= now && new Date(s.end_date).getTime() + 86_400_000 >= now);
-  const done = s.match_count > 0 && s.completed_count === s.match_count && s.end_date && new Date(s.end_date).getTime() < now;
+  const done = s.match_count > 0 && seriesMatchesToPlay(s) === 0 && s.end_date && new Date(s.end_date).getTime() < now;
   return (
     <Link href={`/cricket/series/${s.espn_id}`} className="card card-link flex flex-col gap-1.5 px-4 py-3">
       <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
@@ -58,21 +59,24 @@ function Side({ side, decided }: { side: SeriesSide | null; decided: boolean }) 
 }
 
 export function SeriesMatchRow({ m, showSeries = false }: { m: CricketSeriesMatch; showSeries?: boolean }) {
-  const live = m.status_state === "in";
-  const done = m.status_state === "post";
+  // Live, a result, a fixture, or called off (postponed, cancelled...): a called-off match shows why, never a start time.
+  const kind = classifyCricketMatch(m);
+  const live = kind === "live";
+  const done = kind === "result";
+  const calledOff = typeof kind === "object" ? kind.calledOff : null;
   const decided = done && Boolean(m.home?.winner || m.away?.winner);
   return (
     <Link href={matchHref(m)} className="flex flex-col px-4 py-2.5 hover:bg-[var(--surface-muted)]">
       <div className="mb-1 flex items-center justify-between gap-2 text-xs">
         <span className="flex min-w-0 items-center gap-2">
-          {live ? <span className="pill pill-live">Live</span> : done ? <span className="pill pill-final">Result</span> : <span className="pill pill-upcoming"><LocalTime iso={m.date} format="datetime" /></span>}
+          {live ? <span className="pill pill-live">Live</span> : done ? <span className="pill pill-final">Result</span> : calledOff ? <span className="pill pill-final">{calledOff}</span> : <span className="pill pill-upcoming"><LocalTime iso={m.date} format="datetime" /></span>}
           {showSeries && <span className="truncate font-semibold text-[var(--text-muted)]">{m.series_name}</span>}
         </span>
         <span className="shrink-0 truncate text-[var(--text-faint)]">{[normalizeStage(m.description), m.class_card].filter(Boolean).join(" · ")}</span>
       </div>
       <Side side={m.home} decided={decided} />
       <Side side={m.away} decided={decided} />
-      {m.status_summary && (live || done) && <p className="mt-1 text-xs text-[var(--text-muted)]">{teamDisplayName(m.status_summary)}</p>}
+      {m.status_summary && (live || done || calledOff) && <p className="mt-1 text-xs text-[var(--text-muted)]">{teamDisplayName(m.status_summary)}</p>}
     </Link>
   );
 }

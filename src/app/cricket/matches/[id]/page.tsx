@@ -21,6 +21,7 @@ import { fetchCricketSummaryLive } from "@/lib/cricketLive";
 import { JsonLd } from "@/components/JsonLd";
 import { cricketSeriesMatchSchema } from "@/lib/structuredData";
 import { normalizeStage } from "@/lib/stage";
+import { classifyCricketMatch, cricketMatchDescription } from "@/lib/cricketMatchStatus";
 
 // The live page for any cricket match ESPN lists: read straight from ESPN's summary
 // with a 10-second cache, refreshed in the browser while the match is in play.
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const stage = m.description ? `, ${m.description}` : "";
   const full = `${m.name}${stage} | ${m.series_name}`;
   const month = m.date ? `, ${new Date(m.date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}` : "";
-  return pageMeta(full.length <= 60 ? full : `${m.name}${stage}${month}`, `${m.name} live score and scorecard, ${m.series_name}${m.status_summary ? `: ${m.status_summary}` : ""}.`, `/cricket/matches/${id}`);
+  return pageMeta(full.length <= 60 ? full : `${m.name}${stage}${month}`, cricketMatchDescription(m), `/cricket/matches/${id}`);
 }
 
 export default async function CricketLiveMatchPage({ params }: { params: Promise<{ id: string }> }) {
@@ -54,6 +55,9 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const state: string | null = comp?.status?.type?.state ?? stored?.status_state ?? null;
   const live = state === "in";
   const summaryText: string | null = comp?.status?.summary ?? stored?.status_summary ?? null;
+  // A match ESPN closed without playing is neither upcoming nor a result: it says why, with no start time.
+  const kind = classifyCricketMatch({ status_state: state, status_summary: summaryText });
+  const calledOff = typeof kind === "object" ? kind.calledOff : null;
   const details = summary && home?.team?.id && away?.team?.id ? extractGameDetails("cricket", summary, String(home.team.id), String(away.team.id)) : null;
   const description = normalizeStage(comp?.description ?? stored?.description ?? null);
   const seriesName = stored?.series_name ?? summary?.header?.league?.name ?? null;
@@ -101,10 +105,10 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
       <section className="card flex flex-col gap-3 px-5 py-5">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="flex items-center gap-2">
-            {live ? <span className="pill pill-live">Live</span> : state === "post" ? <span className="pill pill-final">Result</span> : <span className="pill pill-upcoming">Upcoming</span>}
+            {live ? <span className="pill pill-live">Live</span> : calledOff ? <span className="pill pill-final">{calledOff}</span> : state === "post" ? <span className="pill pill-final">Result</span> : <span className="pill pill-upcoming">Upcoming</span>}
             <h1 className="font-semibold text-[var(--text-muted)]">{[matchName, description, seriesName].filter(Boolean).join(" · ")}</h1>
           </span>
-          {date && <LocalTime iso={date} format="datetime" className="text-[var(--text-muted)]" />}
+          {date && <LocalTime iso={date} format={calledOff ? "date" : "datetime"} className="text-[var(--text-muted)]" />}
         </div>
         {sideRow(sides[0])}
         {sideRow(sides[1])}
@@ -149,7 +153,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
           <CricketScorecards league="odi" scorecard={details.scorecard} playerSlugs={new Map()} />
         </section>
       ) : (
-        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
+        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{calledOff ? `No scorecard: this match was ${calledOff.toLowerCase()}.` : state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
       )}
 
       <p className="text-xs text-[var(--text-muted)]">Live scores and scorecard, refreshed every 10 seconds while in play.</p>

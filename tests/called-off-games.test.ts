@@ -13,6 +13,7 @@ let queries: typeof import("../src/lib/queries");
 let homeFeed: typeof import("../src/lib/homeFeed");
 let gamesLive: typeof import("../src/lib/gamesLive");
 let ics: typeof import("../src/lib/ics");
+let cricketSeries: typeof import("../src/lib/cricketSeries");
 let pickSpotlight: typeof import("../src/components/SpotlightCard").pickSpotlight;
 
 before(async () => {
@@ -22,6 +23,7 @@ before(async () => {
   homeFeed = await import("../src/lib/homeFeed");
   gamesLive = await import("../src/lib/gamesLive");
   ics = await import("../src/lib/ics");
+  cricketSeries = await import("../src/lib/cricketSeries");
   pickSpotlight = (await import("../src/components/SpotlightCard")).pickSpotlight;
 });
 after(async () => {
@@ -30,6 +32,8 @@ after(async () => {
 });
 beforeEach(async () => {
   await db.pool.query(`delete from games`);
+  await db.pool.query(`delete from cricket_series_matches`);
+  await db.pool.query(`delete from cricket_series`);
 });
 
 const at = (hours: number) => new Date(Date.now() + hours * 3600_000).toISOString();
@@ -252,4 +256,71 @@ test("a live game is never emitted as cancelled, even when its status text says 
   assert.ok(lines.includes("STATUS:CONFIRMED"));
   assert.ok(!lines.some((l) => /CANCELLED|\(Suspended\)/.test(l)));
   assert.ok(lines.some((l) => l.startsWith("DESCRIPTION:") && /In progress/.test(l)));
+});
+
+/* ------------------------------------------------------------------------ */
+/* Cricket series                                                            */
+/* ------------------------------------------------------------------------ */
+
+/** A row of the cricket series listing: state pre / in / post plus ESPN's summary text. */
+async function seedCricket(matches: { id: string; date: string; state: string | null; summary: string | null }[]) {
+  await db.pool.query(`insert into cricket_series (espn_id, name, kind, match_count, completed_count) values ('S', 'Test Series', 'international', $1, $2)`, [
+    matches.length,
+    matches.filter((m) => m.state === "post").length,
+  ]);
+  for (const m of matches) {
+    await db.pool.query(
+      `insert into cricket_series_matches (espn_id, series_espn_id, date, name, status_state, status_summary) values ($1, 'S', $2, $1, $3, $4)`,
+      [m.id, m.date, m.state, m.summary]
+    );
+  }
+}
+
+test("the upcoming cricket list leaves out a postponed or cancelled match but keeps the fixtures around it", async () => {
+  await seedCricket([
+    { id: "fixture", date: at(24), state: "pre", summary: "Match scheduled to begin at 09:30" },
+    { id: "plain", date: at(30), state: "pre", summary: null },
+    { id: "no-state", date: at(36), state: null, summary: null },
+    { id: "postponed", date: at(6), state: "pre", summary: "Match postponed" },
+    { id: "cancelled", date: at(12), state: null, summary: "Match cancelled" },
+    { id: "abandoned-pre", date: at(18), state: "pre", summary: "Match abandoned" },
+  ]);
+  const ids = (await cricketSeries.getUpcomingCricketMatches(10)).map((m) => m.espn_id);
+  assert.deepEqual(ids, ["fixture", "plain", "no-state"]);
+});
+
+test("the upcoming cricket list still fills its limit when a called-off match sits ahead of the fixtures", async () => {
+  await seedCricket([
+    { id: "postponed", date: at(2), state: "pre", summary: "Match postponed" },
+    { id: "f1", date: at(24), state: "pre", summary: null },
+    { id: "f2", date: at(48), state: "pre", summary: null },
+  ]);
+  const ids = (await cricketSeries.getUpcomingCricketMatches(2)).map((m) => m.espn_id);
+  assert.deepEqual(ids, ["f1", "f2"]);
+});
+
+test("a finished abandoned or no-result match and a match in play are not the upcoming list's business, and stay as stored", async () => {
+  await seedCricket([
+    { id: "abandoned", date: at(-30), state: "post", summary: "Match abandoned without a ball bowled" },
+    { id: "rain", date: at(-2), state: "in", summary: "Play suspended due to rain" },
+    { id: "fixture", date: at(24), state: "pre", summary: null },
+  ]);
+  const ids = (await cricketSeries.getUpcomingCricketMatches(10)).map((m) => m.espn_id);
+  assert.deepEqual(ids, ["fixture"]);
+  const live = (await cricketSeries.getLiveCricketMatches()).map((m) => m.espn_id);
+  assert.deepEqual(live, ["rain"]);
+  const rows = await cricketSeries.getCricketSeriesMatches("S");
+  assert.equal(rows.find((m) => m.espn_id === "abandoned")?.status_state, "post");
+});
+
+test("a series counts a called-off match as neither played nor still to play", async () => {
+  await seedCricket([
+    { id: "done", date: at(-72), state: "post", summary: "A won by 5 runs" },
+    { id: "abandoned", date: at(-48), state: "post", summary: "Match abandoned without a ball bowled" },
+    { id: "postponed", date: at(-24), state: "pre", summary: "Match postponed" },
+  ]);
+  const s = await cricketSeries.getCricketSeries("S");
+  assert.equal(s?.match_count, 3);
+  assert.equal(s?.completed_count, 2);
+  assert.equal(s?.called_off_count, 1);
 });

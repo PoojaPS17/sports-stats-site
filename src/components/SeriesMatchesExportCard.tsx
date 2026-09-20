@@ -3,6 +3,7 @@ import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportLabel, ExportMore, capRows } from "./ExportShell";
 import { SERIES_KIND_LABEL, formatSeriesDates, type CricketSeries, type CricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
 import { normalizeStage } from "@/lib/stage";
+import { classifyCricketMatch, cricketMatchWhen } from "@/lib/cricketMatchStatus";
 import { CARD } from "@/lib/exportTheme";
 
 function Side({ side, decided }: { side: SeriesSide | null; decided: boolean }) {
@@ -15,12 +16,6 @@ function Side({ side, decided }: { side: SeriesSide | null; decided: boolean }) 
       <span style={{ fontSize: 13, fontWeight: loser ? 500 : 700, color: loser ? CARD.textMuted : CARD.text, fontVariantNumeric: "tabular-nums" }}>{side.score ?? ""}</span>
     </div>
   );
-}
-
-function when(m: CricketSeriesMatch): string {
-  const d = new Date(m.date);
-  if (m.status_state === "post") return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}, ${d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
 }
 
 // The downloadable Fixtures / Results list for a cricket series: date, stage, both sides
@@ -44,16 +39,17 @@ export function SeriesMatchesExportCard({ series, title, matches }: { series: Cr
     >
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {shown.map((m) => {
-          const decided = m.status_state === "post" && Boolean(m.home?.winner || m.away?.winner);
+          const kind = classifyCricketMatch(m);
+          const decided = kind === "result" && Boolean(m.home?.winner || m.away?.winner);
           return (
             <div key={m.espn_id} style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 10, padding: "8px 12px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4, fontSize: 11, color: CARD.textMuted }}>
-                <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{when(m)}</span>
+                <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{cricketMatchWhen(m)}</span>
                 <span style={{ textAlign: "right" }}>{[normalizeStage(m.description), m.class_card].filter(Boolean).join(" · ")}</span>
               </div>
               <Side side={m.home} decided={decided} />
               <Side side={m.away} decided={decided} />
-              {m.status_summary && m.status_state === "post" && <div style={{ marginTop: 4, fontSize: 12, color: CARD.textMuted }}>{teamDisplayName(m.status_summary)}</div>}
+              {m.status_summary && (kind === "result" || typeof kind === "object") && <div style={{ marginTop: 4, fontSize: 12, color: CARD.textMuted }}>{teamDisplayName(m.status_summary)}</div>}
             </div>
           );
         })}

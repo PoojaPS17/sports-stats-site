@@ -13,6 +13,7 @@ import { SeriesCard, SeriesMatchList, formatSeriesDates } from "@/components/Cri
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesMatches, getCricketSeriesSeasons, SERIES_KIND_LABEL } from "@/lib/cricketSeries";
 import { overlayLiveCricket } from "@/lib/cricketLive";
+import { classifyCricketMatch } from "@/lib/cricketMatchStatus";
 import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 15;
@@ -74,9 +75,12 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
   const s = await getCricketSeries(id);
   if (!s) notFound();
   const matches = await overlayLiveCricket(await getCricketSeriesMatches(id), id);
-  const live = matches.filter((m) => m.status_state === "in");
-  const results = matches.filter((m) => m.status_state === "post").reverse();
-  const fixtures = matches.filter((m) => m.status_state !== "post" && m.status_state !== "in");
+  // A match ESPN closed without playing is neither a fixture nor a result: it gets its own list, with no start time.
+  const kinds = new Map(matches.map((m) => [m.espn_id, classifyCricketMatch(m)]));
+  const live = matches.filter((m) => kinds.get(m.espn_id) === "live");
+  const results = matches.filter((m) => kinds.get(m.espn_id) === "result").reverse();
+  const fixtures = matches.filter((m) => kinds.get(m.espn_id) === "fixture");
+  const calledOff = matches.filter((m) => typeof kinds.get(m.espn_id) === "object");
   const dates = formatSeriesDates(s.start_date, s.end_date);
 
   return (
@@ -121,6 +125,13 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
         <section>
           <SectionHeader description="Times shown in your local time zone" tools={<ImageActions filename={`${s.espn_id}-fixtures-cricket`} width={860} shareTitle={`${s.name} fixtures`} card={<SeriesMatchesExportCard series={s} title="Fixtures" matches={fixtures} />} />}>Fixtures</SectionHeader>
           <SeriesMatchList matches={fixtures} />
+        </section>
+      )}
+
+      {calledOff.length > 0 && (
+        <section>
+          <SectionHeader description="Not being played as scheduled">Called off</SectionHeader>
+          <SeriesMatchList matches={calledOff} />
         </section>
       )}
 

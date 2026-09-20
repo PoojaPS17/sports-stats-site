@@ -1,5 +1,6 @@
 import { isSoccerLeague } from "./leagues";
 import { schemaEventStatus } from "./gameStatus";
+import { cricketSchemaStatus } from "./cricketMatchStatus";
 // schema.org builders for the structured data blocks on key pages.
 import { LEAGUE_LABEL, type GameRow, type League } from "./queries";
 import { CONTACT_EMAIL, SITE_NAME, SITE_URL, absoluteUrl } from "./site";
@@ -131,7 +132,7 @@ export function cricketSeriesMatchSchema(m: {
     name: m.name,
     sport: "Cricket",
     startDate: m.date,
-    eventStatus: "https://schema.org/EventScheduled",
+    eventStatus: cricketSchemaStatus(m),
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url: absoluteUrl(`/cricket/matches/${m.espn_id}`),
     ...(m.home ? { homeTeam: team(m.home) } : {}),

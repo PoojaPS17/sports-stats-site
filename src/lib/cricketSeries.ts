@@ -1,6 +1,7 @@
 import { pool } from "./db";
 import { isLeague, type League } from "./leagues";
 import { featuredMatchSql, featuredSeriesSql, isFeaturedCricket } from "./cricketFeatured";
+import { CALLED_OFF } from "./gameStatus";
 
 export type SeriesKind = "international" | "womens-international" | "domestic" | "womens-domestic" | "other";
 
@@ -25,6 +26,8 @@ export interface CricketSeries {
   end_date: string | null;
   match_count: number;
   completed_count: number;
+  /** Matches ESPN closed without playing (postponed, cancelled...): not finished, and not still to be played. */
+  called_off_count: number;
   live_count: number;
   teams: { id: string; name: string; abbreviation: string | null; logo: string | null }[];
   /** The SportsDB competition this series is, when it is one (IPL, World Cups, ...). */
@@ -83,6 +86,9 @@ const SERIES_SELECT = `
          to_char(s.end_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as end_date,
          s.match_count, s.completed_count, s.teams,
          (select count(*) from cricket_series_matches m where m.series_espn_id = s.espn_id and m.status_state = 'in')::int as live_count,
+         -- a match that is not finished or in play and whose summary says it was called off (CALLED_OFF is a constant, not user input)
+         (select count(*) from cricket_series_matches m where m.series_espn_id = s.espn_id and coalesce(m.status_state, 'pre') = 'pre'
+            and coalesce(m.status_summary, '') ~* '${CALLED_OFF.source}')::int as called_off_count,
          ${SERIES_LEAGUE_SQL},
          ${featuredSeriesSql("s")} as featured
   from cricket_series s`;
@@ -162,9 +168,11 @@ export async function getUpcomingCricketMatches(limit = 6, withinDays = 7, featu
      where coalesce(m.status_state, 'pre') = 'pre' and m.date >= now() - interval '1 hour' and m.date <= now() + ($2 || ' days')::interval
        -- a knockout fixture whose sides are still "TBA" is a placeholder, not a match to list
        and coalesce(m.home->>'name', '') !~* '^t?tb[acd]$' and coalesce(m.away->>'name', '') !~* '^t?tb[acd]$'
+       -- a postponed or cancelled match is not a fixture to list
+       and coalesce(m.status_summary, '') !~* $3
        ${featuredOnly ? `and ${featuredMatchSql("m")}` : ""}
      order by s.kind = 'other', m.date limit $1`,
-    [limit, withinDays]
+    [limit, withinDays, CALLED_OFF.source]
   );
   return rows;
 }
