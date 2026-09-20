@@ -2,7 +2,7 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
-import { formatStat, type PlayerProfile } from "@/lib/playerProfile";
+import { formatStat, gamesHeader, type PlayerProfile } from "@/lib/playerProfile";
 import { recordText } from "./PlayerStatsShared";
 
 const num = "px-2 py-2 text-right tabular-nums";
@@ -27,6 +27,9 @@ export function PlayerSeasonTable({
 }) {
   const soccer = profile.sport === "soccer";
   const specs = profile.profile.specs.filter((s) => s.table !== false);
+  const games = gamesHeader(profile);
+  // A table whose header says GP but that has a season with no ESPN figure marks that season's number.
+  const mixed = profile.gamesFromEspn && profile.seasons.some((s) => s.gamesSource === "logged");
   const latest = baseSeason === undefined ? (profile.seasons[0]?.season ?? null) : baseSeason;
   return (
     <div className="card overflow-hidden">
@@ -36,7 +39,9 @@ export function PlayerSeasonTable({
             <tr className="table-head">
               <th className="py-2 pl-4 text-left font-semibold">Season</th>
               <th className="py-2 pl-2 text-left font-semibold">Team</th>
-              <th className={`${num} font-semibold`}>{profile.profile.gamesLabel}</th>
+              <th className={`${num} font-semibold`} title={games.title}>
+                {games.label}
+              </th>
               <th className={`${num} font-semibold`}>{soccer ? "W-D-L" : "W-L"}</th>
               {specs.map((s) => (
                 <th key={s.key} className={`${num} font-semibold`} title={s.title}>
@@ -63,7 +68,13 @@ export function PlayerSeasonTable({
                     ))}
                   </span>
                 </td>
-                <td className={num}>{row.games}</td>
+                {mixed && row.gamesSource === "logged" ? (
+                  <td className={num} title="Games with a recorded stat line; ESPN's figure is not stored for this season.">
+                    {row.games}*
+                  </td>
+                ) : (
+                  <td className={num}>{row.games}</td>
+                )}
                 <td className={`${num} whitespace-nowrap text-[var(--text-muted)]`}>{recordText(row.record, soccer)}</td>
                 {specs.map((s) => (
                   <td key={s.key} className={num}>
@@ -89,6 +100,7 @@ export function PlayerSeasonTable({
           </tbody>
         </table>
       </div>
+      {mixed && <p className="border-t border-[var(--border)] px-4 py-2 text-[11px] text-[var(--text-faint)]">* Games with a recorded stat line; ESPN&apos;s figure is not stored for this season.</p>}
     </div>
   );
 }

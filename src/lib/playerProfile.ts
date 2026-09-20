@@ -354,11 +354,17 @@ export function record(rows: PlayerLogRow[]): Record3 {
   return r;
 }
 
+/** Where a season's games figure comes from: ESPN's own count, or the box-score rows stored here. */
+export type GamesSource = "espn" | "logged";
+
 export interface SeasonLine {
   season: number;
   teams: { espn_id: string; name: string; slug: string; logo: string | null }[];
+  /** The figure shown as GP: ESPN's games played (NFL regular season, when stored) or the logged count. */
   games: number;
-  record: Record3;
+  gamesSource: GamesSource;
+  /** Null when `games` is ESPN's and exceeds the logged games, so a W-L would contradict the games count. */
+  record: Record3 | null;
   line: Line;
 }
 
@@ -386,8 +392,12 @@ export interface PlayerProfile {
   profile: SportProfile;
   /** Appearances only, most recent first. */
   rows: PlayerLogRow[];
+  /** The sum of the seasons' displayed games when ESPN's figures were supplied, else the logged count. */
   games: number;
-  record: Record3;
+  /** Null when any season's record is null. */
+  record: Record3 | null;
+  /** True when at least one listed season's `games` is ESPN's figure. */
+  gamesFromEspn: boolean;
   career: Line;
   seasons: SeasonLine[];
   teams: SeasonLine["teams"];
@@ -478,9 +488,19 @@ function milestonesFor(sport: PlayerSport, profile: SportProfile, chrono: Player
   return out;
 }
 
+/** The column header (and its tooltip) for a games count. An NFL count that is not ESPN's is the number of
+ * games with a stat line in the box scores, so it says so rather than passing for games played. */
+export function gamesHeader(profile: PlayerProfile, fromEspn: boolean = profile.gamesFromEspn): { label: string; title?: string } {
+  if (profile.sport !== "nfl" || fromEspn) return { label: profile.profile.gamesLabel };
+  return { label: "Logged", title: "Games with a recorded stat line" };
+}
+
 /** NFL picks its columns from the rows it is given; the staged tables pass the regular-season rows
- * as `specRows` so every table for a player has the same columns. */
-export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRows: PlayerLogRow[] = allRows): PlayerProfile {
+ * as `specRows` so every table for a player has the same columns. `reportedGames` (season year to ESPN's
+ * games played) applies to the NFL only: ESPN's box scores omit players without a stat line, so the log
+ * undercounts games played. */
+export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRows: PlayerLogRow[] = allRows, reportedGames?: ReadonlyMap<number, number>): PlayerProfile {
+  const reported = sport === "nfl" ? reportedGames : undefined;
   const profile = sportProfile(sport, specRows);
   const rows = allRows.filter(profile.played).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   const chrono = [...rows].reverse();
@@ -497,7 +517,18 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
     .map(([season, rs]) => {
       const teams = new Map<string, SeasonLine["teams"][number]>();
       for (const r of [...rs].reverse()) teams.set(r.team_espn_id, { espn_id: r.team_espn_id, name: r.team_name, slug: r.team_slug, logo: r.team_logo });
-      return { season, teams: [...teams.values()], games: rs.length, record: record(rs), line: aggregate(rs, specs) };
+      const logged = rs.length;
+      const figure = reported?.get(season);
+      // A stat line proves the player played, so a stale stored figure never shows fewer games than the log.
+      const games = figure === undefined ? logged : Math.max(figure, logged);
+      return {
+        season,
+        teams: [...teams.values()],
+        games,
+        gamesSource: figure === undefined ? "logged" : "espn",
+        record: games > logged ? null : record(rs),
+        line: aggregate(rs, specs),
+      };
     });
 
   const teams = new Map<string, SeasonLine["teams"][number]>();
@@ -531,8 +562,9 @@ export function buildProfile(sport: PlayerSport, allRows: PlayerLogRow[], specRo
     sport,
     profile,
     rows,
-    games: rows.length,
-    record: record(rows),
+    games: reported ? seasons.reduce((n, s) => n + s.games, 0) : rows.length,
+    record: seasons.some((s) => s.record === null) ? null : record(rows),
+    gamesFromEspn: seasons.some((s) => s.gamesSource === "espn"),
     career: aggregate(rows, specs),
     seasons,
     teams: [...teams.values()],
@@ -563,7 +595,8 @@ export interface StagedProfile {
 // NBA and NFL: ESPN's headline totals are regular-season games only, so the regular season, the
 // playoffs and the play-in are separate tables. Preseason, All-Star and Cup-final games are in
 // the game log but in no total.
-export function buildStagedProfile(sport: PlayerSport, allRows: PlayerLogRow[]): StagedProfile {
+// `reportedGames` is ESPN's games played per season (NFL only); it feeds the regular-season profile alone.
+export function buildStagedProfile(sport: PlayerSport, allRows: PlayerLogRow[], reportedGames?: ReadonlyMap<number, number>): StagedProfile {
   if (sport === "soccer") {
     const regular = buildProfile(sport, allRows);
     return { split: false, regular, playoffs: null, playin: null, counted: regular, log: regular.rows };
@@ -575,7 +608,7 @@ export function buildStagedProfile(sport: PlayerSport, allRows: PlayerLogRow[]):
   const countedRows = [...regularRows, ...playoffRows, ...playinRows];
   const specRows = regularRows.length > 0 ? regularRows : countedRows;
   const build = (rows: PlayerLogRow[]) => buildProfile(sport, rows, specRows);
-  const regular = build(regularRows);
+  const regular = buildProfile(sport, regularRows, specRows, sport === "nfl" ? reportedGames : undefined);
   const playoffs = build(playoffRows);
   const playin = build(playinRows);
   return {

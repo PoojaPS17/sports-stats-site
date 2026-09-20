@@ -15,7 +15,7 @@ export function PlayerCareerStrip({ league, profile }: { league: League; profile
     <div className="card px-4 py-4">
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         {careerStripStats(profile).map((s) => (
-          <Stat key={s.label} label={s.label} value={s.value} />
+          <Stat key={s.label} label={s.label} value={s.value} title={s.title} />
         ))}
       </div>
       <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
@@ -38,10 +38,10 @@ export function PlayerCareerStrip({ league, profile }: { league: League; profile
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
     <div className="min-w-0">
-      <p className="truncate text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]" title={label}>
+      <p className="truncate text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]" title={title ?? label}>
         {label}
       </p>
       <p className="text-xl font-bold tabular-nums tracking-tight sm:text-2xl">{value}</p>

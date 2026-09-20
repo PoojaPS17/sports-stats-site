@@ -10,6 +10,7 @@ import {
   formatSeasonLabel,
   getPlayerBySlug,
   getPlayerLog,
+  getPlayerReportedGames,
   getPlayerGoalClocks,
   getPlayerSeasonStatsBySeason,
   getPlayerSeasons,
@@ -45,6 +46,7 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
+import { NFL_PLAYOFFS_NOTE, NFL_REGULAR_SEASON_NOTE } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -70,11 +72,13 @@ function profileSummary(league: League, player: PlayerRow, profile: PlayerProfil
 // cache means each is fetched once per request.
 const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(league, slug));
 const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
+const cachedReportedGames = cache((league: League, espnId: string) => getPlayerReportedGames(league, espnId));
 
 async function loadStaged(league: League, player: PlayerRow): Promise<StagedProfile | null> {
   const sport = playerSport(league);
   if (!sport) return null;
-  return buildStagedProfile(sport, await cachedLog(league, player.espn_id));
+  const [log, reportedGames] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id)]);
+  return buildStagedProfile(sport, log, reportedGames);
 }
 
 // Any appearance at all: a player with only playoff or play-in games still has a page to show.
@@ -236,7 +240,7 @@ export default async function PlayerPage({
               </section>
 
               <section>
-                <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <SectionHeader description={profile.sport === "nba" ? "Per-game averages; shooting as made over attempted for the season." : profile.sport === "nfl" ? NFL_REGULAR_SEASON_NOTE : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
                 <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
               </section>
             </>
@@ -249,7 +253,7 @@ export default async function PlayerPage({
 
           {staged.playoffs && (
             <section>
-              <SectionHeader description="Playoff games only; ESPN lists these separately from the regular season.">Playoffs</SectionHeader>
+              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : "Playoff games only; ESPN lists these separately from the regular season."}>Playoffs</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} careerLabel="Career playoffs" baseSeason={latestRegular} />
             </section>
           )}
@@ -333,7 +337,7 @@ export default async function PlayerPage({
             <p className="text-[11px] text-[var(--text-faint)]">
               {profile.games > 0 && (
                 <>
-                  Regular-season figures are summed from the {profile.games} {LEAGUE_LABEL[league]} regular-season games on record here
+                  Regular-season figures are summed from the {sport === "nfl" ? profile.rows.length : profile.games} {LEAGUE_LABEL[league]} regular-season games {sport === "nfl" ? "with a recorded stat line" : "on record"} here
                   {since ? ` since ${since}` : ""}.{" "}
                 </>
               )}

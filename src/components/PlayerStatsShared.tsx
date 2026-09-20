@@ -2,22 +2,25 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import type { League } from "@/lib/queries";
-import { headlineCareerStats, type PlayerLogRow, type PlayerProfile, type Record3 } from "@/lib/playerProfile";
+import { gamesHeader, headlineCareerStats, type PlayerLogRow, type PlayerProfile, type Record3 } from "@/lib/playerProfile";
 
 export function fmtDate(date: string): string {
   return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function recordText(r: Record3, soccer: boolean): string {
+/** A season's or career's W-L; a dash where the record was dropped because the log does not cover every game. */
+export function recordText(r: Record3 | null, soccer: boolean): string {
+  if (r === null) return "–";
   return soccer ? `${r.w}-${r.d}-${r.l}` : `${r.w}-${r.l}`;
 }
 
 // Every number in the career strip, in order - shared by the live strip and the downloadable
 // card so the two can never drift apart.
-export function careerStripStats(profile: PlayerProfile): { label: string; value: string }[] {
+export function careerStripStats(profile: PlayerProfile): { label: string; value: string; title?: string }[] {
   const soccer = profile.sport === "soccer";
+  const games = gamesHeader(profile);
   return [
-    { label: profile.profile.gamesLabel, value: String(profile.games) },
+    { label: games.label, value: String(profile.games), ...(games.title ? { title: games.title } : {}) },
     { label: soccer ? "W-D-L" : "W-L", value: recordText(profile.record, soccer) },
     ...headlineCareerStats(profile),
   ];

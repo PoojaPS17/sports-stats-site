@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { isLeague, isCricketLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerLog, getPlayerSeasonStatsBySeason, getPlayerSeasons, formatSeasonLabel, type League } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerLog, getPlayerReportedGames, getPlayerSeasonStatsBySeason, getPlayerSeasons, formatSeasonLabel, type League } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
@@ -22,6 +22,7 @@ import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
+import { NFL_PLAYOFFS_NOTE, NFL_REGULAR_SEASON_NOTE } from "@/lib/playerCopy";
 
 // A past season's stat line is static (it never changes once the season is over), so
 // this can be cached far longer than the live current-season player page.
@@ -29,6 +30,7 @@ export const revalidate = 86400;
 
 const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(league, slug));
 const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
+const cachedReportedGames = cache((league: League, espnId: string) => getPlayerReportedGames(league, espnId));
 
 // Any appearance that season: a player with only playoff or play-in games still has a page to show.
 function hasGames(staged: StagedProfile): boolean {
@@ -45,8 +47,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   let figures = "";
   let empty = false;
   if (sport) {
-    const rows = (await cachedLog(league, player.espn_id)).filter((r) => r.season_year === Number(season));
-    const staged = buildStagedProfile(sport, rows);
+    const [log, reportedGames] = await Promise.all([cachedLog(league, player.espn_id), cachedReportedGames(league, player.espn_id)]);
+    const staged = buildStagedProfile(sport, log.filter((r) => r.season_year === Number(season)), reportedGames);
     const p = staged.regular;
     if (p.games > 0) {
       const headline = p.profile.specs.filter((s) => s.headline).slice(0, 3);
@@ -70,8 +72,12 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
   const player = (await cachedPlayer(league, slug)) ?? (await playerNotFound(league, slug, (s) => `/${league}/players/${s}/${season}`));
 
   const sport = playerSport(league);
-  const [log, feedSeasons] = await Promise.all([sport ? cachedLog(league, player.espn_id) : [], getPlayerSeasons(league, player.espn_id)]);
-  const staged = sport ? buildStagedProfile(sport, log.filter((r) => r.season_year === season)) : null;
+  const [log, reportedGames, feedSeasons] = await Promise.all([
+    sport ? cachedLog(league, player.espn_id) : [],
+    sport ? cachedReportedGames(league, player.espn_id) : new Map<number, number>(),
+    getPlayerSeasons(league, player.espn_id),
+  ]);
+  const staged = sport ? buildStagedProfile(sport, log.filter((r) => r.season_year === season), reportedGames) : null;
   // Regular season (for soccer, every appearance) drives the strip and the splits; best games read
   // every counted game.
   const profile = staged?.regular ?? null;
@@ -105,7 +111,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {profile.games > 0 && (
             <section>
               <SectionHeader
-                description={staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`}
+                description={sport === "nfl" ? NFL_REGULAR_SEASON_NOTE : staged.split ? `${label} regular-season figures from every game on record.` : `${label} figures from every game on record.`}
                 tools={
                   <ImageActions
                     filename={`${slug}-${season}-${league}`}
@@ -129,7 +135,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
 
           {staged.playoffs && (
             <section>
-              <SectionHeader description="Playoff games only; ESPN lists these separately from the regular season.">Playoffs</SectionHeader>
+              <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : "Playoff games only; ESPN lists these separately from the regular season."}>Playoffs</SectionHeader>
               <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} activeSeason={season} careerLabel="Career playoffs" baseSeason={null} />
             </section>
           )}

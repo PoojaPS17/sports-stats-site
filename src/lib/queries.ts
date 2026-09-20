@@ -4,7 +4,7 @@ import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 import type { GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
-import { fetchPlayerLog } from "./playerLog";
+import { fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import type { PlayerLogRow } from "./playerProfile";
 
 export type { League } from "./leagues";
@@ -640,6 +640,12 @@ export async function getTeamInjuries(league: League, teamEspnId: string): Promi
 // the result). One query; everything on the profile is derived from it in memory.
 export async function getPlayerLog(league: League, playerEspnId: string): Promise<PlayerLogRow[]> {
   return fetchPlayerLog(pool, league, playerEspnId);
+}
+
+// ESPN's games played per season for an NFL player (empty for every other league): the log only
+// holds games in which the player had a stat line, so it undercounts games played.
+export async function getPlayerReportedGames(league: League, playerEspnId: string): Promise<Map<number, number>> {
+  return fetchReportedGames(pool, league, playerEspnId);
 }
 
 // Clock of every goal this player scored in the stored match reports for the given

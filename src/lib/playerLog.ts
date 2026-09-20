@@ -28,3 +28,16 @@ export async function fetchPlayerLog(db: Pick<Pool, "query">, league: League, pl
   );
   return rows;
 }
+
+/** ESPN's games played per season (season year to games) for an NFL player: the regular-season figure the
+ * loader stores in player_season_stats. Box scores list only players with a stat line, so the log
+ * undercounts games played. Other leagues get an empty map without a query. */
+export async function fetchReportedGames(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<Map<number, number>> {
+  if (league !== "nfl") return new Map();
+  const { rows } = await db.query<{ season: number; games_played: number }>(
+    `select season, games_played from player_season_stats
+     where league = $1 and player_espn_id = $2 and games_played is not null and games_played > 0`,
+    [league, playerEspnId]
+  );
+  return new Map(rows.map((r) => [r.season, r.games_played]));
+}

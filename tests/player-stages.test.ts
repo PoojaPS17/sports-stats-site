@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildProfile, buildStagedProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import type { GameStage } from "../src/lib/gameStage";
+import { careerStripStats, recordText } from "../src/components/PlayerStatsShared";
 
 interface RowOptions {
   id: string;
@@ -199,4 +200,167 @@ test("buildProfile takes the NFL columns from the spec rows, not the rows it agg
   assert.equal(p.games, 1);
   assert.equal(p.profile.specs.some((sp) => sp.key === "pass_yds"), true);
   assert.equal(p.profile.specs.some((sp) => sp.key === "rush_yds"), false);
+});
+
+// ---------------------------------------------------------------------------
+// NFL games played: ESPN's figure for the regular season, the log's count everywhere else.
+// ---------------------------------------------------------------------------
+const nflGame = (id: string, date: string, season: number, stage: GameStage = "regular", result: "W" | "L" = "W"): PlayerLogRow => ({
+  ...row({ id, date, season_year: season, stage, season_type: stage === "playoffs" ? 3 : 2, stats: passing(200) }),
+  result,
+});
+
+// 2025: two logged games (a win and a loss); 2024: three logged games (all wins).
+const NFL_TWO_SEASONS: PlayerLogRow[] = [
+  nflGame("a1", "2025-09-07", 2025, "regular", "W"),
+  nflGame("a2", "2025-09-14", 2025, "regular", "L"),
+  nflGame("b1", "2024-09-08", 2024),
+  nflGame("b2", "2024-09-15", 2024),
+  nflGame("b3", "2024-09-22", 2024),
+];
+
+test("NFL: ESPN's games played replaces the logged count, and a W-L that would contradict it is dropped", () => {
+  const s = buildStagedProfile("nfl", [nflGame("a1", "2025-09-07", 2025, "regular", "L")], new Map([[2025, 16]]));
+  const season = s.regular.seasons[0];
+  assert.equal(season.games, 16);
+  assert.equal(season.gamesSource, "espn");
+  assert.equal(season.record, null);
+  assert.equal(s.regular.games, 16);
+  assert.equal(s.regular.record, null);
+  assert.equal(s.regular.gamesFromEspn, true);
+  // Totals and the log stay what the box scores say.
+  assert.equal(s.regular.career.pass_yds, 200);
+  assert.equal(s.regular.rows.length, 1);
+  assert.equal(s.log.length, 1);
+});
+
+test("NFL: an ESPN figure at or below the logged count never shows fewer games than the log, and the W-L stays", () => {
+  const equal = buildStagedProfile("nfl", NFL_TWO_SEASONS.slice(0, 2), new Map([[2025, 2]])).regular;
+  assert.equal(equal.seasons[0].games, 2);
+  assert.equal(equal.seasons[0].gamesSource, "espn");
+  assert.deepEqual(equal.seasons[0].record, { w: 1, d: 0, l: 1 });
+  assert.deepEqual(equal.record, { w: 1, d: 0, l: 1 });
+
+  const stale = buildStagedProfile("nfl", NFL_TWO_SEASONS.slice(0, 2), new Map([[2025, 1]])).regular;
+  assert.equal(stale.seasons[0].games, 2);
+  assert.equal(stale.seasons[0].gamesSource, "espn");
+  assert.deepEqual(stale.seasons[0].record, { w: 1, d: 0, l: 1 });
+  assert.equal(stale.games, 2);
+});
+
+test("NFL: a season the map has no figure for shows the logged count, with its W-L", () => {
+  const p = buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 17]])).regular;
+  const s2025 = p.seasons.find((x) => x.season === 2025)!;
+  assert.equal(s2025.games, 2);
+  assert.equal(s2025.gamesSource, "logged");
+  assert.deepEqual(s2025.record, { w: 1, d: 0, l: 1 });
+});
+
+test("NFL: two seasons, one from ESPN and one logged; the career adds the displayed games and loses its W-L", () => {
+  const p = buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 17]])).regular;
+  const s2024 = p.seasons.find((x) => x.season === 2024)!;
+  assert.equal(s2024.games, 17);
+  assert.equal(s2024.gamesSource, "espn");
+  assert.equal(s2024.record, null);
+  assert.equal(p.games, 19);
+  assert.equal(p.record, null);
+  assert.equal(p.gamesFromEspn, true);
+});
+
+test("NFL: with every ESPN figure at or below the log, the career W-L is the logged one", () => {
+  const p = buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 3], [2025, 2]])).regular;
+  assert.equal(p.games, 5);
+  assert.deepEqual(p.record, { w: 4, d: 0, l: 1 });
+});
+
+test("NFL: only seasons with logged rows are listed, even when the map has more", () => {
+  const p = buildStagedProfile("nfl", NFL_TWO_SEASONS.slice(0, 2), new Map([[2025, 16], [2023, 17]])).regular;
+  assert.deepEqual(p.seasons.map((x) => x.season), [2025]);
+  assert.equal(p.games, 16);
+});
+
+test("NFL: a profile built without a map, or with a map that has none of its seasons, is logged", () => {
+  const plain = buildStagedProfile("nfl", NFL_TWO_SEASONS).regular;
+  assert.equal(plain.games, 5);
+  assert.deepEqual(plain.record, { w: 4, d: 0, l: 1 });
+  assert.equal(plain.gamesFromEspn, false);
+  assert.deepEqual(plain.seasons.map((x) => x.gamesSource), ["logged", "logged"]);
+
+  const unmatched = buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2019, 17]])).regular;
+  assert.equal(unmatched.games, 5);
+  assert.deepEqual(unmatched.record, { w: 4, d: 0, l: 1 });
+  assert.equal(unmatched.gamesFromEspn, false);
+});
+
+test("NBA and soccer ignore a map that is passed to them", () => {
+  const map = new Map([[2026, 82]]);
+  const nbaRows = NBA_ROWS.filter((r) => r.stage === "regular");
+  const n = buildStagedProfile("nba", nbaRows, map).regular;
+  assert.equal(n.games, 3);
+  assert.equal(n.seasons[0].games, 3);
+  assert.equal(n.seasons[0].gamesSource, "logged");
+  assert.deepEqual(n.record, { w: 3, d: 0, l: 0 });
+  assert.equal(n.gamesFromEspn, false);
+  assert.equal(buildProfile("nba", nbaRows, nbaRows, map).games, 3);
+
+  const soccerRows = [row({ id: "s1", date: "2026-01-10", stage: "regular", stats: soccer(1) }), row({ id: "s2", date: "2026-01-17", stage: "regular", stats: soccer(0) })];
+  const sc = buildStagedProfile("soccer", soccerRows, map).regular;
+  assert.equal(sc.games, 2);
+  assert.equal(sc.seasons[0].gamesSource, "logged");
+  assert.deepEqual(sc.record, { w: 2, d: 0, l: 0 });
+  assert.equal(sc.gamesFromEspn, false);
+  assert.equal(buildProfile("soccer", soccerRows, soccerRows, map).games, 2);
+});
+
+test("NFL: the playoffs and counted profiles ignore the map", () => {
+  const rows = [nflGame("a1", "2025-09-07", 2025), nflGame("a2", "2025-09-14", 2025), nflGame("po", "2026-01-12", 2025, "playoffs")];
+  const s = buildStagedProfile("nfl", rows, new Map([[2025, 17]]));
+  assert.equal(s.regular.games, 17);
+  assert.ok(s.playoffs);
+  assert.equal(s.playoffs.games, 1);
+  assert.equal(s.playoffs.seasons[0].games, 1);
+  assert.equal(s.playoffs.seasons[0].gamesSource, "logged");
+  assert.deepEqual(s.playoffs.record, { w: 1, d: 0, l: 0 });
+  assert.equal(s.playoffs.gamesFromEspn, false);
+  assert.equal(s.counted.games, 3);
+  assert.equal(s.counted.gamesFromEspn, false);
+});
+
+test("NFL: home/away, result and opponent splits, best games and recent form stay logged", () => {
+  const p = buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 17], [2025, 16]])).regular;
+  assert.equal(p.games, 33);
+  assert.equal(p.homeAway.reduce((n, x) => n + x.games, 0), 5);
+  assert.equal(p.byResult.reduce((n, x) => n + x.games, 0), 5);
+  assert.equal(p.opponents.reduce((n, x) => n + x.games, 0), 5);
+  assert.deepEqual(p.byResult.map((x) => [x.key, x.games]), [["w", 4], ["l", 1]]);
+  assert.deepEqual(p.homeAway[0].record, { w: 4, d: 0, l: 1 });
+  assert.equal(p.best.length, 5);
+  assert.equal(p.form.length, 5);
+});
+
+test("recordText shows a dash for a record that was dropped", () => {
+  assert.equal(recordText(null, false), "–");
+  assert.equal(recordText(null, true), "–");
+  assert.equal(recordText({ w: 3, d: 1, l: 2 }, true), "3-1-2");
+  assert.equal(recordText({ w: 3, d: 0, l: 2 }, false), "3-2");
+});
+
+test("career strip: ESPN's games as GP and a dash for the W-L when the season is short of a full log", () => {
+  const strip = careerStripStats(buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2024, 17], [2025, 16]])).regular);
+  assert.deepEqual(strip.slice(0, 2), [
+    { label: "GP", value: "33" },
+    { label: "W-L", value: "–" },
+  ]);
+});
+
+test("career strip: an NFL profile whose games are the log's is labelled Logged, and keeps its W-L", () => {
+  const strip = careerStripStats(buildStagedProfile("nfl", NFL_TWO_SEASONS).regular);
+  assert.deepEqual(strip.slice(0, 2), [
+    { label: "Logged", value: "5", title: "Games with a recorded stat line" },
+    { label: "W-L", value: "4-1" },
+  ]);
+  // NBA is untouched.
+  const nbaStrip = careerStripStats(buildStagedProfile("nba", NBA_ROWS.filter((r) => r.stage === "regular")).regular);
+  assert.equal(nbaStrip[0].label, "GP");
+  assert.equal(nbaStrip[0].value, "3");
 });
