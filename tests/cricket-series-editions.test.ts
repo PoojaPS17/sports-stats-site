@@ -97,6 +97,14 @@ test("baseSeriesId is the ESPN league id an edition key stands for", () => {
   assert.equal(key.baseSeriesId("8044-2025-26"), "8044");
   assert.equal(key.baseSeriesId("8044"), "8044");
   assert.equal(key.baseSeriesId("24046"), "24046");
+  // Every script that sends a stored series id to ESPN must strip the edition first, or a tournament match
+  // 404s on ".../8044-2025-26/summary". The two SQL readers do it with split_part; the card refresh calls
+  // baseSeriesId. If a third way appears, this is the test that should catch it.
+  const refresh = readFileSync(resolve(process.cwd(), "scripts/refresh-cricket-cards.ts"), "utf8");
+  assert.match(refresh, /SUMMARY_URL\(baseSeriesId\(/, "refresh-cricket-cards must strip the edition from a composite series key");
+  for (const f of ["scripts/lib/cricket-topup.ts", "scripts/import-cricket-espn.ts"]) {
+    assert.match(readFileSync(resolve(process.cwd(), f), "utf8"), /split_part\(m\.series_espn_id, '-', 1\)/, `${f} reads the leading id`);
+  }
 });
 
 test("the series title carries the edition once", () => {

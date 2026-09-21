@@ -30,6 +30,7 @@ import { pool } from "./lib/db";
 import { CARD_VERSION } from "./lib/cricket-career";
 import { REFRESH_USAGE, parseRefreshArgs, refreshMatchCards } from "./lib/cricket-cards-refresh";
 import { CRICSHEET_REPORT_SQL } from "./lib/cricsheet-report";
+import { baseSeriesId } from "../src/lib/cricketSeriesKey";
 
 const SUMMARY_URL = (seriesId: string, eventId: string) => `https://site.api.espn.com/apis/site/v2/sports/cricket/${seriesId}/summary?event=${eventId}`;
 // Same as import-cricket-espn.ts: ESPN's summary endpoint resolves any cricket event
@@ -63,8 +64,10 @@ async function getJson(url: string): Promise<any> {
 async function fetchSummary(eventId: string): Promise<any> {
   const summary = await getJson(SUMMARY_URL(FALLBACK_SERIES, eventId));
   if (summary?.header?.competitions?.[0]?.competitors?.length) return summary;
+  // A tournament series is keyed by edition since Task 11 ("8044-2025-26"), but ESPN's summary path wants the bare
+  // league id. baseSeriesId is the same leading-id rule cricket-topup.ts and import-cricket-espn.ts apply in SQL.
   const { rows } = await pool.query(`select series_espn_id from cricket_series_matches where espn_id = $1`, [eventId]);
-  return rows[0] ? getJson(SUMMARY_URL(rows[0].series_espn_id, eventId)) : summary;
+  return rows[0] ? getJson(SUMMARY_URL(baseSeriesId(String(rows[0].series_espn_id)), eventId)) : summary;
 }
 
 async function main() {
