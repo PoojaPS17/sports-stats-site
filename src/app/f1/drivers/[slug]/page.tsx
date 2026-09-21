@@ -9,6 +9,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
+import { f1FormatDate } from "@/lib/f1Dates";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -74,13 +75,13 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
                 <div className="min-w-0">
                   <p className="truncate font-medium">{r.event_name}</p>
                   <p className="text-xs text-[var(--text-muted)]">
-                    {new Date(r.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {f1FormatDate(r.session_date, r.circuit_name, { month: "short", day: "numeric", year: "numeric" }, r.event_espn_id)}
                     {r.constructor_name && ` · ${r.constructor_name}`}
                   </p>
                 </div>
                 <span className="shrink-0 text-sm font-bold tabular-nums">
                   {r.winner ? "🏆 " : ""}
-                  {r.position ? `P${r.position}` : "—"}
+                  {r.result_label ?? (r.position ? `P${r.position}` : "—")}
                 </span>
               </Link>
             ))}

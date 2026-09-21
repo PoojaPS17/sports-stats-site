@@ -7,6 +7,7 @@ import { CalendarButton } from "@/components/CalendarButton";
 import { ImageActions } from "@/components/ImageActions";
 import { F1CalendarExportCard } from "@/components/F1ExportCards";
 import { f1EventStatus } from "@/lib/f1Status";
+import { f1FormatDate, f1RaceInstant } from "@/lib/f1Dates";
 
 export const metadata = pageMeta("F1 Calendar", "Formula 1 race calendar with circuits, dates and winners.", "/f1");
 
@@ -40,7 +41,8 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
           <ImageActions filename={`f1-calendar-${activeSeason}`} shareTitle={`F1 calendar ${activeSeason}`} width={720} card={<F1CalendarExportCard season={activeSeason} calendar={calendar} />} />
           <div className="card divide-y divide-[var(--border)]">
             {calendar.map((ev) => {
-              const date = new Date(ev.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              // The day of the Race at the circuit; the event's own date is the first practice.
+              const date = f1FormatDate(f1RaceInstant(ev), ev.circuit_name, { month: "short", day: "numeric" }, ev.espn_id);
               // A Grand Prix ESPN cancelled has no winner, but it is not upcoming either.
               const status = f1EventStatus(ev);
               return (

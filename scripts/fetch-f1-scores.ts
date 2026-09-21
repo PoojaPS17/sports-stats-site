@@ -3,7 +3,7 @@
 // any date param (confirmed by testing), so this can't reach past weekends; see
 // backfill-f1-events.ts for historical seasons.
 import { pool } from "./lib/db";
-import { fetchF1Scoreboard } from "./lib/f1";
+import { fetchByRef, fetchF1Scoreboard } from "./lib/f1";
 import { upsertF1Weekend } from "./lib/f1-weekend";
 import { recordRun } from "./lib/heartbeat";
 
@@ -17,7 +17,7 @@ async function main() {
     await pool.end();
     return;
   }
-  const { sessions, results } = await upsertF1Weekend(pool, event, league?.season?.year ?? null);
+  const { sessions, results } = await upsertF1Weekend(pool, event, league?.season?.year ?? null, { fetchRef: fetchByRef });
   console.log(`[fetch-f1-scores] ${event.name}: ${sessions} sessions, ${results} results`);
   await recordRun(pool, "fetch-f1-scores");
   await pool.end();

@@ -1,5 +1,6 @@
 import { pageMeta } from "@/lib/metadata";
 import { teamDisplayName } from "@/lib/teamName";
+import { f1TeamLabel } from "@/lib/f1Names";
 import Link from "next/link";
 import { search, LEAGUE_LABEL, isLeague, type SearchResult } from "@/lib/queries";
 import { isTour, TOUR_LABEL } from "@/lib/tennisTours";
@@ -17,6 +18,12 @@ function resultHref(r: SearchResult): string {
   if (r.league === "f1") return r.type === "team" ? `/f1/teams/${r.slug}` : `/f1/drivers/${r.slug}`;
   if (isTour(r.league)) return `/tennis/${r.league}/players/${r.slug}`;
   return r.type === "team" ? `/${r.league}/teams/${r.slug}` : `/${r.league}/players/${r.slug}`;
+}
+
+// An F1 constructor is listed under the name it races under now (Red Bull Racing), not the short name ESPN stores.
+function resultName(r: SearchResult): string {
+  if (r.league === "f1" && r.type === "team") return f1TeamLabel(new Date().getUTCFullYear(), r.name) ?? r.name;
+  return teamDisplayName(r.name);
 }
 
 function resultLeagueLabel(r: SearchResult): string {
@@ -58,9 +65,9 @@ export default async function SearchPage({
               href={resultHref(r)}
               className="card flex items-center gap-3 px-4 py-3"
             >
-              <TeamLogo name={teamDisplayName(r.name)} logoUrl={r.image} size={32} />
+              <TeamLogo name={resultName(r)} logoUrl={r.image} size={32} />
               <div className="flex flex-col">
-                <span className="font-medium">{teamDisplayName(r.name)}</span>
+                <span className="font-medium">{resultName(r)}</span>
                 <span className="text-xs text-[var(--text-muted)]">
                   {resultLeagueLabel(r)} {r.type === "player" ? "player" : r.type === "series" ? "series" : "team"}
                   {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}

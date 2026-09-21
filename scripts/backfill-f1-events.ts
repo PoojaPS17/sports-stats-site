@@ -10,13 +10,34 @@
 // Circuits repeat across years the same way and are cached the same way. That keeps
 // the real cost to about one request per event (24/season) plus a few dozen one-time
 // lookups total, not the thousands a naive per-competitor-per-race fetch would need.
+//
+// The exception is a race or sprint driver's status and laps completed (Ret / DSQ labels, the order of the back of the
+// field): those are bare refs too, so each such driver costs one request (his status) and one more when he did not
+// finish, and for the winner of each session (his laps are the distance the 90% classification line is measured from).
+// That is the bulk of a full run: about 5,200 status requests, plus laps for some 800 drivers who did not finish and about
+// 300 winners, on top of roughly 400 for the event lists, events, drivers and circuits, about 6,700 in all. A driver
+// already stored with his status (and laps, where they are read) is skipped, so the run can be repeated safely and cheaply.
+// The total is logged at the end; a failed status/laps request is counted, listed and makes the run exit non-zero.
 import { pool } from "./lib/db";
-import { fetchF1SeasonEventRefs, fetchByRef } from "./lib/f1";
+import { fetchF1SeasonEventRefs, fetchByRef as fetchEspnRef } from "./lib/f1";
 import { uniqueSlugFor } from "./lib/players";
-import { f1BackfillSessionStatus } from "../src/lib/f1Status";
+import { saveBackfilledSession } from "./lib/f1-session";
+import { addF1DidNotStartRows, f1CompetitorDetail, f1SessionHasStatuses, isPracticeOnlyCompetitor, loadKnownF1Details, saveF1CompetitorResult } from "./lib/f1-competitor";
 
 const YEARS_BACK = 10;
 const CONCURRENCY = 6;
+
+// Sessions (event id/session id) whose status could not be read; the run exits non-zero when there are any.
+const statusUnread: string[] = [];
+// Driver status / laps requests that failed; those drivers keep what is stored (null on a first run), and the run exits non-zero.
+const lookupsFailed: string[] = [];
+
+// Every ESPN request this run makes goes through here, so the total is logged at the end.
+let espnRequests = 0;
+function fetchByRef<T = any>(ref: string): Promise<T> {
+  espnRequests++;
+  return fetchEspnRef<T>(ref);
+}
 
 const driverNameCache = new Map<string, string>();
 const circuitCache = new Map<string, { name: string | null; city: string | null; country: string | null }>();
@@ -55,50 +76,40 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
     `insert into f1_events (espn_id, name, short_name, date, end_date, season_year, circuit_name, circuit_city, circuit_country, updated_at)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
      on conflict (espn_id) do update set
-       date = excluded.date, end_date = excluded.end_date, circuit_name = excluded.circuit_name,
-       circuit_city = excluded.circuit_city, circuit_country = excluded.circuit_country, updated_at = now()`,
+       date = excluded.date, end_date = excluded.end_date,
+       circuit_name = coalesce(excluded.circuit_name, f1_events.circuit_name),
+       circuit_city = coalesce(excluded.circuit_city, f1_events.circuit_city),
+       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()`,
     [event.id, event.name, event.shortName ?? null, event.date, event.endDate ?? null, seasonYear, circuit?.name ?? null, circuit?.city ?? null, circuit?.country ?? null]
   );
 
   let resultCount = 0;
   for (const comp of event.competitions ?? []) {
-    // Unlike the live scoreboard (fetch-f1-scores.ts), this endpoint's `status` is a
-    // bare $ref with no inline `.type` — the same shape tennis's historical events
-    // have. Every session backfilled here is from a past event by construction, so
-    // it's marked final outright rather than fetching yet another $ref just to
-    // confirm what's already true (this was the actual bug: without this, every
-    // backfilled session sat at completed=false despite having real results).
-    // The exception is a session with no competitors: a Grand Prix ESPN cancelled
-    // (2026 Bahrain and Saudi Arabia) lists every session with an empty field and
-    // STATUS_CANCELED, which "final" would hide, so only those read their status.
-    const noField = (comp.competitors ?? []).length === 0;
-    const status = noField && comp.status?.["$ref"] ? await fetchByRef<any>(comp.status["$ref"]).catch(() => null) : null;
-    const session = f1BackfillSessionStatus(status);
-    await pool.query(
-      `insert into f1_sessions (espn_id, event_espn_id, session_type, date, status_state, status_detail, completed, updated_at)
-       values ($1,$2,$3,$4,$5,$6,$7, now())
-       on conflict (espn_id) do update set
-         status_state = excluded.status_state, status_detail = excluded.status_detail, completed = excluded.completed, updated_at = now()`,
-      [comp.id, event.id, comp.type?.abbreviation ?? null, comp.date, session.state, session.detail, session.completed]
-    );
+    // Unlike the live scoreboard (fetch-f1-scores.ts), this endpoint's `status` is a bare $ref with no inline `.type`, so a
+    // session that ran is marked final outright rather than fetching yet another $ref to confirm what is already true. A
+    // session with no competitors is a Grand Prix ESPN cancelled and reads its status; if that read fails its stored status
+    // is left alone and the run fails at the end (scripts/lib/f1-session.ts).
+    if ((await saveBackfilledSession(pool, event.id, comp, fetchByRef)) === "status-unread") statusUnread.push(`${event.id}/${comp.id}`);
 
+    // A race or sprint driver's status (retired, disqualified, ...) and laps completed are only bare refs in the event
+    // resource: one request for his status, and one more for his laps when he did not finish. Drivers already stored with
+    // both are not asked about again, so a run that was cut off is finished by running it again.
+    const sessionType: string | undefined = comp.type?.abbreviation;
+    const known = f1SessionHasStatuses(sessionType) ? await loadKnownF1Details(pool, comp.id) : undefined;
     for (const c of comp.competitors ?? []) {
       const athleteRef = c.athlete?.["$ref"];
       if (!c.id || !athleteRef) continue;
+      if (f1SessionHasStatuses(sessionType) && isPracticeOnlyCompetitor(c)) {
+        await saveF1CompetitorResult(pool, comp.id, sessionType, c, { status: null, laps: null }); // removes a stored practice-only row
+        continue;
+      }
       const name = await resolveDriverName(athleteRef, c.id);
       if (!name) continue;
       await upsertDriver(c.id, name);
-      await pool.query(
-        `insert into f1_session_results (session_espn_id, driver_espn_id, position, winner, constructor_name, car_number)
-         values ($1,$2,$3,$4,$5,$6)
-         on conflict (session_espn_id, driver_espn_id) do update set
-           position = excluded.position, winner = excluded.winner,
-           constructor_name = coalesce(excluded.constructor_name, f1_session_results.constructor_name),
-           car_number = coalesce(excluded.car_number, f1_session_results.car_number)`,
-        [comp.id, c.id, c.order ?? null, Boolean(c.winner), c.vehicle?.manufacturer ?? null, c.vehicle?.number ?? null]
-      );
-      resultCount++;
+      const detail = f1SessionHasStatuses(sessionType) ? await f1CompetitorDetail(c, fetchByRef, known?.get(c.id), (ref) => lookupsFailed.push(ref)) : { status: null, laps: null };
+      if (await saveF1CompetitorResult(pool, comp.id, sessionType, c, detail)) resultCount++;
     }
+    if (sessionType === "Race") await addF1DidNotStartRows(pool, event.id, comp.id);
   }
   return resultCount;
 }
@@ -138,6 +149,7 @@ async function main() {
 
   for (let year = currentYear - YEARS_BACK; year <= currentYear; year++) {
     try {
+      espnRequests++;
       const refs = await fetchF1SeasonEventRefs(year);
       for (const item of refs.items ?? []) jobs.push({ seasonYear: year, eventRef: item["$ref"] });
     } catch (err) {
@@ -147,9 +159,17 @@ async function main() {
   console.log(`[backfill-f1-events] starting ${jobs.length} events across ${YEARS_BACK + 1} seasons...`);
 
   const totalResults = await runPool(jobs, CONCURRENCY);
-  console.log(`[backfill-f1-events] done: ${jobs.length} events, ${totalResults} session results, ${driverNameCache.size} unique drivers`);
+  console.log(`[backfill-f1-events] done: ${jobs.length} events, ${totalResults} session results, ${driverNameCache.size} unique drivers, ${espnRequests} ESPN requests`);
 
   await pool.end();
+
+  if (lookupsFailed.length > 0) {
+    console.error(`[backfill-f1-events] ERROR: ${lookupsFailed.length} driver status/laps request(s) failed, so those drivers have no status yet (a driver already stored keeps his). Run the backfill again; it only asks about the drivers still without one. First: ${lookupsFailed.slice(0, 3).join(", ")}`);
+  }
+  if (statusUnread.length > 0) {
+    console.error(`[backfill-f1-events] ERROR: the status of ${statusUnread.length} empty session(s) could not be read, so their stored status was left as it was: ${statusUnread.join(", ")}. Run the backfill again.`);
+  }
+  if (statusUnread.length > 0 || lookupsFailed.length > 0) process.exit(1);
 }
 
 main().catch((err) => {

@@ -4,7 +4,7 @@ import { pool } from "./db";
 import { GAME_SELECT, type GameRow, type League } from "./queries";
 import { ALL_LEAGUES } from "./leagues";
 import { CALLED_OFF } from "./gameStatus";
-import { type F1EventRow } from "./f1";
+import { displayF1Event, type F1EventRow } from "./f1";
 
 // Which competitions lead the upcoming list when fixtures fall on the same day.
 const LEAGUE_PRIORITY: League[] = ["ucl", "nfl", "nba", "epl", "cwc", "t20wc", "wcwc", "wt20wc", "ipl", "test", "odi", "laliga", "bundesliga", "seriea", "t20i", "wodi", "wt20i", "bbl", "wpl", "wbbl"];
@@ -81,6 +81,8 @@ export async function getNextF1Event(withinDays = 7): Promise<F1EventRow | null>
     `select e.espn_id, e.name, e.short_name,
             to_char(e.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
             to_char(e.end_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as end_date,
+            (select to_char(s.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') from f1_sessions s
+             where s.event_espn_id = e.espn_id and s.session_type = 'Race' order by s.date desc limit 1) as race_date,
             e.season_year, e.circuit_name, initcap(e.circuit_city) as circuit_city, initcap(e.circuit_country) as circuit_country,
             null::text as winner_name, null::text as winner_slug, null::text as race_status_state, null::text as race_status_detail, null::boolean as race_completed
      from f1_events e
@@ -91,5 +93,5 @@ export async function getNextF1Event(withinDays = 7): Promise<F1EventRow | null>
      order by e.date limit 1`,
     [withinDays, CALLED_OFF.source]
   );
-  return rows[0] ?? null;
+  return rows[0] ? displayF1Event(rows[0]) : null;
 }

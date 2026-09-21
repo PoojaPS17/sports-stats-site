@@ -9,6 +9,9 @@ import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
 import { f1EventDescription, f1EventStatus } from "@/lib/f1Status";
+import { f1SessionLabel, sortF1Sessions } from "@/lib/f1Sessions";
+import { f1FormatDate, f1RaceInstant } from "@/lib/f1Dates";
+import { f1LabelKey } from "@/lib/f1RaceOrder";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -31,15 +34,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return pageMeta(`${event.name} ${year}: Results`, description, `/f1/events/${event.espn_id}`);
 }
 
-const SESSION_LABEL: Record<string, string> = {
-  FP1: "Free Practice 1",
-  FP2: "Free Practice 2",
-  FP3: "Free Practice 3",
-  Qual: "Qualifying",
-  Sprint: "Sprint",
-  Race: "Race",
-};
-
 export default async function F1EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const event = await getF1Event(id);
@@ -52,13 +46,10 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
     if (!bySession.has(r.session_espn_id)) bySession.set(r.session_espn_id, []);
     bySession.get(r.session_espn_id)!.push(r);
   }
-  // Race last, practice sessions first — the order a fan actually cares about.
-  const sessionOrder = ["FP1", "FP2", "FP3", "Sprint", "Qual", "Race"];
-  const sessions = [...bySession.values()].sort((a, b) => {
-    const ai = sessionOrder.indexOf(a[0]?.session_type ?? "");
-    const bi = sessionOrder.indexOf(b[0]?.session_type ?? "");
-    return ai - bi;
-  });
+  // In the order the weekend was run, the race last (f1Sessions.ts).
+  const sessions = sortF1Sessions(event.season_year, [...bySession.values()].map((rows) => ({ session_type: rows[0].session_type, rows })));
+  const sessionLabel = (type: string) => f1SessionLabel(event.season_year, type);
+  const labelKey = (rows: typeof results) => f1LabelKey(rows.map((r) => r.result_label));
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,7 +60,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
         </Link>
         <h1 className="page-title mt-1">{event.name}</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          {new Date(event.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+          {f1FormatDate(f1RaceInstant(event), event.circuit_name, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, event.espn_id)}
           {event.circuit_name && ` · ${event.circuit_name}`}
           {event.circuit_city && event.circuit_country && ` · ${event.circuit_city}, ${event.circuit_country}`}
         </p>
@@ -82,7 +73,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
           {status.kind === "called-off" ? `This race weekend was ${status.label?.toLowerCase()}.` : "No session results on record for this weekend yet."}
         </p>
       ) : (
-        sessions.map((sessionResults) => {
+        sessions.map(({ rows: sessionResults }) => {
           const first = sessionResults[0];
           return (
             <section key={first.session_espn_id}>
@@ -91,14 +82,14 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                   first.completed && (
                     <ImageActions
                       filename={`f1-${event.espn_id}-${first.session_type.toLowerCase()}`}
-                      shareTitle={`${event.name}: ${SESSION_LABEL[first.session_type] ?? first.session_type}`}
+                      shareTitle={`${event.name}: ${sessionLabel(first.session_type)}`}
                       width={640}
-                      card={<F1SessionExportCard event={{ name: event.name, date: event.date, circuit: event.circuit_name }} sessionLabel={SESSION_LABEL[first.session_type] ?? first.session_type} results={sessionResults} />}
+                      card={<F1SessionExportCard event={{ name: event.name, id: event.espn_id, date: f1RaceInstant(event).toISOString(), circuit: event.circuit_name }} sessionLabel={sessionLabel(first.session_type)} results={sessionResults} />}
                     />
                   )
                 }
               >
-                {SESSION_LABEL[first.session_type] ?? first.session_type}
+                {sessionLabel(first.session_type)}
               </SectionHeader>
               {!first.completed ? (
                 <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
@@ -115,11 +106,11 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                       </tr>
                     </thead>
                     <tbody>
+                      {/* in the order getF1EventResults returns: a race's retirements and disqualifications are placed there */}
                       {sessionResults
-                        .sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
                         .map((r) => (
                           <tr key={r.driver_espn_id} className="table-row">
-                            <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{r.position ?? "—"}</td>
+                            <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{r.result_label ?? r.position ?? "—"}</td>
                             <td className="py-2">
                               <Link href={`/f1/drivers/${r.driver_slug}`} className="font-medium hover:underline">
                                 {r.winner ? "🏆 " : ""}
@@ -131,6 +122,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                         ))}
                     </tbody>
                   </table>
+                  {labelKey(sessionResults) && <p className="border-t border-[var(--border)] px-4 py-2 text-xs text-[var(--text-muted)]">{labelKey(sessionResults)}</p>}
                 </div>
               )}
             </section>

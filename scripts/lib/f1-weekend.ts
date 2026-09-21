@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import { uniqueSlugFor } from "./players";
+import { addF1DidNotStartRows, f1CompetitorDetail, f1SessionHasStatuses, loadKnownF1Details, saveF1CompetitorResult, type FetchRef } from "./f1-competitor";
 
 async function upsertDriver(pool: Pool, athleteId: string, name: string) {
   if (!athleteId || !name) return;
@@ -15,10 +16,12 @@ async function upsertDriver(pool: Pool, athleteId: string, name: string) {
 /**
  * Save one race weekend as ESPN's scoreboard returns it: the event, its sessions and each
  * session's classification. Session dates, event names and season year are refreshed on every run
- * so a rescheduled session or a corrected name reaches the site.
+ * so a rescheduled session or a corrected name reaches the site. A race or sprint driver's status and laps completed come from
+ * the feed when it carries them, otherwise from his status/statistics refs when `opts.fetchRef` is given (f1-competitor.ts).
  */
-export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number | null): Promise<{ sessions: number; results: number }> {
-  const circuit = event.competitions?.[0]?.circuit;
+export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number | null, opts: { fetchRef?: FetchRef } = {}): Promise<{ sessions: number; results: number }> {
+  // ESPN's scoreboard puts the circuit on the event itself; a session carrying it is the older shape.
+  const circuit = event.circuit ?? event.competitions?.[0]?.circuit;
   await pool.query(
     `insert into f1_events (espn_id, name, short_name, date, end_date, season_year, circuit_name, circuit_city, circuit_country, updated_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
@@ -26,8 +29,10 @@ export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number
        name = excluded.name, short_name = coalesce(excluded.short_name, f1_events.short_name),
        date = excluded.date, end_date = excluded.end_date,
        season_year = coalesce(excluded.season_year, f1_events.season_year),
-       circuit_name = excluded.circuit_name, circuit_city = excluded.circuit_city,
-       circuit_country = excluded.circuit_country, updated_at = now()`,
+       -- a run whose feed has no circuit keeps the stored one rather than blanking the venue
+       circuit_name = coalesce(excluded.circuit_name, f1_events.circuit_name),
+       circuit_city = coalesce(excluded.circuit_city, f1_events.circuit_city),
+       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()`,
     [
       event.id,
       event.name,
@@ -63,21 +68,16 @@ export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number
     );
     sessions++;
 
+    const sessionType: string | undefined = comp.type?.abbreviation;
+    const known = f1SessionHasStatuses(sessionType) ? await loadKnownF1Details(pool, comp.id) : undefined;
     for (const c of comp.competitors ?? []) {
       const name = c.athlete?.displayName ?? c.athlete?.fullName;
       if (!c.id || !name) continue;
       await upsertDriver(pool, c.id, name);
-      await pool.query(
-        `insert into f1_session_results (session_espn_id, driver_espn_id, position, winner, constructor_name, car_number)
-         values ($1, $2, $3, $4, $5, $6)
-         on conflict (session_espn_id, driver_espn_id) do update set
-           position = excluded.position, winner = excluded.winner,
-           constructor_name = coalesce(excluded.constructor_name, f1_session_results.constructor_name),
-           car_number = coalesce(excluded.car_number, f1_session_results.car_number)`,
-        [comp.id, c.id, c.order ?? null, Boolean(c.winner), c.vehicle?.manufacturer ?? null, c.vehicle?.number ?? null]
-      );
-      results++;
+      const detail = f1SessionHasStatuses(sessionType) ? await f1CompetitorDetail(c, opts.fetchRef, known?.get(c.id)) : { status: null, laps: null };
+      if (await saveF1CompetitorResult(pool, comp.id, sessionType, c, detail)) results++;
     }
+    if (sessionType === "Race") await addF1DidNotStartRows(pool, event.id, comp.id);
   }
   return { sessions, results };
 }
