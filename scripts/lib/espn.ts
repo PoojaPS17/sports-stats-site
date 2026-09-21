@@ -115,31 +115,9 @@ export function fetchScoreboardBySeason(league: League, season: number, options:
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/scoreboard?season=${season}${bust}`);
 }
 
-// The earliest season to load per league. Most competitions we load further back
-// than the default `currentYear - YEARS_BACK` window: IPL from 2008, the Big Bash
-// from 2011-12, the ODI World Cup from the first edition in 1975 and the T20 World
-// Cup from 2007 (years without an edition simply return no matches). The major
-// team leagues are pinned to 2015 rather than left on the relative window, which
-// would otherwise silently drop the oldest season every time the current year
-// advances — 2015-16 (Leicester City's title) fell out of standings backfills this
-// way once, though `games` already covers it independently of this constant.
-export const HISTORY_START: Partial<Record<League, number>> = {
-  ipl: 2008,
-  bbl: 2011,
-  cwc: 1975,
-  t20wc: 2007,
-  wpl: 2023,
-  wbbl: 2015,
-  wcwc: 1973,
-  wt20wc: 2009,
-  epl: 2015,
-  laliga: 2015,
-  bundesliga: 2015,
-  seriea: 2015,
-  ucl: 2015,
-  nba: 2015,
-  nfl: 2015,
-};
+// The earliest season to load per league (HISTORY_START) lives in src/lib/leagues.ts, where the site's pages read it too
+// (the "since 2014-15" wording of a player's totals); it is re-exported here for the loaders.
+export { HISTORY_START } from "../../src/lib/leagues";
 
 // `level=3` asks for the division-level groups (conference → division → teams) that
 // the NFL table is conventionally shown in; the default response stops at conferences.
@@ -208,9 +186,14 @@ export function fetchInjuries(league: League) {
 // The response it returns is also sport-wide (a player's career across every league
 // and competition they've featured in, not just one of them) — callers must filter
 // rows by `leagueSlug` themselves.
-export function fetchAthleteSeasonStats(league: League, athleteEspnId: string) {
+//
+// `seasontype` picks ESPN's season type: omitted is the regular season (the default), 3 is the postseason (the
+// same categories, one row per season the player had playoff games in). ESPN silently ignores 5 (play-in): the
+// play-in has no line here.
+export function fetchAthleteSeasonStats(league: League, athleteEspnId: string, seasontype?: number) {
   const sportPath = isSoccerLeague(league) ? "soccer" : SPORT_PATH[league];
-  return getJson<any>(`${COMMON_BASE}/${sportPath}/athletes/${athleteEspnId}/stats`);
+  const query = seasontype === undefined ? "" : `?seasontype=${seasontype}`;
+  return getJson<any>(`${COMMON_BASE}/${sportPath}/athletes/${athleteEspnId}/stats${query}`);
 }
 
 // The athlete season-stats endpoint can lag behind the actual live season (it may not

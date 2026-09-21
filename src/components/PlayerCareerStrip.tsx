@@ -5,6 +5,7 @@ import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, LEAGUE_LABEL, type League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
 import { careerStripStats } from "./PlayerStatsShared";
+import { careerStripSuffix } from "@/lib/playerCopy";
 
 // The numbers a reader came for, in one row: games and record, then the sport's headline figures,
 // as the profile has them (summed from the game log, or ESPN's own season figures for a season the log is short of).
@@ -21,7 +22,7 @@ export function PlayerCareerStrip({ league, profile }: { league: League; profile
       </div>
       <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
         <span>
-          {LEAGUE_LABEL[league]}{span ? `, ${span}` : ""}.
+          {LEAGUE_LABEL[league]}{profile.sport !== "soccer" ? " regular season" : ""}{span ? `, ${span}` : ""}.{careerStripSuffix(league, from, profile.seasons.length > 1)}
         </span>
         {profile.teams.length > 0 && (
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1" title={profile.teams.length > 1 ? joinTeams([...profile.teams].reverse()) : undefined}>

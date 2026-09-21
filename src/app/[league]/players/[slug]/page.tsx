@@ -14,6 +14,7 @@ import {
   getPlayerGoalClocks,
   getPlayerSeasonStatsBySeason,
   getPlayerSeasons,
+  getSameNamePlayerWithGames,
   getPlayerCricketCareer,
   getPlayerCricketSplits,
   CRICKET_SPLIT_DIMENSIONS,
@@ -49,7 +50,7 @@ import { GoalMinutesChart } from "@/components/GoalMinutesChart";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getTeammates, getPositionPeers } from "@/lib/related";
 import { h2hPath } from "@/lib/h2h";
-import { BOX_ROWS_ONLY_NOTE, NBA_NO_BOX_SCORE_NOTE, NBA_REGULAR_SEASON_FOOTNOTE, NFL_NO_GAME_LOG_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withMilestonesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
+import { BOX_ROWS_ONLY_NOTE, careerWording, NBA_NO_BOX_SCORE_NOTE, NBA_REGULAR_SEASON_FOOTNOTE, NFL_NO_GAME_LOG_NOTE, NFL_PLAYER_DATA_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, unlistedGamesNote, withBoxRowsNote, withMilestonesNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -89,8 +90,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const seasons = hasGames(staged) ? [] : await getPlayerSeasons(league, player.espn_id);
   const empty = !hasGames(staged) && seasons.length === 0;
   // The competition is named because a player has a page in each one he plays in.
-  const longTitle = `${player.name} ${LEAGUE_LABEL[league]} Stats, Game Log & Career`;
-  return pageMeta(longTitle.length <= 60 ? longTitle : `${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player.name, profile, true), `/${league}/players/${slug}`, { noindex: empty });
+  return pageMeta(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player.name, profile, true), `/${league}/players/${slug}`, { noindex: empty });
 }
 
 export default async function PlayerPage({
@@ -166,9 +166,12 @@ export default async function PlayerPage({
   // splits and the summary; best games and recent form read every counted game.
   const profile = staged.regular;
   const anyGames = hasGames(staged);
+  // Two players can share a name (the bare slug went to whoever was stored first): a page with no games points to the namesake who has some.
+  const sameName = anyGames ? null : await getSameNamePlayerWithGames(league, player.name, player.espn_id);
   // No box-score row in the regular season (ESPN lists games for the player and no stat line): games only, no stats, clubs or log.
   const storedOnly = storedGamesOnly(profile);
   const split = staged.split;
+  const wording = careerWording(league, split, profile.seasons[profile.seasons.length - 1]?.season ?? null);
   const latestRegular = profile.seasons[0]?.season ?? null;
   const seasons = [...new Set([...staged.counted.seasons.map((s) => s.season), ...feedSeasons])].sort((a, b) => b - a);
   const latest = seasons[0] ?? null;
@@ -220,7 +223,19 @@ export default async function PlayerPage({
 
       {!anyGames ? (
         <>
-          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No games on record for {player.name} in {LEAGUE_LABEL[league]} yet.</p>
+          <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
+            No games on record for {player.name} in {LEAGUE_LABEL[league]} yet.
+            {sameName && (
+              <>
+                {" "}
+                Looking for the other {player.name}?{" "}
+                <Link href={`/${league}/players/${sameName.slug}`} className="font-semibold text-[var(--accent)] hover:underline">
+                  {sameName.name}{[sameName.position, sameName.team_name].filter(Boolean).length > 0 ? ` (${[sameName.position, sameName.team_name].filter(Boolean).join(", ")})` : ""}
+                </Link>{" "}
+                has games on record.
+              </>
+            )}
+          </p>
           <PlayerSeasonStats league={league} stats={feedStats} seasons={seasons} activeSeason={latest} basePath={basePath} />
         </>
       ) : (
@@ -229,22 +244,22 @@ export default async function PlayerPage({
             <>
               <section>
                 <SectionHeader
-                  description={regularNoBoxScore > 0 ? NBA_NO_BOX_SCORE_NOTE : undefined}
+                  description={[wording.heroNote, regularNoBoxScore > 0 ? NBA_NO_BOX_SCORE_NOTE : null].filter(Boolean).join(" ") || undefined}
                   tools={
                     <ImageActions
                       filename={`${slug}-${league}`}
-                      shareTitle={split ? `${player.name} career stats (regular season)` : `${player.name} career stats`}
+                      shareTitle={`${player.name} ${wording.cardContext}${split ? " (regular season)" : ""}`}
                       card={<PlayerExportCard league={league} name={player.name} headshotUrl={player.headshot_url} teamName={headerTeam} teamColor={player.team_color} meta={[...playerMeta(sport, player), ...lastClub]} stats={careerStripStats(profile)} boxOnlyShort={profile.boxOnlyShort} />}
                     />
                   }
                 >
-                  {split ? "Career (regular season)" : "Career"}
+                  {wording.heroTitle}
                 </SectionHeader>
                 <PlayerCareerStrip league={league} profile={profile} />
               </section>
 
               <section>
-                <SectionHeader description={profile.sport === "nba" ? withNoBoxScoreNote("Per-game averages; shooting as made over attempted for the season.", regularNoBoxScore, "table") : profile.sport === "nfl" ? nflRegularSeasonNote(profile.gamesFromEspn, storedOnly) : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
+                <SectionHeader description={profile.sport === "nba" ? withNoBoxScoreNote("Per-game averages; shooting as made over attempted for the season.", regularNoBoxScore, "table") : profile.sport === "nfl" ? `${nflRegularSeasonNote(profile.gamesFromEspn, storedOnly)}${storedOnly ? "" : ` ${NFL_PLAYER_DATA_NOTE}`}` : "Totals from the box score of every game on record."}>{split ? "Regular season" : "Season by season"}</SectionHeader>
                 <PlayerSeasonTable league={league} profile={profile} basePath={basePath} />
               </section>
             </>
@@ -258,14 +273,14 @@ export default async function PlayerPage({
           {staged.playoffs && (
             <section>
               <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : withNoBoxScoreNote("Playoff games only; ESPN lists these separately from the regular season.", playoffsNoBoxScore, "other")}>Playoffs</SectionHeader>
-              <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} careerLabel="Career playoffs" baseSeason={latestRegular} />
+              <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} careerLabel={wording.playoffsTotal} baseSeason={latestRegular} />
             </section>
           )}
 
           {staged.playin && (
             <section>
               <SectionHeader description={withNoBoxScoreNote("Play-in tournament games, listed separately from the regular season and the playoffs.", playinNoBoxScore, "other")}>Play-In</SectionHeader>
-              <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} careerLabel="Career play-in" baseSeason={latestRegular} />
+              <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} careerLabel={wording.playinTotal} baseSeason={latestRegular} />
             </section>
           )}
 
@@ -361,7 +376,7 @@ export default async function PlayerPage({
             </p>
           ) : (
             <p className="text-[11px] text-[var(--text-faint)]">
-              Career figures are summed from the {profile.games} {LEAGUE_LABEL[league]} {soccer ? "appearances" : "games"} on record here
+              Figures are summed from the {profile.games} {LEAGUE_LABEL[league]} {soccer ? "appearances" : "games"} on record here
               {since ? ` since ${since}` : ""}; earlier games and other competitions are not included.
             </p>
           )}

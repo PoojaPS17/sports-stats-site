@@ -24,7 +24,7 @@ import { PlayerBestGames } from "@/components/PlayerBestGames";
 import { PlayerGameLogTable } from "@/components/PlayerGameLogTable";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
-import { BOX_ROWS_ONLY_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, seasonFiguresText, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
+import { BOX_ROWS_ONLY_NOTE, careerWording, NFL_PLAYER_DATA_NOTE, NFL_PLAYOFFS_NOTE, nflRegularSeasonNote, seasonFiguresText, unlistedGamesNote, withBoxRowsNote, withNoBoxScoreNote } from "@/lib/playerCopy";
 
 // `[season]` is any season the player has, the one in progress included, so this is live data
 // for as long as that season runs. Held to the site-wide five-minute cap (next.config.ts).
@@ -131,7 +131,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {profile.games > 0 && (
             <section>
               <SectionHeader
-                description={sport === "nfl" ? nflRegularSeasonNote(staged.regular.gamesFromEspn) : withNoBoxScoreNote(seasonFiguresText(label, staged.split, regularNoBoxScore), regularNoBoxScore, "season")}
+                description={sport === "nfl" ? `${nflRegularSeasonNote(staged.regular.gamesFromEspn)} ${NFL_PLAYER_DATA_NOTE}` : withNoBoxScoreNote(seasonFiguresText(label, staged.split, regularNoBoxScore), regularNoBoxScore, "season")}
                 tools={
                   <ImageActions
                     filename={`${slug}-${season}-${league}`}
@@ -156,14 +156,14 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {staged.playoffs && (
             <section>
               <SectionHeader description={sport === "nfl" ? NFL_PLAYOFFS_NOTE : withNoBoxScoreNote("Playoff games only; ESPN lists these separately from the regular season.", playoffsNoBoxScore, "other")}>Playoffs</SectionHeader>
-              <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} activeSeason={season} careerLabel="Career playoffs" baseSeason={null} />
+              <PlayerSeasonTable league={league} profile={staged.playoffs} basePath={basePath} activeSeason={season} careerLabel={careerWording(league, true).playoffsTotal} baseSeason={null} />
             </section>
           )}
 
           {staged.playin && (
             <section>
               <SectionHeader description={withNoBoxScoreNote("Play-in tournament games, listed separately from the regular season and the playoffs.", playinNoBoxScore, "other")}>Play-In</SectionHeader>
-              <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} activeSeason={season} careerLabel="Career play-in" baseSeason={null} />
+              <PlayerSeasonTable league={league} profile={staged.playin} basePath={basePath} activeSeason={season} careerLabel={careerWording(league, true).playinTotal} baseSeason={null} />
             </section>
           )}
 
@@ -211,7 +211,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
               ...(supportsMatchweeks(league) ? [{ href: weekIndexPath(league, season), label: `Every ${weekNoun(league).toLowerCase()} of ${label}` }] : []),
             ],
           },
-          { title: player.name, links: [{ href: basePath, label: `${player.name} career`, sub: "Every season on record, splits, best games and milestones", image: player.headshot_url, imageName: player.name }] },
+          { title: player.name, links: [{ href: basePath, label: careerWording(league, staged?.split ?? true).allSeasonsLabel(player.name), sub: "Every season on record, splits, best games and milestones", image: player.headshot_url, imageName: player.name }] },
         ]}
       />
 

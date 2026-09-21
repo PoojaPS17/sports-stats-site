@@ -3,7 +3,7 @@ import { TeamLogo } from "./TeamLogo";
 import { ExportFooter } from "./ExportFooter";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
-import { nbaCardNote } from "@/lib/playerCopy";
+import { careerWording, nbaCardNote } from "@/lib/playerCopy";
 
 // The downloadable version of PlayerHeader + PlayerCareerStrip: same facts (name,
 // team, headline numbers), redrawn on a fixed-width light card so nothing truncates
@@ -17,7 +17,7 @@ export function PlayerExportCard({
   meta,
   stats,
   boxOnlyShort,
-  context = "Career stats",
+  context = careerWording(league, true).cardContext,
 }: {
   league: League;
   name: string;
@@ -29,7 +29,7 @@ export function PlayerExportCard({
   stats: { label: string; value: string; noBoxScore?: boolean }[];
   /** The profile's `boxOnlyShort`: whether every † season shows ESPN's figures, which the card's note says. */
   boxOnlyShort: number;
-  /** What the numbers cover, shown in the footer ("Career stats", "2025-26 stats"). */
+  /** What the numbers cover, shown in the footer ("NBA stats since 2014-15", "2025-26 stats"). */
   context?: string;
 }) {
   return (

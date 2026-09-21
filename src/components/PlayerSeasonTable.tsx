@@ -4,7 +4,7 @@ import { joinTeams, teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
 import { formatStat, gamesHeader, noBoxScoreGames, type PlayerProfile, type SeasonLine } from "@/lib/playerProfile";
-import { nbaGamesStartedTitle, noBoxScoreGamesTitle } from "@/lib/playerCopy";
+import { careerWording, nbaGamesStartedTitle, noBoxScoreGamesTitle } from "@/lib/playerCopy";
 import { careerNoBoxScoreTitle, recordText } from "./PlayerStatsShared";
 
 const num = "px-2 py-2 text-right tabular-nums";
@@ -14,14 +14,14 @@ export function PlayerSeasonTable({
   profile,
   basePath,
   activeSeason,
-  careerLabel = "Career on record",
+  careerLabel = careerWording(league, profile.sport !== "soccer").seasonTotal,
   baseSeason,
 }: {
   league: League;
   profile: PlayerProfile;
   basePath: string;
   activeSeason?: number | null;
-  /** The label of the totals row: "Career playoffs" and "Career play-in" for the other stages' tables. */
+  /** The label of the totals row: "Playoffs since 2014-15" and "Play-in since 2014-15" for the other stages' tables. */
   careerLabel?: string;
   /** The season whose link is the player page itself (the latest). Defaults to this table's first
    * row; the playoffs and play-in tables pass the regular season's, since their first row can be an older year. */

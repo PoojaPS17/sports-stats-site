@@ -1,4 +1,5 @@
 import { teamDisplayName } from "@/lib/teamName";
+import { formatLeaderValue } from "@/lib/leaders";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportTitle, ExportGroup, ExportList } from "./ExportShell";
 import { formatSeasonLabel, type League, type LeaderRow } from "@/lib/queries";
@@ -15,10 +16,11 @@ export function LeadersExportCard({ league, season, title, note, boards }: { lea
             <ExportList
               rows={b.rows.map((r) => ({
                 key: r.player_espn_id,
+                rank: r.rank,
                 lead: <TeamLogo name={r.name} logoUrl={r.headshot_url} size={28} />,
                 title: r.name,
                 sub: r.team_name ? teamDisplayName(r.team_name) : null,
-                value: r.value,
+                value: formatLeaderValue(r.value, b.unit),
                 unit: b.unit,
               }))}
             />

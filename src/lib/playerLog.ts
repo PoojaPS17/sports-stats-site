@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { espnSeasonTotals, storedRowHasStats, type EspnSeasonTotals } from "./espnSeason";
+import { EspnSeasons, espnSeasonTotals, POSTSEASON_PREFIX, storedRowHasStats } from "./espnSeason";
 import type { League } from "./leagues";
 import { ReportedGames, type PlayerLogRow } from "./playerProfile";
 
@@ -66,18 +66,22 @@ export async function fetchReportedGames(db: Pick<Pool, "query">, league: League
 
 /** ESPN's whole-season NBA line per season (season year to its totals), read from the row the loader stores in
  * player_season_stats.categories. A season whose stored row cannot be read as a full line (`espnSeasonTotals`
- * gives null) is left out. The profile uses it where the game rows are short of ESPN's games. Other leagues
- * get an empty map without a query. */
-export async function fetchEspnSeasons(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<Map<number, EspnSeasonTotals>> {
-  const out = new Map<number, EspnSeasonTotals>();
-  if (league !== "nba") return out;
+ * gives null) is left out. The profile uses it where the game rows are short of ESPN's games. The result is the
+ * regular-season map and also carries ESPN's postseason line per season (`postseason`, from the `postseason_`
+ * keys), which feeds the playoffs table. Other leagues get an empty result without a query. */
+export async function fetchEspnSeasons(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<EspnSeasons> {
+  if (league !== "nba") return new EspnSeasons();
   const { rows } = await db.query<{ season: number; categories: unknown }>(
     `select season, categories from player_season_stats where league = $1 and player_espn_id = $2`,
     [league, playerEspnId]
   );
+  const regular: [number, NonNullable<ReturnType<typeof espnSeasonTotals>>][] = [];
+  const postseason: typeof regular = [];
   for (const r of rows) {
     const totals = espnSeasonTotals(r.categories);
-    if (totals) out.set(r.season, totals);
+    if (totals) regular.push([r.season, totals]);
+    const playoffs = espnSeasonTotals(r.categories, POSTSEASON_PREFIX);
+    if (playoffs) postseason.push([r.season, playoffs]);
   }
-  return out;
+  return new EspnSeasons(regular, postseason);
 }

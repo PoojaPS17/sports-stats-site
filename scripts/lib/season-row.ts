@@ -1,5 +1,6 @@
 // Which of ESPN's per-season rows the season-stats loader stores. Pure: no database import, so the
 // tests and the audit can use it without a connection (season-stats.ts opens the pool on import).
+import { POSTSEASON_PREFIX } from "../../src/lib/espnSeason";
 import { HISTORY_START, type League } from "./espn";
 
 /** One row of a category in ESPN's athlete /stats payload. */
@@ -53,6 +54,37 @@ export function seasonRow(category: SeasonCategory, seasonYear: number, leagueSl
   const row = (leagueSlug ? undefined : rows.find(isTotalsRow)) ?? rows[0];
   if (!row) return null;
   return { labels: category.labels ?? [], values: row.stats ?? [] };
+}
+
+/** The categories of a `/stats?seasontype=3` response that are the player's POSTSEASON, or an empty list when he has none.
+ *
+ * Two answers look like "no postseason" and must not be confused with a failure or with data:
+ * - ESPN answers a player with no postseason career with his REGULAR season and reports `seasontype` value 2 in its filters
+ *   (measured on Bub Carrington, no playoffs: value 2, the regular rows). Storing those rows as postseason lines would show a
+ *   whole regular season as the playoffs line of a player whose first playoff games are in progress, so only value 3 counts.
+ * - A season with no playoff games has the categories with empty `statistics`; `postseasonRows` then adds no keys.
+ * A body with no `categories` array (`getJson` returns any parseable body on a non-2xx status: `{"code":500,...}`) or with no
+ * seasontype filter is not an answer at all: this throws, and the loader leaves the stored row alone. */
+export function postseasonCategoriesOf(data: unknown): (SeasonCategory & { name?: string })[] {
+  const body = data as { categories?: unknown; filters?: unknown } | null;
+  if (!body || !Array.isArray(body.categories)) throw new Error("ESPN postseason stats response has no categories array");
+  const filter = Array.isArray(body.filters) ? (body.filters as { name?: string; value?: unknown }[]).find((f) => f?.name === "seasontype") : undefined;
+  if (filter === undefined) throw new Error("ESPN postseason stats response has no seasontype filter");
+  return String(filter.value) === "3" ? (body.categories as (SeasonCategory & { name?: string })[]) : [];
+}
+
+/** The categories of ESPN's postseason payload (`/stats?seasontype=3`) that the site reads, stored beside the regular-season
+ * ones in the same `categories` JSON under prefixed keys: `postseason_averages` and `postseason_totals`. A category with
+ * no row for the season adds nothing (a season the player had no playoff games in has no postseason keys). */
+const POSTSEASON_CATEGORIES = new Set(["averages", "totals"]);
+export function postseasonRows(categories: (SeasonCategory & { name?: string })[], seasonYear: number): Record<string, { labels: string[]; values: string[] }> {
+  const out: Record<string, { labels: string[]; values: string[] }> = {};
+  for (const category of categories) {
+    if (!category.name || !POSTSEASON_CATEGORIES.has(category.name)) continue;
+    const row = seasonRow(category, seasonYear);
+    if (row) out[`${POSTSEASON_PREFIX}${category.name}`] = row;
+  }
+  return out;
 }
 
 /**

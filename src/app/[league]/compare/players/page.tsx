@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
 import { getPlayerComparison, getPlayerLabel, type PlayerCompareSide } from "@/lib/compare";
 import { pageMeta } from "@/lib/metadata";
+import { careerWording } from "@/lib/playerCopy";
 import { AdSlot } from "@/components/AdSlot";
 import { PageHeader } from "@/components/PageHeader";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -86,7 +87,7 @@ export default async function ComparePlayersPage({
       ? cmp.a.season === cmp.b.season
         ? `${formatSeasonLabel(league, cmp.a.season)} season totals`
         : `Latest season for each: ${formatSeasonLabel(league, cmp.a.season)} vs ${formatSeasonLabel(league, cmp.b.season)}`
-      : "Career figures on record"
+      : careerWording(league, true).compareNote
     : "Pick any two players to see their stats side by side";
 
   return (

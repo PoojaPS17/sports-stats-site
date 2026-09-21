@@ -6,11 +6,12 @@ import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 import { presentDetails, type GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
+import { getLeaderBoard } from "./leaderQueries";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { seriesHasPlaySql } from "./cricketSeriesKey";
 import { sortStandings } from "./standingsOrder";
-import type { EspnSeasonTotals } from "./espnSeason";
+import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 
 export type { League } from "./leagues";
@@ -466,6 +467,8 @@ export interface LeaderRow {
   team_name: string | null;
   team_slug: string | null;
   value: number;
+  /** Competition rank (1, 2, 2, 4): equal figures share a rank. Absent on cricket boards, which number by position. */
+  rank?: number;
 }
 
 export interface LeaderCategory {
@@ -524,44 +527,19 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
 
 const LEADER_COLUMNS = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) => cats.map((c) => c.column)));
 
-// Every column here is a season total (or season average, for NBA) sourced from
-// player_season_stats, which now holds many years of history per player — so this
-// must pin to the most recent season, or it'd silently pick whichever of a player's
-// seasons on file happened to be their best, mixed arbitrarily across different players.
-// `season` pins a specific year (the off-season recap wants the season just played,
-// not the new one whose zero rows may already exist); default is the latest on file.
+// A board's season and figures: see leaderQueries.ts for where each (league, season) reads from (box scores at read time
+// for NBA, NFL and the domestic soccer leagues, so a board always agrees with the player pages; ESPN's stored rows for a
+// season with no box scores, and for UCL). `season` pins a specific year (the off-season recap wants the season just
+// played, not the new one whose zero rows may already exist); default is the latest with figures. Exactly `limit` rows;
+// the Leaders page asks `getLeaderBoard` for the tie-inclusive list.
 export async function getLeaders(league: League, column: string, limit = 10, season?: number): Promise<LeaderRow[]> {
   if (!LEADER_COLUMNS.has(column)) throw new Error(`Unknown leader column: ${column}`);
-  // A per-game average is only a leader-board figure once the player has played a
-  // qualifying share of the season (the NBA's own rule is 70% of games, 58 of 82):
-  // without it a ten-game injury season outranks a full one. The threshold follows
-  // the most games anyone has played so far, so it tracks the season as it goes.
-  const qualifier = column.endsWith("_avg")
-    ? `and pss.games_played >= ceil(0.7 * (select max(games_played) from player_season_stats q where q.league = pss.league and q.season = pss.season))`
-    : "";
-  const { rows } = await pool.query(
-    `select pss.player_espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
-            t.name as team_name, t.slug as team_slug, pss.${column} as value
-     from player_season_stats pss
-     join players p on p.league = pss.league and p.espn_id = pss.player_espn_id
-     left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
-     where pss.league = $1 and pss.${column} is not null and ${notPseudoAthleteSql()}
-       and pss.season = coalesce($3, (select max(season) from player_season_stats where league = $1))
-       ${qualifier}
-     order by pss.${column} desc
-     limit $2`,
-    [league, limit, season ?? null]
-  );
-  return rows;
+  return (await getLeaderBoard(league, column, { limit, season })).rows;
 }
 
-// The season the Leaders page's boards are for — same "most recent season on file"
-// pin `getLeaders` uses, surfaced so the page can label itself unambiguously instead
-// of leaving the reader to guess what time window these totals cover.
-export async function getLeadersSeason(league: League): Promise<number | null> {
-  const { rows } = await pool.query(`select max(season) as season from player_season_stats where league = $1`, [league]);
-  return rows[0]?.season ?? null;
-}
+// `getLeadersSeason` (the season the Leaders page's boards are for, surfaced so the page can label itself) and the
+// tie-inclusive `getLeaderBoard` live with the board queries.
+export { getLeaderBoard, getLeadersSeason, type LeaderBoard } from "./leaderQueries";
 
 // Cricket has no season-totals feed; its boards are summed from the per-match
 // batting and bowling figures for the most recent season on record.
@@ -679,7 +657,7 @@ export async function getPlayerReportedGames(league: League, playerEspnId: strin
 
 // ESPN's whole-season line per season for an NBA player (empty for every other league), from the stored
 // season row: what a season's figures show where the game rows are short of ESPN's games.
-export async function getPlayerEspnSeasons(league: League, playerEspnId: string): Promise<Map<number, EspnSeasonTotals>> {
+export async function getPlayerEspnSeasons(league: League, playerEspnId: string): Promise<EspnSeasons> {
   return fetchEspnSeasons(pool, league, playerEspnId);
 }
 
@@ -1082,26 +1060,62 @@ export interface SearchResult {
   image: string | null;
 }
 
+// A player has "games on record" when the site holds a box score row for one of his completed games. Tennis players and F1
+// drivers have no box scores here (their results live in other tables), so they are not held back by the rule.
+// `player_game_stats` has no index on the player, so this is read ONCE, as a distinct (league, player) set joined to the matched
+// players, never as a per-row EXISTS: that scanned the table once per matched player (seconds for a one-letter query).
+const PLAYERS_WITH_GAMES_SQL = `select distinct s.league, s.player_espn_id from player_game_stats s
+                                 join games g on g.league = s.league and g.espn_id = s.game_espn_id
+                                 where g.completed`;
+
+// Results with games on record come first, then by name: a roster-only namesake (the Browns' Justin Jefferson holds the bare slug
+// because he was inserted first; the Vikings receiver has an id suffix) must not outrank the player people are looking for.
+// Teams and series have no such rule and count as having games. The limit applies after the ordering.
 export async function search(query: string, limit = 20): Promise<SearchResult[]> {
   const like = `%${query}%`;
   const { rows } = await pool.query(
-    `select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image
-     from teams where name ilike $1
-     union all
-     select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image
-     from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-     where p.name ilike $1 and ${notPseudoAthleteSql()}
-     union all
-     -- Every cricket series and tournament in the database, current or past (Ranji Trophy, PSL, a bilateral tour).
-     select 'series' as type, 'cricket' as league, s.name, s.espn_id as slug,
-            nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
-                                                 when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
-                                    to_char(s.start_date, 'YYYY')), '') as subtitle,
-            null as image
-     from cricket_series s
-     where (s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1) and ${seriesHasPlaySql("s")}
+    `select type, league, name, slug, subtitle, image from (
+       select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games
+       from teams where name ilike $1
+       union all
+       select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image,
+              (p.league in ('atp', 'wta', 'f1') or h.player_espn_id is not null) as has_games
+       from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+       left join (${PLAYERS_WITH_GAMES_SQL}) h on h.league = p.league and h.player_espn_id = p.espn_id
+       where p.name ilike $1 and ${notPseudoAthleteSql()}
+       union all
+       -- Every cricket series and tournament in the database that has play on record, current or past (Ranji Trophy,
+       -- PSL, a bilateral tour). An emptied series row (one an edition split has taken every match from) is not a
+       -- result: seriesHasPlaySql is the same gate its own page and the series listings use.
+       select 'series' as type, 'cricket' as league, s.name, s.espn_id as slug,
+              nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
+                                                   when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
+                                      to_char(s.start_date, 'YYYY')), '') as subtitle,
+              null as image, true as has_games
+       from cricket_series s
+       where (s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1) and ${seriesHasPlaySql("s")}
+     ) r
+     order by has_games desc, name, type, league, slug
      limit $2`,
     [like, limit]
   );
   return rows;
+}
+
+/** A player with games on record who has the same name as one who has none (two Justin Jeffersons: the Browns' linebacker holds
+ * the bare slug and has no games, the Vikings' receiver has them under an id-suffixed one), for the page of the one without to
+ * point to. The namesake with the most games; null when there is none. */
+export async function getSameNamePlayerWithGames(league: League, name: string, excludeEspnId: string): Promise<{ slug: string; name: string; position: string | null; team_name: string | null } | null> {
+  const { rows } = await pool.query(
+    `select p.slug, p.name, p.position, t.name as team_name, h.games
+     from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+     join (select s.player_espn_id, count(*) as games from player_game_stats s
+           join games g on g.league = s.league and g.espn_id = s.game_espn_id
+           where s.league = $1 and g.completed group by s.player_espn_id) h on h.player_espn_id = p.espn_id
+     where p.league = $1 and lower(p.name) = lower($2) and p.espn_id <> $3 and ${notPseudoAthleteSql()}
+     order by h.games desc, p.slug
+     limit 1`,
+    [league, name, excludeEspnId]
+  );
+  return rows[0] ? { slug: rows[0].slug, name: rows[0].name, position: rows[0].position, team_name: rows[0].team_name } : null;
 }

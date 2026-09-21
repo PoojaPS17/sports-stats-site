@@ -57,10 +57,10 @@ test("unlistedGamesNote agrees with the count", () => {
   assert.equal(unlistedGamesNote(2), "2 games without a box score are not listed.");
 });
 
-test("the playoffs and play-in note counts the games from the rosters and does not mention ESPN's own figure", () => {
+test("the playoffs and play-in note says ESPN's postseason row is used where stored, else dashes, and never mentions the regular-season figure", () => {
   assert.equal(
     NBA_NO_BOX_SCORE_STAGE_NOTE,
-    "ESPN's box scores have no stat line for some of this player's games. Those games are counted from the game rosters toward GP but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons."
+    "ESPN's box scores have no stat line for some of this player's games. Where ESPN's own postseason row is stored for a season, that season shows ESPN's figures; otherwise its games are counted from the game rosters toward GP and its averages are dashes, not an average over the games that have a box score. The game log and best games count only games with a box score, and W-L is left blank for those seasons."
   );
   assert.equal(NBA_NO_BOX_SCORE_STAGE_NOTE.includes("ESPN's own figure"), false);
 });
@@ -121,4 +121,27 @@ test("the season page's description: every game on record, or a neutral lead whe
 test("the GS header tooltip: ESPN's count for an ESPN season, else box-score games only", () => {
   assert.equal(nbaGamesStartedTitle(true), "Games started. For a season shown from ESPN's season figures this is ESPN's count; for other seasons it counts only games with a box score.");
   assert.equal(nbaGamesStartedTitle(false), "Games started, counted only in games with a box score.");
+});
+
+test("the source-limit notes are one short line each", async () => {
+  const { NFL_PLAYER_DATA_NOTE, NFL_ROSTER_SOURCE_NOTE, ROSTER_SOURCE_NOTE, SOCCER_CARDS_NOTE, rosterSourceNote } = await import("../src/lib/playerCopy");
+  assert.equal(NFL_PLAYER_DATA_NOTE, "Figures are summed from ESPN box scores; ESPN occasionally leaves a stat unrecorded or uncorrected (for example a tackle credited to the wrong game).");
+  assert.equal(SOCCER_CARDS_NOTE, "Cards as reported by ESPN; occasional omissions.");
+  // The NBA's wording is the brief's; "two-way" is an NBA term and the lag is not measured for the NFL, so its note is generic.
+  assert.equal(ROSTER_SOURCE_NOTE, "Roster as listed by ESPN; camp and two-way signings appear when ESPN adds them.");
+  assert.equal(NFL_ROSTER_SOURCE_NOTE, "Roster as listed by ESPN; recent signings appear when ESPN adds them.");
+  assert.equal(rosterSourceNote("nba"), ROSTER_SOURCE_NOTE);
+  assert.equal(rosterSourceNote("nfl"), NFL_ROSTER_SOURCE_NOTE);
+  assert.equal(NFL_ROSTER_SOURCE_NOTE.includes("two-way"), false);
+  // Soccer has no camp or two-way signings, and cricket has no roster feed.
+  assert.equal(rosterSourceNote("epl"), undefined);
+  assert.equal(rosterSourceNote("ipl"), undefined);
+});
+
+test("the pages use the source-limit notes where the figures appear", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = (p: string) => readFileSync(p, "utf8");
+  assert.match(read("src/app/[league]/teams/[slug]/page.tsx"), /description=\{rosterSourceNote\(league\)\}/);
+  assert.match(read("src/app/[league]/games/[id]/page.tsx"), /description=\{isSoccerLeague\(league\) \? SOCCER_CARDS_NOTE : undefined\}/);
+  assert.match(read("src/app/[league]/players/[slug]/[season]/page.tsx"), /NFL_PLAYER_DATA_NOTE/);
 });

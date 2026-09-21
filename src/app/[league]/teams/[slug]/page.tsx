@@ -33,6 +33,7 @@ import { CalendarButton } from "@/components/CalendarButton";
 import { Kickoff } from "@/components/Kickoff";
 import { JsonLd } from "@/components/JsonLd";
 import { teamSchema } from "@/lib/structuredData";
+import { rosterSourceNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -192,6 +193,7 @@ export default async function TeamPage({
 
       <section>
         <SectionHeader
+          description={rosterSourceNote(league)}
           tools={
             roster.length > 0 && (
               <ImageActions

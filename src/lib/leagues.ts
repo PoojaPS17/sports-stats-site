@@ -140,6 +140,32 @@ export function isQualifyingRound(round: string | null | undefined): boolean {
 // league phase in 2024-25. Tables, zones and projections differ between the formats.
 export const UCL_LEAGUE_PHASE_FROM = 2024;
 
+// The earliest season to load per league. Most competitions we load further back
+// than the default `currentYear - YEARS_BACK` window: IPL from 2008, the Big Bash
+// from 2011-12, the ODI World Cup from the first edition in 1975 and the T20 World
+// Cup from 2007 (years without an edition simply return no matches). The major
+// team leagues are pinned to 2015 rather than left on the relative window, which
+// would otherwise silently drop the oldest season every time the current year
+// advances — 2015-16 (Leicester City's title) fell out of standings backfills this
+// way once, though `games` already covers it independently of this constant.
+export const HISTORY_START: Partial<Record<League, number>> = {
+  ipl: 2008,
+  bbl: 2011,
+  cwc: 1975,
+  t20wc: 2007,
+  wpl: 2023,
+  wbbl: 2015,
+  wcwc: 1973,
+  wt20wc: 2009,
+  epl: 2015,
+  laliga: 2015,
+  bundesliga: 2015,
+  seriea: 2015,
+  ucl: 2015,
+  nba: 2015,
+  nfl: 2015,
+};
+
 // ESPN labels a season by its *ending* year for NBA ("2023" = the 2022-23 season) but
 // by its *starting* year for NFL/EPL/La Liga/IPL ("2024" = the 2024 NFL season /
 // 2024-25 EPL season / 2024 IPL season). Render the conventional human label for each.
