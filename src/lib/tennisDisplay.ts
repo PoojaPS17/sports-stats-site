@@ -7,7 +7,18 @@
 import { calledOffLabel, isCalledOff } from "./gameStatus";
 import type { TennisMatch, TennisSet } from "./tennis";
 
-type Fields = Pick<TennisMatch, "completed" | "status_state" | "status_detail" | "winner_side">;
+// The sides are optional so a caller that only has the status fields (and older tests) still type-checks; a missing
+// side reads as no score.
+/** Prefix of the start time of a match that follows another on its court: ESPN's time for it is an estimate. */
+export const ESTIMATED = "Est.";
+/** What that prefix means, for a tooltip. */
+export const ESTIMATED_TITLE = "Followed by the previous match on this court; the start time is an estimate";
+
+type Fields = Pick<TennisMatch, "completed" | "status_state" | "status_detail" | "winner_side"> & {
+  side1?: { sets?: unknown[] };
+  side2?: { sets?: unknown[] };
+  after_court_match?: boolean;
+};
 
 export type TennisMatchStatus = { kind: "live" | "result" | "called-off" | "upcoming"; label: string | null };
 
@@ -15,19 +26,25 @@ export type TennisMatchStatus = { kind: "live" | "result" | "called-off" | "upco
  * - in play: live, with ESPN's own detail ("2nd Set", "Suspended" for a rain stoppage), never called off;
  * - a winner, or a finished match: a result, "Final" or ESPN's text ("Retired", "Walkover");
  * - not in play, no winner, and a called-off status: called off, with the reason;
+ * - still "pre" but with a score on the board: play started and stopped and ESPN never moved it out of "pre"
+ *   (the SP Open doubles final stood at 4-3 with a start time in the past): suspended, never a start time;
+ * - a start time ESPN has not set ("M/d - 'TBD'", with a placeholder date of midnight Eastern): "Time TBD";
  * - anything else: upcoming.
  */
 export function tennisMatchStatus(m: Fields): TennisMatchStatus {
   if (m.status_state === "in") return { kind: "live", label: m.status_detail ?? "Live" };
   if (m.winner_side == null && isCalledOff(m.status_detail)) return { kind: "called-off", label: calledOffLabel(m.status_detail) };
   if (m.completed || m.winner_side != null) return { kind: "result", label: m.status_detail && m.status_detail !== "Final" ? m.status_detail : "Final" };
+  if (m.status_state === "pre" && ((m.side1?.sets?.length ?? 0) > 0 || (m.side2?.sets?.length ?? 0) > 0)) return { kind: "called-off", label: "Suspended" };
+  if (m.status_detail && /\bTBD\b/i.test(m.status_detail)) return { kind: "upcoming", label: "Time TBD" };
   return { kind: "upcoming", label: null };
 }
 
 /** The caption above a match on a share image: state (start time in UTC for an upcoming match), round and court. */
 export function tennisMatchCaption(m: Fields & Pick<TennisMatch, "date" | "round" | "court">): string {
   const s = tennisMatchStatus(m);
-  const state = s.label ?? `${new Date(m.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" })} UTC`;
+  const clock = `${new Date(m.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" })} UTC`;
+  const state = s.label ?? (m.after_court_match ? `${ESTIMATED} ${clock}` : clock);
   // A finished final would read "Final · Final": say it once.
   return [state, m.round === state ? null : m.round, m.court].filter(Boolean).join(" · ");
 }
@@ -46,4 +63,24 @@ export function setCell(own: TennisSet | undefined, other: TennisSet | undefined
   const decided = own.winner || other?.winner === true;
   const shows = own.tiebreak != null && (!decided || !own.winner);
   return { text: String(own.games), sup: shows ? String(own.tiebreak) : null };
+}
+
+/**
+ * The ids of the matches that follow another on the same tournament, court and day, given every match of that day.
+ * ESPN gives the first match on a court its real start and the rest an estimate that moves with the play before it.
+ * The SQL twin is `after_court_match` in tennis.ts.
+ */
+export function idsFollowingOnCourt(rows: { id: string; tournament: string | null; court: string | null; day: string | null; date: string }[]): Set<string> {
+  const key = (r: (typeof rows)[number]) => (r.tournament && r.court && r.day ? `${r.tournament}|${r.court}|${r.day}` : null);
+  const first = new Map<string, number>();
+  for (const r of rows) {
+    const k = key(r);
+    if (k) first.set(k, Math.min(first.get(k) ?? Infinity, Date.parse(r.date)));
+  }
+  const out = new Set<string>();
+  for (const r of rows) {
+    const k = key(r);
+    if (k && Date.parse(r.date) > (first.get(k) as number)) out.add(r.id);
+  }
+  return out;
 }

@@ -85,6 +85,8 @@ export interface TennisMatch {
   status_state: string | null;
   status_detail: string | null;
   winner_side: 1 | 2 | null;
+  /** Another match on the same court that day starts earlier, so this start time is an estimate (see tennisDisplay). */
+  after_court_match?: boolean;
   side1: TennisSide;
   side2: TennisSide;
 }
@@ -111,6 +113,8 @@ const MATCH_SELECT = `
          m.completed, m.status_state, m.status_detail,
          case when m.winner_espn_id is null then null
               when m.winner_espn_id = m.player1_espn_id then 1 else 2 end as winner_side,
+         exists (select 1 from tennis_matches o
+                 where o.tournament_espn_id = m.tournament_espn_id and o.court = m.court and o.day = m.day and o.date < m.date) as after_court_match,
          ${SIDE_SQL("side1", "player1_espn_id")},
          ${SIDE_SQL("side2", "player2_espn_id")}
   from tennis_matches m

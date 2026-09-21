@@ -44,6 +44,7 @@ function SideRow({ side, other, won, decided, setCount }: { side: TennisSide; ot
 
 export function MatchBox({ m, caption }: { m: TennisMatch; caption?: string | null }) {
   const decided = m.winner_side != null;
+  const status = tennisMatchStatus(m);
   const setCount = Math.max(m.side1.sets?.length ?? 0, m.side2.sets?.length ?? 0);
   return (
     <div style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 10, padding: "8px 12px" }}>
@@ -51,6 +52,8 @@ export function MatchBox({ m, caption }: { m: TennisMatch; caption?: string | nu
       <SideRow side={m.side1} other={m.side2} won={m.winner_side === 1} decided={decided} setCount={setCount} />
       <SideRow side={m.side2} other={m.side1} won={m.winner_side === 2} decided={decided} setCount={setCount} />
       {!decided && tennisMatchStatus(m).kind === "result" && m.status_detail && m.status_detail !== "Final" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{m.status_detail}</div>}
+      {/* a called-off or suspended match shows why; a tile with a caption already says it there */}
+      {!caption && !decided && status.kind === "called-off" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{status.label}</div>}
     </div>
   );
 }

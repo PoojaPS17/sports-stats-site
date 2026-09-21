@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/LocalTime";
-import { setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
+import { ESTIMATED, ESTIMATED_TITLE, setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
 import { displayCountry } from "@/lib/tennisCountry";
-import { formatTournamentRange, tournamentInPlay } from "@/lib/tennisDates";
+import { formatTournamentRange, TENNIS_ZONE, tournamentInPlay } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type TennisMatch, type TennisSide, type TennisTournament } from "@/lib/tennis";
 
 /* ------------------------------------------------------------------------ */
@@ -111,9 +111,12 @@ export function TennisMatchLine({ match, showTournament = false }: { match: Tenn
             <span className="pill pill-live">{status.label}</span>
           ) : status.kind === "result" || status.kind === "called-off" ? (
             <span className="pill pill-final">{status.label}</span>
+          ) : status.label ? (
+            <span className="pill pill-upcoming">{status.label}</span>
           ) : (
-            <span className="pill pill-upcoming">
-              <LocalTime iso={match.date} format="time" />
+            <span className="pill pill-upcoming" title={match.after_court_match ? ESTIMATED_TITLE : undefined}>
+              {match.after_court_match && `${ESTIMATED} `}
+              <LocalTime iso={match.date} format="time" showZone serverTimeZone={TENNIS_ZONE} />
             </span>
           )}
           {showTournament && (
