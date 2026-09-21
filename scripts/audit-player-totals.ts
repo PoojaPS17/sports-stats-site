@@ -23,7 +23,9 @@
 //           ESPN's side). Never runs unless asked; honours --limit.
 // Exits 1 when any season is a MISMATCH (or a live read failed; with --gamelog, a game log that is a MISMATCH
 // or could not be read, or every game log checked being empty), 2 on bad arguments. Listed but not
-// failing: coverage gaps (ESPN has the season, no regular-season box scores), "no ESPN row" (stored
+// failing: coverage gaps (ESPN has the season, the page lists no regular season for it: no box scores and no
+// stored games figure, or a stored row with stats and no regular-season rows, whose stats are then likely a postseason
+// game's in ESPN's regular-season row (NFL only) when the player has playoff rows that season; each such gap says which), "no ESPN row" (stored
 // mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
 // gives no games played), NFL "games short (no stat line)" (the page shows the logged count, with a
 // `*`, because no ESPN games figure is stored for the season; site games below ESPN's, every figure
@@ -42,12 +44,18 @@
 // ESPN side is the loader's figure, not the first-stint category GP: player_season_stats.games_played
 // (stored mode) or seasonGamesPlayed on the payload (live mode), the categories' GP only as a fallback.
 // A page showing a stored ESPN figure that is below ESPN's is a MISMATCH (stale or wrong), as is any
-// page figure above ESPN's. NBA: the site side is built the same way (ESPN's stored games played for a
+// page figure above ESPN's. A season with a stored figure, no box-score row and a stored ESPN row with no stat but
+// games (a player with no stat line in ESPN's box scores) is on the page with that figure and a dash for every
+// stat, and is compared like any other season (the dash reads as 0): ESPN's own non-zero stat for it is a MISMATCH,
+// not a coverage gap. In stored mode the NFL players read include those with a stored figure and no box-score row. NBA: the site side is built the same way (ESPN's stored games played for a
 // season with games that have no box score, else the games listed); see compareSeason for the bounds.
 //
 // `select` only. The database is imported after the arguments are validated, so a usage error never
 // opens a connection. The live read uses the loader's own row selection (season-row.ts, pure).
 import {
+  auditPlayersSql,
+  classifyGap,
+  hasPostseasonGap,
   compareSeason,
   espnFigures,
   gamesPlayedFromPayload,
@@ -87,6 +95,8 @@ interface Finding {
    * games of them with a stat line. */
   espnGames?: number;
   recorded?: number;
+  /** A coverage gap whose ESPN row has stats: why (see `classifyGap`). */
+  gapNote?: string | null;
 }
 
 /** A season shown from ESPN's own row whose game log is not the row: both sides' games and points. */
@@ -158,18 +168,12 @@ async function main() {
       const sport = playerSport(league);
       if (!sport) throw new Error(`no player profile for ${league}`);
       const minYear = seasonWindowStart(league, new Date().getUTCFullYear());
-      const { rows: everyone } = await pool.query<{ id: string; name: string }>(
-        `select pgs.player_espn_id as id, coalesce(max(p.name), pgs.player_espn_id) as name
-         from player_game_stats pgs
-         left join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
-         where pgs.league = $1
-         group by pgs.player_espn_id
-         order by pgs.player_espn_id
-         limit $2::int`,
-        [league, args.limit]
-      );
+      // NFL, stored mode: also the players with a stored games figure and no box-score row at all (the page lists their seasons).
+      const withStored = league === "nfl" && !args.live;
+      const { rows: everyone } = await pool.query<{ id: string; name: string }>(auditPlayersSql(withStored), [league, args.limit]);
       const players = args.live ? sample(everyone, args.live) : everyone;
-      console.log(`[audit-player-totals] ${league}: ${players.length} players${args.live ? ` sampled from ${everyone.length} with box scores` : " with box scores"}`);
+      const population = withStored ? "with box scores or a stored games figure" : "with box scores";
+      console.log(`[audit-player-totals] ${league}: ${players.length} players${args.live ? ` sampled from ${everyone.length} ${population}` : ` ${population}`}`);
 
       for (const player of players) {
         try {
@@ -224,7 +228,8 @@ async function main() {
               if (result.differences[0]?.field !== "ESPN row") compared += 1;
               mismatches.push(finding);
             } else if (result.verdict === "no box scores") {
-              gaps.push(finding);
+              const playoffRows = log.filter((r) => r.stage === "playoffs" && r.season_year === season).length;
+              gaps.push({ ...finding, gapNote: classifyGap(league, stored, playoffRows) });
             } else if (result.verdict === "no ESPN row") {
               noEspn.push(finding);
             } else if (result.verdict === "games not verified") {
@@ -289,7 +294,7 @@ async function main() {
   console.log(`  compared:                   ${compared} player-seasons (site and ESPN both have the season)`);
   console.log(`  matched:                    ${matched}`);
   console.log(`  mismatched:                 ${mismatches.length}   (fails the run)`);
-  console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the database has no regular-season box scores; never a match)`);
+  console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the page lists no regular season for it: no box scores and no stored games figure, or a stored row with stats and no regular-season rows; never a match)`);
   console.log(`  no ESPN row:                ${noEspn.length}   (the site has regular-season games, ESPN has no row; ${args.live ? "outside the loader's window only, inside it is a mismatch" : "stored rows exist only for current-roster players"})`);
   console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  games short (no stat line): ${short.length}   (NFL: the page shows the logged count because no ESPN games figure is stored for the season; every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
@@ -319,7 +324,10 @@ async function main() {
     }
   }
 
-  section("coverage gaps (box scores not backfilled for that season yet?)", "players", gaps, () => 1, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}`);
+  section("coverage gaps (the page lists no regular season for it: no box scores, and no usable stored games figure)", "players", gaps, () => 1, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}${f.gapNote ? `  [${f.gapNote}]` : ""}`);
+  if (hasPostseasonGap(gaps.map((f) => f.gapNote))) {
+    console.log("  Note: a gap season whose ESPN row has stats while the player has playoff rows that season is likely ESPN's postseason stats sitting in its regular-season row (ESPN's regular-season game log lists no game for it; the figures are not checked against the playoff rows); the site shows those games in its Playoffs table, and a regular season built from that row would double-count them. NFL only; a gap without that mark is not explained by this. Not a failure.");
+  }
   section("no ESPN row", "site games", noEspn, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
   section("games not verified (ESPN gives no games played)", "site games", unverified, (f) => f.siteGames, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: ${f.siteGames} site games${note(f)}`);
   section("games short (no stat line)", "games short", short, gapOf, (f) => `${f.league} ${f.playerId} ${f.name} ${f.season}: site ${f.differences[0]?.site} / ESPN ${f.differences[0]?.espn} games, ${gapOf(f)} short${note(f)}`);

@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
-import { espnSeasonTotals, type EspnSeasonTotals } from "./espnSeason";
+import { espnSeasonTotals, storedRowHasStats, type EspnSeasonTotals } from "./espnSeason";
 import type { League } from "./leagues";
-import type { PlayerLogRow } from "./playerProfile";
+import { ReportedGames, type PlayerLogRow } from "./playerProfile";
 
 /** SQL condition, true for a row of `rowAlias` (a player_game_stats alias) whose NBA game has no player with a
  * stat line: no numeric MIN (a decimal counts, as `cell()` in playerProfile.ts reads it) and no PTS from 1 up.
@@ -47,15 +47,18 @@ export async function fetchPlayerLog(db: Pick<Pool, "query">, league: League, pl
 
 /** ESPN's games played per season (season year to games) for an NFL or NBA player: the regular-season figure the
  * loader stores in player_season_stats. NFL box scores list only players with a stat line, and some NBA games
- * have no box score at all, so the log undercounts games played. Other leagues get an empty map without a query. */
-export async function fetchReportedGames(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<Map<number, number>> {
-  if (league !== "nfl" && league !== "nba") return new Map();
-  const { rows } = await db.query<{ season: number; games_played: number }>(
-    `select season, games_played from player_season_stats
+ * have no box score at all, so the log undercounts games played. Other leagues get an empty map without a query.
+ * For the NFL the result also says which seasons' stored ESPN row has no stat but games (`statFree`: no non-zero value
+ * in any category outside GP and GS, and no yard total): only those may be listed with no box-score row. */
+export async function fetchReportedGames(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<ReportedGames> {
+  if (league !== "nfl" && league !== "nba") return new ReportedGames();
+  const { rows } = await db.query<{ season: number; games_played: number; categories: unknown; passing_yards: number | null; rushing_yards: number | null; receiving_yards: number | null }>(
+    `select season, games_played, categories, passing_yards, rushing_yards, receiving_yards from player_season_stats
      where league = $1 and player_espn_id = $2 and games_played is not null and games_played > 0`,
     [league, playerEspnId]
   );
-  return new Map(rows.map((r) => [r.season, r.games_played]));
+  const statFree = league === "nfl" ? rows.filter((r) => !storedRowHasStats(r.categories) && !r.passing_yards && !r.rushing_yards && !r.receiving_yards) : [];
+  return new ReportedGames(rows.map((r) => [r.season, r.games_played]), statFree.map((r) => r.season));
 }
 
 /** ESPN's whole-season NBA line per season (season year to its totals), read from the row the loader stores in

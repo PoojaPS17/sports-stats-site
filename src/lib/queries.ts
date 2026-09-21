@@ -7,7 +7,7 @@ import type { GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import type { EspnSeasonTotals } from "./espnSeason";
-import type { PlayerLogRow } from "./playerProfile";
+import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 
 export type { League } from "./leagues";
 export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, isFirstClassCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
@@ -645,9 +645,10 @@ export async function getPlayerLog(league: League, playerEspnId: string): Promis
   return fetchPlayerLog(pool, league, playerEspnId);
 }
 
-// ESPN's games played per season for an NFL player (empty for every other league): the log only
-// holds games in which the player had a stat line, so it undercounts games played.
-export async function getPlayerReportedGames(league: League, playerEspnId: string): Promise<Map<number, number>> {
+// ESPN's games played per season for an NFL or NBA player (empty for every other league): the log only
+// holds games in which the player had a stat line, so it undercounts games played. It also says which seasons
+// have a stored ESPN row with no stat but games.
+export async function getPlayerReportedGames(league: League, playerEspnId: string): Promise<ReportedGames> {
   return fetchReportedGames(pool, league, playerEspnId);
 }
 

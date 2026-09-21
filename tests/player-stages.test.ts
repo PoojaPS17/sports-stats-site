@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildProfile, buildStagedProfile, noBoxScoreGames, unlistedGameCount, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
+import { buildProfile, buildStagedProfile, noBoxScoreGames, ReportedGames, unlistedGameCount, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import { noBoxScoreGamesTitle } from "../src/lib/playerCopy";
 import type { GameStage } from "../src/lib/gameStage";
 import { careerStripStats, recordText } from "../src/components/PlayerStatsShared";
@@ -285,23 +285,29 @@ test("NFL: with every ESPN figure at or below the log, the career W-L is the log
   assert.deepEqual(p.record, { w: 4, d: 0, l: 1 });
 });
 
-test("NFL: only seasons with logged rows are listed, even when the map has more", () => {
-  const p = buildStagedProfile("nfl", NFL_TWO_SEASONS.slice(0, 2), new Map([[2025, 16], [2023, 17]])).regular;
-  assert.deepEqual(p.seasons.map((x) => x.season), [2025]);
-  assert.equal(p.games, 16);
+test("NFL: a season the map has a stat-free figure for but the log has no rows for is listed with ESPN's games (see nfl-zero-stat-seasons.test.ts)", () => {
+  const listed = buildStagedProfile("nfl", NFL_TWO_SEASONS.slice(0, 2), new ReportedGames([[2025, 16], [2023, 17]], [2023])).regular;
+  assert.deepEqual(listed.seasons.map((x) => [x.season, x.games, x.recorded]), [[2025, 16, 2], [2023, 17, 0]]);
+  assert.equal(listed.games, 33);
+  // Only when its stored ESPN row has no stat but games: with stats, or from a plain map, the season is not listed.
+  for (const map of [new ReportedGames([[2025, 16], [2023, 17]], []), new Map([[2025, 16], [2023, 17]])]) {
+    const p = buildStagedProfile("nfl", NFL_TWO_SEASONS.slice(0, 2), map).regular;
+    assert.deepEqual(p.seasons.map((x) => x.season), [2025]);
+    assert.equal(p.games, 16);
+  }
 });
 
-test("NFL: a profile built without a map, or with a map that has none of its seasons, is logged", () => {
+test("NFL: a profile built without a map is logged; a map with only a season of no rows leaves the logged seasons as they were", () => {
   const plain = buildStagedProfile("nfl", NFL_TWO_SEASONS).regular;
   assert.equal(plain.games, 5);
   assert.deepEqual(plain.record, { w: 4, d: 0, l: 1 });
   assert.equal(plain.gamesFromEspn, false);
   assert.deepEqual(plain.seasons.map((x) => x.gamesSource), ["logged", "logged"]);
 
-  const unmatched = buildStagedProfile("nfl", NFL_TWO_SEASONS, new Map([[2019, 17]])).regular;
-  assert.equal(unmatched.games, 5);
-  assert.deepEqual(unmatched.record, { w: 4, d: 0, l: 1 });
-  assert.equal(unmatched.gamesFromEspn, false);
+  const unmatched = buildStagedProfile("nfl", NFL_TWO_SEASONS, new ReportedGames([[2019, 17]], [2019])).regular;
+  assert.deepEqual(unmatched.seasons.filter((x) => x.recorded > 0), plain.seasons);
+  assert.deepEqual(unmatched.seasons.map((x) => [x.season, x.games, x.gamesSource]), [[2025, 2, "logged"], [2024, 3, "logged"], [2019, 17, "espn"]]);
+  assert.equal(unmatched.games, 22);
 });
 
 test("NBA and soccer ignore a map that is passed to them", () => {

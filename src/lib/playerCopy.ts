@@ -7,8 +7,16 @@ const NFL_REGULAR_SEASON_ESPN_NOTE =
 const NFL_REGULAR_SEASON_LOGGED_NOTE =
   "Games are those with a recorded stat line; ESPN's games-played figure is not stored for this player. Stat totals come from the same box scores.";
 
-/** The regular-season section note; it only says the games are ESPN's when at least one listed season has ESPN's figure. */
-export const nflRegularSeasonNote = (gamesFromEspn: boolean): string => (gamesFromEspn ? NFL_REGULAR_SEASON_ESPN_NOTE : NFL_REGULAR_SEASON_LOGGED_NOTE);
+/** The regular-season note of a player whose seasons are all ESPN's stored games with no box-score row (`storedGamesOnly`). */
+export const NFL_STORED_GAMES_NOTE = "Games played is ESPN's figure. The site has no box-score stat line for these games, so no stats are shown.";
+
+/** Where the game log would be, for such a player. */
+export const NFL_NO_GAME_LOG_NOTE = "No game-by-game box scores are on record for this player.";
+
+/** The regular-season section note; it only says the games are ESPN's when at least one listed season has ESPN's figure.
+ * `storedOnly`: every season is ESPN's stored games with no box-score row. */
+export const nflRegularSeasonNote = (gamesFromEspn: boolean, storedOnly = false): string =>
+  storedOnly ? NFL_STORED_GAMES_NOTE : gamesFromEspn ? NFL_REGULAR_SEASON_ESPN_NOTE : NFL_REGULAR_SEASON_LOGGED_NOTE;
 
 export const NFL_PLAYOFFS_NOTE = "Playoff games only; ESPN lists these separately from the regular season. Counts are games with a recorded stat line.";
 

@@ -367,6 +367,15 @@ export function aggregate(rows: PlayerLogRow[], specs: StatSpec[]): Line {
   return aggregateWithEspn(rows, [], specs);
 }
 
+/** The line of a season ESPN counts games for but no box-score row backs (the player had no stat line): a dash in every
+ * column, the site's convention for a game with no stat line and for a stat a player has no figure in. Never a 0: the
+ * site has no figure for the season, and ESPN's row carries none either. */
+function noStatLine(specs: StatSpec[]): Line {
+  const line: Line = {};
+  for (const spec of specs) line[spec.key] = null;
+  return line;
+}
+
 export function formatStat(spec: StatSpec, v: number | null | undefined): string {
   if (v === null || v === undefined) return "–";
   const d = spec.decimals ?? 0;
@@ -402,6 +411,8 @@ export type LineSource = "espn" | "box";
 
 export interface SeasonLine {
   season: number;
+  /** Empty for an NFL season that has ESPN's games figure and no box-score row (the stored season row does not name
+   * the club that season). */
   teams: { espn_id: string; name: string; slug: string; logo: string | null }[];
   /** The figure shown as GP: ESPN's games played (NFL regular season, NBA season with unrecorded games, when
    * stored), or the logged count plus the games with no box score. */
@@ -583,12 +594,33 @@ export function noBoxScoreGames(sport: PlayerSport, games: number, recorded: num
   return sport === "nba" ? Math.max(0, games - recorded) : 0;
 }
 
+/** ESPN's games played per season (season year to games), as the loader stores them, that also says which of those
+ * seasons have a stored ESPN row with no stat but games (`statFree`). It is a `Map` for every reader that only wants the
+ * figures; `buildProfile` adds an NFL season that has a figure and no box-score row only when it is in `statFree`. */
+export class ReportedGames extends Map<number, number> {
+  readonly statFree: ReadonlySet<number>;
+  constructor(entries: Iterable<readonly [number, number]> = [], statFree: Iterable<number> = []) {
+    super(entries);
+    this.statFree = new Set(statFree);
+  }
+}
+
+/** The stored games figure for one season alone: what a season page hands the builder, so the page for a season lists
+ * that season only and not every other one ESPN has a games figure for. */
+export function reportedForSeason(reported: ReadonlyMap<number, number>, season: number): ReportedGames {
+  const figure = reported.get(season);
+  const statFree = reported instanceof ReportedGames && reported.statFree.has(season);
+  return new ReportedGames(figure === undefined ? [] : [[season, figure]], statFree ? [season] : []);
+}
+
 /** NFL picks its columns from the rows it is given; the staged tables pass the regular-season rows
  * as `specRows` so every table for a player has the same columns. `reportedGames` (season year to ESPN's
  * games played) applies to the NFL, where ESPN's box scores omit players without a stat line so the log
  * undercounts games played, and to an NBA season with games ESPN published no box score for (`no_box_score`
  * rows: listed players with zeros, no stat line). Those games are counted as played but sit in no average:
- * the season's games are ESPN's figure when stored, else the logged games plus the listed ones.
+ * the season's games are ESPN's figure when stored, else the logged games plus the listed ones. An NFL season with a
+ * stored figure, no row at all and a stored ESPN row that has no stat but games (`ReportedGames.statFree`) is a season of
+ * its own (ESPN's games, `recorded` 0, no team, a dash for every stat), whether or not the player has rows in other seasons.
  * `espnSeasons` (season year to ESPN's whole-season line; NBA regular season) replaces a season's line, games and career
  * share when ESPN counts more games than are logged and the row passes three guards: its points are at least the
  * recorded points, a season with more than one team has ESPN games covering the logged and listed games, and the
@@ -662,6 +694,17 @@ export function buildProfile(
         lineSource: "box",
       };
     });
+  // NFL: ESPN's box scores leave out a player with no stat line, so a season ESPN counts games for can have no row here
+  // at all. It is still a season of the player: ESPN's games played and a dash for every stat. Only a season whose stored
+  // ESPN row carries no stat other than games (`reported.statFree`) is added: a row with stats is a line the site cannot
+  // reproduce (ESPN's regular-season row can hold a postseason game's stats when the player has no regular-season line).
+  if (sport === "nfl" && reported instanceof ReportedGames) {
+    for (const [season, figure] of reported) {
+      if (bySeason.has(season) || !(figure > 0) || !reported.statFree.has(season)) continue;
+      seasons.push({ season, teams: [], games: figure, gamesSource: "espn", recorded: 0, unrecorded: 0, record: null, line: noStatLine(specs), lineSource: "box" });
+    }
+    seasons.sort((a, b) => b.season - a.season);
+  }
   const unrecorded = unrecordedRows.length;
 
   // Newest first, so the latest club leads; a team the player has only games with no box score for is still a team.
@@ -770,6 +813,18 @@ export function buildStagedProfile(
     counted: build(countedRows),
     log: allRows.filter(regular.profile.played).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
   };
+}
+
+/** An NFL regular-season profile whose seasons are all ESPN's stored games and no box-score row (a player who has no
+ * stat line in any regular-season game): it has games but no rows, teams or stats to describe. */
+export function storedGamesOnly(profile: PlayerProfile): boolean {
+  return profile.sport === "nfl" && profile.rows.length === 0 && profile.games > 0;
+}
+
+/** Whether a player page has anything to show: an appearance in the log, a counted game (a player with only playoff or
+ * play-in games still has a page to show), or a regular season that is only ESPN's stored games. */
+export function hasGames(staged: StagedProfile | null): boolean {
+  return staged !== null && (staged.log.length > 0 || staged.counted.games > 0 || storedGamesOnly(staged.regular));
 }
 
 /** The games the player pages say ESPN published no box score for, in one figure: the same `games - recorded`
