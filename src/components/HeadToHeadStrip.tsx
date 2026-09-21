@@ -19,7 +19,9 @@ export async function HeadToHeadStrip({
   awaySlug: string;
   excludeGameId: string | null;
 }) {
-  const h2h = await getHeadToHead(league, awaySlug, homeSlug);
+  // teamA is the side listed first: football lists the home side first (like the match header above), the NBA and NFL the visitors.
+  const [firstSlug, secondSlug] = scoreLineHomeFirst(league) ? [homeSlug, awaySlug] : [awaySlug, homeSlug];
+  const h2h = await getHeadToHead(league, firstSlug, secondSlug);
   if (!h2h) return null;
   const games = excludeGameId ? h2h.games.filter((g) => g.espn_id !== excludeGameId) : h2h.games;
   if (games.length === 0) return null;

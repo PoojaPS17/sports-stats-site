@@ -373,3 +373,17 @@ test("UpcomingProbabilityExportCard: football reads home v away with the home pr
   assert.ok(textOrder(nba, "10%", "70%"));
   assert.match(nba, />at</);
 });
+
+test("gameAccessibleLabel: 'final' follows a stage label unless the label already ends in it", () => {
+  const name = (over: Record<string, unknown>) => gameAccessibleLabel("epl", g(over));
+  assert.equal(name({ round: "Final" }), "Arsenal 2, Chelsea 1, Final");
+  assert.equal(name({ round: "Semi Final" }), "Arsenal 2, Chelsea 1, Semi-Final");
+  assert.equal(name({ round: "Quarter-Final" }), "Arsenal 2, Chelsea 1, Quarter-Final");
+  assert.equal(name({ round: "Round of 16" }), "Arsenal 2, Chelsea 1, Round of 16, final");
+  assert.equal(gameAccessibleLabel("nba", g({ stage: "excluded", competition_type: "CC" })), "Chelsea 1, Arsenal 2, NBA Cup final");
+  assert.equal(gameAccessibleLabel("nba", g({ note: "NBA Cup - Group Play" })), "Chelsea 1, Arsenal 2, NBA Cup · Group play, final");
+  assert.equal(gameAccessibleLabel("nba", g({ stage: "playin" })), "Chelsea 1, Arsenal 2, Play-In, final");
+  assert.equal(gameAccessibleLabel("nba", g({ status_detail: "Final/2OT" })), "Chelsea 1, Arsenal 2, Final/2OT");
+  assert.equal(gameAccessibleLabel("nba", g({ stage: "playin", status_detail: "Final/OT" })), "Chelsea 1, Arsenal 2, Play-In · Final/OT");
+  assert.equal(gameAccessibleLabel("nba", g()), "Chelsea 1, Arsenal 2, final");
+});

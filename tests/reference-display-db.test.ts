@@ -197,3 +197,36 @@ test("a domestic league with a complete table is over; with an incomplete table 
   assert.equal(partial.champion, null);
   assert.ok(partial.nextFixtureOn);
 });
+
+/* ------------------------------------------------------------------------ */
+/* Head-to-head strip on a match page                                         */
+/* ------------------------------------------------------------------------ */
+
+async function seedMeetings(league: string) {
+  for (const [id, name, abbr] of [["701", "Manchester City", "MCI"], ["702", "Sunderland", "SUN"]]) {
+    await db.pool.query(`insert into teams (league, espn_id, name, slug, abbreviation) values ($1, $2, $3, $4, $5) on conflict do nothing`, [league, id, name, name.toLowerCase().replace(/ /g, "-"), abbr]);
+  }
+  // three finished meetings: Manchester City (home) win twice, Sunderland (away at City, then home) win once
+  const meet = (id: string, days: number, home: string, away: string, hs: number, as: number) =>
+    db.pool.query(
+      `insert into games (league, espn_id, date, name, season_year, home_team_espn_id, away_team_espn_id, home_score, away_score, home_winner, away_winner, completed, season_type, competition_type, status_state, status_detail)
+       values ($1,$2,$3,'x',2026,$4,$5,$6::int,$7::int,$6::int > $7::int,$7::int > $6::int,true,2,'STD','post','Final')`,
+      [league, id, day(-days), home, away, hs, as]
+    );
+  await meet("h1", 30, "701", "702", 2, 0);
+  await meet("h2", 20, "701", "702", 3, 1);
+  await meet("h3", 10, "702", "701", 2, 1);
+}
+
+test("the head-to-head strip lists football's home side first with its own wins, and the NBA's visitors first", async () => {
+  const { HeadToHeadStrip } = await import("../src/components/HeadToHeadStrip");
+  const strip = async (league: string) => {
+    await seedMeetings(league);
+    const element = await HeadToHeadStrip({ league: league as never, homeSlug: "manchester-city", awaySlug: "sunderland", excludeGameId: null });
+    assert.ok(element);
+    return renderToStaticMarkup(element).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+  };
+  // Manchester City are at home on the match page. City won 2 of the 3 meetings, Sunderland 1, none drawn.
+  assert.match(await strip("epl"), /Head-to-head MCI 2 · 0 · 1 SUN/);
+  assert.match(await strip("nba"), /Head-to-head SUN 1 · 2 MCI/, "the NBA lists the visitors first, as its match header does");
+});
