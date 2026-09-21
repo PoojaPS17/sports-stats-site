@@ -178,6 +178,31 @@ before(async () => {
   await row("laliga", "l1", "lp", "1", soccer(1));
   await pss("laliga", 2025, "lp", "1", { goals: 12 });
 
+  // Between seasons: ESPN already stores next season's rows for the player, with no figure in any column.
+  await pss("laliga", 2027, "lp", "1", {});
+  await pss("nba", 2027, "star", "1", {});
+
+  // ---------------- Serie A: the rows the player page drops, and a top scorer with no players row ----------------
+  await team("seriea", "1", "Juventus");
+  await team("seriea", "2", "Milan");
+  await game("seriea", "s1", "2026-08-30T18:00:00Z", 2026);
+  await game("seriea", "s2", "2026-09-06T18:00:00Z", 2026);
+  await game("seriea", "s3", "2026-09-13T18:00:00Z", 2026);
+  await player("seriea", "mt", "Missing Team", "1");
+  await player("seriea", "rs", "Real Scorer", "1");
+  await player("seriea", "ru", "Runner Up", "2");
+  // 1 goal for a club the site knows, 3 for a club that is not in `teams`, 1 with no club at all: the page reads only the first.
+  await row("seriea", "s1", "mt", "1", soccer(1));
+  await row("seriea", "s2", "mt", "99", soccer(3));
+  await row("seriea", "s3", "mt", null as never, soccer(1));
+  await row("seriea", "s1", "rs", "1", soccer(2));
+  await row("seriea", "s2", "ru", "2", soccer(4));
+  await row("seriea", "s1", "nn", "1", soccer(6)); // no players row: cannot be shown
+
+  // ---------------- NBA: an ESPN row and no box row in a season that has box scores ----------------
+  await player("nba", "ghost", "Ghost Star", "1");
+  await pss("nba", 2026, "ghost", "1", { pts_avg: 50, reb_avg: 20, ast_avg: 15, games_played: 30, categories: espnRow(30, { fg: [600, 1000], tp: [100, 200], ft: [200, 250], reb: 600, ast: 400 }) });
+
   // ---------------- Cricket: summed from scorecards, untouched ----------------
   await team("ipl", "1", "Mumbai");
   await team("ipl", "2", "Chennai");
@@ -239,9 +264,10 @@ test("a season with no box scores keeps ESPN's rows (the boundary), with the sam
   assert.deepEqual(board.rows.map((r) => [r.name, r.value, r.rank, r.team_name]), [["Older Timer", 20, 1, "Arsenal"], ["Old Timer", 20, 1, "Arsenal"]]);
 });
 
-test("the board's season is the latest with box scores or stored rows; UCL stays on its stored rows", async () => {
+test("the board's season is the latest with box scores or stored figures; next season's empty rows do not win; UCL stays on its stored rows", async () => {
   assert.equal(await queries.getLeadersSeason("epl"), 2026);
-  assert.equal(await queries.getLeadersSeason("laliga"), 2026, "box scores of 2026 exist, ESPN's row only for 2025");
+  assert.equal(await queries.getLeadersSeason("laliga"), 2026, "box scores of 2026 exist, ESPN's row only for 2025 (and an empty 2027 row that must not win)");
+  assert.equal(await queries.getLeadersSeason("nba"), 2026, "an empty 2027 row is no season with a board");
   assert.equal(await queries.getLeadersSeason("ucl"), 2026, "the 2027 box scores are not in player_season_stats yet");
   assert.deepEqual((await queries.getLeaders("laliga", "goals", 10)).map((r) => [r.name, r.value]), [["Liga Scorer", 1]]);
 });
@@ -292,8 +318,14 @@ test("NBA rebounds and assists follow the same rule", async () => {
   assert.deepEqual(reb.map((r) => [r.name, r.value]), [["Bulls Wing", 9], ["Star Guard", 8], ["Traded Forward", 5], ["Low Scorer", 2]]);
   const ast = (await queries.getLeaderBoard("nba", "ast_avg", { limit: 10, ties: true })).rows;
   assert.deepEqual(ast.map((r) => [r.name, r.value, r.rank]), [["Traded Forward", 5, 1], ["Low Scorer", 4, 2], ["Star Guard", 4, 2], ["Bulls Wing", 2, 4]], "a tie is ranked as one (the next rank skips), then by name; Bulls Wing is ESPN's 20 over 10 games");
-  for (const r of reb) assert.equal(shown((await pageLine("nba", r.player_espn_id, 2026)).specs, (await pageLine("nba", r.player_espn_id, 2026)).line, "reb"), r.value, r.name);
-  for (const r of ast) assert.equal(shown((await pageLine("nba", r.player_espn_id, 2026)).specs, (await pageLine("nba", r.player_espn_id, 2026)).line, "ast"), r.value, r.name);
+  for (const r of reb) {
+    const { line, specs } = await pageLine("nba", r.player_espn_id, 2026);
+    assert.equal(shown(specs, line, "reb"), r.value, r.name);
+  }
+  for (const r of ast) {
+    const { line, specs } = await pageLine("nba", r.player_espn_id, 2026);
+    assert.equal(shown(specs, line, "ast"), r.value, r.name);
+  }
 });
 
 test("NBA teams: the clubs of the season, both for a traded player, whatever ESPN's row says he plays for now", async () => {
@@ -321,4 +353,53 @@ test("the Leaders page numbers ties as a competition and lists everyone tied at 
   assert.match(epl, /Arsenal \/ Tottenham/);
   const ipl = text(renderToStaticMarkup(await page.default({ params: Promise.resolve({ league: "ipl" }) })));
   assert.match(ipl, /1 .*Opening Bat.* 45 RUNS/);
+});
+
+// ---------------------------------------------------------------------------
+// Fix round 1: the board and the page read one set of rows and show one figure
+// ---------------------------------------------------------------------------
+test("rows the player page drops (club not in teams, no club) are not on the board either: 1 goal on both", async () => {
+  const board = (await queries.getLeaderBoard("seriea", "goals", { limit: 10, ties: true })).rows;
+  const mt = board.find((r) => r.name === "Missing Team")!;
+  assert.equal(mt.value, 1);
+  assert.equal((await pageLine("seriea", "mt", 2026)).line.g, 1);
+  assert.equal(mt.team_name, "Juventus");
+});
+
+test("a top player with no players row is left out and the ranks stay those of the full standing (no one is promoted to 1)", async () => {
+  const board = (await queries.getLeaderBoard("seriea", "goals", { limit: 10, ties: true })).rows;
+  assert.deepEqual(board.map((r) => [r.name, r.value, r.rank]), [["Runner Up", 4, 2], ["Real Scorer", 2, 3], ["Missing Team", 1, 4]]);
+  const small = await queries.getLeaders("seriea", "goals", 2);
+  assert.deepEqual(small.map((r) => [r.name, r.rank]), [["Runner Up", 2]]);
+});
+
+test("an NBA player with an ESPN row and no box rows in a season with box scores is on no board, and does not move the 70% cutoff", async () => {
+  for (const column of ["pts_avg", "reb_avg", "ast_avg"]) {
+    const board = (await queries.getLeaderBoard("nba", column, { limit: 10, ties: true })).rows;
+    assert.ok(!names(board).includes("Ghost Star"), column);
+    assert.ok(board.length > 0);
+  }
+  // His page has no 2026 season line (games come only from rows), so board and page agree.
+  const [log, reported, espn] = await Promise.all([queries.getPlayerLog("nba", "ghost"), queries.getPlayerReportedGames("nba", "ghost"), queries.getPlayerEspnSeasons("nba", "ghost")]);
+  assert.equal(buildStagedProfile("nba", log, reported, espn).regular.seasons.find((x) => x.season === 2026), undefined);
+});
+
+test("per-game figures print one decimal like the page (30.0, not 30) and totals stay plain", async () => {
+  const { formatLeaderValue } = await import("../src/lib/leaders");
+  assert.equal(formatLeaderValue(30, "PPG"), "30.0");
+  assert.equal(formatLeaderValue(27.6, "RPG"), "27.6");
+  assert.equal(formatLeaderValue(4, "APG"), "4.0");
+  assert.equal(formatLeaderValue(662, "YDS"), "662");
+  assert.equal(formatLeaderValue(5, "GLS"), "5");
+  // Every NBA per-game category the boards define is one the formatter knows.
+  for (const c of queries.LEADER_CATEGORIES.nba) assert.equal(formatLeaderValue(1, c.unit), "1.0", c.unit);
+  const page = await import("../src/app/[league]/leaders/page");
+  const html = renderToStaticMarkup(await page.default({ params: Promise.resolve({ league: "nba" }) }));
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  assert.match(text, /Bulls Wing.* 35\.0 PPG/);
+  assert.match(text, /Star Guard.* 30\.0 PPG/);
+  assert.match(text, /Traded Forward.* 5\.0 APG/);
+  // And the page cell of the same player prints the same text.
+  const { line, specs } = await pageLine("nba", "star", 2026);
+  assert.equal(formatStat(specs.find((x) => x.key === "pts") as never, line.pts), "30.0");
 });

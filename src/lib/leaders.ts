@@ -2,6 +2,7 @@
 // and numbered, which players a top-N board lists when several are tied at the cutoff, the clubs a traded player is
 // shown with, and which NBA figure (the box-score rows' or ESPN's own season row) a season's average is.
 import type { EspnSeasonTotals } from "./espnSeason";
+import { formatStat, type StatSpec } from "./playerProfile";
 import { joinTeams } from "./teamName";
 
 /** The most rows a board lists when a tie at the cutoff pulls extra players in. */
@@ -36,17 +37,39 @@ export function competitionRanks(values: readonly number[]): number[] {
   return ranks;
 }
 
-/** A board: the candidates ordered and ranked. With `ties`, every player whose rank is within `limit` is listed, so a
- * player tied with the last place is never dropped (a top ten can list eleven); the list is cut at `cap` (default
- * `LEADER_CAP`, never below `limit`) and `omitted` says how many tied players that left off. Without `ties` the list is
- * exactly `limit` rows. Players with no positive figure are never on a board. */
-export function pickLeaders<T extends Rankable>(candidates: readonly T[], limit: number, opts: { ties?: boolean; cap?: number } = {}): { rows: (T & { rank: number })[]; omitted: number } {
+/** The standing of every candidate: ordered (see `orderLeaders`) and given its competition rank. Players with no positive
+ * figure are never in it. The rank is a fact about the whole standing, so anything that later leaves a player out (no page
+ * to link to) must keep the others' ranks: a hole in the numbering is fine, a wrong rank is not. */
+export function rankLeaders<T extends Rankable>(candidates: readonly T[]): (T & { rank: number })[] {
   const ordered = orderLeaders(candidates.filter((c) => c.value > 0));
   const ranks = competitionRanks(ordered.map((r) => r.value));
-  const ranked = ordered.map((r, i) => ({ ...r, rank: ranks[i] }));
+  return ordered.map((r, i) => ({ ...r, rank: ranks[i] }));
+}
+
+/** A board from a ranked standing (best first, ranks kept). With `ties`, every player whose rank is within `limit` is
+ * listed, so a player tied with the last place is never dropped (a top ten can list eleven); the list is cut at `cap`
+ * (default `LEADER_CAP`, never below `limit`) and `omitted` says how many tied players that left off. Without `ties` the
+ * list is exactly `limit` rows. */
+export function takeLeaders<T extends Rankable & { rank: number }>(ranked: readonly T[], limit: number, opts: { ties?: boolean; cap?: number } = {}): { rows: T[]; omitted: number } {
   const eligible = opts.ties ? ranked.filter((r) => r.rank <= limit) : ranked.slice(0, limit);
   const cap = opts.ties ? Math.max(limit, opts.cap ?? LEADER_CAP) : limit;
   return { rows: eligible.slice(0, cap), omitted: Math.max(0, eligible.length - cap) };
+}
+
+/** A board straight from candidates: `rankLeaders` then `takeLeaders`. */
+export function pickLeaders<T extends Rankable>(candidates: readonly T[], limit: number, opts: { ties?: boolean; cap?: number } = {}): { rows: (T & { rank: number })[]; omitted: number } {
+  return takeLeaders(rankLeaders(candidates), limit, opts);
+}
+
+/** The units of the NBA per-game boards (LEADER_CATEGORIES): a figure the page and ESPN print to one decimal. */
+const PER_GAME_UNITS = new Set(["PPG", "RPG", "APG"]);
+
+const PER_GAME_SPEC: StatSpec = { key: "", label: "", title: "", value: () => null, agg: "avg", decimals: 1 };
+
+/** A board figure as text: a per-game average to one decimal through the player page's own cell formatter (30.0, never
+ * 30), everything else as the plain number it always was. */
+export function formatLeaderValue(value: number, unit: string): string {
+  return PER_GAME_UNITS.has(unit) ? formatStat(PER_GAME_SPEC, value) : String(value);
 }
 
 export interface TeamStint {

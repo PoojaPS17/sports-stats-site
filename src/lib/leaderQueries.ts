@@ -10,7 +10,10 @@
 //     with no stored box score) the board follows the page.
 //   * NBA exception, per player: where ESPN counts more games than the box scores hold (it published no box score for
 //     some games, see the audit notes on the Bulls and Pelicans 2015-2018) and the row passes the page's guards, the
-//     player's figure is ESPN's own season row, exactly as on his page (`usesEspnSeasonLine`).
+//     player's figure is ESPN's own season row, exactly as on his page (`usesEspnSeasonLine`). A player with a stored ESPN row
+//     and no box-score rows of his own has no season on his page, so he is on no board (and is not counted in the 70% rule).
+//   * The box-score rows are the page's rows: the same two joins on `teams` as `fetchPlayerLog`, so a row the page drops
+//     (club or opponent not in `teams`, no club) is not summed either.
 //   * A season with no stored box scores (before the box-score history starts, or the cup and cricket leagues whose
 //     boards are built elsewhere) keeps ESPN's stored rows: player_season_stats. UCL is such a league on purpose: its
 //     season rows are themselves rebuilt from box scores (scripts/lib/boxscore-season-stats.ts) and stay as they are.
@@ -20,7 +23,7 @@
 import { pool } from "./db";
 import { espnSeasonTotals, type EspnSeasonTotals } from "./espnSeason";
 import { isCupCompetition, type League } from "./leagues";
-import { nbaPerGame, nbaQualifyingGames, pickLeaders, roundLeaderAverage, seasonTeams, teamsLabel, type NbaStat, type Rankable, type TeamStint } from "./leaders";
+import { nbaPerGame, nbaQualifyingGames, orderLeaders, pickLeaders, rankLeaders, roundLeaderAverage, seasonTeams, takeLeaders, teamsLabel, type NbaStat, type Rankable, type TeamStint } from "./leaders";
 import { noStatLineGameSql } from "./playerLog";
 import { playerSport, type PlayerSport } from "./playerProfile";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
@@ -49,11 +52,17 @@ const BOX_COLUMNS: Record<string, BoxColumn> = {
   ast_avg: { sport: "nba", stat: "ast" },
 };
 
-/** The most recent season a board can show: the latest season with stored ESPN rows, or, for the leagues whose boards
+/** The most recent season a board can show: the latest season with a stored ESPN figure, or, for the leagues whose boards
  * are summed from box scores, the latest with a completed regular-season game that has box scores (so a new season's
  * board appears with its first game, not with the next daily job). */
 export async function getLeadersSeason(league: League): Promise<number | null> {
-  const { rows } = await pool.query(`select max(season) as season from player_season_stats where league = $1`, [league]);
+  // Only a stored season with a figure in some board column counts: ESPN can already hold next season's rows for a player
+  // (the loader writes every column as null for a season with no games), and that season has no board to show.
+  const { rows } = await pool.query(
+    `select max(season) as season from player_season_stats
+     where league = $1 and (${Object.keys(BOX_COLUMNS).map((c) => `${c} is not null`).join(" or ")})`,
+    [league]
+  );
   const stored: number | null = rows[0]?.season ?? null;
   if (isCupCompetition(league) || playerSport(league) === null) return stored;
   const { rows: box } = await pool.query(
@@ -172,7 +181,7 @@ function seasonStints(league: League, season: number, sport: PlayerSport): Promi
 async function loadSeasonStints(league: League, season: number, sport: PlayerSport): Promise<Stint[]> {
   // The season's games first (games_league_season_idx), then their rows by the primary key (league, game_espn_id): the
   // cost follows the season, not the league's whole history in player_game_stats.
-  const { rows: games } = await pool.query(`select espn_id, date from games where league = $1 and season_year = $2 and completed and stage in ('regular', 'other')`, [league, season]);
+  const { rows: games } = await pool.query(`select espn_id, date, home_team_espn_id as home, away_team_espn_id as away from games where league = $1 and season_year = $2 and completed and stage in ('regular', 'other')`, [league, season]);
   if (games.length === 0) return [];
   const measures = MEASURES[sport];
   const raw = [
@@ -181,6 +190,8 @@ async function loadSeasonStints(league: League, season: number, sport: PlayerSpo
     ...(sport === "nba" ? [`s.stats->'box'->>'MIN' as raw_min`] : []),
   ];
   const aggregates = measures.map((m) => `coalesce(sum(${asNumber(`x.raw_${m.key}`)}) filter (where x.played), 0) as sum_${m.key}, count(${asNumber(`x.raw_${m.key}`)}) filter (where x.played)::int as n_${m.key}`);
+  // The two joins on `teams` are the player page's own (fetchPlayerLog): a row whose club, or whose game's opponent, is not in
+  // `teams` never reaches a page, so it is on no board either.
   // `offset 0` keeps each row's cells and its played / nobox tests computed once instead of inlined into every aggregate.
   const { rows } = await pool.query(
     `select x.player_espn_id, x.team_espn_id,
@@ -194,7 +205,9 @@ async function loadSeasonStints(league: League, season: number, sport: PlayerSpo
        from (
          select s.league, s.game_espn_id, s.player_espn_id, s.team_espn_id, g.date, ${raw.join(", ")}
          from player_game_stats s
-         join unnest($2::text[], $3::timestamptz[]) as g(espn_id, date) on g.espn_id = s.game_espn_id
+         join unnest($2::text[], $3::timestamptz[], $4::text[], $5::text[]) as g(espn_id, date, home, away) on g.espn_id = s.game_espn_id
+         join teams tm on tm.league = s.league and tm.espn_id = s.team_espn_id
+         join teams op on op.league = s.league and op.espn_id = case when g.home = s.team_espn_id then g.away else g.home end
          where s.league = $1 and s.game_espn_id = any($2) and ${notPseudoAthleteSql("s.player_espn_id")}
          offset 0
        ) r
@@ -202,7 +215,7 @@ async function loadSeasonStints(league: League, season: number, sport: PlayerSpo
      ) x
      group by x.player_espn_id, x.team_espn_id
      having count(*) filter (where x.played or x.nobox) > 0`,
-    [league, games.map((g) => g.espn_id), games.map((g) => g.date)]
+    [league, games.map((g) => g.espn_id), games.map((g) => g.date), games.map((g) => g.home), games.map((g) => g.away)]
   );
   return rows.map((r) => ({
     player_espn_id: r.player_espn_id,
@@ -217,8 +230,6 @@ async function loadSeasonStints(league: League, season: number, sport: PlayerSpo
 
 interface Candidate extends Rankable {
   stints: Stint[];
-  /** The stored row's club (ESPN's), used when the player has no stint of his own. */
-  stored_team_espn_id?: string | null;
 }
 
 const byPlayer = (stints: Stint[]) => {
@@ -247,73 +258,62 @@ async function totalsBoard(league: League, season: number, spec: Extract<BoxColu
 /** NBA per-game averages: the box-score average, or ESPN's own season row for a player whose box scores are short,
  * for players with at least 70% of the games the most-played player has. */
 async function nbaBoard(league: League, season: number, stat: NbaStat, limit: number, ties: boolean): Promise<LeaderBoard | null> {
-  const column = `${stat}_avg`;
   const stints = await seasonStints(league, season, "nba");
   if (stints.length === 0) return null;
-  const { rows: stored } = await pool.query(
-    `select player_espn_id, team_espn_id, nullif(games_played, 0) as games_played, ${column} as value from player_season_stats where league = $1 and season = $2`,
-    [league, season]
-  );
+  // Only a player with rows of his own has a season (and games) on his page; one with an ESPN row and no rows here has neither,
+  // so he is on no board and does not count towards the games the 70% rule is taken from.
   const logged = byPlayer(stints);
-  // ESPN's whole row is read only for a player whose box scores it may outrun (or who has none): the rest is all box.
+  const { rows: stored } = await pool.query(`select player_espn_id, nullif(games_played, 0) as games_played from player_season_stats where league = $1 and season = $2 and player_espn_id = any($3)`, [league, season, [...logged.keys()]]);
+  const storedGames = new Map<string, number>(stored.filter((r) => r.games_played !== null).map((r) => [r.player_espn_id as string, r.games_played as number]));
+  // ESPN's whole row is read only for a player whose box scores it may outrun: the rest is all box.
   const needRow = stored.filter((r) => r.games_played === null || r.games_played > total(logged.get(r.player_espn_id) ?? [], (s) => s.logged)).map((r) => r.player_espn_id as string);
   const { rows: cats } = needRow.length
     ? await pool.query(`select player_espn_id, categories from player_season_stats where league = $1 and season = $2 and player_espn_id = any($3)`, [league, season, needRow])
     : { rows: [] as { player_espn_id: string; categories: unknown }[] };
   const espnBy = new Map<string, EspnSeasonTotals | null>(cats.map((r) => [r.player_espn_id, espnSeasonTotals(r.categories)]));
-  const storedBy = new Map(stored.map((r) => [r.player_espn_id as string, r]));
 
-  const players = new Set([...logged.keys(), ...storedBy.keys()]);
-  const figures: { id: string; exact: number | null; games: number; stints: Stint[]; storedTeam: string | null }[] = [];
-  for (const id of players) {
-    const ss = logged.get(id) ?? [];
-    const row = storedBy.get(id);
-    const storedGames: number | null = row?.games_played ?? null;
+  const figures = [...logged].map(([id, ss]) => {
     const f = nbaPerGame(stat, {
       logged: total(ss, (s) => s.logged),
       unrecorded: total(ss, (s) => s.unrecorded),
       recordedPoints: total(ss, (s) => s.sum.pts),
       teams: ss.length,
-      storedGames,
+      storedGames: storedGames.get(id) ?? null,
       espn: espnBy.get(id) ?? null,
       sum: total(ss, (s) => s.sum[stat]),
       n: total(ss, (s) => s.n[stat]),
     });
-    // A player with no box-score figure at all keeps ESPN's stored average and games.
-    const fromStored = f.exact === null && row?.value != null;
-    figures.push({ id, exact: fromStored ? Number(row.value) : f.exact, games: fromStored ? (storedGames ?? 0) : f.games, stints: ss, storedTeam: row?.team_espn_id ?? null });
-  }
-  const mostGames = Math.max(0, ...figures.map((f) => f.games));
-  const needed = nbaQualifyingGames(mostGames);
-  const candidates = figures
+    return { id, ...f, stints: ss };
+  });
+  const needed = nbaQualifyingGames(Math.max(0, ...figures.map((f) => f.games)));
+  const candidates: Candidate[] = figures
     .filter((f) => f.exact !== null && f.exact > 0 && f.games >= needed)
-    .map((f) => ({ player_espn_id: f.id, name: "", value: roundLeaderAverage(f.exact!), secondary: f.exact, stints: f.stints, stored_team_espn_id: f.storedTeam }));
+    .map((f) => ({ player_espn_id: f.id, name: "", value: roundLeaderAverage(f.exact!), secondary: f.exact, stints: f.stints }));
   return hydrate(league, candidates, limit, ties);
 }
 
-/** Names, headshots and the season's clubs for the players near the top, then the final order, ranks and ties. Only
- * players whose rank is within `limit` are looked up (ties included), so the lookup is a handful of rows. */
+/** Names, headshots and the season's clubs for the players near the top, then the final order and ties. The ranks are those of
+ * the whole standing (`rankLeaders`), kept when a player cannot be shown (no `players` row): the next player keeps his own
+ * rank rather than being promoted. Only players whose rank is within `limit` are looked up (ties included), so the lookup
+ * is a handful of rows. */
 async function hydrate(league: League, candidates: Candidate[], limit: number, ties: boolean): Promise<LeaderBoard> {
-  const near = pickLeaders(candidates, limit, { ties: true, cap: Infinity }).rows;
+  const near = rankLeaders(candidates).filter((r) => r.rank <= limit);
   if (near.length === 0) return { rows: [], omitted: 0 };
   const ids = near.map((r) => r.player_espn_id);
-  const clubIds = [...new Set(near.flatMap((r) => [...r.stints.map((s) => s.team_espn_id), ...(r.stored_team_espn_id ? [r.stored_team_espn_id] : [])]))];
+  const clubIds = [...new Set(near.flatMap((r) => r.stints.map((s) => s.team_espn_id)))];
   const [{ rows: people }, { rows: clubs }] = await Promise.all([
     pool.query(`select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url from players p where p.league = $1 and p.espn_id = any($2) and ${notPseudoAthleteSql()}`, [league, ids]),
     pool.query(`select espn_id, name, slug from teams where league = $1 and espn_id = any($2)`, [league, clubIds]),
   ]);
   const person = new Map(people.map((p) => [p.espn_id as string, p]));
   const club = new Map(clubs.map((t) => [t.espn_id as string, t]));
-  const named = near
-    .filter((r) => person.has(r.player_espn_id))
-    .map((r) => ({ ...r, name: person.get(r.player_espn_id).name as string }));
-  const picked = pickLeaders(named, limit, { ties });
+  // Real names now, so equal figures order by name; each row keeps the rank it had in the full standing.
+  const named = orderLeaders(near.filter((r) => person.has(r.player_espn_id)).map((r) => ({ ...r, name: person.get(r.player_espn_id).name as string })));
+  const picked = takeLeaders(named, limit, { ties });
   return {
     rows: picked.rows.map((r): LeaderRow => {
       const p = person.get(r.player_espn_id);
-      const stints: TeamStint[] = r.stints.flatMap((s) => (club.has(s.team_espn_id) ? [{ ...club.get(s.team_espn_id), first_date: s.first_date }] : []));
-      let teams = seasonTeams(stints);
-      if (teams.length === 0 && r.stored_team_espn_id && club.has(r.stored_team_espn_id)) teams = [club.get(r.stored_team_espn_id)];
+      const teams = seasonTeams(r.stints.flatMap((s): TeamStint[] => (club.has(s.team_espn_id) ? [{ ...club.get(s.team_espn_id), first_date: s.first_date }] : [])));
       return {
         player_espn_id: r.player_espn_id,
         name: p.name,

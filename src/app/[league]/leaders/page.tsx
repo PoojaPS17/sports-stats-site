@@ -16,6 +16,7 @@ import {
   formatSeasonLabel,
   type LeaderRow,
 } from "@/lib/queries";
+import { formatLeaderValue } from "@/lib/leaders";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -102,7 +103,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
                             </span>
                           </span>
                           <span className="shrink-0 text-base font-bold tabular-nums">
-                            {row.value} <span className="text-[11px] font-semibold uppercase text-[var(--text-faint)]">{board.unit}</span>
+                            {formatLeaderValue(row.value, board.unit)} <span className="text-[11px] font-semibold uppercase text-[var(--text-faint)]">{board.unit}</span>
                           </span>
                         </Link>
                       </li>
@@ -111,7 +112,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
                 )}
                 {board.omitted ? (
                   <p className="border-t border-[var(--border)] px-4 py-2 text-xs text-[var(--text-muted)]">
-                    {board.omitted} more {board.omitted === 1 ? "player is" : "players are"} level on {board.rows[board.rows.length - 1].value}, not shown.
+                    {board.omitted} more {board.omitted === 1 ? "player is" : "players are"} level on {formatLeaderValue(board.rows[board.rows.length - 1].value, board.unit)}, not shown.
                   </p>
                 ) : null}
               </section>

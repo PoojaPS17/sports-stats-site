@@ -2,7 +2,7 @@
 // the season's team list for a traded player, and which NBA figure (box scores or ESPN's own row) a season's average is.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { LEADER_CAP, competitionRanks, nbaPerGame, nbaQualifyingGames, orderLeaders, pickLeaders, roundLeaderAverage, seasonTeams, teamsLabel, usesEspnSeasonLine, type NbaSeasonInputs } from "../src/lib/leaders";
+import { LEADER_CAP, competitionRanks, rankLeaders, takeLeaders, nbaPerGame, nbaQualifyingGames, orderLeaders, pickLeaders, roundLeaderAverage, seasonTeams, teamsLabel, usesEspnSeasonLine, type NbaSeasonInputs } from "../src/lib/leaders";
 import type { EspnSeasonTotals } from "../src/lib/espnSeason";
 
 const cand = (id: string, name: string, value: number, secondary: number | null = null) => ({ player_espn_id: id, name, value, secondary });
@@ -105,4 +105,13 @@ test("the 70% qualifier is integer arithmetic (7 of 10, not 8) and the average r
   assert.equal(roundLeaderAverage(27.64), 27.6);
   assert.equal(roundLeaderAverage(27.65), 27.7);
   assert.equal(roundLeaderAverage(1234.56), 1234.6, "no grouping comma");
+});
+
+test("ranking is the standing of all candidates: taking rows from it never re-ranks (a hole is fine, a wrong rank is not)", () => {
+  const ranked = rankLeaders([cand("a", "A", 9), cand("b", "B", 7), cand("c", "C", 7), cand("d", "D", 3)]);
+  assert.deepEqual(ranked.map((r) => [r.player_espn_id, r.rank]), [["a", 1], ["b", 2], ["c", 2], ["d", 4]]);
+  // "a" cannot be shown: the rest keep 2, 2, 4 and the board is one row short of a top four.
+  const without = takeLeaders(ranked.filter((r) => r.player_espn_id !== "a"), 2, { ties: true });
+  assert.deepEqual(without.rows.map((r) => [r.player_espn_id, r.rank]), [["b", 2], ["c", 2]]);
+  assert.deepEqual(takeLeaders(ranked.filter((r) => r.player_espn_id !== "a"), 2).rows.map((r) => r.rank), [2, 2]);
 });

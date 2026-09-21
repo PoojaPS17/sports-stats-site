@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { OffseasonRecap as Recap } from "@/lib/offseason";
 import { leagueNameWithArticle, isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
 import { formatGameDate } from "@/lib/gameDay";
+import { formatLeaderValue } from "@/lib/leaders";
 import { formatWinLossTie } from "@/lib/teamSummary";
 import { GameCard } from "./GameCard";
 import { SectionHeader } from "./SectionHeader";
@@ -118,7 +119,7 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
                               </span>
                             </span>
                             <span className="shrink-0 font-bold tabular-nums">
-                              {row.value} <span className="text-[11px] font-semibold uppercase text-[var(--text-faint)]">{board.unit}</span>
+                              {formatLeaderValue(row.value, board.unit)} <span className="text-[11px] font-semibold uppercase text-[var(--text-faint)]">{board.unit}</span>
                             </span>
                           </Link>
                         </li>
