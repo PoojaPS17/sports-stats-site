@@ -2,7 +2,8 @@
 // /api/ticker rather than rendered into the root layout: a layout that queries the
 // database makes every page on the site re-render whenever a score changes, and that
 // is what burned through the host's page-regeneration allowance.
-import { getTickerGames, getLastUpdated, LEAGUE_LABEL, isCricketLeague, isSoccerLeague } from "./queries";
+import { getTickerGames, getLastUpdated, LEAGUE_LABEL, isCricketLeague } from "./queries";
+import { gameSides } from "./gamePage";
 import { formatGameDate } from "./gameDay";
 import { teamDisplayName } from "./teamName";
 
@@ -35,11 +36,12 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
     return { href: `/${g.league}/games/${g.espn_id}`, label };
   }
   const date = formatGameDate(g.date, g.league, { month: "short", day: "numeric" }, g.local_date);
+  // The order and joiner the match page's title uses: football and cricket name the home side first with "v" (a fixture
+  // has no batting order yet, and this query carries no scorecard), the NBA and NFL the visitors first with "at".
+  const { first, second, awayFirst } = gameSides(g.league, g);
   return {
     href: `/${g.league}/games/${g.espn_id}`,
-    label: isSoccerLeague(g.league)
-      ? `${league} · ${teamDisplayName(g.home_name)} v ${teamDisplayName(g.away_name)}, ${date}`
-      : `${league} · ${teamDisplayName(g.away_name)} at ${teamDisplayName(g.home_name)}, ${date}`,
+    label: `${league} · ${teamDisplayName(first)} ${awayFirst ? "at" : "v"} ${teamDisplayName(second)}, ${date}`,
   };
 }
 
