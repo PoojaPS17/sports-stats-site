@@ -1,9 +1,10 @@
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
-import { ExportShell, ExportTitle, ExportGroup, ExportTable, EXPORT_ROW_LIMIT, type ExportCell, type ExportRow } from "./ExportShell";
-import { groupStandings, legendFor, zoneRules } from "./StandingsTable";
+import { ExportShell, ExportTitle, ExportGroup, ExportTable, type ExportCell, type ExportRow } from "./ExportShell";
+import { groupStandings, legendFor, notStarted, zoneRules } from "./StandingsTable";
 import type { League, StandingRow } from "@/lib/queries";
-import { isSoccer, type ComputedTableRow } from "@/lib/analytics";
+import { hasTies } from "@/lib/leagues";
+import { computedWinPct, isSoccer, type ComputedTableRow } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 
 const ZONE_COLOR: Record<string, string> = { "zone-1": "#1d4ed8", "zone-2": "#d97706", "zone-3": "#dc2626" };
@@ -25,30 +26,36 @@ export function standingsExportWidth(league: League, standings: StandingRow[]): 
 export function StandingsExportCard({ league, standings, title, subtitle, context }: { league: League; standings: StandingRow[]; title: string; subtitle?: string | null; context: string }) {
   const { mode, sections } = groupStandings(league, standings);
   const sectionSize = sections.length ? sections[0][1].length : 0;
-  const showZones = mode === "soccer" && sections.every(([, rows]) => rows.length === sectionSize) && zoneRules(league, sectionSize) !== null;
+  const showZones = mode === "soccer" && sections.every(([, rows]) => rows.length === sectionSize && !notStarted(rows)) && zoneRules(league, sectionSize) !== null;
   const legend = showZones ? legendFor(league, sectionSize) : [];
+  const ties = mode === "default" && hasTies(league);
 
-  const headers = mode === "soccer" ? ["W", "D", "L", "GF", "GA", "GD", "Pts"] : mode === "cricket" ? ["M", "W", "L", "NR", "Pts", "NRR"] : ["W", "L", "Pct", "Streak"];
+  const headers = mode === "soccer" ? ["P", "W", "D", "L", "GF", "GA", "GD", "Pts"] : mode === "cricket" ? ["M", "W", "L", "NR", "Pts", "NRR"] : ties ? ["W", "L", "T", "Pct", "Streak"] : ["W", "L", "Pct", "Streak"];
 
   const cellsFor = (r: StandingRow): ExportCell[] => {
     if (mode === "soccer") {
       const gd = r.goals_for != null && r.goals_against != null ? r.goals_for - r.goals_against : null;
-      return [String(r.wins), String(r.draws ?? 0), String(r.losses), String(r.goals_for ?? "—"), String(r.goals_against ?? "—"), gd == null ? "—" : { text: signed(gd), tone: tone(gd) }, { text: String(r.points ?? "—"), tone: "strong", bold: true }];
+      return [String(r.wins + (r.draws ?? 0) + r.losses), String(r.wins), String(r.draws ?? 0), String(r.losses), String(r.goals_for ?? "—"), String(r.goals_against ?? "—"), gd == null ? "—" : { text: signed(gd), tone: tone(gd) }, { text: String(r.points ?? "—"), tone: "strong", bold: true }];
     }
     if (mode === "cricket") {
       return [String(r.wins + r.losses + (r.no_result ?? 0)), String(r.wins), String(r.losses), String(r.no_result ?? 0), { text: String(r.points ?? "—"), tone: "strong", bold: true }, r.net_run_rate != null ? Number(r.net_run_rate).toFixed(3) : "—"];
     }
     const kind = r.streak?.[0]?.toUpperCase();
-    return [String(r.wins), String(r.losses), Number(r.win_percent).toFixed(3), r.streak ? { text: r.streak, tone: kind === "W" ? "win" : kind === "L" ? "loss" : "muted", bold: true } : "—"];
+    return [String(r.wins), String(r.losses), ...(ties ? [String(r.draws ?? 0)] : []), Number(r.win_percent).toFixed(3), r.streak ? { text: r.streak, tone: kind === "W" ? "win" : kind === "L" ? "loss" : "muted", bold: true } : "—"];
   };
 
   const tables = sections.map(([name, rows]) => {
     const list: ExportRow[] = rows.map((r, i) => {
-      const zone = showZones ? zoneRules(league, rows.length)?.(i + 1) ?? null : null;
-      return { key: r.team_espn_id, rank: i + 1, lead: logo(r.name, r.logo_url, r.color), name: teamDisplayName(r.name), cells: cellsFor(r), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
+      const zone = showZones && !r.unranked ? zoneRules(league, rows.length)?.(i + 1) ?? null : null;
+      return { key: r.team_espn_id, rank: r.unranked ? "–" : i + 1, lead: logo(r.name, r.logo_url, r.color), name: teamDisplayName(r.name), cells: cellsFor(r), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
     });
-    const table = <ExportTable firstHeader="Team" headers={headers} rows={list} limit={EXPORT_ROW_LIMIT} moreNoun="more teams" bare />;
-    return sections.length === 1 && name === "All Teams" ? <div key={name} style={{ border: `1px solid ${CARD.border}`, borderRadius: 12, overflow: "hidden" }}>{table}</div> : <ExportGroup key={name} title={name}>{table}</ExportGroup>;
+    // No row cap: the image is the whole table (a 32-team NFL season, a 36-team league phase).
+    const table = <ExportTable firstHeader="Team" headers={headers} rows={list} bare />;
+    return sections.length === 1 && name === "All Teams" && !notStarted(rows) ? (
+      <div key={name} style={{ border: `1px solid ${CARD.border}`, borderRadius: 12, overflow: "hidden" }}>{table}</div>
+    ) : (
+      <ExportGroup key={name} title={name} aside={notStarted(rows) ? "Season not started" : undefined}>{table}</ExportGroup>
+    );
   });
 
   return (
@@ -85,7 +92,8 @@ function FormStrip({ form }: { form: ("W" | "D" | "L")[] }) {
 // The Home / Away / Form tables computed from results.
 export function ComputedStandingsExportCard({ league, rows, title, subtitle, context }: { league: League; rows: ComputedTableRow[]; title: string; subtitle?: string | null; context: string }) {
   const soccer = isSoccer(league);
-  const headers = ["P", "W", ...(soccer ? ["D"] : []), "L", soccer ? "GF" : "PF", soccer ? "GA" : "PA", soccer ? "GD" : "Diff", soccer ? "Pts" : "Pct", "Form"];
+  const ties = hasTies(league);
+  const headers = ["P", "W", ...(soccer ? ["D"] : []), "L", ...(ties ? ["T"] : []), soccer ? "GF" : "PF", soccer ? "GA" : "PA", soccer ? "GD" : "Diff", soccer ? "Pts" : "Pct", "Form"];
   const list: ExportRow[] = rows.map((r, i) => {
     const diff = r.goalsFor - r.goalsAgainst;
     return {
@@ -98,17 +106,18 @@ export function ComputedStandingsExportCard({ league, rows, title, subtitle, con
         String(r.wins),
         ...(soccer ? [String(r.draws)] : []),
         String(r.losses),
+        ...(ties ? [String(r.draws)] : []),
         String(r.goalsFor),
         String(r.goalsAgainst),
         { text: signed(diff), tone: tone(diff) },
-        { text: soccer ? String(r.points) : r.played ? (r.wins / r.played).toFixed(3) : "—", tone: "strong", bold: true },
+        { text: soccer ? String(r.points) : computedWinPct(league, r)?.toFixed(3) ?? "—", tone: "strong", bold: true },
         { text: <FormStrip form={[...r.form].reverse()} /> },
       ],
     };
   });
   return (
     <ExportShell header={<ExportTitle league={league} title={title} subtitle={subtitle} />} context={context}>
-      <ExportTable firstHeader="Team" headers={headers} rows={list} limit={EXPORT_ROW_LIMIT} moreNoun="more teams" />
+      <ExportTable firstHeader="Team" headers={headers} rows={list} />
     </ExportShell>
   );
 }

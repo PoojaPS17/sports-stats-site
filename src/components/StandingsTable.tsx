@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
-import { isCricketLeague, isSoccerLeague } from "@/lib/queries";
+import { isCricketLeague, isSoccerLeague, isCupCompetition, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
+import { hasTies } from "@/lib/leagues";
 import type { StandingRow, League } from "@/lib/queries";
 
 interface Zone {
@@ -47,6 +48,9 @@ function StreakCell({ streak }: { streak: string | null }) {
   return <span className={`font-semibold ${color}`}>{streak}</span>;
 }
 
+/** A table in which nobody has played yet has no positions to show (sortStandings flags its rows). */
+export const notStarted = (rows: StandingRow[]) => rows.length > 0 && rows.every((r) => r.unranked);
+
 // How a standings list is split into tables, shared by the live page and its image:
 // the NFL by division, everything else by conference (or as one table).
 export function groupStandings(league: League, standings: StandingRow[]) {
@@ -63,7 +67,15 @@ export function groupStandings(league: League, standings: StandingRow[]) {
 
   // Divisions read in the conventional order (AFC East, North, South, West, then NFC),
   // which is also alphabetical.
-  const sections = useDivisions ? [...byConference.entries()].sort((a, b) => a[0].localeCompare(b[0])) : [...byConference.entries()];
+  let sections = useDivisions ? [...byConference.entries()].sort((a, b) => a[0].localeCompare(b[0])) : [...byConference.entries()];
+  // A domestic league is one table, and the feed's name for it varies by season and league
+  // ("2026-2027 Italian Serie A", "2015/2016 Spanish Primera División", "Barclays Premier League
+  // 2015-2016"), so it is headed by the league and the season instead. A cup's groups and stages
+  // keep their own names.
+  if (mode === "soccer" && !isCupCompetition(league) && sections.length === 1) {
+    const season = formatSeasonLabel(league, sections[0][1][0]?.season ?? null);
+    sections = [[season ? `${LEAGUE_LABEL[league]} ${season}` : LEAGUE_LABEL[league], sections[0][1]]];
+  }
   return { mode, useDivisions, sections } as const;
 }
 
@@ -76,7 +88,9 @@ export function StandingsTable({ league, standings }: { league: League; standing
 
   // Zones apply per section (a cup's groups are four-team tables of their own).
   const sectionSize = sections.length ? sections[0][1].length : 0;
-  const showZones = mode === "soccer" && sections.every(([, rows]) => rows.length === sectionSize) && zoneRules(league, sectionSize) !== null;
+  // Zones are places in a table; a table nobody has played in has none.
+  const showZones = mode === "soccer" && sections.every(([, rows]) => rows.length === sectionSize && !notStarted(rows)) && zoneRules(league, sectionSize) !== null;
+  const ties = mode === "default" && hasTies(league);
   const legend = showZones ? legendFor(league, sectionSize) : [];
   const numCell = "px-2 py-2.5 text-right tabular-nums";
 
@@ -85,16 +99,21 @@ export function StandingsTable({ league, standings }: { league: League; standing
       <div className={`grid gap-6 ${sections.length > 1 ? "lg:grid-cols-2" : ""}`} style={useDivisions ? { gridAutoFlow: "row dense" } : undefined}>
         {sections.map(([conference, rows]) => (
           <section key={conference} className="card overflow-hidden">
-            <h2 className="table-head border-b border-[var(--border)] px-4 py-2.5">{conference}</h2>
+            <h2 className="table-head flex items-baseline justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5">
+              <span>{conference}</span>
+              {notStarted(rows) && <span className="text-xs font-semibold normal-case tracking-normal text-[var(--text-muted)]">Season not started</span>}
+            </h2>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[440px] border-collapse text-sm">
                 <thead>
                   <tr className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                     <th className="py-2 pl-4 text-left font-semibold">Team</th>
                     {mode === "cricket" && <th className={`${numCell} font-semibold`}>M</th>}
+                    {mode === "soccer" && <th className={`${numCell} font-semibold`}>P</th>}
                     <th className={`${numCell} font-semibold`}>W</th>
                     {mode === "soccer" && <th className={`${numCell} font-semibold`}>D</th>}
                     <th className={`${numCell} font-semibold`}>L</th>
+                    {ties && <th className={`${numCell} font-semibold`}>T</th>}
                     {mode === "soccer" && (
                       <>
                         <th className={`${numCell} font-semibold`}>GF</th>
@@ -120,8 +139,8 @@ export function StandingsTable({ league, standings }: { league: League; standing
                 </thead>
                 <tbody>
                   {rows.map((r, i) => {
-                    const position = i + 1;
-                    const zone = showZones ? zoneRules(league, rows.length)?.(position) ?? null : null;
+                    const position = r.unranked ? null : i + 1;
+                    const zone = showZones && position !== null ? zoneRules(league, rows.length)?.(position) ?? null : null;
                     const gd = r.goals_for != null && r.goals_against != null ? r.goals_for - r.goals_against : null;
                     return (
                       <tr key={r.team_espn_id} className="table-row">
@@ -129,7 +148,7 @@ export function StandingsTable({ league, standings }: { league: League; standing
                           <Link href={`/${league}/teams/${r.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
                             <span className="flex w-7 items-center gap-1.5">
                               <span className={`zone-marker ${zone?.cls ?? ""}`} title={zone?.label} />
-                              <span className="w-4 text-right text-xs tabular-nums text-[var(--text-muted)]">{position}</span>
+                              <span className="w-4 text-right text-xs tabular-nums text-[var(--text-muted)]">{position ?? "–"}</span>
                             </span>
                             <TeamLogo name={teamDisplayName(r.name)} logoUrl={r.logo_url} color={r.color} size={22} />
                             <span className="truncate">{teamDisplayName(r.name)}</span>
@@ -138,9 +157,11 @@ export function StandingsTable({ league, standings }: { league: League; standing
                         {mode === "cricket" && (
                           <td className={`${numCell} text-[var(--text-muted)]`}>{r.wins + r.losses + (r.no_result ?? 0)}</td>
                         )}
+                        {mode === "soccer" && <td className={`${numCell} text-[var(--text-muted)]`}>{r.wins + (r.draws ?? 0) + r.losses}</td>}
                         <td className={numCell}>{r.wins}</td>
                         {mode === "soccer" && <td className={numCell}>{r.draws ?? 0}</td>}
                         <td className={numCell}>{r.losses}</td>
+                        {ties && <td className={numCell}>{r.draws ?? 0}</td>}
                         {mode === "soccer" && (
                           <>
                             <td className={`${numCell} text-[var(--text-muted)]`}>{r.goals_for ?? "—"}</td>
