@@ -27,5 +27,5 @@ export function trunc2(value: number | null | undefined, digits = 2, missing = "
  * "115.96" on ESPN's and Cricinfo's scorecards, and one decimal ("116.0") reads as a different figure.
  */
 export function inningsStrikeRate(runs: number, balls: number | null | undefined, missing = "-"): string {
-  return balls ? ((runs / balls) * 100).toFixed(2) : missing;
+  return balls ? ((runs * 100) / balls).toFixed(2) : missing; // runs * 100 first: (runs / balls) * 100 carries a float error into the rounding of a tie
 }

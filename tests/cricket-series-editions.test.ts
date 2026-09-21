@@ -357,6 +357,8 @@ test("a series row with no stored match is never listed, searched or offered in 
   assert.ok(!win.includes("555"), "a bilateral series left with no match (ESPN regrouped its fixtures) is not listed either");
   assert.ok(!(await series.getCricketSeriesBySeason(2026)).some((r) => r.espn_id === "8044"), "archive");
   assert.ok(!(await series.searchCricketSeries("Big Bash")).some((r) => r.espn_id === "8044"), "picker");
+  assert.ok(!(await series.getCricketSeriesBySeason(2026)).some((r) => r.espn_id === "555"), "archive, bilateral");
+  assert.ok(!(await series.searchCricketSeries("quiet tour")).some((r) => r.espn_id === "555"), "picker, bilateral");
   const hits = (await (await import("../src/lib/queries")).search("Big Bash")).filter((r) => r.type === "series").map((r) => r.slug);
   assert.ok(!hits.includes("8044") && hits.includes("8044-2025-26"), "site search");
 });

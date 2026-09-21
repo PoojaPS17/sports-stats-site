@@ -79,6 +79,7 @@ test("an innings strike rate is rounded to two decimals as a scorecard writes it
   assert.equal(inningsStrikeRate(112, 84), "133.33");
   assert.equal(inningsStrikeRate(103, 102), "100.98");
   assert.equal(inningsStrikeRate(100, 50), "200.00");
+  assert.equal(inningsStrikeRate(169, 160), "105.63"); // an exact tie (105.625) rounds up
   assert.equal(inningsStrikeRate(101, null), "-");
   assert.equal(inningsStrikeRate(101, 0), "-");
 });
