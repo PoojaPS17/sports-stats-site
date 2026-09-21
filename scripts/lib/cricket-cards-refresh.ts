@@ -6,7 +6,7 @@ import { parseCricketScorecard } from "../../src/lib/matchDetail";
 import { CARD_VERSION, extractCricketMatchStats } from "./cricket-career";
 import { isCricsheetReport, isEspnReport } from "./cricsheet-report";
 
-// A player absent from the current ESPN summary keeps his old v<3 row, so the match is selected again on every
+// A player absent from the current ESPN summary keeps the old v<3 row, so the match is selected again on every
 // run; v3 is a superset of v2, so this should not arise. The report update and the card upsert below are not one
 // transaction: a failure between them converges on the next run, because the v stamp on the rows is written last.
 export interface RefreshResult {
