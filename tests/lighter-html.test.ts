@@ -78,7 +78,8 @@ test("a game-log opponent is a text link to the match: no crest, same href and n
 test("a game-log opponent with a date still shows the date", () => {
   const html = renderToStaticMarkup(OpponentCell({ league: "nba", row: { ...logRow, is_home: true }, withDate: true }));
   assert.match(html, />vs</);
-  assert.match(html, /Jan 1[45], 2026/);
+  // exact now rather than Jan 14-or-15: an NBA date is the league's own Eastern day (lib/gameDay.ts), not the machine's zone
+  assert.match(html, /Jan 14, 2026/);
 });
 
 test("related links are not prefetched, and keep every href, label and sub-label", () => {

@@ -18,8 +18,10 @@ export const revalidate = 15;
 // (expireTime in next.config.ts), which is too old for a day's live scores. The window above still
 // sets the default for the cached fetches inside this render.
 
+// The heading is the day in the URL, not a game's date: midday UTC is the same calendar day
+// everywhere, and the zone is named so the label cannot drift with the machine's own.
 function dayLabel(date: string): string {
-  return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; date: string }> }): Promise<Metadata> {

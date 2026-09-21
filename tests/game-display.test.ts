@@ -2,10 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { scoresDayDescription, finishedNoScoreNote, shareImageStatus, gameAccessibleLabel, isUpcomingGame, scheduleRowHeading, scoreboardTileStatus } from "../src/lib/gameDisplay";
 
-// scheduleRowHeading and gameAccessibleLabel format in the machine's own time zone (the schedule image is rendered
-// where the viewer is), so the tests pin the zone rather than depend on where they run. New York: 12:00 UTC is
-// 8:00 AM on Sunday, September 20. Node re-reads TZ when it is assigned, and each test file runs in its own process.
+// scheduleRowHeading and gameAccessibleLabel now format in the league's own day zone (lib/gameDay.ts): US
+// Eastern for the NFL and NBA, UTC for everything else. The machine's zone is still pinned, but now to prove
+// the output no longer follows it. Node re-reads TZ when it is assigned, and each test file runs in its own
+// process. The fixture below is a Premier League game, so its zone is UTC: 12:00 UTC on Sunday, September 20.
 process.env.TZ = "America/New_York";
+const LEAGUE = "epl" as const;
 const DATE = "2026-09-20T12:00:00.000Z";
 
 const game = (over: Record<string, unknown> = {}) => ({
@@ -37,31 +39,42 @@ test("isUpcomingGame: only a scheduled game that is not live and not called off"
 });
 
 test("scheduleRowHeading: an upcoming game shows its date and kickoff time", () => {
-  assert.equal(scheduleRowHeading(game()), "Sun, Sep 20 · 8:00 AM");
+  // was 8:00 AM only because the test machine's zone was pinned to New York; a Premier League kickoff is read in UTC
+  assert.equal(scheduleRowHeading(LEAGUE, game()), "Sun, Sep 20 · 12:00 PM");
+});
+
+test("scheduleRowHeading and gameAccessibleLabel put an NFL game on its US Eastern day", () => {
+  // 00:20 UTC on the Monday is the Sunday-night game ESPN files under Sunday 20 September, 8:20 PM Eastern
+  const sundayNight = game({ date: "2026-09-21T00:20:00.000Z" });
+  assert.equal(scheduleRowHeading("nfl", sundayNight), "Sun, Sep 20 · 8:20 PM");
+  assert.equal(gameAccessibleLabel("nfl", sundayNight), "Chelsea at Arsenal, Sunday, September 20");
+  // the same instant in a league whose day is UTC is the Monday
+  assert.equal(scheduleRowHeading(LEAGUE, sundayNight), "Mon, Sep 21 · 12:20 AM");
+  assert.equal(gameAccessibleLabel(LEAGUE, sundayNight), "Chelsea at Arsenal, Monday, September 21");
 });
 
 test("scheduleRowHeading: a called-off game shows the reason and no kickoff time", () => {
-  assert.equal(scheduleRowHeading(calledOff()), "Sun, Sep 20 · Postponed");
-  assert.equal(scheduleRowHeading(calledOff("Canceled")), "Sun, Sep 20 · Cancelled");
-  assert.equal(scheduleRowHeading(calledOff("Abandoned")), "Sun, Sep 20 · Abandoned");
-  assert.doesNotMatch(scheduleRowHeading(calledOff()), /[AP]M/);
+  assert.equal(scheduleRowHeading(LEAGUE, calledOff()), "Sun, Sep 20 · Postponed");
+  assert.equal(scheduleRowHeading(LEAGUE, calledOff("Canceled")), "Sun, Sep 20 · Cancelled");
+  assert.equal(scheduleRowHeading(LEAGUE, calledOff("Abandoned")), "Sun, Sep 20 · Abandoned");
+  assert.doesNotMatch(scheduleRowHeading(LEAGUE, calledOff()), /[AP]M/);
 });
 
 test("scheduleRowHeading: a finished game shows only the date", () => {
-  assert.equal(scheduleRowHeading(finished()), "Sun, Sep 20");
+  assert.equal(scheduleRowHeading(LEAGUE, finished()), "Sun, Sep 20");
   // a finished abandoned match is a result, so it carries no called-off label
-  assert.equal(scheduleRowHeading(game({ completed: true, status_detail: "Abandoned" })), "Sun, Sep 20");
+  assert.equal(scheduleRowHeading(LEAGUE, game({ completed: true, status_detail: "Abandoned" })), "Sun, Sep 20");
 });
 
 test("gameAccessibleLabel: an upcoming game reads as a fixture, a called-off one says why it is off", () => {
-  assert.equal(gameAccessibleLabel(game()), "Chelsea at Arsenal, Sunday, September 20");
-  assert.equal(gameAccessibleLabel(calledOff()), "Chelsea at Arsenal, Sunday, September 20, postponed");
-  assert.equal(gameAccessibleLabel(calledOff("Canceled")), "Chelsea at Arsenal, Sunday, September 20, cancelled");
+  assert.equal(gameAccessibleLabel(LEAGUE, game()), "Chelsea at Arsenal, Sunday, September 20");
+  assert.equal(gameAccessibleLabel(LEAGUE, calledOff()), "Chelsea at Arsenal, Sunday, September 20, postponed");
+  assert.equal(gameAccessibleLabel(LEAGUE, calledOff("Canceled")), "Chelsea at Arsenal, Sunday, September 20, cancelled");
 });
 
 test("gameAccessibleLabel: a finished game reads as a result", () => {
-  assert.equal(gameAccessibleLabel(finished()), "Chelsea 1, Arsenal 2, final");
-  assert.equal(gameAccessibleLabel(game({ completed: true, status_detail: "Abandoned", round: "Match abandoned", home_score: 1, away_score: 1 })), "Chelsea 1, Arsenal 1, Match abandoned");
+  assert.equal(gameAccessibleLabel(LEAGUE, finished()), "Chelsea 1, Arsenal 2, final");
+  assert.equal(gameAccessibleLabel(LEAGUE, game({ completed: true, status_detail: "Abandoned", round: "Match abandoned", home_score: 1, away_score: 1 })), "Chelsea 1, Arsenal 1, Match abandoned");
 });
 
 test("scoreboardTileStatus: an upcoming game shows its kickoff, a called-off one shows why it is off", () => {
@@ -88,8 +101,8 @@ test("a cricket match ESPN cancelled but the writer stored as finished is still 
   // ESPN files a cancelled match under state post; older rows were stored completed
   const stored = game({ completed: true, status_state: "post", status_detail: "Canceled", home_score: null, away_score: null });
   assert.equal(isUpcomingGame(stored), false);
-  assert.equal(scheduleRowHeading(stored), "Sun, Sep 20 · Cancelled");
-  assert.equal(gameAccessibleLabel(stored), "Chelsea at Arsenal, Sunday, September 20, cancelled");
+  assert.equal(scheduleRowHeading(LEAGUE, stored), "Sun, Sep 20 · Cancelled");
+  assert.equal(gameAccessibleLabel(LEAGUE, stored), "Chelsea at Arsenal, Sunday, September 20, cancelled");
   assert.equal(scoreboardTileStatus("ipl", stored, false), "Cancelled");
   assert.equal(scoreboardTileStatus("ipl", stored, true), "Sep 20, 2026 · Cancelled");
   // whereas a finished abandoned match is a result
@@ -102,8 +115,8 @@ test("a live game is live even when its status text reads like a stoppage", () =
   assert.equal(scoreboardTileStatus("ipl", live, false), "Suspended");
   assert.equal(scoreboardTileStatus("ipl", live, true), "Sep 20, 2026 · Suspended");
   assert.equal(isUpcomingGame(live), false);
-  assert.equal(scheduleRowHeading(live), "Sun, Sep 20");
-  assert.equal(gameAccessibleLabel(live), "Chelsea at Arsenal, Sunday, September 20");
+  assert.equal(scheduleRowHeading(LEAGUE, live), "Sun, Sep 20");
+  assert.equal(gameAccessibleLabel(LEAGUE, live), "Chelsea at Arsenal, Sunday, September 20");
 });
 
 test("finishedNoScoreNote: a finished match with no scores says how it ended, and is never a called-off label", () => {
