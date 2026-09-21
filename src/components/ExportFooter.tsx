@@ -7,7 +7,7 @@ import { CARD } from "@/lib/exportTheme";
 // was generated - the same "site + handle + timestamp" footer ps-store-db.live uses.
 export function ExportFooter({ context }: { context: string }) {
   const domain = SITE_URL.replace(/^https?:\/\//, "");
-  const stamp = `${new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false })} UTC`;
+  const stamp = `${new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", hourCycle: "h23" })} UTC`;
 
   return (
     <div

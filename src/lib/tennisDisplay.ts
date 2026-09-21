@@ -27,6 +27,6 @@ export function tennisMatchStatus(m: Fields): TennisMatchStatus {
 /** The caption above a match on a share image: state (start time in UTC for an upcoming match), round and court. */
 export function tennisMatchCaption(m: Fields & Pick<TennisMatch, "date" | "round" | "court">): string {
   const s = tennisMatchStatus(m);
-  const state = s.label ?? `${new Date(m.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
+  const state = s.label ?? `${new Date(m.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" })} UTC`;
   return [state, m.round, m.court].filter(Boolean).join(" · ");
 }

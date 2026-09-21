@@ -54,6 +54,8 @@ test("cricketMatchWhen: a fixture shows its start time in UTC, a called-off matc
   const date = "2026-09-20T09:30:00Z";
   assert.equal(cricketMatchWhen({ date, ...m("pre", null) }), "Sep 20, 09:30 UTC");
   assert.equal(cricketMatchWhen({ date, ...m("pre", "Match postponed") }), "Sep 20, 2026 · Postponed");
+  // a start just after midnight UTC is 00:xx, never 24:xx
+  assert.equal(cricketMatchWhen({ date: "2026-09-21T00:30:00Z", ...m("pre", null) }), "Sep 21, 00:30 UTC");
   assert.doesNotMatch(cricketMatchWhen({ date, ...m("pre", "Match postponed") }), /UTC|\d:\d\d/);
   assert.equal(cricketMatchWhen({ date, ...m("post", "Bahrain won by 67 runs") }), "Sep 20, 2026");
   assert.equal(cricketMatchWhen({ date, ...m("post", "Match abandoned without a ball bowled") }), "Sep 20, 2026");

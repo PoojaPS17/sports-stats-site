@@ -59,6 +59,8 @@ test("tennisMatchStatus: a match with a winner is a result even if its text ment
 
 test("tennisMatchCaption: an upcoming match shows its start (UTC), a called-off one shows why and no time", () => {
   assert.equal(tennisMatchCaption(match()), "16:00 UTC · Round of 16 · Court 4");
+  // a start just after midnight UTC is 00:xx, never 24:xx
+  assert.equal(tennisMatchCaption(match({ date: "2026-09-21T00:30:00.000Z" })), "00:30 UTC · Round of 16 · Court 4");
   assert.equal(tennisMatchCaption(off("Postponed")), "Postponed · Round of 16 · Court 4");
   assert.equal(tennisMatchCaption(off("Canceled")), "Cancelled · Round of 16 · Court 4");
   assert.doesNotMatch(tennisMatchCaption(off("Postponed")), /UTC|\d\d:\d\d/);

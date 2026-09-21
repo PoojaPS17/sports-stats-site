@@ -39,7 +39,7 @@ export function cricketMatchWhen(m: StatusFields & { date: string }): string {
   const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   if (kind === "result") return day;
   if (typeof kind === "object") return `${day} · ${kind.calledOff}`;
-  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}, ${d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
+  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}, ${d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" })} UTC`;
 }
 
 /** schema.org status of a cricket match: postponed or cancelled when called off, scheduled otherwise (it has no "finished" status). */
