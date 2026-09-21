@@ -10,7 +10,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
 import { fetchMatchSummary, extractGameDetails, presentDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
 import { getMatchContext } from "@/lib/matchContext";
-import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
+import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -254,7 +254,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           >
             {statsFraming.heading}
           </SectionHeader>
-          <TeamStatsComparison away={awayStats} home={homeStats} />
+          <TeamStatsComparison away={awayStats} home={homeStats} homeFirst={scoreLineHomeFirst(league)} />
         </section>
       )}
 

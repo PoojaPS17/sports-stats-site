@@ -1,5 +1,6 @@
 import { isCricketLeague, isSoccerLeague, type League } from "./leagues";
 import { cupNoteLabel } from "./gameNote";
+import { specialStageLabel } from "./stageLabels";
 
 // Stage labels arrive in every spelling the sources use ("Semi Final", "1st semi-final",
 // "3rd Place Play-Off", "2nd QF"). One form each, Cricinfo's, so the same stage reads
@@ -59,15 +60,10 @@ export function finalLabel(league: League, statusDetail: string | null | undefin
   return overtimeFinal(statusDetail) ?? finishedLabel(league);
 }
 
-/**
- * The stage of a game that has no `round`, from the columns the NBA feed fills: a play-in game and the NBA Cup
- * final. `round` itself is left alone (it marks playoff rounds, and a query for those must not pick these up).
- */
-export function specialStageLabel(g: { stage?: string | null; competition_type?: string | null }): string | null {
-  if (g.stage === "playin") return "Play-In";
-  if (g.competition_type === "CC") return "NBA Cup final";
-  return null;
-}
+// The stage of a game that has no `round`, from the columns the NBA feed fills (a play-in game, the NBA Cup final),
+// is `specialStageLabel`, shared with the game log. `round` itself is left alone (it marks playoff rounds, and a
+// query for those must not pick these up).
+export { specialStageLabel };
 
 /** The stage label a card shows: the game's round, else its play-in / Cup-final label, else its NBA Cup note label (see gameNote.ts), else null. */
 export function gameRoundLabel(g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null }): string | null {
@@ -82,10 +78,11 @@ export function gameRoundLabel(g: { round: string | null; stage?: string | null;
 export function finishedPillLabel(
   league: League,
   g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null; status_detail: string | null | undefined },
-  fallback: string = finishedLabel(league),
+  fallback?: string,
 ): string {
   const stage = gameRoundLabel(g);
   const ot = overtimeFinal(g.status_detail);
   if (stage && ot) return `${stage} · ${ot}`;
-  return stage ?? ot ?? fallback;
+  if (stage) return stage;
+  return ot || fallback === undefined ? finalLabel(league, g.status_detail) : fallback;
 }

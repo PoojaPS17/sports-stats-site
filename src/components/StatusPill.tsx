@@ -14,6 +14,7 @@ export function StatusPill({
   note,
   league,
   kickoff = "date",
+  clock = true,
 }: {
   statusState: string | null;
   statusDetail: string | null;
@@ -29,6 +30,8 @@ export function StatusPill({
   league: League;
   /** What an upcoming game's pill says besides its stage: the date alone (a card that shows the time beside it) or date and time. */
   kickoff?: "date" | "datetime";
+  /** A game in play: put its clock ("Q3 4:12", "67'") after the stage label. False where the card already prints the clock beside the pill. */
+  clock?: boolean;
 }) {
   const stageFields = { round: rawRound ?? null, stage, competition_type: competitionType, note };
   const round = gameRoundLabel(stageFields);
@@ -36,7 +39,7 @@ export function StatusPill({
     return (
       <span className="pill pill-live">
         <span className="live-dot" />
-        {round ?? statusDetail ?? "Live"}
+        {round ? (clock && statusDetail ? `${round} · ${statusDetail}` : round) : (statusDetail ?? "Live")}
       </span>
     );
   }

@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
 import { Kickoff } from "@/components/Kickoff";
 import { formatGameDate } from "@/lib/gameDay";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 import { ImageActions } from "@/components/ImageActions";
 import { ProjectionTableExportCard, UpcomingProbabilityExportCard } from "@/components/ProjectionsExportCards";
 
@@ -79,34 +80,41 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
             This week
           </SectionHeader>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => (
-              <Link key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
-                <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                  <Kickoff league={league} game={game} format="datetime" />
-                </div>
-                <div className="flex items-center justify-between gap-2 text-sm font-semibold">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <TeamLogo name={teamDisplayName(game.away_name)} logoUrl={game.away_logo} color={game.away_color} size={22} />
-                    <span className="truncate">{game.away_abbr ?? teamDisplayName(game.away_name)}</span>
-                  </span>
-                  <span className="text-[var(--text-faint)]">at</span>
-                  <span className="flex min-w-0 items-center justify-end gap-2">
-                    <span className="truncate">{game.home_abbr ?? teamDisplayName(game.home_name)}</span>
-                    <TeamLogo name={teamDisplayName(game.home_name)} logoUrl={game.home_logo} color={game.home_color} size={22} />
-                  </span>
-                </div>
-                <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
-                  <span className="h-full" style={{ width: `${awayWin * 100}%`, background: game.away_color ?? "var(--accent-2)" }} />
-                  {soccer && <span className="h-full bg-[var(--draw)]" style={{ width: `${draw * 100}%` }} />}
-                  <span className="h-full flex-1" style={{ background: game.home_color ?? "var(--accent)" }} />
-                </div>
-                <div className="flex justify-between text-xs tabular-nums text-[var(--text-muted)]">
-                  <span className={awayWin > homeWin ? "font-bold text-[var(--text)]" : ""}>{pct(awayWin)}</span>
-                  {soccer && <span>draw {pct(draw)}</span>}
-                  <span className={homeWin > awayWin ? "font-bold text-[var(--text)]" : ""}>{pct(homeWin)}</span>
-                </div>
-              </Link>
-            ))}
+            {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => {
+              const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "var(--accent-2)", win: awayWin };
+              const home = { name: game.home_name, abbr: game.home_abbr, logo: game.home_logo, color: game.home_color ?? "var(--accent)", win: homeWin };
+              // Football lists the home side first ("MCI v SUN"); the NBA and NFL the visitors first ("SUN at MCI").
+              const homeFirst = scoreLineHomeFirst(league);
+              const [first, second] = homeFirst ? [home, away] : [away, home];
+              return (
+                <Link key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
+                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                    <Kickoff league={league} game={game} format="datetime" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-sm font-semibold">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <TeamLogo name={teamDisplayName(first.name)} logoUrl={first.logo} color={first.color} size={22} />
+                      <span className="truncate">{first.abbr ?? teamDisplayName(first.name)}</span>
+                    </span>
+                    <span className="text-[var(--text-faint)]">{homeFirst ? "v" : "at"}</span>
+                    <span className="flex min-w-0 items-center justify-end gap-2">
+                      <span className="truncate">{second.abbr ?? teamDisplayName(second.name)}</span>
+                      <TeamLogo name={teamDisplayName(second.name)} logoUrl={second.logo} color={second.color} size={22} />
+                    </span>
+                  </div>
+                  <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
+                    <span className="h-full" style={{ width: `${first.win * 100}%`, background: first.color }} />
+                    {soccer && <span className="h-full bg-[var(--draw)]" style={{ width: `${draw * 100}%` }} />}
+                    <span className="h-full flex-1" style={{ background: second.color }} />
+                  </div>
+                  <div className="flex justify-between text-xs tabular-nums text-[var(--text-muted)]">
+                    <span className={first.win > second.win ? "font-bold text-[var(--text)]" : ""}>{pct(first.win)}</span>
+                    {soccer && <span>draw {pct(draw)}</span>}
+                    <span className={second.win > first.win ? "font-bold text-[var(--text)]" : ""}>{pct(second.win)}</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

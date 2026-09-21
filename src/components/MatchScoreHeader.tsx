@@ -3,7 +3,7 @@ import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
 import { formatGameDate } from "@/lib/gameDay";
-import { overtimeFinal } from "@/lib/stage";
+import { finishedPillLabel } from "@/lib/stage";
 import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 // The top of every match-section image: league, date and the scoreline, so a stats
@@ -23,7 +23,7 @@ export function MatchScoreHeader({ league, game }: { league: League; game: GameR
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>
         <span>{LEAGUE_LABEL[league]}</span>
-        <span>{off ? `${off} · ${when}` : game.completed ? `${overtimeFinal(game.status_detail) ?? "Final"} · ${when}` : game.status_state === "in" ? `Live · ${when}` : when}</span>
+        <span>{off ? `${off} · ${when}` : game.completed ? `${finishedPillLabel(league, game)} · ${when}` : game.status_state === "in" ? `Live · ${when}` : when}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
         {sides.map((t) => (

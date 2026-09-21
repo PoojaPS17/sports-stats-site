@@ -1,4 +1,5 @@
 import { normalizeStage } from "./stage";
+import { specialStageLabel } from "./stageLabels";
 
 // The classification itself lives in the database (games.stage, a generated column); this is
 // the TypeScript side of it. See db/schema.sql.
@@ -14,9 +15,9 @@ export function isRegularSeasonGame(g: { stage?: GameStage | string | null; roun
  * the play-in, preseason, the NBA Cup final and the All-Star game. Regular-season and playoff
  * rows return null (a playoff row keeps its round label). */
 export function stageLabel(row: { stage?: string | null; season_type?: number | null; competition_type?: string | null }): string | null {
-  if (row.stage === "playin") return "Play-In";
+  const special = specialStageLabel(row);
+  if (special) return special;
   if (row.competition_type === "ALLSTAR") return "All-Star";
-  if (row.competition_type === "CC") return "NBA Cup final";
   if (row.season_type === 1) return "Preseason";
   return null;
 }

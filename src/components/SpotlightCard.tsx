@@ -57,7 +57,7 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
           {label} · {LEAGUE_LABEL[league]}
         </span>
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} note={game.note} league={league} />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} note={game.note} league={league} clock={false} />
       </div>
       <div className="flex flex-col gap-2.5">
         {sides.map((t) => (

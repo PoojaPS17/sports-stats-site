@@ -90,6 +90,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           competitionType={game.competition_type}
           note={game.note}
           league={league}
+          clock={false}
         />
         {upcoming ? (
           <Kickoff league={league} game={game} format="time" className="text-xs font-medium text-[var(--text-muted)]" />

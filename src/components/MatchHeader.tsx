@@ -6,6 +6,7 @@ import { FollowButton } from "./FollowButton";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { formatGameDate } from "@/lib/gameDay";
 import { scoreLineHomeFirst } from "@/lib/gamePage";
+import { isUpcomingGame } from "@/lib/gameDisplay";
 
 function TeamLine({
   href,
@@ -57,9 +58,12 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} note={game.note} league={league} kickoff="datetime" />
         <div className="flex items-center gap-3">
-          <span className="text-xs text-[var(--text-muted)]">
-            {formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-          </span>
+          {/* An upcoming match's pill already carries its date and kickoff time; print the date once. */}
+          {!isUpcomingGame(game) && (
+            <span className="text-xs text-[var(--text-muted)]">
+              {formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+            </span>
+          )}
           <FollowButton item={{ kind: "game", league, refId: game.espn_id, label: matchLabel, sublabel: LEAGUE_LABEL[league], href: path }} />
         </div>
       </div>

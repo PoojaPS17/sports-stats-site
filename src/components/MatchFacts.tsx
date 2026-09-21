@@ -2,6 +2,7 @@ import type { GameDetails } from "@/lib/matchDetail";
 import { teamDisplayName } from "@/lib/teamName";
 import type { GameRow, League } from "@/lib/queries";
 import { isSoccerLeague } from "@/lib/queries";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 function periodLabels(league: League, n: number): string[] {
   const soccer = isSoccerLeague(league);
@@ -38,10 +39,12 @@ export function MatchFacts({ league, game, details }: { league: League; game: Ga
               </tr>
             </thead>
             <tbody>
-              {[
-                { name: game.away_abbr ?? teamDisplayName(game.away_name), scores: ls.away, total: game.away_score_display ?? game.away_score },
-                { name: game.home_abbr ?? teamDisplayName(game.home_name), scores: ls.home, total: game.home_score_display ?? game.home_score },
-              ].map((row) => (
+              {(() => {
+                const away = { name: game.away_abbr ?? teamDisplayName(game.away_name), scores: ls.away, total: game.away_score_display ?? game.away_score };
+                const home = { name: game.home_abbr ?? teamDisplayName(game.home_name), scores: ls.home, total: game.home_score_display ?? game.home_score };
+                // Football lists the home side first, like the scoreline above; the NBA and NFL the visitors.
+                return scoreLineHomeFirst(league) ? [home, away] : [away, home];
+              })().map((row) => (
                 <tr key={row.name} className="border-t border-[var(--border)]">
                   <td className="py-1.5 font-medium">{row.name}</td>
                   {labels.map((l, i) => (

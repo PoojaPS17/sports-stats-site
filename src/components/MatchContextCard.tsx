@@ -3,7 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import type { FormResult, MatchContext, SideContext } from "@/lib/matchContext";
 import type { GameRow, League } from "@/lib/queries";
 import { isSoccerLeague } from "@/lib/queries";
-import type { matchContextView } from "@/lib/gamePage";
+import { scoreLineHomeFirst, type matchContextView } from "@/lib/gamePage";
 
 function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
@@ -72,6 +72,8 @@ function Standing({ side, soccer }: { side: SideContext; soccer: boolean }) {
 export function MatchContextCard({ league, game, context, view }: { league: League; game: GameRow; context: MatchContext; view: ReturnType<typeof matchContextView> }) {
   const soccer = isSoccerLeague(league);
   const p = view.showProbability ? context.probabilities : null;
+  // Football lists the home side first (left), as the match header does; the NBA and NFL the visitors.
+  const homeFirst = scoreLineHomeFirst(league);
   const rows: { label: string; away: React.ReactNode; home: React.ReactNode }[] = [
     { label: view.labels.elo, away: <Elo side={context.away} />, home: <Elo side={context.home} /> },
     { label: view.labels.form, away: <Form form={context.away.form} />, home: <Form form={context.home.form} /> },
@@ -81,23 +83,38 @@ export function MatchContextCard({ league, game, context, view }: { league: Leag
     rows.push({ label: standingLabel, away: <Standing side={context.away} soccer={soccer} />, home: <Standing side={context.home} soccer={soccer} /> });
   }
 
+  const awayName = game.away_abbr ?? teamDisplayName(game.away_name);
+  const homeName = game.home_abbr ?? teamDisplayName(game.home_name);
+
   return (
     <div className="card flex flex-col gap-3 px-4 py-4">
       {p && (
         <div>
           <div className="mb-1 flex justify-between text-xs font-semibold text-[var(--text-muted)]">
-            <span>
-              {game.away_abbr ?? teamDisplayName(game.away_name)} {Math.round(p.awayWin * 100)}%
-            </span>
+            {homeFirst ? (
+              <span>
+                {homeName} {Math.round(p.homeWin * 100)}%
+              </span>
+            ) : (
+              <span>
+                {awayName} {Math.round(p.awayWin * 100)}%
+              </span>
+            )}
             {soccer && <span>Draw {Math.round(p.draw * 100)}%</span>}
-            <span>
-              {Math.round(p.homeWin * 100)}% {game.home_abbr ?? teamDisplayName(game.home_name)}
-            </span>
+            {homeFirst ? (
+              <span>
+                {Math.round(p.awayWin * 100)}% {awayName}
+              </span>
+            ) : (
+              <span>
+                {Math.round(p.homeWin * 100)}% {homeName}
+              </span>
+            )}
           </div>
           <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-            <span className="bg-[var(--loss)]" style={{ width: `${p.awayWin * 100}%` }} />
+            <span className={homeFirst ? "bg-[var(--win)]" : "bg-[var(--loss)]"} style={{ width: `${(homeFirst ? p.homeWin : p.awayWin) * 100}%` }} />
             {soccer && <span className="bg-[var(--draw)]" style={{ width: `${p.draw * 100}%` }} />}
-            <span className="bg-[var(--win)]" style={{ width: `${p.homeWin * 100}%` }} />
+            <span className={homeFirst ? "bg-[var(--loss)]" : "bg-[var(--win)]"} style={{ width: `${(homeFirst ? p.awayWin : p.homeWin) * 100}%` }} />
           </div>
           <p className="mt-1 text-[11px] text-[var(--text-faint)]">
             Pre-match win probability from Elo ratings at kickoff{game.completed ? "" : " (updates as results come in)"}. Not a betting line.
@@ -108,9 +125,9 @@ export function MatchContextCard({ league, game, context, view }: { league: Leag
         <tbody>
           {rows.map((r) => (
             <tr key={r.label} className="border-t border-[var(--border)]">
-              <td className="py-2 text-left">{r.away}</td>
+              <td className="py-2 text-left">{homeFirst ? r.home : r.away}</td>
               <td className="py-2 text-center text-xs text-[var(--text-muted)]">{r.label}</td>
-              <td className="py-2 text-right">{r.home}</td>
+              <td className="py-2 text-right">{homeFirst ? r.away : r.home}</td>
             </tr>
           ))}
         </tbody>

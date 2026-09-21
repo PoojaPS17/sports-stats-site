@@ -125,6 +125,39 @@ test("a postponed fixture in the future does not keep a finished season open", a
   assert.match(renderToStaticMarkup(createElement(OffseasonRecap, { league: "ucl", recap })), /season ended on/);
 });
 
+test("only a called-off fixture is ignored when finding the next matchday: the site's one definition of postponed or cancelled", async () => {
+  await standing("ucl", 2026, "1", 1, 0, 0);
+  await standing("ucl", 2026, "2", 0, 0, 1);
+  await match("ucl", 2026, "1", "2", day(-10), true);
+  // ESPN's status text for a fixture still to be played is its date and time; a called-off one names why
+  await match("ucl", 2026, "2", "1", day(9), false, { detail: "Postponed" });
+  await match("ucl", 2026, "2", "1", day(11), false, { detail: "Canceled" });
+  const off = await offseason.getOffseasonRecap("ucl");
+  assert.ok(off);
+  assert.equal(off.seasonOver, true, "only called-off games are left");
+  await match("ucl", 2026, "1", "2", day(14), false, { detail: "Sat, September 26th at 3:00 PM EDT" });
+  const on = await offseason.getOffseasonRecap("ucl");
+  assert.ok(on);
+  assert.equal(on.seasonOver, false);
+  assert.equal(on.nextFixtureOn?.slice(0, 10), day(14).slice(0, 10), "the next fixture is the real one, not the postponed dates before it");
+});
+
+test("a followed game's card reads its play-in stage from the row the follows API serves", async () => {
+  const { getGameByEspnId } = await import("../src/lib/queries");
+  const { GameCard } = await import("../src/components/GameCard");
+  await team("nba", "1");
+  await team("nba", "2");
+  await db.pool.query(
+    `insert into games (league, espn_id, date, name, season_year, home_team_espn_id, away_team_espn_id, home_score, away_score, completed, season_type, competition_type, status_state, status_detail)
+     values ('nba','pi1',$1,'x',2026,'1','2',101,99,true,5,'STD','post','Final/OT')`,
+    [day(-3)]
+  );
+  const g = await getGameByEspnId("nba", "pi1");
+  assert.ok(g);
+  const html = renderToStaticMarkup(createElement(GameCard, { league: "nba", game: g }));
+  assert.match(html, />Play-In · Final\/OT</);
+});
+
 test("a cup whose final has been played is over even with a stray fixture in the database", async () => {
   await standing("ucl", 2026, "1", 1, 0, 0);
   await standing("ucl", 2026, "2", 0, 0, 1);
