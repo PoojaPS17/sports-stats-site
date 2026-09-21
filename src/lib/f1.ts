@@ -1,6 +1,7 @@
 import { pool } from "./db";
 import { applyF1StandingsCorrections } from "./f1Corrections";
 import { f1ConstructorEspnName, f1TeamLabel } from "./f1Names";
+import { f1RaceName } from "./f1RaceNames";
 
 export interface F1EventRow {
   espn_id: string;
@@ -54,14 +55,19 @@ export async function getF1Seasons(): Promise<number[]> {
   return rows.map((r) => r.season_year as number);
 }
 
+/** The event as it is shown: the race's plain name, without ESPN's title sponsor or its mistakes (f1RaceNames.ts). */
+function displayEvent(row: F1EventRow): F1EventRow {
+  return { ...row, name: f1RaceName(row.espn_id, row.name) };
+}
+
 export async function getF1Calendar(seasonYear: number): Promise<F1EventRow[]> {
   const { rows } = await pool.query(`${EVENT_SELECT} where e.season_year = $1 order by e.date asc`, [seasonYear]);
-  return rows;
+  return rows.map(displayEvent);
 }
 
 export async function getF1Event(espnId: string): Promise<F1EventRow | null> {
   const { rows } = await pool.query(`${EVENT_SELECT} where e.espn_id = $1`, [espnId]);
-  return rows[0] ?? null;
+  return rows[0] ? displayEvent(rows[0]) : null;
 }
 
 export interface F1SessionResultRow {
@@ -210,7 +216,7 @@ export async function getF1DriverResults(driverEspnId: string, limit = 20): Prom
      limit $2`,
     [driverEspnId, limit]
   );
-  return rows.map(({ season_year, ...r }) => ({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
+  return rows.map(({ season_year, ...r }) => ({ ...r, event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }
 
 export interface F1Constructor {
@@ -273,5 +279,5 @@ export async function getF1ConstructorResults(constructorName: string, limit = 2
      limit $2`,
     [constructorName, limit]
   );
-  return rows.map(({ season_year, ...r }) => ({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
+  return rows.map(({ season_year, ...r }) => ({ ...r, event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }
