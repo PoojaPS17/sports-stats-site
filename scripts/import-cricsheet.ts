@@ -30,17 +30,22 @@
 // For games already stored that have no player rows, the matching Cricsheet file
 // (same Cricinfo id) supplies the scorecard: player figures and the match report are
 // written, the game row is left as ESPN has it, and players keep their current club.
+// `--rewrite-cards` (cards-only leagues only) also redoes the games an earlier run filled
+// from Cricsheet (their stored report has no dismissal text), so they follow the current
+// rules: the 0* (0) batter, and a card for every player in the XI. Games filled from ESPN
+// are never selected.
 import { normalizeStage } from "../src/lib/stage";
 import { readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pool } from "./lib/db";
 import { slugify } from "./lib/espn";
 import { uniqueSlugFor } from "./lib/players";
-import type { CricketPlayerMatchStats } from "./lib/cricket-career";
+import { buildCards, buildScorecard, oversText, parseMatch, type Innings, type ParsedMatch } from "./lib/cricsheet-parse";
+import { selectCardsOnlyGames } from "./lib/cricsheet-targets";
+import { isCricsheetLeague, type CricsheetLeague } from "./lib/cricsheet-report";
 
-type IntlLeague = "odi" | "t20i";
-type CardsLeague = "ipl" | "bbl";
-type CsLeague = IntlLeague | CardsLeague;
+// Derived from the shared list of Cricsheet leagues, so the two cannot drift apart.
+type CsLeague = CricsheetLeague;
 const MATCH_TYPE: Record<CsLeague, string> = { odi: "ODI", t20i: "T20", ipl: "T20", bbl: "T20" };
 const CARDS_ONLY: Record<CsLeague, boolean> = { odi: false, t20i: false, ipl: true, bbl: true };
 const NAME_FETCH_CONCURRENCY = 4;
@@ -58,8 +63,12 @@ function parseArgs() {
   };
   const league = positional[0] as CsLeague | undefined;
   const dir = positional[1];
-  if (!league || !(league in MATCH_TYPE) || !dir || !opt("people")) {
-    console.error("usage: import-cricsheet.ts <odi|t20i|ipl|bbl> <dir> --people <people.csv> [--names <cache.json>] [--missing] [--limit N]");
+  if (!league || !isCricsheetLeague(league) || !dir || !opt("people")) {
+    console.error("usage: import-cricsheet.ts <odi|t20i|ipl|bbl> <dir> --people <people.csv> [--names <cache.json>] [--missing] [--limit N] [--rewrite-cards (ipl|bbl only)]");
+    process.exit(1);
+  }
+  if (args.includes("--rewrite-cards") && !CARDS_ONLY[league]) {
+    console.error("import-cricsheet.ts: --rewrite-cards only applies to the cards-only leagues (ipl, bbl); odi and t20i are always rewritten in full");
     process.exit(1);
   }
   return {
@@ -68,6 +77,7 @@ function parseArgs() {
     people: opt("people")!,
     names: opt("names"),
     missingOnly: args.includes("--missing"),
+    rewriteCards: args.includes("--rewrite-cards"),
     limit: opt("limit") ? Number(opt("limit")) : Infinity,
   };
 }
@@ -89,225 +99,6 @@ function loadRegister(path: string): Map<string, string | null> {
     out.set(cols[idCol], cols[cricinfoCol] || null);
   }
   return out;
-}
-
-/* ------------------------------------------------------------------------ */
-/* Match parsing                                                             */
-/* ------------------------------------------------------------------------ */
-
-interface BatterLine {
-  id: string;
-  runs: number;
-  balls: number;
-  fours: number;
-  sixes: number;
-  out: boolean;
-  order: number;
-}
-interface BowlerLine {
-  id: string;
-  balls: number;
-  maidens: number;
-  conceded: number;
-  wickets: number;
-  order: number;
-}
-interface Innings {
-  team: string;
-  runs: number;
-  wickets: number;
-  balls: number;
-  allOut: boolean;
-  target: { runs: number; overs: number } | null;
-  batters: BatterLine[];
-  bowlers: BowlerLine[];
-  catches: Map<string, number>;
-}
-
-// Dismissals the bowler is credited with.
-const BOWLER_WICKETS = new Set(["bowled", "caught", "lbw", "stumped", "caught and bowled", "hit wicket"]);
-// Ways of leaving the crease that do not count as a wicket in the total.
-const NOT_A_WICKET = new Set(["retired hurt", "retired not out"]);
-
-function oversText(balls: number, ballsPerOver = 6): string {
-  return `${Math.floor(balls / ballsPerOver)}.${balls % ballsPerOver}`;
-}
-
-function parseInnings(raw: any, personId: (name: string) => string | null, ballsPerOver: number, playersInXI: number): Innings {
-  const batters = new Map<string, BatterLine>();
-  const bowlers = new Map<string, BowlerLine>();
-  const catches = new Map<string, number>();
-  let runs = 0;
-  let wickets = 0;
-  let balls = 0;
-
-  const batter = (name: string): BatterLine | null => {
-    const id = personId(name);
-    if (!id) return null;
-    if (!batters.has(id)) batters.set(id, { id, runs: 0, balls: 0, fours: 0, sixes: 0, out: false, order: batters.size });
-    return batters.get(id)!;
-  };
-  const bowler = (name: string): BowlerLine | null => {
-    const id = personId(name);
-    if (!id) return null;
-    if (!bowlers.has(id)) bowlers.set(id, { id, balls: 0, maidens: 0, conceded: 0, wickets: 0, order: bowlers.size });
-    return bowlers.get(id)!;
-  };
-
-  for (const over of raw.overs ?? []) {
-    let overBowler: string | null = null;
-    let overConceded = 0;
-    let overLegalBalls = 0;
-    let singleBowler = true;
-    for (const d of over.deliveries ?? []) {
-      const wides = d.extras?.wides ?? 0;
-      const noballs = d.extras?.noballs ?? 0;
-      const legal = wides === 0 && noballs === 0;
-      runs += d.runs?.total ?? 0;
-      if (legal) balls++;
-
-      const bt = batter(d.batter);
-      if (bt) {
-        if (wides === 0) bt.balls++;
-        bt.runs += d.runs?.batter ?? 0;
-        if (!d.runs?.non_boundary) {
-          if (d.runs?.batter === 4) bt.fours++;
-          if (d.runs?.batter === 6) bt.sixes++;
-        }
-      }
-      // The non-striker has come to the crease even if they never face a ball
-      // (they can still be run out), so they belong on the card.
-      batter(d.non_striker);
-
-      const bw = bowler(d.bowler);
-      if (bw) {
-        if (overBowler === null) overBowler = bw.id;
-        else if (overBowler !== bw.id) singleBowler = false;
-        if (legal) {
-          bw.balls++;
-          overLegalBalls++;
-        }
-        const conceded = (d.runs?.batter ?? 0) + wides + noballs;
-        bw.conceded += conceded;
-        overConceded += conceded;
-      }
-
-      for (const w of d.wickets ?? []) {
-        const kind: string = w.kind ?? "";
-        if (NOT_A_WICKET.has(kind)) continue;
-        wickets++;
-        const out = batter(w.player_out);
-        if (out) out.out = true;
-        if (bw && BOWLER_WICKETS.has(kind)) bw.wickets++;
-        if (kind === "caught and bowled" && bw) catches.set(bw.id, (catches.get(bw.id) ?? 0) + 1);
-        if (kind === "caught" || kind === "stumped") {
-          const f = (w.fielders ?? [])[0];
-          if (f && !f.substitute && f.name) {
-            const fid = personId(f.name);
-            if (fid) catches.set(fid, (catches.get(fid) ?? 0) + 1);
-          }
-        }
-      }
-    }
-    if (overBowler && singleBowler && overConceded === 0 && overLegalBalls === ballsPerOver) {
-      bowlers.get(overBowler)!.maidens++;
-    }
-  }
-
-  return {
-    team: raw.team,
-    runs,
-    wickets,
-    balls,
-    allOut: wickets >= playersInXI - 1,
-    target: raw.target ? { runs: raw.target.runs, overs: raw.target.overs } : null,
-    batters: [...batters.values()].filter((b) => b.balls > 0 || b.out).sort((a, b) => a.order - b.order),
-    bowlers: [...bowlers.values()].sort((a, b) => a.order - b.order),
-    catches,
-  };
-}
-
-interface ParsedMatch {
-  id: string;
-  date: string;
-  seasonYear: number;
-  teams: [string, string];
-  venue: string | null;
-  city: string | null;
-  event: { name: string | null; stage: string | null };
-  officials: { name: string; role: string }[];
-  playerOfMatch: string[];
-  innings: Innings[];
-  hadSuperOver: boolean;
-  outcome: any;
-  maxOvers: number | null;
-  ballsPerOver: number;
-  /** Player Cricinfo id -> team name, for everyone in the XIs. */
-  squads: Map<string, string>;
-  names: Map<string, string>;
-}
-
-function parseMatch(id: string, data: any, register: Map<string, string | null>): ParsedMatch | null {
-  const info = data.info ?? {};
-  if (!info.teams || info.teams.length !== 2 || !info.dates?.length) return null;
-  const registry: Record<string, string> = info.registry?.people ?? {};
-  const names = new Map<string, string>();
-  const personId = (name: string | undefined): string | null => {
-    if (!name) return null;
-    const ident = registry[name];
-    if (!ident) return null;
-    const id = register.get(ident) || `cs-${ident}`;
-    names.set(id, name);
-    return id;
-  };
-
-  const squads = new Map<string, string>();
-  for (const [team, list] of Object.entries<string[]>(info.players ?? {})) {
-    for (const n of list) {
-      const pid = personId(n);
-      if (pid) squads.set(pid, team);
-    }
-  }
-  const ballsPerOver: number = info.balls_per_over ?? 6;
-  const xi = Math.max(...Object.values<string[]>(info.players ?? {}).map((l) => l.length), 11);
-
-  const innings: Innings[] = [];
-  let hadSuperOver = false;
-  for (const raw of data.innings ?? []) {
-    if (raw.super_over) {
-      hadSuperOver = true;
-      continue;
-    }
-    innings.push(parseInnings(raw, personId, ballsPerOver, xi));
-  }
-
-  const officials: { name: string; role: string }[] = [];
-  const roles: [string, string][] = [
-    ["umpires", "Umpire"],
-    ["tv_umpires", "TV Umpire"],
-    ["reserve_umpires", "Reserve Umpire"],
-    ["match_referees", "Match Referee"],
-  ];
-  for (const [key, role] of roles) for (const n of info.officials?.[key] ?? []) officials.push({ name: n, role });
-
-  return {
-    id,
-    date: info.dates[0],
-    seasonYear: Number(info.dates[0].slice(0, 4)),
-    teams: [info.teams[0], info.teams[1]],
-    venue: info.venue ?? null,
-    city: info.city ?? null,
-    event: { name: info.event?.name ?? null, stage: info.event?.stage ?? null },
-    officials,
-    playerOfMatch: (info.player_of_match ?? []).map((n: string) => personId(n)).filter(Boolean) as string[],
-    innings,
-    hadSuperOver,
-    outcome: info.outcome ?? {},
-    maxOvers: typeof info.overs === "number" ? info.overs : null,
-    ballsPerOver,
-    squads,
-    names,
-  };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -349,13 +140,6 @@ function resultSummary(m: ParsedMatch): { summary: string; winner: string | null
   }
   if (o.result === "no result") return { summary: "No result", winner: null, noResult: true };
   return { summary: o.result ? String(o.result) : "Result unknown", winner: null, noResult: true };
-}
-
-function strikeRate(runs: number, balls: number): string {
-  return balls > 0 ? ((runs / balls) * 100).toFixed(2) : "-";
-}
-function economy(conceded: number, balls: number, ballsPerOver: number): string {
-  return balls > 0 ? ((conceded / balls) * ballsPerOver).toFixed(2) : "-";
 }
 
 /* ------------------------------------------------------------------------ */
@@ -584,17 +368,8 @@ async function writeMatch(
     [league, playerIds, `${m.date}T12:00:00Z`, playerIds.map(teamOf)]
   );
 
-  // Per-player match figures in the shape backfill-cricket-player-stats stores.
-  const cards = new Map<string, CricketPlayerMatchStats>();
-  const card = (id: string) => {
-    if (!cards.has(id)) cards.set(id, { athleteId: id, name: names.get(id)?.name || m.names.get(id) || id, teamId: teamOf(id) ?? "" });
-    return cards.get(id)!;
-  };
-  for (const inn of m.innings) {
-    for (const b of inn.batters) card(b.id).batting = { runs: b.runs, ballsFaced: b.balls, fours: b.fours, sixes: b.sixes, notOut: !b.out };
-    for (const bw of inn.bowlers) card(bw.id).bowling = { overs: Number(oversText(bw.balls, m.ballsPerOver)), conceded: bw.conceded, wickets: bw.wickets };
-    for (const [id, n] of inn.catches) card(id).catches = (card(id).catches ?? 0) + n;
-  }
+  const playerName = (id: string) => names.get(id)?.name || m.names.get(id) || id;
+  const cards = buildCards(m, teamOf, playerName);
   // A fielder can only be on the bowling side; anyone unplaced (a substitute who is
   // somehow in the register) is skipped rather than filed against no team.
   const rows = [...cards.values()].filter((c) => c.teamId);
@@ -614,28 +389,8 @@ async function writeMatch(
     );
   }
 
-  // The stored match report the match page renders (same document the ESPN scraper
-  // would produce), so no live ESPN call is needed for these leagues.
-  const playerName = (id: string) => names.get(id)?.name || m.names.get(id) || id;
-  const scorecard = m.innings.map((inn) => {
-    const battingTeam = teamMap.get(inn.team)!;
-    return {
-      teamId: battingTeam.espn_id,
-      teamName: battingTeam.name,
-      battingLabels: ["R", "B", "4s", "6s", "SR"],
-      battingRows: inn.batters.map((b) => ({
-        athleteId: b.id,
-        name: playerName(b.id),
-        stats: [String(b.runs), String(b.balls), String(b.fours), String(b.sixes), strikeRate(b.runs, b.balls)],
-      })),
-      bowlingLabels: ["O", "M", "R", "W", "Econ"],
-      bowlingRows: inn.bowlers.map((bw) => ({
-        athleteId: bw.id,
-        name: playerName(bw.id),
-        stats: [oversText(bw.balls, m.ballsPerOver), String(bw.maidens), String(bw.conceded), String(bw.wickets), economy(bw.conceded, bw.balls, m.ballsPerOver)],
-      })),
-    };
-  });
+  // The stored match report the match page renders.
+  const scorecard = buildScorecard(m, (name) => teamMap.get(name)!, playerName);
   const leaders = m.playerOfMatch.map((id) => {
     const c = cards.get(id);
     const parts: string[] = [];
@@ -673,7 +428,7 @@ async function writeMatch(
 /* ------------------------------------------------------------------------ */
 
 async function main() {
-  const { league, dir, people, names: namesPath, missingOnly, limit } = parseArgs();
+  const { league, dir, people, names: namesPath, missingOnly, rewriteCards, limit } = parseArgs();
   const register = loadRegister(people);
 
   const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
@@ -698,15 +453,7 @@ async function main() {
   // Daredevils" -> "Delhi Capitals", "Kings XI Punjab" -> "Punjab Kings").
   const gameTeams = new Map<string, Map<string, TeamInfo>>();
   if (CARDS_ONLY[league]) {
-    const { rows } = await pool.query(
-      `select g.espn_id, h.espn_id as home_id, h.name as home_name, h.abbreviation as home_abbr, a.espn_id as away_id, a.name as away_name, a.abbreviation as away_abbr
-       from games g
-       join teams h on h.league = g.league and h.espn_id = g.home_team_espn_id
-       join teams a on a.league = g.league and a.espn_id = g.away_team_espn_id
-       where g.league = $1 and g.completed
-         and not exists (select 1 from player_game_stats s where s.league = g.league and s.game_espn_id = g.espn_id)`,
-      [league]
-    );
+    const rows = await selectCardsOnlyGames(pool, league, rewriteCards);
     const targets = new Map(rows.map((r) => [r.espn_id as string, r]));
     const words = (n: string) => new Set(n.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2));
     const overlap = (a: string, b: string) => [...words(a)].filter((w) => words(b).has(w)).length;
@@ -725,7 +472,7 @@ async function main() {
       gameTeams.set(m.id, new Map([[homeName, info(g.home_id, g.home_name, g.home_abbr)], [awayName, info(g.away_id, g.away_name, g.away_abbr)]]));
       queue.push(m);
     }
-    console.log(`[import-cricsheet] ${league}: ${targets.size} stored games without scorecards, ${queue.length} found in the archive`);
+    console.log(`[import-cricsheet] ${league}: ${targets.size} stored games ${rewriteCards ? "without scorecards or with a Cricsheet one" : "without scorecards"}, ${queue.length} found in the archive`);
   } else if (missingOnly) {
     const { rows } = await pool.query(`select espn_id from games where league = $1 and espn_id = any($2)`, [league, parsed.map((m) => m.id)]);
     const have = new Set(rows.map((r) => r.espn_id as string));

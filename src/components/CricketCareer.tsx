@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { SectionHeader } from "./SectionHeader";
 import { CricketSplitTabs } from "./CricketSplitTabs";
-import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL, isInternationalCricket } from "@/lib/queries";
+import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL } from "@/lib/queries";
+import { cricketCareerNote } from "@/lib/cricketCareerNote";
 import type { League, CricketCareerStats, CricketSplitDimension, CricketSplitRow } from "@/lib/queries";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -65,13 +66,7 @@ export function CricketCareer({
       <section>
         <SectionHeader>{LEAGUE_LABEL[league]} Career</SectionHeader>
         <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
-          {league === "test"
-            ? "From every men's Test since the start of 2015. Tests before 2015 are not included, so this is not a full career record for anyone who played earlier. Average, highest score, hundreds and five-wicket hauls are counted per innings. Matches counts a Test only when the player batted, bowled or took a catch in it."
-            : league === "wodi" || league === "wt20i"
-            ? `From every women's ${league === "wodi" ? "ODI" : "T20 international"} on record (2009 onward, World Cups included). Matches counts a game only when the player batted, bowled or took a catch in it.`
-            : isInternationalCricket(league)
-            ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} on record (${league === "odi" ? "2002" : "2005"} onward, World Cups included). Matches counts a game only when the player batted, bowled or took a catch in it.`
-            : `From every ${LEAGUE_LABEL[league]} match on record. ${LEAGUE_LABEL[league]} only: other competitions and formats are not counted.`}
+          {cricketCareerNote(league)}
         </p>
         <div className="flex flex-col gap-4">
           <div>
@@ -104,7 +99,7 @@ export function CricketCareer({
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Fielding</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                <Stat label="Catches" value={String(career.catches)} />
+                <Stat label="Catches & stumpings" value={String(career.catches)} />
               </div>
             </div>
           )}
