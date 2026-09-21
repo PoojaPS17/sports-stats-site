@@ -31,6 +31,13 @@ test("Las Vegas 2025 is Nov 22 (the day at the circuit), not Nov 23 (UTC) or Nov
   assert.deepEqual(f1WeekendDays(LAS_VEGAS_2025), { start: "2025-11-20", end: "2025-11-22" });
 });
 
+test("Las Vegas 2025 stored with no circuit is still dated Nov 22 (the event id carries the zone)", () => {
+  const noCircuit = { ...LAS_VEGAS_2025, circuit_name: null, espn_id: "600052106" };
+  assert.equal(f1RaceDay(noCircuit), "2025-11-22");
+  assert.deepEqual(f1WeekendDays(noCircuit), { start: "2025-11-20", end: "2025-11-22" });
+  assert.equal(f1FormatDate(f1RaceInstant(noCircuit), null, { month: "short", day: "numeric" }, "600052106"), "Nov 22");
+});
+
 test("a weekend runs from the first session's day to the race day; an event date that is a month out falls back to Friday-Sunday", () => {
   assert.deepEqual(f1WeekendDays(AUSTRALIA_2026), { start: "2026-03-06", end: "2026-03-08" });
   assert.deepEqual(f1WeekendDays(AUSTRALIA_2018), { start: "2018-03-23", end: "2018-03-25" });

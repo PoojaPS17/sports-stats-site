@@ -20,6 +20,9 @@ interface CircuitFix {
 const CIRCUIT_FIXES: CircuitFix[] = [
   // ESPN circuit 605 is the new Madrid circuit; before 2026 the Spanish Grand Prix was at Barcelona-Catalunya.
   { circuit: "Madring", seasons: [2016, 2025], set: { name: "Circuit de Barcelona-Catalunya", city: "Montmeló", country: "Spain" } },
+  // ESPN's 2026 record for the same track (circuit 5826, city Barcelona): Wikipedia's 2026 calendar has the Barcelona-Catalunya Grand Prix
+  // at the Circuit de Barcelona-Catalunya in Montmeló, so it reads as the 2016-25 Spanish Grands Prix above.
+  { circuit: "Circuit de Catalunya", set: { name: "Circuit de Barcelona-Catalunya", city: "Montmeló" } },
   { circuit: "Autodromo Enzo e Dino Ferrari", set: { city: "Imola" } }, // ESPN: Rome
   { circuit: "Nürburgring", set: { city: "Nürburg" } }, // ESPN: Nuremberg (2020 Eifel Grand Prix)
   { circuit: "Miami International Autodrome", set: { city: "Miami" } }, // ESPN: Florida
@@ -57,6 +60,14 @@ const CIRCUIT_TIME_ZONES: Record<string, string> = {
   "Las Vegas Street Circuit": "America/Los_Angeles",
 };
 
-export function f1CircuitTimeZone(circuitName: string | null | undefined): string {
-  return (circuitName && CIRCUIT_TIME_ZONES[circuitName]) || "UTC";
+// An event stored with no circuit (ESPN's feed sometimes has none) is still in Las Vegas: the Las Vegas Grand Prix, 2023-2026.
+const EVENT_TIME_ZONES: Record<string, string> = {
+  "600026789": "America/Los_Angeles",
+  "600041157": "America/Los_Angeles",
+  "600052106": "America/Los_Angeles",
+  "600057449": "America/Los_Angeles",
+};
+
+export function f1CircuitTimeZone(circuitName: string | null | undefined, eventId?: string | null): string {
+  return (eventId && EVENT_TIME_ZONES[eventId]) || (circuitName && CIRCUIT_TIME_ZONES[circuitName]) || "UTC";
 }

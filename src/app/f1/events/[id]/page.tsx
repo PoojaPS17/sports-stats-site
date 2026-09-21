@@ -60,7 +60,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
         </Link>
         <h1 className="page-title mt-1">{event.name}</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          {f1FormatDate(f1RaceInstant(event), event.circuit_name, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+          {f1FormatDate(f1RaceInstant(event), event.circuit_name, { weekday: "long", month: "long", day: "numeric", year: "numeric" }, event.espn_id)}
           {event.circuit_name && ` · ${event.circuit_name}`}
           {event.circuit_city && event.circuit_country && ` · ${event.circuit_city}, ${event.circuit_country}`}
         </p>
@@ -84,7 +84,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                       filename={`f1-${event.espn_id}-${first.session_type.toLowerCase()}`}
                       shareTitle={`${event.name}: ${sessionLabel(first.session_type)}`}
                       width={640}
-                      card={<F1SessionExportCard event={{ name: event.name, date: f1RaceInstant(event).toISOString(), circuit: event.circuit_name }} sessionLabel={sessionLabel(first.session_type)} results={sessionResults} />}
+                      card={<F1SessionExportCard event={{ name: event.name, id: event.espn_id, date: f1RaceInstant(event).toISOString(), circuit: event.circuit_name }} sessionLabel={sessionLabel(first.session_type)} results={sessionResults} />}
                     />
                   )
                 }

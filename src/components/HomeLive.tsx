@@ -17,7 +17,7 @@ export function F1Card({ ev }: { ev: F1EventRow }) {
     <Link href={`/f1/events/${ev.espn_id}`} className="card block px-4 py-3">
       <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
         <span className="pill pill-upcoming">Formula 1 · race weekend</span>
-        <LocalTime iso={f1RaceInstant(ev).toISOString()} format="datetime" serverTimeZone={f1CircuitTimeZone(ev.circuit_name)} className="font-medium text-[var(--text-muted)]" />
+        <LocalTime iso={f1RaceInstant(ev).toISOString()} format="datetime" serverTimeZone={f1CircuitTimeZone(ev.circuit_name, ev.espn_id)} className="font-medium text-[var(--text-muted)]" />
       </div>
       <p className="text-[15px] font-semibold">{ev.name}</p>
       {where && <p className="mt-0.5 text-xs text-[var(--text-muted)]">{where}</p>}

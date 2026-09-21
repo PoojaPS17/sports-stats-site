@@ -106,7 +106,7 @@ export default async function F1ConstructorPage({ params }: { params: Promise<{ 
                   <p className="truncate font-medium">{r.event_name}</p>
                   <p className="text-xs text-[var(--text-muted)]">
                     {r.driver_name} ·{" "}
-                    {f1FormatDate(r.session_date, r.circuit_name, { month: "short", day: "numeric", year: "numeric" })}
+                    {f1FormatDate(r.session_date, r.circuit_name, { month: "short", day: "numeric", year: "numeric" }, r.event_espn_id)}
                   </p>
                 </div>
                 <span className="shrink-0 text-sm font-bold tabular-nums">

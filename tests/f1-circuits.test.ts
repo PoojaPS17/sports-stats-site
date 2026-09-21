@@ -14,6 +14,13 @@ test("the Spanish Grand Prix 2016-2025 is at Barcelona-Catalunya, not the Madrid
   assert.deepEqual(v("x", 2026, "Madring", "Madrid", "Spain"), { name: "Madring", city: "Madrid", country: "Spain" });
 });
 
+test("Barcelona-Catalunya reads the same in every year: ESPN's 2026 circuit record ('Circuit de Catalunya', Barcelona) and the pre-2026 'Madring' rewrite agree", () => {
+  const before2026 = v("x", 2024, "Madring", "Madrid", "Spain");
+  const in2026 = v("x", 2026, "Circuit de Catalunya", "Barcelona", "Spain");
+  assert.deepEqual(in2026, { name: "Circuit de Barcelona-Catalunya", city: "Montmeló", country: "Spain" });
+  assert.deepEqual(in2026, before2026);
+});
+
 test("Imola is not in Rome, the Nürburgring not in Nuremberg", () => {
   assert.equal(v("x", 2022, "Autodromo Enzo e Dino Ferrari", "Rome", "Italy").city, "Imola");
   assert.equal(v("x", 2020, "Nürburgring", "Nuremberg", "Germany").city, "Nürburg");
@@ -48,6 +55,12 @@ test("dates are shown in the circuit's own time zone; only Las Vegas differs fro
   assert.equal(f1CircuitTimeZone("Las Vegas Street Circuit"), "America/Los_Angeles");
   assert.equal(f1CircuitTimeZone("Circuit de Monaco"), "UTC");
   assert.equal(f1CircuitTimeZone(null), "UTC");
+});
+
+test("a Las Vegas event stored with no circuit still resolves to Las Vegas time, by event id (2023-2026)", () => {
+  for (const id of ["600026789", "600041157", "600052106", "600057449"]) assert.equal(f1CircuitTimeZone(null, id), "America/Los_Angeles");
+  assert.equal(f1CircuitTimeZone(null, "600041142"), "UTC");
+  assert.equal(f1CircuitTimeZone("Circuit de Monaco", "600052106"), "America/Los_Angeles", "the event id decides even when the circuit name is another's");
 });
 
 let db: TestDb;

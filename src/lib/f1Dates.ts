@@ -11,6 +11,8 @@ export interface F1EventDates {
   /** The Race session's start, when a Race session is on file. */
   race_date?: When | null;
   circuit_name: string | null;
+  /** ESPN's event id: the zone of an event stored with no circuit (Las Vegas) is found by it. */
+  espn_id?: string;
 }
 
 /** When the Race starts: the Race session, else the event's end date, else its first date. */
@@ -19,18 +21,18 @@ export function f1RaceInstant(ev: F1EventDates): Date {
 }
 
 /** A date as a visitor reads it, in the circuit's own time zone. */
-export function f1FormatDate(when: When, circuitName: string | null | undefined, options: Intl.DateTimeFormatOptions): string {
-  return new Date(when).toLocaleDateString("en-US", { ...options, timeZone: f1CircuitTimeZone(circuitName) });
+export function f1FormatDate(when: When, circuitName: string | null | undefined, options: Intl.DateTimeFormatOptions, eventId?: string | null): string {
+  return new Date(when).toLocaleDateString("en-US", { ...options, timeZone: f1CircuitTimeZone(circuitName, eventId) });
 }
 
 /** The calendar day (YYYY-MM-DD) of an instant at the circuit. */
-function localDay(when: When, circuitName: string | null | undefined): string {
-  return new Date(when).toLocaleDateString("en-CA", { timeZone: f1CircuitTimeZone(circuitName), year: "numeric", month: "2-digit", day: "2-digit" });
+function localDay(when: When, circuitName: string | null | undefined, eventId?: string | null): string {
+  return new Date(when).toLocaleDateString("en-CA", { timeZone: f1CircuitTimeZone(circuitName, eventId), year: "numeric", month: "2-digit", day: "2-digit" });
 }
 
 /** The day of the Race at the circuit, YYYY-MM-DD. */
 export function f1RaceDay(ev: F1EventDates): string {
-  return localDay(f1RaceInstant(ev), ev.circuit_name);
+  return localDay(f1RaceInstant(ev), ev.circuit_name, ev.espn_id);
 }
 
 const DAY_MS = 86_400_000;
@@ -43,7 +45,7 @@ const dayString = (n: number) => new Date(n * DAY_MS).toISOString().slice(0, 10)
  */
 export function f1WeekendDays(ev: F1EventDates): { start: string; end: string } {
   const end = f1RaceDay(ev);
-  const start = localDay(ev.date, ev.circuit_name);
+  const start = localDay(ev.date, ev.circuit_name, ev.espn_id);
   const span = dayNumber(end) - dayNumber(start);
   return span >= 0 && span <= 4 ? { start, end } : { start: dayString(dayNumber(end) - 2), end };
 }
