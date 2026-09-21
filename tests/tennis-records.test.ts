@@ -198,3 +198,22 @@ test("the tournament page lists no champion from a team event's final rubbers (U
   const slam = await tennis.getTennisTournament("188-2024");
   assert.deepEqual(slam?.champions.map((c) => c.competition_type), ["mens-singles", "mixed-doubles"], "a real Slam mixed-doubles pair is");
 });
+
+/* ---- fix round 3: a row with no draw type (the early Slam backfill) is a singles match, and its Final is a title ---- */
+
+test("rows with a NULL competition_type and round Final count as titles, one per row (with and without side JSON)", async () => {
+  await put({ id: "n1", type: null, date: "2018-09-08T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "189-2018", tname: "US Open", noSides: true });
+  await put({ id: "n2", type: null, date: "2018-07-15T12:00:00Z", p1: "30", p2: P, winner: P, round: "Final", tournament: "188-2018", tname: "Wimbledon", noSides: true });
+  await put({ id: "n3", type: null, date: "2018-01-27T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "154-2018", tname: "Australian Open" }); // typeless but with sides
+  await put({ id: "n4", type: null, date: "2018-06-09T12:00:00Z", p1: P, p2: "30", winner: "30", round: "Final", tournament: "172-2018", tname: "French Open", noSides: true }); // lost final: no title
+  const r = (await tennis.getTennisPlayerSeasonRecords("atp", P)).find((x) => x.season === 2018);
+  assert.deepEqual(r, { season: 2018, wins: 3, losses: 1, titles: 3 });
+});
+
+test("the champions of a tournament whose rows have no draw type are not hidden by the team-event check", async () => {
+  await db.pool.query(`delete from tennis_matches`);
+  await db.pool.query(`insert into tennis_tournaments (espn_id, tour, tournament_id, season, name) values ('189-2018', 'both', '189', 2018, 'US Open')`);
+  await put({ id: "n5", type: null, date: "2018-09-08T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "189-2018", tname: "US Open" }); // sides present, no type
+  const t = await tennis.getTennisTournament("189-2018");
+  assert.equal(t?.champions.length, 1, "the null-type Final still lists its winner");
+});

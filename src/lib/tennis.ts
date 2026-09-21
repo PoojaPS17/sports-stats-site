@@ -202,8 +202,10 @@ export interface TennisTournament {
 // rubbers under competition_type 'team-cup', and every United Cup rubber under 'mixed-doubles', its singles rubbers
 // with a one-player side. ESPN also labels the rubbers of a final tie "Final", so such a row must never be read as a
 // tournament final (a title, a champion). A real mixed-doubles match has two-player sides.
-const TEAM_RUBBER_SQL = (a: string) => `(${a}.competition_type = 'team-cup'
-       or (${a}.competition_type = 'mixed-doubles' and ${a}.side1 is not null and jsonb_array_length(${a}.side1 -> 'ids') = 1))`;
+// Null-safe on purpose: a row with no competition_type (the early Slam backfill) makes both comparisons NULL, and
+// `not NULL` is NULL, which would drop the row from a FILTER or WHERE. coalesce makes it a plain false.
+const TEAM_RUBBER_SQL = (a: string) => `coalesce(${a}.competition_type = 'team-cup'
+       or (${a}.competition_type = 'mixed-doubles' and ${a}.side1 is not null and jsonb_array_length(${a}.side1 -> 'ids') = 1), false)`;
 
 const TOURNAMENT_SELECT = `
   select t.espn_id, t.tour, t.tournament_id, t.season, t.name, t.location, t.major,
