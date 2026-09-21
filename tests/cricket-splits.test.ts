@@ -136,10 +136,44 @@ test("each split panel carries its own row's figures", () => {
   }
 });
 
-test("the career note says Matches counts every game in the XI, whatever the league", () => {
-  for (const league of ["test", "odi", "t20i", "wodi", "wt20i", "ipl", "bbl", "wpl", "wbbl", "cwc", "t20wc", "wcwc", "wt20wc"] as const) {
-    const html = renderToStaticMarkup(createElement(CricketCareer, { league, career, splits }));
-    assert.ok(html.includes("Matches counts every game the player was in the playing XI for."), `${league} note`);
-    assert.doesNotMatch(html, /batted, bowled or took a catch/);
+// What the site holds decides what the career figures can say. Cricsheet's ball-by-ball ODI archive starts in
+// 2002 and its T20I archive in 2005; ESPN fills what Cricsheet lacks from 2009; the women's internationals and
+// the Tests (since 2015) are ESPN's alone. Some matches neither source has are missing, so the note may not claim
+// "every match on record" and may state only the years the data supports (for the ODI note: 2002 where the
+// archive starts, 2008 where the missing span ends, 2009 where ESPN's gap fill begins).
+const CRICKET_LEAGUES = ["test", "odi", "t20i", "wodi", "wt20i", "ipl", "bbl", "wpl", "wbbl", "cwc", "t20wc", "wcwc", "wt20wc"] as const;
+const SUPPORTED_YEARS: Record<string, string[]> = { test: ["2015"], odi: ["2002", "2008", "2009"], t20i: ["2005"], wodi: ["2009"], wt20i: ["2009"] };
+const noteOf = (league: (typeof CRICKET_LEAGUES)[number]) => {
+  const html = renderToStaticMarkup(createElement(CricketCareer, { league, career, splits }));
+  const note = html.match(/<p class="-mt-2 mb-3[^>]*>([\s\S]*?)<\/p>/)?.[1];
+  assert.ok(note, `${league} has a career note`);
+  return note.replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
+};
+
+test("the career note counts the matches held on this site and says Matches counts the XI, for every league", () => {
+  for (const league of CRICKET_LEAGUES) {
+    const note = noteOf(league);
+    assert.ok(note.includes("held on this site") || note.includes("without a scorecard"), `${league}: says the figures are of what this site holds`);
+    assert.ok(note.includes("Matches counts every match on this site the player was in the playing XI for."), `${league}: Matches sentence`);
+    assert.match(note, /lower than Cricinfo's/, `${league}: totals can be lower than Cricinfo's`);
+    assert.doesNotMatch(note, /on record|From every|every game the player/, `${league}: no claim of full coverage`);
+    assert.doesNotMatch(note, /batted, bowled or took a catch/);
   }
+});
+
+test("the career note states only the years the data supports, and no other year", () => {
+  for (const league of CRICKET_LEAGUES) {
+    const years = [...new Set(noteOf(league).match(/\b(19|20)\d\d\b/g) ?? [])].sort();
+    assert.deepEqual(years, (SUPPORTED_YEARS[league] ?? []).sort(), `${league} note years`);
+    assert.doesNotMatch(noteOf(league), /onward/, `${league}: no "onward" claim`);
+  }
+});
+
+test("each league type says what is missing", () => {
+  assert.match(noteOf("odi"), /Some ODIs from 2002 to 2008 and a few later ones are missing/);
+  assert.match(noteOf("t20i"), /small number of matches are missing/);
+  assert.match(noteOf("wodi"), /earlier matches are not included/);
+  assert.match(noteOf("wt20i"), /small number of later matches are missing/);
+  assert.match(noteOf("test"), /Tests before 2015 are not included/);
+  for (const league of ["ipl", "bbl", "wpl", "wbbl", "cwc", "t20wc", "wcwc", "wt20wc"] as const) assert.match(noteOf(league), /Matches without a scorecard on this site are not counted/, league);
 });

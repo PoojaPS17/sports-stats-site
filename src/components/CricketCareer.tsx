@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { SectionHeader } from "./SectionHeader";
 import { CricketSplitTabs } from "./CricketSplitTabs";
-import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL, isInternationalCricket } from "@/lib/queries";
+import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL } from "@/lib/queries";
+import { cricketCareerNote } from "@/lib/cricketCareerNote";
 import type { League, CricketCareerStats, CricketSplitDimension, CricketSplitRow } from "@/lib/queries";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -65,13 +66,7 @@ export function CricketCareer({
       <section>
         <SectionHeader>{LEAGUE_LABEL[league]} Career</SectionHeader>
         <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
-          {league === "test"
-            ? "From every men's Test since the start of 2015. Tests before 2015 are not included, so this is not a full career record for anyone who played earlier. Average, highest score, hundreds and five-wicket hauls are counted per innings. Matches counts every game the player was in the playing XI for."
-            : league === "wodi" || league === "wt20i"
-            ? `From every women's ${league === "wodi" ? "ODI" : "T20 international"} on record (2009 onward, World Cups included). Matches counts every game the player was in the playing XI for.`
-            : isInternationalCricket(league)
-            ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} on record (${league === "odi" ? "2002" : "2005"} onward, World Cups included). Matches counts every game the player was in the playing XI for.`
-            : `From every ${LEAGUE_LABEL[league]} match on record. ${LEAGUE_LABEL[league]} only: other competitions and formats are not counted. Matches counts every game the player was in the playing XI for.`}
+          {cricketCareerNote(league)}
         </p>
         <div className="flex flex-col gap-4">
           <div>
