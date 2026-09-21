@@ -39,9 +39,14 @@ export interface CricketSummaryOptions {
   accept?: (summary: any) => boolean;
   /** Where the final failure is logged (default console.error). */
   log?: (message: string) => void;
+  /** Stop starting attempts once this many ms have passed since the call began. For a page render, which must not wait out every retry on every path; the scripts leave it unset. */
+  deadlineMs?: number;
+  /** Clock and sleep, injectable for tests. */
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const realSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** The paths to try, in order: the competition's own, then the IPL's, without repeats. */
 export function cricketSummaryPaths(primary: string | undefined): string[] {
@@ -62,11 +67,19 @@ export async function fetchCricketSummaryVia(
   const retries = options.retries ?? 2;
   const backoffMs = options.backoffMs ?? 500;
   const log = options.log ?? ((m: string) => console.error(m));
+  const now = options.now ?? Date.now;
+  const sleep = options.sleep ?? realSleep;
+  const started = now();
+  const expired = () => options.deadlineMs !== undefined && now() - started >= options.deadlineMs;
   let lastReason = "no path tried";
   let bestStructural: any = null;
-  for (const path of paths) {
+  search: for (const path of paths) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       if (attempt > 0) await sleep(backoffMs * 2 ** (attempt - 1));
+      if (expired()) {
+        lastReason += ` (gave up after ${options.deadlineMs} ms)`;
+        break search;
+      }
       try {
         const body = await fetchJson(path);
         if (!isCricketSummary(body)) {

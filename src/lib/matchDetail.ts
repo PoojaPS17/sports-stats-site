@@ -42,13 +42,14 @@ export async function fetchMatchSummary(league: League, espnId: string): Promise
     try {
       return await fetchCricketSummaryVia(
         async (p) => {
-          const res = await fetch(url(p), { ...cache, signal: AbortSignal.timeout(6000) });
+          const res = await fetch(url(p), { ...cache, signal: AbortSignal.timeout(4000) });
           // A complete body can arrive under a 502 status; whether it is a summary is decided by its shape.
           return JSON.parse(await res.text());
         },
         espnId,
         cricketSummaryPaths(path),
-        { backoffMs: 250 }
+        // A render must not wait out every retry on both paths when ESPN is down: about eight seconds in all, then the page shows what it has.
+        { backoffMs: 250, deadlineMs: 8000 }
       );
     } catch {
       return null; // already logged with the game id and the reason

@@ -193,6 +193,10 @@ test("a match ESPN has squads but no figures for is not a failure; it is retried
   const first = await topup.topUpCricketPlayerStats({ fetchSummary: fetcherFor(byId) });
   assert.deepEqual({ noScorecard: first.noScorecard, failed: first.failed.length, written: first.written }, { noScorecard: 2, failed: 0, written: 0 });
   assert.equal(topup.topUpExitCode(first), 0);
+  // the ten-day-old one is named in a WARNING on the summary line (the run still exits 0); the recent one may just be hydrating
+  assert.deepEqual(first.overdue, ["wcwc/nofig"]);
+  assert.match(topup.summaryLine(first, 40), /; WARNING 1 match\(es\) still without a scorecard more than 3 days after they ended: wcwc\/nofig$/);
+  assert.doesNotMatch(topup.summaryLine({ ...first, overdue: [] }, 40), /WARNING/);
   const calls: string[] = [];
   const second = await topup.topUpCricketPlayerStats({ fetchSummary: fetcherFor(byId, calls) });
   // the old match's report was fetched more than three days after it was played: settled. The recent one may still be hydrating.
@@ -228,6 +232,19 @@ test("leaders after a top-up equal the sum of the scorecards on the game pages",
     for (const row of board) assert.equal(row.value, fromPages[key].get(row.player_espn_id), `${key} for ${row.name}`);
   }
   assert.equal((await queries.getCricketLeaders("wpl", "runs", 2026, 1))[0].value, 173);
+});
+
+test("two players who share a name in one match are both stored, the second under a disambiguated slug", async () => {
+  await seedGame("wpl", "twin");
+  const twins = summary({ id: "twin", home: [{ id: "p1", name: "Mohammad Nawaz", runs: 10 }], away: [{ id: "p2", name: "Mohammad Nawaz", runs: 20 }] });
+  const result = await topup.topUpCricketPlayerStats({ fetchSummary: fetcherFor({ twin: twins }) });
+  assert.deepEqual({ failed: result.failed, written: result.written, playerRows: result.playerRows }, { failed: [], written: 1, playerRows: 2 });
+  const slugs = (await db.pool.query(`select espn_id, slug from players where league = 'wpl' order by espn_id`)).rows;
+  assert.deepEqual(slugs, [
+    { espn_id: "p1", slug: "mohammad-nawaz" },
+    { espn_id: "p2", slug: "mohammad-nawaz-p2" },
+  ]);
+  assert.equal((await rowsOf("wpl", "twin")).length, 2);
 });
 
 /* ---------------------------------- reconcile --------------------------------- */
@@ -281,6 +298,14 @@ test("reconcile leaves abandoned-without-a-ball, unfinished, already-imported an
   assert.equal((await db.pool.query(`select home_score from games where espn_id = '4'`)).rows[0].home_score, 99);
 });
 
+test("reconcile imports a match in which two players share a name", async () => {
+  await seedListing("1549196");
+  stubEspn({ "1549196": summary({ id: "1549196", home: [{ id: "p1", name: "Mohammad Nawaz", runs: 10 }], away: [{ id: "p2", name: "Mohammad Nawaz", runs: 20 }] }) });
+  const result = await importer.reconcileMissingInternationals({});
+  assert.deepEqual({ imported: result.imported, failed: result.failed }, { imported: ["wt20i/1549196"], failed: [] });
+  assert.equal((await db.pool.query(`select count(distinct slug)::int as n from players where league = 'wt20i'`)).rows[0].n, 2);
+});
+
 test("reconcile also catches a Test and an ODI, oldest first, capped, and says how many are left", async () => {
   await seedListing("11", { intl: "1", daysAgo: 5 });
   await seedListing("12", { intl: "2", daysAgo: 4 });
@@ -312,4 +337,44 @@ test("reconcile logs each id that still fails with its error and reports a failu
   assert.match(errors.join("\n"), /wt20i 1549195 failed/);
   assert.match(importer.reconcileSummaryLine(result, 40), /failed 1 \(wt20i\/1549195\)/);
   assert.equal((await db.pool.query(`select count(*)::int as n from games where espn_id = '1549195'`)).rows[0].n, 0);
+});
+
+test("an unparseable ESPN reply costs one request per attempt, not the importer's own retries times the summary retries", async () => {
+  await seedListing("1549195");
+  const urls: string[] = [];
+  globalThis.fetch = (async (input: any) => {
+    urls.push(String(input));
+    return new Response("<html>502 Bad Gateway</html>", { status: 502 });
+  }) as typeof fetch;
+  const realError = console.error;
+  console.error = () => {};
+  let result;
+  try {
+    result = await importer.reconcileMissingInternationals({});
+  } finally {
+    console.error = realError;
+  }
+  assert.equal(result.failed.length, 1);
+  // 3 attempts (first try + 2 retries) on each of the two paths (IPL's, then the listing's series) = 6, not 4 x 6
+  assert.equal(urls.length, 6);
+  assert.equal(urls.filter((u) => u.includes("/cricket/8048/")).length, 3);
+});
+
+test("reconcile names a match it keeps skipping more than three days after it ended in a WARNING, and still exits 0", async () => {
+  await seedListing("21", { daysAgo: 10 });
+  await seedListing("22", { daysAgo: 1 });
+  // both finished on the listing, but ESPN's summary has no competitors
+  const bare = { header: { id: "x", competitions: [{ competitors: [] }] } };
+  stubEspn({ "21": bare, "22": bare });
+  const realError = console.error;
+  console.error = () => {};
+  let result;
+  try {
+    result = await importer.reconcileMissingInternationals({});
+  } finally {
+    console.error = realError;
+  }
+  assert.deepEqual({ imported: result.imported, skipped: result.skipped.sort(), failed: result.failed }, { imported: [], skipped: ["wt20i/21", "wt20i/22"], failed: [] });
+  assert.deepEqual(result.overdue, ["wt20i/21"]);
+  assert.match(importer.reconcileSummaryLine(result, 40), /WARNING 1 match\(es\).*: wt20i\/21$/);
 });

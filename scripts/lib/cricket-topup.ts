@@ -11,7 +11,7 @@ import type { PoolClient } from "pg";
 import { pool } from "./db";
 import { SPORT_PATH, fetchCricketSummary, type League } from "./espn";
 import { extractCricketMatchStats } from "./cricket-career";
-import { scorecardHasRowsSql, storeCricketDetailsIfMissing, writeCricketPlayerRows } from "./cricket-player-rows";
+import { isScorecardOverdue, overdueWarning, scorecardHasRowsSql, storeCricketDetailsIfMissing, writeCricketPlayerRows } from "./cricket-player-rows";
 import { cricketSummaryPaths, type CricketSummaryOptions } from "../../src/lib/cricketSummary";
 import { extractGameDetails } from "../../src/lib/matchDetail";
 
@@ -43,6 +43,7 @@ export interface TopUpCandidate {
   home_team_espn_id: string;
   away_team_espn_id: string;
   series_id: string | null;
+  date: Date | string;
 }
 
 export async function findTopUpCandidates(cap: number, leagues: readonly string[] = TOPUP_LEAGUES): Promise<{ total: number; games: TopUpCandidate[] }> {
@@ -54,7 +55,7 @@ export async function findTopUpCandidates(cap: number, leagues: readonly string[
                 or (${EMPTY_SCORECARD_SQL} and d.fetched_at > g.date + interval '${SETTLED_AFTER_DAYS} days')))`;
   const [{ rows: games }, { rows: count }] = await Promise.all([
     pool.query(
-      `select g.league, g.espn_id, g.home_team_espn_id, g.away_team_espn_id,
+      `select g.league, g.espn_id, g.home_team_espn_id, g.away_team_espn_id, g.date,
               (select split_part(m.series_espn_id, '-', 1) from cricket_series_matches m where m.espn_id = g.espn_id) as series_id
        from games g where ${where} order by g.date desc limit $2`,
       [leagues, cap]
@@ -89,6 +90,8 @@ export interface TopUpResult {
   playerRows: number;
   /** Games ESPN answered for but has no scorecard for (yet): retried on later runs until settled. */
   noScorecard: number;
+  /** The no-scorecard games (league/id) that are more than three days past their match date: ESPN is not going to publish one soon, and the job exits 0 for them. */
+  overdue: string[];
   failed: { league: string; id: string; error: string }[];
 }
 
@@ -96,7 +99,7 @@ export async function topUpCricketPlayerStats(options: { cap?: number; leagues?:
   const cap = options.cap ?? DEFAULT_TOPUP_CAP;
   const fetchSummary = options.fetchSummary ?? defaultSummaryFetcher();
   const { total, games } = await findTopUpCandidates(cap, options.leagues);
-  const result: TopUpResult = { eligible: total, attempted: games.length, written: 0, playerRows: 0, noScorecard: 0, failed: [] };
+  const result: TopUpResult = { eligible: total, attempted: games.length, written: 0, playerRows: 0, noScorecard: 0, overdue: [], failed: [] };
 
   for (const game of games) {
     try {
@@ -123,7 +126,10 @@ export async function topUpCricketPlayerStats(options: { cap?: number; leagues?:
       }
       result.playerRows += rows;
       if (players.length > 0) result.written++;
-      else result.noScorecard++;
+      else {
+        result.noScorecard++;
+        if (isScorecardOverdue(game.date)) result.overdue.push(`${game.league}/${game.espn_id}`);
+      }
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       result.failed.push({ league: game.league, id: game.espn_id, error });
@@ -144,6 +150,7 @@ export function summaryLine(r: TopUpResult, cap: number): string {
     `[topup-cricket-player-stats] ${r.eligible} game(s) without player rows; attempted ${r.attempted} (cap ${cap}), ` +
     `stored ${r.written} (${r.playerRows} player rows), ${r.noScorecard} with no scorecard on ESPN yet, ${r.failed.length} failed` +
     (waiting > 0 ? `, ${waiting} left for the next run` : "") +
-    (r.failed.length > 0 ? `; failed: ${r.failed.map((f) => `${f.league}/${f.id}`).join(", ")}` : "")
+    (r.failed.length > 0 ? `; failed: ${r.failed.map((f) => `${f.league}/${f.id}`).join(", ")}` : "") +
+    overdueWarning(r.overdue)
   );
 }

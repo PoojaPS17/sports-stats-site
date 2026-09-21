@@ -35,6 +35,7 @@ import { upsertTeam } from "./lib/teams";
 import { uniqueSlugFor } from "./lib/players";
 import { extractGameDetails } from "../src/lib/matchDetail";
 import { fetchCricketSummaryVia } from "../src/lib/cricketSummary";
+import { isScorecardOverdue, overdueWarning } from "./lib/cricket-player-rows";
 
 export type IntlLeague = "test" | "odi" | "t20i" | "wodi" | "wt20i";
 export const INTL_LEAGUES: IntlLeague[] = ["test", "odi", "t20i", "wodi", "wt20i"];
@@ -54,9 +55,11 @@ function sleep(ms: number) {
 
 // ESPN's edge answers a slice of requests with 502/504 (a transient — the same URL
 // succeeds on retry) and occasionally a non-2xx status wrapped around a valid body.
-async function getJson(url: string): Promise<any> {
+// `attempts` is how many times to try: a caller that already retries around this (the summary
+// read, through fetchCricketSummaryVia) passes 1 so the two loops do not multiply.
+async function getJson(url: string, attempts = RETRIES): Promise<any> {
   let lastErr: unknown;
-  for (let attempt = 0; attempt < RETRIES; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       const res = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
       const text = await res.text();
@@ -67,7 +70,7 @@ async function getJson(url: string): Promise<any> {
       }
     } catch (err) {
       lastErr = err;
-      await sleep(1000 * (attempt + 1));
+      if (attempt + 1 < attempts) await sleep(1000 * (attempt + 1));
     }
   }
   throw lastErr;
@@ -207,7 +210,7 @@ export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
   // ESPN's 502 error body ({"code":2502,...}) parses as JSON, so a bare getJson reads it as a
   // summary with no competitors and the match is skipped as if ESPN had nothing. The shared
   // read rejects it, retries, and tries the IPL id then the series id (lib/cricketSummary.ts).
-  const summary = await fetchCricketSummaryVia((path) => getJson(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${f.id}`), f.id, [...new Set([`cricket/${FALLBACK_SERIES}`, `cricket/${f.seriesId}`])], {
+  const summary = await fetchCricketSummaryVia((path) => getJson(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${f.id}`, 1), f.id, [...new Set([`cricket/${FALLBACK_SERIES}`, `cricket/${f.seriesId}`])], {
     accept: (s) => Boolean(s?.header?.competitions?.[0]?.competitors?.length),
   });
   const comp = summary?.header?.competitions?.[0];
@@ -434,17 +437,22 @@ export interface ReconcileResult {
   imported: string[];
   /** writeMatch declined (logged with its reason): not finished after all, no scorecard on ESPN, no competitors. */
   skipped: string[];
+  /** The skipped matches (league/id) more than three days past their date: persistent, and the run still exits 0. */
+  overdue: string[];
   failed: { id: string; error: string }[];
 }
 
 export async function reconcileMissingInternationals(options: { cap?: number; league?: IntlLeague; delayMs?: number } = {}): Promise<ReconcileResult> {
   const cap = options.cap ?? RECONCILE_CAP;
   const { total, matches } = await findMissingInternationals(cap, options.league);
-  const result: ReconcileResult = { eligible: total, attempted: matches.length, imported: [], skipped: [], failed: [] };
+  const result: ReconcileResult = { eligible: total, attempted: matches.length, imported: [], skipped: [], overdue: [], failed: [] };
   for (const f of matches) {
     try {
       if (await writeMatch(f, false)) result.imported.push(`${f.league}/${f.id}`);
-      else result.skipped.push(`${f.league}/${f.id}`);
+      else {
+        result.skipped.push(`${f.league}/${f.id}`);
+        if (isScorecardOverdue(f.date)) result.overdue.push(`${f.league}/${f.id}`);
+      }
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       result.failed.push({ id: `${f.league}/${f.id}`, error });
@@ -461,7 +469,8 @@ export function reconcileSummaryLine(r: ReconcileResult, cap: number): string {
     `imported ${r.imported.length}${r.imported.length ? ` (${r.imported.join(", ")})` : ""}, ` +
     `skipped ${r.skipped.length}${r.skipped.length ? ` (${r.skipped.join(", ")})` : ""}, failed ${r.failed.length}` +
     (r.failed.length ? ` (${r.failed.map((f) => f.id).join(", ")})` : "") +
-    (r.eligible > r.attempted ? `; ${r.eligible - r.attempted} left for the next run` : "")
+    (r.eligible > r.attempted ? `; ${r.eligible - r.attempted} left for the next run` : "") +
+    overdueWarning(r.overdue)
   );
 }
 

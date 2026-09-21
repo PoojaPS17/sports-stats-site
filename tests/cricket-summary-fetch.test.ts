@@ -76,6 +76,31 @@ test("a summary the caller finds unusable moves to the next path; the structural
   assert.equal(await fetchCricketSummaryVia(async () => bare, "1", ["a", "b"], { ...noLog, accept: useful }), bare);
 });
 
+test("a deadline stops the retries: with ESPN slow and failing the read gives up after the attempt that crossed it", async () => {
+  let t = 0;
+  const calls: string[] = [];
+  const logged: string[] = [];
+  const clock = { now: () => t, sleep: async (ms: number) => void (t += ms) };
+  await assert.rejects(
+    fetchCricketSummaryVia(async (p) => (calls.push(p), (t += 3000), BAD_GATEWAY), "77", ["cricket/8584", CRICKET_FALLBACK_PATH], { backoffMs: 250, deadlineMs: 8000, log: (m) => logged.push(m), ...clock }),
+    /77.*gave up after 8000 ms/
+  );
+  // 3s + 0.25s wait + 3s + 0.5s wait + 3s = 9.75s: the third attempt crosses 8s and nothing more is started
+  assert.deepEqual(calls, ["cricket/8584", "cricket/8584", "cricket/8584"]);
+  assert.equal(logged.length, 1);
+  // and without a deadline the same ESPN gets all six attempts
+  t = 0;
+  calls.length = 0;
+  await assert.rejects(fetchCricketSummaryVia(async (p) => (calls.push(p), (t += 3000), BAD_GATEWAY), "77", ["cricket/8584", CRICKET_FALLBACK_PATH], { backoffMs: 250, log: () => {}, ...clock }));
+  assert.equal(calls.length, 6);
+});
+
+test("a deadline does not stop a read that is succeeding", async () => {
+  let t = 0;
+  const got = await fetchCricketSummaryVia(async () => ((t += 100), GOOD), "1", ["a"], { deadlineMs: 8000, now: () => t, sleep: async () => {}, log: () => {} });
+  assert.equal(got, GOOD);
+});
+
 const realFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = realFetch;

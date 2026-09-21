@@ -15,7 +15,7 @@ type Queryable = Pick<Pool | PoolClient, "query">;
  */
 export async function writeCricketPlayerRows(db: Queryable, league: string, gameEspnId: string, players: CricketPlayerMatchStats[], keepClub: boolean): Promise<number> {
   for (const p of players) {
-    const slug = await uniqueSlugFor(league, p.athleteId, p.name);
+    const slug = await uniqueSlugFor(league, p.athleteId, p.name, db);
     await db.query(
       `insert into players (league, espn_id, team_espn_id, name, slug)
        values ($1, $2, $3, $4, $5)
@@ -55,3 +55,11 @@ export async function storeCricketDetailsIfMissing(db: Queryable, league: string
   );
   return (rowCount ?? 0) > 0;
 }
+
+/** A finished match ESPN still has no scorecard for this long after its last ball is not a hydration lag any more. */
+export const SCORECARD_OVERDUE_DAYS = 3;
+export const isScorecardOverdue = (matchDate: string | Date, now = Date.now()): boolean => now - new Date(matchDate).getTime() > SCORECARD_OVERDUE_DAYS * 86_400_000;
+
+/** Suffix for a job's summary line naming matches that are still without a scorecard well after they ended (empty when there are none), so the VM log shows a persistent gap although the run exits 0. */
+export const overdueWarning = (ids: string[]): string =>
+  ids.length === 0 ? "" : `; WARNING ${ids.length} match(es) still without a scorecard more than ${SCORECARD_OVERDUE_DAYS} days after they ended: ${ids.join(", ")}`;
