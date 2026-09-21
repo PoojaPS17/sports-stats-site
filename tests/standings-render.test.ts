@@ -1,5 +1,6 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { startTestDb, type TestDb } from "./helpers/testDb";
@@ -14,6 +15,7 @@ let standingsExportWidth: typeof import("../src/components/StandingsExportCard")
 let ComputedStandingsTable: typeof import("../src/components/ComputedStandingsTable").ComputedStandingsTable;
 let TeamHistoryExportCard: typeof import("../src/components/TeamHistoryExportCard").TeamHistoryExportCard;
 let sortStandings: typeof import("../src/lib/standingsOrder").sortStandings;
+let SeasonSummary: typeof import("../src/components/SeasonSummary").SeasonSummary;
 let analytics: typeof import("../src/lib/analytics");
 let teamSummary: typeof import("../src/lib/teamSummary");
 
@@ -24,6 +26,7 @@ before(async () => {
   ({ ComputedStandingsTable } = await import("../src/components/ComputedStandingsTable"));
   ({ TeamHistoryExportCard } = await import("../src/components/TeamHistoryExportCard"));
   ({ sortStandings } = await import("../src/lib/standingsOrder"));
+  ({ SeasonSummary } = await import("../src/components/SeasonSummary"));
   analytics = await import("../src/lib/analytics");
   teamSummary = await import("../src/lib/teamSummary");
 });
@@ -36,7 +39,7 @@ function row(name: string, over: Partial<StandingRow> = {}): StandingRow {
   return {
     season: 2025, team_espn_id: name.toLowerCase().replace(/\W+/g, "-"), name, slug: name.toLowerCase().replace(/\W+/g, "-"), abbreviation: null, logo_url: null, color: null,
     conference: null, division: null, wins: 0, losses: 0, win_percent: "0", streak: null, playoff_seed: null, draws: null, points: null, goals_for: null, goals_against: null,
-    no_result: null, net_run_rate: null, rank: null, ...over,
+    no_result: null, net_run_rate: null, rank: null, zone: null, ...over,
   };
 }
 const html = (el: ReactElement) => renderToStaticMarkup(el);
@@ -179,4 +182,98 @@ test("a Champions League group-stage image is wider than the default side-by-sid
   assert.equal(standingsExportWidth("epl" as League, sortStandings("epl", [row("A", { points: 3, wins: 1, conference: "g" })])), 720);
   const nfl = sortStandings("nfl", [row("A", { conference: "AFC", division: "AFC East", wins: 1, win_percent: "1" }), row("B", { conference: "NFC", division: "NFC East", wins: 1, win_percent: "1" })]);
   assert.equal(standingsExportWidth("nfl" as League, nfl), 980);
+});
+
+// ---- Qualification and relegation bands (Task 3) ----------------------------------------------------------
+
+// The 2025-26 La Liga table as ESPN sent it (tests/fixtures/espn-laliga-2025-standings.json, trimmed from
+// https://site.api.espn.com/apis/v2/sports/soccer/esp.1/standings?season=2025), as the site would store it.
+function laligaRows(withNotes: boolean, played?: number): StandingRow[] {
+  const data = JSON.parse(readFileSync(new URL("./fixtures/espn-laliga-2025-standings.json", import.meta.url), "utf8"));
+  const stat = (e: any, n: string) => Number(e.stats.find((s: any) => s.name === n)?.displayValue ?? 0);
+  return data.children[0].standings.entries.map((e: any) =>
+    row(e.team.displayName, {
+      conference: data.children[0].name, rank: stat(e, "rank"), points: stat(e, "points"), wins: played ? Math.floor(played / 2) : stat(e, "wins"), draws: played ? played - Math.floor(played / 2) : stat(e, "ties"),
+      losses: played ? 0 : stat(e, "losses"), goals_for: stat(e, "pointsFor"), goals_against: stat(e, "pointsAgainst"), zone: withNotes ? e.note?.description ?? null : null,
+    })
+  );
+}
+/** The zone marker (class and tooltip) drawn on the row of a club. */
+const markerOf = (markup: string, club: string) => {
+  const tr = [...markup.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/g)].map((m) => m[0]).find((r) => r.includes(`>${club}<`));
+  assert.ok(tr, `${club} row`);
+  const m = /class="zone-marker ([^"]*)"(?: title="([^"]*)")?/.exec(tr);
+  return { cls: (m?.[1] ?? "").trim(), title: m?.[2] ?? null };
+};
+const legendLabels = (markup: string) => [...markup.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map((m) => text(m[1]));
+
+test("a finished La Liga 2025-26 table is banded from each row's ESPN note; the legend lists only those labels", () => {
+  const rows = sortStandings("laliga", laligaRows(true));
+  const markup = html(createElement(StandingsTable, { league: "laliga" as League, standings: rows }));
+  assert.deepEqual(markerOf(markup, "Real Betis"), { cls: "zone-1", title: "Champions League" }, "Betis, 5th");
+  assert.deepEqual(markerOf(markup, "Celta Vigo"), { cls: "zone-2", title: "Europa League" }, "6th");
+  assert.deepEqual(markerOf(markup, "Getafe"), { cls: "zone-4", title: "Conference League qualifying" }, "7th");
+  assert.deepEqual(markerOf(markup, "Rayo Vallecano"), { cls: "", title: null }, "8th has no note");
+  assert.deepEqual(markerOf(markup, "Real Sociedad"), { cls: "zone-2", title: "Europa League" }, "Real Sociedad, 10th");
+  assert.deepEqual(markerOf(markup, "Levante"), { cls: "", title: null }, "16th");
+  assert.deepEqual(markerOf(markup, "Mallorca"), { cls: "zone-3", title: "Relegation" }, "18th");
+  assert.deepEqual(legendLabels(markup), ["Champions League", "Europa League", "Conference League qualifying", "Relegation"]);
+  assert.ok(!markup.includes("Qualification places as at the start of the season"), "no start-of-season caption on a finished table");
+});
+
+test("the same finished La Liga rows without notes fall back to the positional rule (5th is Europa League, no Conference band)", () => {
+  const rows = sortStandings("laliga", laligaRows(false));
+  const markup = html(createElement(StandingsTable, { league: "laliga" as League, standings: rows }));
+  assert.deepEqual(markerOf(markup, "Real Betis"), { cls: "zone-2", title: "Europa League" });
+  assert.deepEqual(markerOf(markup, "Real Sociedad"), { cls: "", title: null });
+  assert.deepEqual(legendLabels(markup), ["Champions League", "Europa League", "Relegation"]);
+});
+
+test("a La Liga season in progress: Conference League at 6th by position, legend entry and caption; last year's notes are ignored", () => {
+  const rows = sortStandings("laliga", laligaRows(true, 20)).map((r) => ({ ...r, season: 2026 }));
+  const markup = html(createElement(StandingsTable, { league: "laliga" as League, standings: rows }));
+  assert.deepEqual(markerOf(markup, "Real Betis"), { cls: "zone-2", title: "Europa League" }, "5th by position, though the stale note says Champions League");
+  assert.deepEqual(markerOf(markup, "Celta Vigo"), { cls: "zone-4", title: "Conference League" }, "6th");
+  assert.deepEqual(markerOf(markup, "Real Sociedad"), { cls: "", title: null }, "10th");
+  assert.deepEqual(legendLabels(markup), ["Champions League", "Europa League", "Conference League", "Relegation"]);
+  assert.ok(markup.includes("Qualification places as at the start of the season; cup results can change them."));
+});
+
+test("a Premier League season in progress has no Conference band", () => {
+  const rows = sortStandings("epl", Array.from({ length: 20 }, (_, i) => row(`Club ${String(i + 1).padStart(2, "0")}`, { season: 2026, conference: "g", rank: i + 1, wins: 5, draws: 1, losses: 4, points: 100 - i })));
+  const markup = html(createElement(StandingsTable, { league: "epl" as League, standings: rows }));
+  assert.deepEqual(markerOf(markup, "Club 06"), { cls: "", title: null });
+  assert.deepEqual(legendLabels(markup), ["Champions League", "Europa League", "Relegation"]);
+});
+
+test("the standings image draws the same bands and legend from the notes, in its own colours", () => {
+  const rows = sortStandings("laliga", laligaRows(true));
+  const markup = html(createElement(StandingsExportCard, { league: "laliga" as League, standings: rows, title: "t", subtitle: null, context: "c" }));
+  assert.ok(markup.includes("Conference League qualifying"));
+  assert.ok(/background:#0f766e/.test(markup), "a colour for the Conference band");
+  const running = sortStandings("laliga", laligaRows(true, 20));
+  const live = html(createElement(StandingsExportCard, { league: "laliga" as League, standings: running, title: "t", subtitle: null, context: "c" }));
+  assert.ok(live.includes("Conference League") && live.includes("Qualification places as at the start of the season"));
+});
+
+test("the season summary names 17th and 18th 'Relegated' in the Bundesliga and 16th 'Relegation play-off'", () => {
+  const rows = sortStandings("bundesliga", Array.from({ length: 18 }, (_, i) => row(`Club ${String(i + 1).padStart(2, "0")}`, { conference: "g", rank: i + 1, wins: 17, draws: 0, losses: 17, points: 100 - i })));
+  const markup = html(createElement(SeasonSummary, { league: "bundesliga" as League, playoffResults: [], standings: rows }));
+  const lines = [...markup.matchAll(/<p class="text-sm">([\s\S]*?)<\/p>/g)].map((m) => text(m[1]));
+  assert.deepEqual(lines, ["ChampionClub 01", "RelegatedClub 17, Club 18", "Relegation play-offClub 16"]);
+});
+
+test("the season summary for the Premier League still relegates the bottom three", () => {
+  const rows = sortStandings("epl", Array.from({ length: 20 }, (_, i) => row(`Club ${String(i + 1).padStart(2, "0")}`, { conference: "g", rank: i + 1, wins: 19, draws: 0, losses: 19, points: 100 - i })));
+  const markup = html(createElement(SeasonSummary, { league: "epl" as League, playoffResults: [], standings: rows }));
+  const lines = [...markup.matchAll(/<p class="text-sm">([\s\S]*?)<\/p>/g)].map((m) => text(m[1]));
+  assert.deepEqual(lines, ["ChampionClub 01", "RelegatedClub 18, Club 19, Club 20"]);
+});
+
+test("the season summary uses a finished season's notes: a Serie A play-off place is not 'Relegated'", () => {
+  const notes: Record<number, string> = { 17: "Relegated via playoff", 19: "Relegated", 20: "Relegated" };
+  const rows = sortStandings("seriea", Array.from({ length: 20 }, (_, i) => row(`Club ${String(i + 1).padStart(2, "0")}`, { season: 2022, conference: "g", rank: i + 1, wins: 19, draws: 0, losses: 19, points: 100 - i, zone: notes[i + 1] ?? null })));
+  const markup = html(createElement(SeasonSummary, { league: "seriea" as League, playoffResults: [], standings: rows }));
+  const lines = [...markup.matchAll(/<p class="text-sm">([\s\S]*?)<\/p>/g)].map((m) => text(m[1]));
+  assert.deepEqual(lines, ["ChampionClub 01", "RelegatedClub 19, Club 20", "Relegation play-offClub 17"]);
 });

@@ -1,13 +1,15 @@
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportTitle, ExportGroup, ExportTable, type ExportCell, type ExportRow } from "./ExportShell";
-import { groupStandings, legendFor, notStarted, zoneRules } from "./StandingsTable";
+import { groupStandings } from "./StandingsTable";
+import { notStarted } from "@/lib/standingsOrder";
+import { zonesFor } from "@/lib/standingsZones";
 import type { League, StandingRow } from "@/lib/queries";
 import { hasTies } from "@/lib/leagues";
 import { computedWinPct, isSoccer, type ComputedTableRow } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 
-const ZONE_COLOR: Record<string, string> = { "zone-1": "#1d4ed8", "zone-2": "#d97706", "zone-3": "#dc2626" };
+const ZONE_COLOR: Record<string, string> = { "zone-1": "#1d4ed8", "zone-2": "#d97706", "zone-3": "#dc2626", "zone-4": "#0f766e" };
 
 function logo(name: string, url: string | null, color: string | null) {
   return <TeamLogo name={teamDisplayName(name)} logoUrl={url} color={color} size={22} />;
@@ -35,9 +37,7 @@ export function standingsExportWidth(league: League, standings: StandingRow[]): 
 // qualification / relegation colours as the live page, on the fixed light card.
 export function StandingsExportCard({ league, standings, title, subtitle, context }: { league: League; standings: StandingRow[]; title: string; subtitle?: string | null; context: string }) {
   const { mode, sections } = groupStandings(league, standings);
-  const sectionSize = sections.length ? sections[0][1].length : 0;
-  const showZones = mode === "soccer" && sections.every(([, rows]) => rows.length === sectionSize && !notStarted(rows)) && zoneRules(league, sectionSize) !== null;
-  const legend = showZones ? legendFor(league, sectionSize) : [];
+  const zones = mode === "soccer" ? zonesFor(league, sections) : null;
   const ties = mode === "default" && hasTies(league);
 
   const headers = mode === "soccer" ? ["P", "W", "D", "L", "GF", "GA", "GD", "Pts"] : mode === "cricket" ? ["M", "W", "L", "NR", "Pts", "NRR"] : ties ? ["W", "L", "T", "Pct", "Streak"] : ["W", "L", "Pct", "Streak"];
@@ -56,7 +56,7 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
 
   const tables = sections.map(([name, rows]) => {
     const list: ExportRow[] = rows.map((r, i) => {
-      const zone = showZones && !r.unranked ? zoneRules(league, rows.length)?.(i + 1) ?? null : null;
+      const zone = zones && !r.unranked ? zones.zoneAt(rows, i) : null;
       return { key: r.team_espn_id, rank: r.unranked ? "–" : i + 1, lead: logo(r.name, r.logo_url, r.color), name: teamDisplayName(r.name), cells: cellsFor(r), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
     });
     // No row cap: the image is the whole table (a 32-team NFL season, a 36-team league phase).
@@ -71,14 +71,17 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
   return (
     <ExportShell header={<ExportTitle league={league} title={title} subtitle={subtitle} />} context={context}>
       <div style={{ display: "grid", gridTemplateColumns: sections.length > 1 ? "1fr 1fr" : "1fr", gap: 14, alignItems: "start" }}>{tables}</div>
-      {legend.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px", marginTop: 12, fontSize: 12, color: CARD.textMuted }}>
-          {legend.map((z) => (
-            <span key={z.label} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 4, height: 14, borderRadius: 2, background: ZONE_COLOR[z.cls] }} />
-              {z.label}
-            </span>
-          ))}
+      {zones && zones.legend.length > 0 && (
+        <div style={{ marginTop: 12, fontSize: 12, color: CARD.textMuted }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>
+            {zones.legend.map((z) => (
+              <span key={z.label} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 4, height: 14, borderRadius: 2, background: ZONE_COLOR[z.cls] }} />
+                {z.label}
+              </span>
+            ))}
+          </div>
+          {zones.caption && <div style={{ marginTop: 6, color: CARD.textFaint }}>{zones.caption}</div>}
         </div>
       )}
     </ExportShell>

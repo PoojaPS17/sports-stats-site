@@ -17,6 +17,7 @@ import {
   type LeaderRow,
 } from "./queries";
 import { summarizePlayoffs, type PlayoffResult } from "./seasonSummary";
+import { tableComplete } from "./standingsOrder";
 
 // What a league hub shows while nothing is scheduled: the season just played, in
 // three glances — how it ended (the final or the last round), the final table, and
@@ -35,16 +36,6 @@ export interface OffseasonRecap {
   table: StandingRow[];
   tableSize: number;
   leaders: { label: string; unit: string; rows: LeaderRow[] }[];
-}
-
-const gamesPlayed = (r: StandingRow) => r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0);
-
-// A league season is over once every team has played its full double round robin;
-// before that the top of the table is only a leader, not a champion.
-function tableComplete(standings: StandingRow[]): boolean {
-  if (standings.length < 2) return false;
-  const expected = (standings.length - 1) * 2;
-  return standings.every((r) => gamesPlayed(r) >= expected);
 }
 
 export async function getOffseasonRecap(league: League): Promise<OffseasonRecap | null> {

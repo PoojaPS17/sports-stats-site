@@ -132,3 +132,19 @@ export function leagueWideRank<T extends RankableStanding>(league: League, rows:
   for (const r of rows) out.set(r.team_espn_id, 1 + rows.filter((o) => cmp(o, r) < 0).length);
   return out;
 }
+
+/** A table in which nobody has played yet has no positions to show (sortStandings flags its rows). */
+export const notStarted = (rows: { unranked?: boolean }[]) => rows.length > 0 && rows.every((r) => r.unranked);
+
+const gamesPlayed = (r: { wins: number; losses: number; draws: number | null; no_result: number | null }) => r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0);
+
+/**
+ * The one definition of a finished league table, used by the offseason recap, the season summary and
+ * the qualification bands: every team has played its full double round robin. Before that the top of
+ * the table is only a leader and the bottom only the current bottom.
+ */
+export function tableComplete(standings: { wins: number; losses: number; draws: number | null; no_result: number | null }[]): boolean {
+  if (standings.length < 2) return false;
+  const expected = (standings.length - 1) * 2;
+  return standings.every((r) => gamesPlayed(r) >= expected);
+}

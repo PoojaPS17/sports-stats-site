@@ -4,42 +4,8 @@ import { TeamLogo } from "./TeamLogo";
 import { isCricketLeague, isSoccerLeague, isCupCompetition, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
 import { hasTies } from "@/lib/leagues";
 import type { StandingRow, League } from "@/lib/queries";
-
-interface Zone {
-  cls: string;
-  label: string;
-}
-
-// Qualification / relegation zones. Domestic leagues: a full table only (20 teams, or
-// the Bundesliga's 18 with its relegation play-off place), so a partial table isn't
-// mislabelled. Champions League: the 36-team league phase (top
-// eight straight to the round of 16, ninth to 24th into the playoffs, the rest out)
-// or a four-team group from the old format (top two through, third to the Europa
-// League). Any other shape gets no zones rather than a guess.
-export function zoneRules(league: League, total: number): ((position: number) => Zone | null) | null {
-  if (league === "ucl") {
-    if (total === 36) return (p) => (p <= 8 ? { cls: "zone-1", label: "Round of 16" } : p <= 24 ? { cls: "zone-2", label: "Knockout playoffs" } : { cls: "zone-3", label: "Eliminated" });
-    if (total === 4) return (p) => (p <= 2 ? { cls: "zone-1", label: "Round of 16" } : p === 3 ? { cls: "zone-2", label: "Europa League" } : { cls: "zone-3", label: "Eliminated" });
-    return null;
-  }
-  if (league === "bundesliga") {
-    if (total !== 18) return null;
-    return (p) => (p <= 4 ? { cls: "zone-1", label: "Champions League" } : p === 5 ? { cls: "zone-2", label: "Europa League" } : p === 16 ? { cls: "zone-2", label: "Relegation play-off" } : p >= 17 ? { cls: "zone-3", label: "Relegation" } : null);
-  }
-  if (total !== 20) return null;
-  return (p) => (p <= 4 ? { cls: "zone-1", label: "Champions League" } : p === 5 ? { cls: "zone-2", label: "Europa League" } : p >= 18 ? { cls: "zone-3", label: "Relegation" } : null);
-}
-
-export function legendFor(league: League, total: number): Zone[] {
-  const rules = zoneRules(league, total);
-  if (!rules) return [];
-  const seen = new Map<string, Zone>();
-  for (let p = 1; p <= total; p++) {
-    const z = rules(p);
-    if (z && !seen.has(z.label)) seen.set(z.label, z);
-  }
-  return [...seen.values()];
-}
+import { notStarted } from "@/lib/standingsOrder";
+import { zonesFor } from "@/lib/standingsZones";
 
 function StreakCell({ streak }: { streak: string | null }) {
   if (!streak) return <span className="text-[var(--text-faint)]">—</span>;
@@ -47,9 +13,6 @@ function StreakCell({ streak }: { streak: string | null }) {
   const color = kind === "W" ? "text-[var(--win)]" : kind === "L" ? "text-[var(--loss)]" : "text-[var(--text-muted)]";
   return <span className={`font-semibold ${color}`}>{streak}</span>;
 }
-
-/** A table in which nobody has played yet has no positions to show (sortStandings flags its rows). */
-export const notStarted = (rows: StandingRow[]) => rows.length > 0 && rows.every((r) => r.unranked);
 
 // How a standings list is split into tables, shared by the live page and its image:
 // the NFL by division, everything else by conference (or as one table).
@@ -86,12 +49,10 @@ export function StandingsTable({ league, standings }: { league: League; standing
     return <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No standings found for this season.</p>;
   }
 
-  // Zones apply per section (a cup's groups are four-team tables of their own).
-  const sectionSize = sections.length ? sections[0][1].length : 0;
-  // Zones are places in a table; a table nobody has played in has none.
-  const showZones = mode === "soccer" && sections.every(([, rows]) => rows.length === sectionSize && !notStarted(rows)) && zoneRules(league, sectionSize) !== null;
+  // Qualification / relegation bands: by position while the season runs, from ESPN's own notes once
+  // it is over (src/lib/standingsZones.ts).
+  const zones = mode === "soccer" ? zonesFor(league, sections) : null;
   const ties = mode === "default" && hasTies(league);
-  const legend = showZones ? legendFor(league, sectionSize) : [];
   const numCell = "px-2 py-2.5 text-right tabular-nums";
 
   return (
@@ -140,7 +101,7 @@ export function StandingsTable({ league, standings }: { league: League; standing
                 <tbody>
                   {rows.map((r, i) => {
                     const position = r.unranked ? null : i + 1;
-                    const zone = showZones && position !== null ? zoneRules(league, rows.length)?.(position) ?? null : null;
+                    const zone = zones && position !== null ? zones.zoneAt(rows, i) : null;
                     const gd = r.goals_for != null && r.goals_against != null ? r.goals_for - r.goals_against : null;
                     return (
                       <tr key={r.team_espn_id} className="table-row">
@@ -198,14 +159,17 @@ export function StandingsTable({ league, standings }: { league: League; standing
           </section>
         ))}
       </div>
-      {legend.length > 0 && (
-        <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-[var(--text-muted)]">
-          {legend.map((z) => (
-            <li key={z.label} className="flex items-center gap-1.5">
-              <span className={`zone-marker ${z.cls}`} /> {z.label}
-            </li>
-          ))}
-        </ul>
+      {zones && zones.legend.length > 0 && (
+        <div className="flex flex-col gap-1.5 text-xs text-[var(--text-muted)]">
+          <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
+            {zones.legend.map((z) => (
+              <li key={z.label} className="flex items-center gap-1.5">
+                <span className={`zone-marker ${z.cls}`} /> {z.label}
+              </li>
+            ))}
+          </ul>
+          {zones.caption && <p className="text-[var(--text-faint)]">{zones.caption}</p>}
+        </div>
       )}
     </div>
   );

@@ -30,6 +30,7 @@
   --zone-1: #1d4ed8; /* Champions League / playoff line */
   --zone-2: #d97706; /* Europa / play-in */
   --zone-3: #dc2626; /* relegation */
+  --zone-4: #0f766e; /* Conference League */
 
   --header-bg: rgba(255, 255, 255, 0.92);
   --header-text: #0f172a;
@@ -93,6 +94,7 @@
     --zone-1: #6ea0ff;
     --zone-2: #f59e0b;
     --zone-3: #f87171;
+    --zone-4: #2dd4bf;
 
     --header-bg: rgba(17, 26, 43, 0.92);
     --header-text: #e8edf6;
@@ -139,6 +141,7 @@
   --zone-1: #6ea0ff;
   --zone-2: #f59e0b;
   --zone-3: #f87171;
+  --zone-4: #2dd4bf;
 
   --header-bg: rgba(17, 26, 43, 0.92);
   --header-text: #e8edf6;
@@ -483,6 +486,10 @@ a.card:hover,
 
 .zone-3 {
   background: var(--zone-3);
+}
+
+.zone-4 {
+  background: var(--zone-4);
 }
 
 @keyframes pulse-dot {
