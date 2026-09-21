@@ -10,6 +10,10 @@ const RACE_NAME_BY_EVENT: Record<string, string> = {
   "401220848": "Styrian Grand Prix", // 2020-07-12, ESPN: "Austrian Grand Prix 2"
   "401221786": "Eifel Grand Prix", // 2020-10-11, ESPN: "Pries Der Eifel Grand Prix"
   "401220871": "70th Anniversary Grand Prix", // 2020-08-09, ESPN: "Rolex British Grand Prix 2"
+  // The 2026 Bahrain Grand Prix, postponed from April 12 and rescheduled at Sepang (Malaysia) for Oct 2-4. Wikipedia's 2026 season
+  // page (round 16) and Formula 1's announcement both call it the Bahrain Grand Prix and say it kept its name because Bahrain remained
+  // the promoter; ESPN calls it "Gulf Air Bahrain Grand Prix in Malaysia". (ESPN's April event, cancelled, has the same name.)
+  "600060990": "Bahrain Grand Prix",
   // Names the championship changed to, which ESPN still gives in its older or informal form.
   "600001774": "Mexico City Grand Prix", // 2021-11-07, ESPN: "Mexican Grand Prix"
   "600001775": "São Paulo Grand Prix", // 2021-11-14, ESPN: "Brazilian Grand Prix"

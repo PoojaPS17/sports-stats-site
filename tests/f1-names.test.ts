@@ -36,6 +36,18 @@ test("f1TeamLabel: Sauber 2016-18, Alfa Romeo Racing 2019-20, Alfa Romeo 2021-23
   assert.equal(f1TeamLabel(2025, "Sauber"), "Kick Sauber");
 });
 
+// Checked against Wikipedia's season pages (constructors' standings): 2018 "Force India" (the Racing Point Force India entry, ESPN's
+// "Racing Point"), 2016 "Manor", 2024 "RB" (the Visa Cash App RB team), 2025-26 "Racing Bulls".
+test("f1TeamLabel: Force India in 2018 (ESPN says Racing Point), Racing Point 2019-20; RB in 2024, Racing Bulls otherwise", () => {
+  assert.equal(f1TeamLabel(2018, "Racing Point"), "Force India");
+  assert.equal(f1TeamLabel(2019, "Racing Point"), "Racing Point");
+  assert.equal(f1TeamLabel(2020, "Racing Point"), "Racing Point");
+  assert.equal(f1TeamLabel(2024, "Racing Bulls"), "RB");
+  assert.equal(f1TeamLabel(2025, "Racing Bulls"), "Racing Bulls");
+  assert.equal(f1TeamLabel(2026, "Racing Bulls"), "Racing Bulls");
+  assert.equal(f1TeamLabel(2016, "Manor"), "Manor");
+});
+
 test("f1TeamLabel: other names pass through", () => {
   assert.equal(f1TeamLabel(2025, "McLaren"), "McLaren");
   assert.equal(f1TeamLabel(2018, "Force India"), "Force India");

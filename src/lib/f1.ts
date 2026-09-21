@@ -190,6 +190,17 @@ export interface F1ConstructorStandingRow {
   color: string | null;
 }
 
+// A constructor neither in `teams` nor in f1Names.ts renders as "Constructor <id>"; that is logged once per id so a new team ESPN
+// adds (or a seed:f1-teams that has not run) is noticed and added to f1Names.ts.
+const warnedUnknownConstructors = new Set<string>();
+function unknownConstructorName(id: string, season: number): string {
+  if (!warnedUnknownConstructors.has(id)) {
+    warnedUnknownConstructors.add(id);
+    console.warn(`[f1] unknown F1 constructor ${id} in the ${season} standings: add its ESPN manufacturer id to src/lib/f1Names.ts`);
+  }
+  return `Constructor ${id}`;
+}
+
 // Every constructor in the season's table, whether or not it is one of today's teams (only those are in `teams`): the
 // name of a team that is not comes from f1Names.ts by ESPN's manufacturer id, and its row has no slug.
 export async function getF1ConstructorStandings(seasonYear: number): Promise<F1ConstructorStandingRow[]> {
@@ -201,11 +212,15 @@ export async function getF1ConstructorStandings(seasonYear: number): Promise<F1C
      order by fs.position asc nulls last`,
     [seasonYear]
   );
-  const table: F1ConstructorStandingRow[] = rows.map(({ team_name, ...r }) => ({
-    ...r,
-    points: r.points == null ? null : Number(r.points),
-    name: f1TeamLabel(seasonYear, team_name ?? f1ConstructorEspnName(r.team_espn_id, seasonYear)) ?? `Constructor ${r.team_espn_id}`,
-  }));
+  const table: F1ConstructorStandingRow[] = rows.map(({ team_name, ...r }) => {
+    // Not through f1TeamLabel with a null name: in 2024-25 that reads "Kick Sauber", the fallback for a driver with no team.
+    const espnName: string | null = team_name ?? f1ConstructorEspnName(r.team_espn_id, seasonYear);
+    return {
+      ...r,
+      points: r.points == null ? null : Number(r.points),
+      name: espnName ? (f1TeamLabel(seasonYear, espnName) ?? espnName) : unknownConstructorName(r.team_espn_id, seasonYear),
+    };
+  });
   return applyF1StandingsCorrections(seasonYear, "constructor", table, (r) => r.team_espn_id);
 }
 

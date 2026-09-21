@@ -1,4 +1,4 @@
-import { after, before, test } from "node:test";
+import { after, before, mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { startTestDb, type TestDb } from "./helpers/testDb";
@@ -123,9 +123,31 @@ test("Kick Sauber: a 2024 driver whose results carry no team is shown for Kick S
   await db.pool.query(`insert into f1_session_results (session_espn_id, driver_espn_id, position, constructor_name) values ('s2024', '4520', 15, null), ('s2024', '4510', 9, 'Racing Bulls')`);
   const rows = await f1.getF1DriverStandings(2024);
   assert.equal(rows.find((r) => r.driver_espn_id === "4520")!.constructor_name, "Kick Sauber");
-  assert.equal(rows.find((r) => r.driver_espn_id === "4510")!.constructor_name, "Racing Bulls");
+  assert.equal(rows.find((r) => r.driver_espn_id === "4510")!.constructor_name, "RB", "the Racing Bulls team raced as RB in 2024");
   const results = await f1.getF1DriverResults("4520");
   assert.equal(results[0].constructor_name, "Kick Sauber");
+});
+
+test("2018: the Racing Point Force India entry reads Force India in the constructors' table", async () => {
+  const names = (await f1.getF1ConstructorStandings(2018)).map((r) => r.name);
+  assert.ok(names.includes("Force India") && !names.includes("Racing Point"));
+  assert.ok(names.includes("Renault") && names.includes("Toro Rosso") && names.includes("Sauber"));
+});
+
+test("a manufacturer id nobody knows renders as 'Constructor <id>' and is logged once, however often the table is read", async () => {
+  await db.pool.query(`insert into f1_standings (season_year, standings_type, entity_espn_id, position, points, wins) values (2025, 'constructor', '999001', 11, 0, 0)`);
+  const warn = mock.method(console, "warn", () => {});
+  try {
+    const first = await f1.getF1ConstructorStandings(2025);
+    await f1.getF1ConstructorStandings(2025);
+    assert.equal(first.find((r) => r.team_espn_id === "999001")!.name, "Constructor 999001");
+    const about = warn.mock.calls.filter((c) => String(c.arguments[0]).includes("999001"));
+    assert.equal(about.length, 1);
+    assert.match(String(about[0].arguments[0]), /unknown F1 constructor/i);
+  } finally {
+    warn.mock.restore();
+    await db.pool.query(`delete from f1_standings where entity_espn_id = '999001'`);
+  }
 });
 
 test("driver results and an event's classification use the season's team names too", async () => {

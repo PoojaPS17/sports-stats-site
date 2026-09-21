@@ -19,11 +19,11 @@ export interface F1StandingsCorrection {
 export const F1_STANDINGS_CORRECTIONS: F1StandingsCorrection[] = [
   // BUG-2. 2021 drivers' championship, FIA final classification: Max Verstappen 395.5 points (10 wins). ESPN lists 413.5.
   { season: 2021, type: "driver", id: "4665", points: 395.5 },
-  // BUG-3. 2021 drivers' championship, FIA final classification: Robert Kubica 20th and Nikita Mazepin 21st (both 0 points;
-  // Kubica scored in no Grand Prix but was classified ahead on the FIA table). ESPN has the two the other way round.
+  // BUG-3. 2021 drivers' championship, FIA final classification: Robert Kubica 20th and Nikita Mazepin 21st. Both finished on
+  // 0 points, so the FIA places them by countback of classified finishes, which puts Kubica ahead. ESPN has the two the other way round.
   { season: 2021, type: "driver", id: "836", position: 20 },
   { season: 2021, type: "driver", id: "5653", position: 21 },
-  // BUG-4. 2020 drivers' championship, FIA final classification: George Russell 3 points (9th at the Sakhir Grand Prix). ESPN lists 2.
+  // BUG-4. 2020 drivers' championship, FIA final classification: George Russell 3 points. ESPN lists 2.
   { season: 2020, type: "driver", id: "5503", points: 3 },
   // BUG-4. 2019 drivers' championship, FIA final classification: Lewis Hamilton 413 points. ESPN lists 412.
   { season: 2019, type: "driver", id: "868", points: 413 },

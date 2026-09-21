@@ -55,6 +55,10 @@ export function f1TeamLabel(season: number | null | undefined, espnName: string 
       return season <= 2019 ? "Toro Rosso" : "AlphaTauri";
     case "Alfa Romeo":
       return season <= 2020 ? "Alfa Romeo Racing" : "Alfa Romeo";
+    case "Racing Point":
+      return season <= 2018 ? "Force India" : "Racing Point"; // 2018: the Racing Point Force India entry, which Wikipedia's standings call Force India
+    case "Racing Bulls":
+      return season === 2024 ? "RB" : "Racing Bulls"; // the Visa Cash App RB team raced as "RB" in 2024
     case "Sauber":
       return season >= 2024 ? "Kick Sauber" : "Sauber";
     default:

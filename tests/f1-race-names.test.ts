@@ -1,5 +1,6 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { startTestDb, type TestDb } from "./helpers/testDb";
 import { f1RaceName } from "../src/lib/f1RaceNames";
 
@@ -35,6 +36,25 @@ const CASES: [string, string, string][] = [
 
 test("f1RaceName: ESPN's wrong names are replaced by event id and sponsor prefixes are stripped", () => {
   for (const [id, espn, expected] of CASES) assert.equal(f1RaceName(id, espn), expected, `${id} ${espn}`);
+});
+
+// Every event name ESPN gives 2016-2026 (sports.core.api.espn.com .../seasons/<year>/types/2/events, 241 events), and the plain
+// Grand Prix names the championship used. No title sponsor may survive, whichever sponsor ESPN used; a name outside this list fails.
+const EVENT_NAMES: [string, string][] = JSON.parse(readFileSync(new URL("./fixtures/f1/espn-event-names.json", import.meta.url), "utf8"));
+const PLAIN_NAMES = new Set(
+  ["Abu Dhabi", "Australian", "Austrian", "Azerbaijan", "Bahrain", "Barcelona-Catalunya", "Belgian", "Brazilian", "British", "Canadian", "Chinese", "Dutch", "Eifel", "Emilia Romagna", "European",
+   "French", "German", "Hungarian", "Italian", "Japanese", "Las Vegas", "Malaysian", "Mexican", "Mexico City", "Miami", "Monaco", "Portuguese", "Qatar", "Russian", "Sakhir", "Saudi Arabian",
+   "Singapore", "São Paulo", "Spanish", "Styrian", "Turkish", "Tuscan", "United States", "70th Anniversary"].map((n) => `${n} Grand Prix`)
+);
+
+test("f1RaceName: every real ESPN event name comes out as a plain Grand Prix name, with no sponsor left", () => {
+  assert.ok(EVENT_NAMES.length >= 240);
+  const stray = EVENT_NAMES.map(([id, name]) => [id, name, f1RaceName(id, name)]).filter(([, , plain]) => !PLAIN_NAMES.has(plain));
+  assert.deepEqual(stray, []);
+});
+
+test("2026 event 600060990 (Sepang, Oct 2-4) is the Bahrain Grand Prix: Wikipedia and Formula 1 say the rescheduled race kept its name", () => {
+  assert.equal(f1RaceName("600060990", "Gulf Air Bahrain Grand Prix in Malaysia"), "Bahrain Grand Prix");
 });
 
 test("f1RaceName: a name that merely contains a sponsor word inside is left alone", () => {
