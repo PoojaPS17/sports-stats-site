@@ -43,7 +43,7 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
                   <th className="py-2 pl-4 font-medium">Rank</th>
                   <th className="px-2 py-2 font-medium">Player</th>
                   <th className="px-2 py-2 text-right font-medium">Points</th>
-                  <th className="py-2 pr-4 text-right font-medium">Prev.</th>
+                  <th className="py-2 pr-4 text-right font-medium">Move</th>
                 </tr>
               </thead>
               <tbody>
