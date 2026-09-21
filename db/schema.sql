@@ -500,6 +500,10 @@ create table if not exists f1_session_results (
   car_number text,
   primary key (session_espn_id, driver_espn_id)
 );
+-- ESPN's per-competitor status name (STATUS_CLASSIFIED, STATUS_RETIRED, STATUS_DISQUALIFIED, ...) and laps completed: they
+-- give the Ret/DSQ labels and the order of the back of the field. Both stay null until scripts/backfill-f1-events.ts has run.
+alter table f1_session_results add column if not exists status text;
+alter table f1_session_results add column if not exists laps int;
 
 create table if not exists f1_standings (
   season_year int not null,

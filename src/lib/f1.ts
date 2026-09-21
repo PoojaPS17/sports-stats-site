@@ -3,6 +3,10 @@ import { applyF1StandingsCorrections } from "./f1Corrections";
 import { f1ConstructorEspnName, f1TeamLabel } from "./f1Names";
 import { f1RaceName } from "./f1RaceNames";
 import { f1Venue } from "./f1Circuits";
+import { F1_PRACTICE_ONLY_STATUS, f1ResultFor, orderF1Classification, type F1ResultLabel } from "./f1RaceOrder";
+
+// The sessions with retirements to label and a back of the field to order (the sprint has no per-race table).
+const STATUS_SESSION_TYPES = ["Race", "SR", "Sprint"];
 
 export interface F1EventRow {
   espn_id: string;
@@ -83,27 +87,49 @@ export interface F1SessionResultRow {
   driver_espn_id: string;
   driver_name: string;
   driver_slug: string;
+  /** The finishing position as it is shown (f1RaceOrder.ts): null for a driver with a Ret / DSQ / NC / DNS label, and for one ESPN gave none. */
   position: number | null;
   winner: boolean;
   /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
   car_number: string | null;
+  /** ESPN's status name and laps completed as stored by the event backfill; null until it has run. */
+  status: string | null;
+  laps: number | null;
+  /** Ret, DSQ, NC or DNS, shown in place of the position. */
+  result_label: F1ResultLabel | null;
 }
 
+// A session's rows come back in the order they are shown: a race or sprint in classification order (retirements by laps
+// completed, disqualified drivers last, f1.com's order for the races in f1RaceOrder.ts), any other session by position.
 export async function getF1EventResults(eventEspnId: string): Promise<F1SessionResultRow[]> {
   const { rows } = await pool.query(
     `select s.espn_id as session_espn_id, s.session_type, s.date as session_date, s.status_detail, s.completed,
             p.espn_id as driver_espn_id, p.name as driver_name, p.slug as driver_slug,
-            r.position, r.winner, r.constructor_name, r.car_number, e.season_year
+            r.position, r.winner, r.constructor_name, r.car_number, r.status, r.laps, e.season_year
      from f1_sessions s
      join f1_events e on e.espn_id = s.event_espn_id
      join f1_session_results r on r.session_espn_id = s.espn_id
      join players p on p.league = 'f1' and p.espn_id = r.driver_espn_id
-     where s.event_espn_id = $1
+     where s.event_espn_id = $1 and (r.status is null or r.status <> $2)
      order by s.date asc, r.position asc nulls last`,
-    [eventEspnId]
+    [eventEspnId, F1_PRACTICE_ONLY_STATUS]
   );
-  return rows.map(({ season_year, ...r }) => ({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
+  type RawRow = Omit<F1SessionResultRow, "result_label"> & { season_year: number | null };
+  const sessions = new Map<string, RawRow[]>();
+  for (const r of rows as RawRow[]) {
+    if (!sessions.has(r.session_espn_id)) sessions.set(r.session_espn_id, []);
+    sessions.get(r.session_espn_id)!.push(r);
+  }
+  const out: F1SessionResultRow[] = [];
+  for (const sessionRows of sessions.values()) {
+    const type: string = sessionRows[0].session_type;
+    const ordered = STATUS_SESSION_TYPES.includes(type)
+      ? orderF1Classification(type === "Race" ? eventEspnId : null, sessionRows)
+      : sessionRows.map((r) => ({ ...r, result_label: null as F1ResultLabel | null }));
+    for (const { season_year, ...r } of ordered) out.push({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) });
+  }
+  return out;
 }
 
 export interface F1DriverStandingRow {
@@ -202,27 +228,36 @@ export interface F1DriverResultRow {
   event_name: string;
   session_type: string;
   session_date: string;
+  /** The finishing position as it is shown (f1RaceOrder.ts): null with a label. */
   position: number | null;
   winner: boolean;
   /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
   /** ESPN's circuit name, which f1Dates.ts reads the race's day at (f1FormatDate). */
   circuit_name: string | null;
+  /** Ret, DSQ, NC or DNS, shown in place of the position. */
+  result_label: F1ResultLabel | null;
+}
+
+// A Race row as the driver's page and the team's page show it: his label or his position (f1RaceOrder.ts).
+function shownRaceResult<T extends { event_espn_id: string; driver_espn_id: string; position: number | null; status: string | null }>(r: T): T & { result_label: F1ResultLabel | null } {
+  const shown = f1ResultFor(r.event_espn_id, r.driver_espn_id, r.position, r.status);
+  return { ...r, position: shown.position, result_label: shown.label };
 }
 
 export async function getF1DriverResults(driverEspnId: string, limit = 20): Promise<F1DriverResultRow[]> {
   const { rows } = await pool.query(
     `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
-            r.position, r.winner, r.constructor_name, e.season_year, e.circuit_name
+            r.position, r.winner, r.constructor_name, r.status, r.driver_espn_id, e.season_year, e.circuit_name
      from f1_session_results r
      join f1_sessions s on s.espn_id = r.session_espn_id
      join f1_events e on e.espn_id = s.event_espn_id
-     where r.driver_espn_id = $1 and s.session_type = 'Race'
+     where r.driver_espn_id = $1 and s.session_type = 'Race' and (r.status is null or r.status <> $3)
      order by s.date desc
      limit $2`,
-    [driverEspnId, limit]
+    [driverEspnId, limit, F1_PRACTICE_ONLY_STATUS]
   );
-  return rows.map(({ season_year, ...r }) => ({ ...r, event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
+  return rows.map(({ season_year, ...r }) => ({ ...shownRaceResult(r), event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }
 
 export interface F1Constructor {
@@ -275,15 +310,15 @@ export interface F1ConstructorResultRow extends F1DriverResultRow {
 export async function getF1ConstructorResults(constructorName: string, limit = 20): Promise<F1ConstructorResultRow[]> {
   const { rows } = await pool.query(
     `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
-            r.position, r.winner, r.constructor_name, e.season_year, e.circuit_name, p.name as driver_name, p.slug as driver_slug
+            r.position, r.winner, r.constructor_name, r.status, r.driver_espn_id, e.season_year, e.circuit_name, p.name as driver_name, p.slug as driver_slug
      from f1_session_results r
      join f1_sessions s on s.espn_id = r.session_espn_id
      join f1_events e on e.espn_id = s.event_espn_id
      join players p on p.league = 'f1' and p.espn_id = r.driver_espn_id
-     where r.constructor_name = $1 and s.session_type = 'Race'
+     where r.constructor_name = $1 and s.session_type = 'Race' and (r.status is null or r.status <> $3)
      order by s.date desc
      limit $2`,
-    [constructorName, limit]
+    [constructorName, limit, F1_PRACTICE_ONLY_STATUS]
   );
-  return rows.map(({ season_year, ...r }) => ({ ...r, event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
+  return rows.map(({ season_year, ...r }) => ({ ...shownRaceResult(r), event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }

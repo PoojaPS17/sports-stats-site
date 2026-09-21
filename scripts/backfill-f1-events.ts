@@ -10,13 +10,27 @@
 // Circuits repeat across years the same way and are cached the same way. That keeps
 // the real cost to about one request per event (24/season) plus a few dozen one-time
 // lookups total, not the thousands a naive per-competitor-per-race fetch would need.
+//
+// The exception is a race or sprint driver's status and laps completed (Ret / DSQ labels, the order of the back of the
+// field): those are bare refs too, so each such driver costs one request (his status) and one more when he did not
+// finish. That is the bulk of a full run: about 5,200 status requests plus the laps of the drivers who did not finish
+// (some 800), on top of roughly 400 for the event lists, events, drivers and circuits, about 6,400 in all. A driver
+// already stored with his status is skipped, so the run can be repeated safely and cheaply. The total is logged at the end.
 import { pool } from "./lib/db";
-import { fetchF1SeasonEventRefs, fetchByRef } from "./lib/f1";
+import { fetchF1SeasonEventRefs, fetchByRef as fetchEspnRef } from "./lib/f1";
 import { uniqueSlugFor } from "./lib/players";
 import { f1BackfillSessionStatus } from "../src/lib/f1Status";
+import { addF1DidNotStartRows, f1CompetitorDetail, f1SessionHasStatuses, isPracticeOnlyCompetitor, loadKnownF1Details, saveF1CompetitorResult } from "./lib/f1-competitor";
 
 const YEARS_BACK = 10;
 const CONCURRENCY = 6;
+
+// Every ESPN request this run makes goes through here, so the total is logged at the end.
+let espnRequests = 0;
+function fetchByRef<T = any>(ref: string): Promise<T> {
+  espnRequests++;
+  return fetchEspnRef<T>(ref);
+}
 
 const driverNameCache = new Map<string, string>();
 const circuitCache = new Map<string, { name: string | null; city: string | null; country: string | null }>();
@@ -84,23 +98,25 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
       [comp.id, event.id, comp.type?.abbreviation ?? null, comp.date, session.state, session.detail, session.completed]
     );
 
+    // A race or sprint driver's status (retired, disqualified, ...) and laps completed are only bare refs in the event
+    // resource: one request for his status, and one more for his laps when he did not finish. Drivers already stored with
+    // both are not asked about again, so a run that was cut off is finished by running it again.
+    const sessionType: string | undefined = comp.type?.abbreviation;
+    const known = f1SessionHasStatuses(sessionType) ? await loadKnownF1Details(pool, comp.id) : undefined;
     for (const c of comp.competitors ?? []) {
       const athleteRef = c.athlete?.["$ref"];
       if (!c.id || !athleteRef) continue;
+      if (f1SessionHasStatuses(sessionType) && isPracticeOnlyCompetitor(c)) {
+        await saveF1CompetitorResult(pool, comp.id, sessionType, c, { status: null, laps: null }); // removes a stored practice-only row
+        continue;
+      }
       const name = await resolveDriverName(athleteRef, c.id);
       if (!name) continue;
       await upsertDriver(c.id, name);
-      await pool.query(
-        `insert into f1_session_results (session_espn_id, driver_espn_id, position, winner, constructor_name, car_number)
-         values ($1,$2,$3,$4,$5,$6)
-         on conflict (session_espn_id, driver_espn_id) do update set
-           position = excluded.position, winner = excluded.winner,
-           constructor_name = coalesce(excluded.constructor_name, f1_session_results.constructor_name),
-           car_number = coalesce(excluded.car_number, f1_session_results.car_number)`,
-        [comp.id, c.id, c.order ?? null, Boolean(c.winner), c.vehicle?.manufacturer ?? null, c.vehicle?.number ?? null]
-      );
-      resultCount++;
+      const detail = f1SessionHasStatuses(sessionType) ? await f1CompetitorDetail(c, fetchByRef, known?.get(c.id)) : { status: null, laps: null };
+      if (await saveF1CompetitorResult(pool, comp.id, sessionType, c, detail)) resultCount++;
     }
+    if (sessionType === "Race") await addF1DidNotStartRows(pool, event.id, comp.id);
   }
   return resultCount;
 }
@@ -149,7 +165,7 @@ async function main() {
   console.log(`[backfill-f1-events] starting ${jobs.length} events across ${YEARS_BACK + 1} seasons...`);
 
   const totalResults = await runPool(jobs, CONCURRENCY);
-  console.log(`[backfill-f1-events] done: ${jobs.length} events, ${totalResults} session results, ${driverNameCache.size} unique drivers`);
+  console.log(`[backfill-f1-events] done: ${jobs.length} events, ${totalResults} session results, ${driverNameCache.size} unique drivers, ${espnRequests} ESPN requests`);
 
   await pool.end();
 }

@@ -111,7 +111,7 @@ export default async function F1ConstructorPage({ params }: { params: Promise<{ 
                 </div>
                 <span className="shrink-0 text-sm font-bold tabular-nums">
                   {r.winner ? "🏆 " : ""}
-                  {r.position ? `P${r.position}` : "—"}
+                  {r.result_label ?? (r.position ? `P${r.position}` : "—")}
                 </span>
               </Link>
             ))}

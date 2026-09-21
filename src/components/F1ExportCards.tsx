@@ -56,7 +56,8 @@ export function F1ConstructorStandingsExportCard({ season, constructors }: { sea
 // One session of a race weekend (practice, qualifying, sprint, race) as a classification.
 export function F1SessionExportCard({ event, sessionLabel, results }: { event: { name: string; date: string; circuit: string | null }; sessionLabel: string; results: Awaited1<typeof getF1EventResults> }) {
   const title = `${event.name}: ${sessionLabel}`;
-  const sorted = [...results].sort((a, b) => (a.position ?? 99) - (b.position ?? 99));
+  // getF1EventResults already returns the session in the order it is shown (a race with its retirements and disqualifications placed).
+  const sorted = results;
   return (
     <ExportShell header={<ExportTitle eyebrow={EYEBROW} title={title} subtitle={[fmtDate(event.date, event.circuit), event.circuit].filter(Boolean).join(" · ")} />} context={title}>
       <ExportTable
@@ -66,7 +67,7 @@ export function F1SessionExportCard({ event, sessionLabel, results }: { event: {
         moreNoun="more drivers"
         rows={sorted.map((r) => ({
           key: r.driver_espn_id,
-          rank: r.position ?? "—",
+          rank: r.result_label ?? r.position ?? "—",
           name: r.winner ? `${r.driver_name}  ·  Winner` : r.driver_name,
           cells: [r.constructor_name ?? "—"],
         }))}
@@ -75,7 +76,7 @@ export function F1SessionExportCard({ event, sessionLabel, results }: { event: {
   );
 }
 
-type ResultRow = { key: string; title: string; sub: string; position: number | null; winner: boolean };
+type ResultRow = { key: string; title: string; sub: string; position: number | null; label: string | null; winner: boolean };
 
 // A driver's or constructor's recent race results, newest first: the race, the date and
 // where they finished.
@@ -90,7 +91,7 @@ export function F1ResultsExportCard({ title, subtitle, rows }: { title: string; 
             rank: "",
             title: r.title,
             sub: r.sub,
-            value: <span style={{ color: r.winner ? CARD.accent : CARD.text }}>{r.position ? `P${r.position}` : "—"}{r.winner ? " · WIN" : ""}</span>,
+            value: <span style={{ color: r.winner ? CARD.accent : CARD.text }}>{r.label ?? (r.position ? `P${r.position}` : "—")}{r.winner ? " · WIN" : ""}</span>,
           }))}
         />
       </div>
@@ -99,11 +100,11 @@ export function F1ResultsExportCard({ title, subtitle, rows }: { title: string; 
 }
 
 export function driverResultRows(results: Awaited1<typeof getF1DriverResults>): ResultRow[] {
-  return results.map((r) => ({ key: r.event_espn_id, title: r.event_name, sub: [fmtDate(r.session_date, r.circuit_name), r.constructor_name].filter(Boolean).join(" · "), position: r.position ?? null, winner: Boolean(r.winner) }));
+  return results.map((r) => ({ key: r.event_espn_id, title: r.event_name, sub: [fmtDate(r.session_date, r.circuit_name), r.constructor_name].filter(Boolean).join(" · "), position: r.position ?? null, label: r.result_label, winner: Boolean(r.winner) }));
 }
 
 export function constructorResultRows(results: Awaited1<typeof getF1ConstructorResults>): ResultRow[] {
-  return results.map((r) => ({ key: `${r.event_espn_id}-${r.driver_slug}`, title: r.event_name, sub: `${r.driver_name} · ${fmtDate(r.session_date, r.circuit_name)}`, position: r.position ?? null, winner: Boolean(r.winner) }));
+  return results.map((r) => ({ key: `${r.event_espn_id}-${r.driver_slug}`, title: r.event_name, sub: `${r.driver_name} · ${fmtDate(r.session_date, r.circuit_name)}`, position: r.position ?? null, label: r.result_label, winner: Boolean(r.winner) }));
 }
 
 export function F1CalendarExportCard({ season, calendar }: { season: number; calendar: Awaited1<typeof getF1Calendar> }) {
