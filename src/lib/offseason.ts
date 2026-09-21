@@ -27,6 +27,8 @@ export interface OffseasonRecap {
   seasonLabel: string;
   /** Date of the season's last completed game. */
   endedOn: string | null;
+  /** Cricket only: the last match's local day, YYYY-MM-DD, when stored (`endedOn` is a UTC instant). */
+  endedOnLocal?: string | null;
   champion: { name: string; slug: string } | null;
   /** The closing games, most recent first: the final and the rounds before it, or the last matchday. */
   closingGames: GameRow[];
@@ -87,6 +89,7 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
     season,
     seasonLabel: formatSeasonLabel(league, season) ?? String(season),
     endedOn: lastResults[0]?.date ?? null,
+    endedOnLocal: lastResults[0]?.local_date ?? null,
     champion,
     closingGames,
     playoffs,
