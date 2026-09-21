@@ -112,7 +112,7 @@ before(async () => {
   await game("nfl", "n2", "2026-09-20T17:00:00Z", 2026, { type: 2 });
   await game("nfl", "npre", "2026-08-20T17:00:00Z", 2026, { type: 1 });
   await game("nfl", "npo", "2027-01-15T17:00:00Z", 2026, { type: 3, round: "Wild Card" });
-  for (const [id, name, cur] of [["qb1", "Tyler Shough", "2"], ["qb2", "Pat Mahomes", "1"], ["qb3", "Ann Passer", "1"], ["rb1", "Traded Runner", "2"], ["-8801", " Team", "1"]] as const) await player("nfl", id, name, cur);
+  for (const [id, name, cur] of [["qb1", "Tyler Shough", "2"], ["qb2", "Pat Mahomes", "1"], ["qb3", "Ann Passer", "1"], ["rb1", "Traded Runner", "2"], ["bigqb", "Big QB", "1"], ["-8801", " Team", "1"]] as const) await player("nfl", id, name, cur);
   await row("nfl", "n1", "qb1", "1", nfl("passing", 300));
   await row("nfl", "n2", "qb1", "1", nfl("passing", 362));
   await row("nfl", "npre", "qb1", "1", nfl("passing", 250));
@@ -120,6 +120,8 @@ before(async () => {
   await row("nfl", "n1", "qb2", "1", nfl("passing", 250));
   await row("nfl", "n2", "qb2", "1", nfl("passing", 316));
   await row("nfl", "n1", "qb3", "1", nfl("passing", 566));
+  await row("nfl", "n1", "bigqb", "1", nfl("passing", 700)); // 1,234 over the season
+  await row("nfl", "n2", "bigqb", "1", nfl("passing", 534));
   await row("nfl", "n1", "rb1", "1", nfl("rushing", 60));
   await row("nfl", "n2", "rb1", "2", nfl("rushing", 80));
   await row("nfl", "n1", "-8801", "1", nfl("passing", 9000));
@@ -284,7 +286,7 @@ test("UCL and cricket keep their sources: UCL reads the stored season rows and t
 // ---------------------------------------------------------------------------
 test("NFL passing: regular-season box scores only, fresher than ESPN's row, pseudo-athletes out, ties ranked; the page agrees", async () => {
   const board = await queries.getLeaderBoard("nfl", "passing_yards", { limit: 10, ties: true });
-  assert.deepEqual(board.rows.map((r) => [r.name, r.value, r.rank]), [["Tyler Shough", 662, 1], ["Ann Passer", 566, 2], ["Pat Mahomes", 566, 2]]);
+  assert.deepEqual(board.rows.map((r) => [r.name, r.value, r.rank]), [["Big QB", 1234, 1], ["Tyler Shough", 662, 2], ["Ann Passer", 566, 3], ["Pat Mahomes", 566, 3]]);
   for (const r of board.rows) {
     const { line } = await pageLine("nfl", r.player_espn_id, 2026);
     assert.equal(line.pass_yds, r.value, r.name);
@@ -402,4 +404,40 @@ test("per-game figures print one decimal like the page (30.0, not 30) and totals
   // And the page cell of the same player prints the same text.
   const { line, specs } = await pageLine("nba", "star", 2026);
   assert.equal(formatStat(specs.find((x) => x.key === "pts") as never, line.pts), "30.0");
+});
+
+// ---------------------------------------------------------------------------
+// Fix round 2: a board figure prints exactly as the player page's cell for the same stat
+// ---------------------------------------------------------------------------
+test("a 1,234-yard board row and the player page's cell print the identical string, on the page, the share image and the recap", async () => {
+  const { formatLeaderValue } = await import("../src/lib/leaders");
+  const board = await queries.getLeaderBoard("nfl", "passing_yards", { limit: 10, ties: true });
+  const big = board.rows.find((r) => r.name === "Big QB")!;
+  assert.equal(big.value, 1234, "the value stays a number: sorting and ties are on it");
+  const { line, specs } = await pageLine("nfl", "bigqb", 2026);
+  const cell = formatStat(specs.find((x) => x.key === "pass_yds") as never, line.pass_yds);
+  assert.equal(cell, "1,234");
+  assert.equal(formatLeaderValue(big.value, "YDS"), cell);
+  // A small figure and a non-integer follow the same formatter; goals and per-game averages too.
+  assert.equal(formatLeaderValue(662, "YDS"), "662");
+  assert.equal(formatLeaderValue(5, "GLS"), "5");
+  assert.equal(formatLeaderValue(1234, "GLS"), "1,234");
+  assert.equal(formatLeaderValue(30, "PPG"), "30.0");
+  // Cricket boards keep their plain figures (their pages print plain numbers): the units are exactly the cricket categories'.
+  for (const c of queries.CRICKET_LEADER_CATEGORIES) assert.equal(formatLeaderValue(1234, c.unit), "1234", c.unit);
+
+  const page = await import("../src/app/[league]/leaders/page");
+  const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  assert.match(text(renderToStaticMarkup(await page.default({ params: Promise.resolve({ league: "nfl" }) }))), /Big QB.* 1,234 YDS/);
+
+  const { LeadersExportCard } = await import("../src/components/LeadersExportCard");
+  const { createElement } = await import("react");
+  const card = text(renderToStaticMarkup(createElement(LeadersExportCard, { league: "nfl", season: 2026, title: "NFL leaders", note: null, boards: [{ label: "Passing Yards", unit: "YDS", rows: board.rows }] })));
+  assert.match(card, /Big QB.* 1,234/);
+  assert.doesNotMatch(card, /1234/);
+
+  const { OffseasonRecap } = await import("../src/components/OffseasonRecap");
+  const recap = { season: 2026, seasonLabel: "2026", seasonOver: true, nextFixtureOn: null, endedOn: null, champion: null, closingGames: [], playoffs: [], table: [], tableSize: 0, leaders: [{ label: "Passing Yards", unit: "YDS", rows: board.rows.slice(0, 3) }] };
+  const html = text(renderToStaticMarkup(createElement(OffseasonRecap, { league: "nfl", recap } as never)));
+  assert.match(html, /Big QB.* 1,234 YDS/);
 });

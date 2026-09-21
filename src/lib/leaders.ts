@@ -64,12 +64,18 @@ export function pickLeaders<T extends Rankable>(candidates: readonly T[], limit:
 /** The units of the NBA per-game boards (LEADER_CATEGORIES): a figure the page and ESPN print to one decimal. */
 const PER_GAME_UNITS = new Set(["PPG", "RPG", "APG"]);
 
-const PER_GAME_SPEC: StatSpec = { key: "", label: "", title: "", value: () => null, agg: "avg", decimals: 1 };
+/** The units of the cricket boards (CRICKET_LEADER_CATEGORIES), whose player pages print plain numbers: they stay plain. */
+const CRICKET_UNITS = new Set(["RUNS", "WKTS", "6s"]);
 
-/** A board figure as text: a per-game average to one decimal through the player page's own cell formatter (30.0, never
- * 30), everything else as the plain number it always was. */
+const PER_GAME_SPEC: StatSpec = { key: "", label: "", title: "", value: () => null, agg: "avg", decimals: 1 };
+const TOTAL_SPEC: StatSpec = { key: "", label: "", title: "", value: () => null, agg: "sum" };
+
+/** A board figure as text, through the player page's own cell formatter (`formatStat`), so a board and the page print the
+ * same string for the same stat: totals grouped like the page (1,234 yards), a per-game average to one decimal (30.0).
+ * Only the display string: boards are ranked and tied on the number. Cricket boards keep their plain figures. */
 export function formatLeaderValue(value: number, unit: string): string {
-  return PER_GAME_UNITS.has(unit) ? formatStat(PER_GAME_SPEC, value) : String(value);
+  if (CRICKET_UNITS.has(unit)) return String(value);
+  return formatStat(PER_GAME_UNITS.has(unit) ? PER_GAME_SPEC : TOTAL_SPEC, value);
 }
 
 export interface TeamStint {
