@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isLeague, isCupCompetition, hasTies, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, isCupCompetition, isCricketLeague, hasTies, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
 import { getTeamHistory, isSoccer } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
 import { teamNotFound } from "@/lib/legacySlug";
@@ -49,7 +49,9 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
   const history = await getTeamHistory(league, team.espn_id);
   const played = history.filter((h) => h.played);
   const soccer = isSoccer(league);
-  const ties = hasTies(league);
+  // Cricket stores no win percentage (ESPN's is always 0), so its table shows W, L, NR and points; T only when a season had a tie.
+  const cricket = isCricketLeague(league);
+  const ties = hasTies(league) || (cricket && played.some((h) => (h.draws ?? 0) > 0));
 
   const best = played.length ? played.reduce((a, b) => (b.position < a.position ? b : a)) : null;
   const worst = played.length ? played.reduce((a, b) => (b.position > a.position ? b : a)) : null;
@@ -121,6 +123,11 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
                           <th className="px-2 py-2 text-right font-semibold">GA</th>
                           <th className="py-2 pl-2 pr-4 text-right font-semibold">Pts</th>
                         </>
+                      ) : cricket ? (
+                        <>
+                          <th className="px-2 py-2 text-right font-semibold">NR</th>
+                          <th className="py-2 pl-2 pr-4 text-right font-semibold">Pts</th>
+                        </>
                       ) : (
                         <th className="py-2 pl-2 pr-4 text-right font-semibold">Pct</th>
                       )}
@@ -147,6 +154,11 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
                           <>
                             <td className="px-2 py-2.5 text-right tabular-nums text-[var(--text-muted)]">{h.goals_for ?? "—"}</td>
                             <td className="px-2 py-2.5 text-right tabular-nums text-[var(--text-muted)]">{h.goals_against ?? "—"}</td>
+                            <td className="py-2.5 pl-2 pr-4 text-right font-bold tabular-nums">{h.points ?? "—"}</td>
+                          </>
+                        ) : cricket ? (
+                          <>
+                            <td className="px-2 py-2.5 text-right tabular-nums text-[var(--text-muted)]">{h.no_result ?? 0}</td>
                             <td className="py-2.5 pl-2 pr-4 text-right font-bold tabular-nums">{h.points ?? "—"}</td>
                           </>
                         ) : (

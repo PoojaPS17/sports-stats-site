@@ -521,6 +521,8 @@ export interface TeamSeasonRow {
   wins: number;
   losses: number;
   draws: number | null;
+  /** Cricket: matches with no result. */
+  no_result?: number | null;
   points: number | null;
   goals_for: number | null;
   goals_against: number | null;
@@ -570,6 +572,7 @@ export async function getTeamHistory(league: League, teamEspnId: string): Promis
         wins: r.wins,
         losses: r.losses,
         draws: r.draws,
+        no_result: r.no_result,
         points: r.points,
         goals_for: r.goals_for,
         goals_against: r.goals_against,

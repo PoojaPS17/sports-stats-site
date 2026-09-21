@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { isLeague, isCricketLeague } from "@/lib/leagues";
 
 export function CompareModeTabs({ league, active }: { league: string; active: "teams" | "players" }) {
+  // Cricket compares players only; a Teams tab would bounce straight back to this page.
+  if (isLeague(league) && isCricketLeague(league)) return null;
   const tabs = [
     { key: "teams", label: "Teams", href: `/${league}/compare` },
     { key: "players", label: "Players", href: `/${league}/compare/players` },

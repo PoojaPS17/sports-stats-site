@@ -1,7 +1,7 @@
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportLabel, ExportTable, EXPORT_ROW_LIMIT } from "./ExportShell";
-import { formatSeasonLabel, isCupCompetition, hasTies, LEAGUE_LABEL, type League } from "@/lib/queries";
+import { formatSeasonLabel, isCupCompetition, isCricketLeague, hasTies, LEAGUE_LABEL, type League } from "@/lib/queries";
 import type { TeamSeasonRow } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 
@@ -31,7 +31,9 @@ export function TeamHistoryExportCard({
   summary: { label: string; value: string | number; sub: string }[];
 }) {
   const hasConference = played.some((h) => h.conference);
-  const ties = hasTies(league);
+  // Cricket has no win percentage: W, L, (T), NR and points instead of Pct.
+  const cricket = isCricketLeague(league);
+  const ties = hasTies(league) || (cricket && played.some((h) => (h.draws ?? 0) > 0));
   const headers = [
     "Finish",
     ...(hasConference ? [isCupCompetition(league) ? "Stage" : "Conference"] : []),
@@ -39,7 +41,7 @@ export function TeamHistoryExportCard({
     ...(soccer ? ["D"] : []),
     "L",
     ...(ties ? ["T"] : []),
-    ...(soccer ? ["GF", "GA", "Pts"] : ["Pct"]),
+    ...(soccer ? ["GF", "GA", "Pts"] : cricket ? ["NR", "Pts"] : ["Pct"]),
   ];
   const rows = [...played].reverse().map((h) => ({
     key: String(h.season),
@@ -51,7 +53,11 @@ export function TeamHistoryExportCard({
       ...(soccer ? [String(h.draws ?? 0)] : []),
       String(h.losses),
       ...(ties ? [String(h.draws ?? 0)] : []),
-      ...(soccer ? [String(h.goals_for ?? "—"), String(h.goals_against ?? "—"), String(h.points ?? "—")] : [h.win_percent ? Number(h.win_percent).toFixed(3) : "—"]),
+      ...(soccer
+        ? [String(h.goals_for ?? "—"), String(h.goals_against ?? "—"), String(h.points ?? "—")]
+        : cricket
+          ? [String(h.no_result ?? 0), String(h.points ?? "—")]
+          : [h.win_percent ? Number(h.win_percent).toFixed(3) : "—"]),
     ],
   }));
   return (
