@@ -9,7 +9,7 @@ import {
   LEAGUE_LABEL,
   LEADER_CATEGORIES,
   CRICKET_LEADER_CATEGORIES,
-  getLeaders,
+  getLeaderBoard,
   getLeadersSeason,
   getCricketLeaders,
   getCricketLeadersSeason,
@@ -25,7 +25,7 @@ import { LeadersExportCard } from "@/components/LeadersExportCard";
 
 export const revalidate = 300;
 
-function categoriesFor(league: Parameters<typeof getLeaders>[0]): { label: string; unit: string }[] {
+function categoriesFor(league: Parameters<typeof getLeaderBoard>[0]): { label: string; unit: string }[] {
   return isCricketLeague(league) ? CRICKET_LEADER_CATEGORIES : LEADER_CATEGORIES[league];
 }
 
@@ -41,7 +41,8 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
   const { league } = await params;
   if (!isLeague(league)) notFound();
 
-  let boards: { label: string; unit: string; rows: LeaderRow[] }[];
+  // `omitted`: players tied at the cutoff that the 15-row cap left off (never any on cricket boards).
+  let boards: { label: string; unit: string; rows: LeaderRow[]; omitted?: number }[];
   let season: number | null;
   let note: string | null = null;
 
@@ -53,9 +54,10 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
     note = "Summed from the scorecard of every match on record for the season.";
   } else {
     const categories = LEADER_CATEGORIES[league];
-    const [lists, s] = await Promise.all([Promise.all(categories.map((c) => getLeaders(league, c.column, 10))), getLeadersSeason(league)]);
+    // Season and boards are read together; a board lists everyone tied with 10th place (see leaderQueries.ts).
+    const [lists, s] = await Promise.all([Promise.all(categories.map((c) => getLeaderBoard(league, c.column, { limit: 10, ties: true }))), getLeadersSeason(league)]);
     season = s;
-    boards = categories.map((c, i) => ({ label: c.label, unit: c.unit, rows: lists[i] }));
+    boards = categories.map((c, i) => ({ label: c.label, unit: c.unit, rows: lists[i].rows, omitted: lists[i].omitted }));
     if (isCupCompetition(league)) note = "Summed from the box score of every match on record for the season, knockout rounds included.";
     if (league === "nba") note = "Per-game averages, for players who have appeared in at least 70% of the games played so far (the NBA's qualifying rule).";
   }
@@ -90,8 +92,8 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
                       <li key={row.player_espn_id} className="table-row first:border-t-0">
                         <Link href={`/${league}/players/${row.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
                           <span className="flex min-w-0 items-center gap-2.5">
-                            <span className={`w-5 text-right text-xs tabular-nums ${rank === 0 ? "font-bold text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
-                              {rank + 1}
+                            <span className={`w-5 text-right text-xs tabular-nums ${(row.rank ?? rank + 1) === 1 ? "font-bold text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
+                              {row.rank ?? rank + 1}
                             </span>
                             <TeamLogo name={row.name} logoUrl={row.headshot_url} size={26} />
                             <span className="min-w-0 truncate">
@@ -107,6 +109,11 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
                     ))}
                   </ol>
                 )}
+                {board.omitted ? (
+                  <p className="border-t border-[var(--border)] px-4 py-2 text-xs text-[var(--text-muted)]">
+                    {board.omitted} more {board.omitted === 1 ? "player is" : "players are"} level on {board.rows[board.rows.length - 1].value}, not shown.
+                  </p>
+                ) : null}
               </section>
             ))}
           </div>

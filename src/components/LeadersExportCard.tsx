@@ -15,6 +15,7 @@ export function LeadersExportCard({ league, season, title, note, boards }: { lea
             <ExportList
               rows={b.rows.map((r) => ({
                 key: r.player_espn_id,
+                rank: r.rank,
                 lead: <TeamLogo name={r.name} logoUrl={r.headshot_url} size={28} />,
                 title: r.name,
                 sub: r.team_name ? teamDisplayName(r.team_name) : null,

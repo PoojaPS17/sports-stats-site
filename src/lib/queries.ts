@@ -6,6 +6,7 @@ import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 import { presentDetails, type GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
+import { getLeaderBoard } from "./leaderQueries";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { sortStandings } from "./standingsOrder";
@@ -459,6 +460,8 @@ export interface LeaderRow {
   team_name: string | null;
   team_slug: string | null;
   value: number;
+  /** Competition rank (1, 2, 2, 4): equal figures share a rank. Absent on cricket boards, which number by position. */
+  rank?: number;
 }
 
 export interface LeaderCategory {
@@ -517,44 +520,19 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
 
 const LEADER_COLUMNS = new Set(Object.values(LEADER_CATEGORIES).flatMap((cats) => cats.map((c) => c.column)));
 
-// Every column here is a season total (or season average, for NBA) sourced from
-// player_season_stats, which now holds many years of history per player — so this
-// must pin to the most recent season, or it'd silently pick whichever of a player's
-// seasons on file happened to be their best, mixed arbitrarily across different players.
-// `season` pins a specific year (the off-season recap wants the season just played,
-// not the new one whose zero rows may already exist); default is the latest on file.
+// A board's season and figures: see leaderQueries.ts for where each (league, season) reads from (box scores at read time
+// for NBA, NFL and the domestic soccer leagues, so a board always agrees with the player pages; ESPN's stored rows for a
+// season with no box scores, and for UCL). `season` pins a specific year (the off-season recap wants the season just
+// played, not the new one whose zero rows may already exist); default is the latest with figures. Exactly `limit` rows;
+// the Leaders page asks `getLeaderBoard` for the tie-inclusive list.
 export async function getLeaders(league: League, column: string, limit = 10, season?: number): Promise<LeaderRow[]> {
   if (!LEADER_COLUMNS.has(column)) throw new Error(`Unknown leader column: ${column}`);
-  // A per-game average is only a leader-board figure once the player has played a
-  // qualifying share of the season (the NBA's own rule is 70% of games, 58 of 82):
-  // without it a ten-game injury season outranks a full one. The threshold follows
-  // the most games anyone has played so far, so it tracks the season as it goes.
-  const qualifier = column.endsWith("_avg")
-    ? `and pss.games_played >= ceil(0.7 * (select max(games_played) from player_season_stats q where q.league = pss.league and q.season = pss.season))`
-    : "";
-  const { rows } = await pool.query(
-    `select pss.player_espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
-            t.name as team_name, t.slug as team_slug, pss.${column} as value
-     from player_season_stats pss
-     join players p on p.league = pss.league and p.espn_id = pss.player_espn_id
-     left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
-     where pss.league = $1 and pss.${column} is not null and ${notPseudoAthleteSql()}
-       and pss.season = coalesce($3, (select max(season) from player_season_stats where league = $1))
-       ${qualifier}
-     order by pss.${column} desc
-     limit $2`,
-    [league, limit, season ?? null]
-  );
-  return rows;
+  return (await getLeaderBoard(league, column, { limit, season })).rows;
 }
 
-// The season the Leaders page's boards are for — same "most recent season on file"
-// pin `getLeaders` uses, surfaced so the page can label itself unambiguously instead
-// of leaving the reader to guess what time window these totals cover.
-export async function getLeadersSeason(league: League): Promise<number | null> {
-  const { rows } = await pool.query(`select max(season) as season from player_season_stats where league = $1`, [league]);
-  return rows[0]?.season ?? null;
-}
+// `getLeadersSeason` (the season the Leaders page's boards are for, surfaced so the page can label itself) and the
+// tie-inclusive `getLeaderBoard` live with the board queries.
+export { getLeaderBoard, getLeadersSeason, type LeaderBoard } from "./leaderQueries";
 
 // Cricket has no season-totals feed; its boards are summed from the per-match
 // batting and bowling figures for the most recent season on record.

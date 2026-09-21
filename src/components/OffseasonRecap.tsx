@@ -110,7 +110,7 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
                         <li key={row.player_espn_id}>
                           <Link href={`/${league}/players/${row.slug}`} className="flex items-center justify-between gap-2 text-sm">
                             <span className="flex min-w-0 items-center gap-2.5">
-                              <span className={`w-4 text-right text-xs tabular-nums ${rank === 0 ? "font-bold text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>{rank + 1}</span>
+                              <span className={`w-4 text-right text-xs tabular-nums ${(row.rank ?? rank + 1) === 1 ? "font-bold text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>{row.rank ?? rank + 1}</span>
                               <TeamLogo name={row.name} logoUrl={row.headshot_url} size={24} />
                               <span className="min-w-0 truncate">
                                 <span className="font-semibold">{row.name}</span>
