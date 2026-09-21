@@ -4,6 +4,7 @@ import type { MetadataRoute } from "next";
 import { pool } from "./db";
 import { ALL_LEAGUES, LEAGUES, hasNewsFeed, hasStandings, isCricketLeague, type League } from "./leagues";
 import { TOURS } from "./tennisTours";
+import { easternDateSql } from "./tennisDates";
 import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
 import { hasWeeks, loadWeeks } from "./matchweekPage";
@@ -64,7 +65,7 @@ async function core(): Promise<Entry[]> {
   );
   for (const { espn_id, date } of seriesMatches) out.push(entry(`/cricket/matches/${espn_id}`, "hourly", 0.4, date));
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
-  const { rows: tournaments } = await pool.query(`select espn_id, season, end_date from tennis_tournaments order by season desc, start_date`);
+  const { rows: tournaments } = await pool.query(`select espn_id, season, ${easternDateSql("end_date")} as end_date from tennis_tournaments order by season desc, start_date`);
   for (const { espn_id, end_date } of tournaments) out.push(entry(`/tennis/tournaments/${espn_id}`, "weekly", 0.5, end_date));
   const { rows: tennisSeasons } = await pool.query(`select distinct season from tennis_tournaments order by season desc`);
   for (const { season } of tennisSeasons.slice(1)) out.push(entry(`/tennis/tournaments/${season}`, "yearly", 0.4));

@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { pageMeta } from "@/lib/metadata";
 import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
-import { isTour, getTennisRankings, TOUR_LABEL } from "@/lib/tennis";
+import { isTour, getTennisRankings, getTennisRankingsAsOf, TOUR_LABEL } from "@/lib/tennis";
+import { newerRankingNote, rankingLabel } from "@/lib/tennisRankings";
+import { tennisToday } from "@/lib/tennisDates";
 import { AdSlot } from "@/components/AdSlot";
 import { Flag } from "@/components/TennisScores";
 import { ImageActions } from "@/components/ImageActions";
@@ -22,12 +24,15 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
   const { tour } = await params;
   if (!isTour(tour)) notFound();
 
-  const rankings = await getTennisRankings(tour);
+  const [rankings, { asOf }] = await Promise.all([getTennisRankings(tour), getTennisRankingsAsOf(tour)]);
+  // Says which ranking this is; a week or more on, that it is dated and a newer one may have been published (never that one was: some Mondays have none).
+  const subtitle = `${rankingLabel(asOf)}, with movement since the previous week`;
+  const stale = newerRankingNote(asOf, tennisToday());
 
   return (
     <div className="flex flex-col gap-6">
 
-      <PageHeader title={`${TOUR_LABEL[tour]} Rankings`} subtitle="Official tour rankings with movement since last week" />
+      <PageHeader title={`${TOUR_LABEL[tour]} Rankings`} subtitle={subtitle} />
 
       <AdSlot label={`${TOUR_LABEL[tour]} rankings top`} />
 
@@ -35,7 +40,8 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No rankings on record yet.</p>
       ) : (
         <div className="flex flex-col gap-3">
-          <ImageActions filename={`tennis-${tour}-rankings`} shareTitle={`${TOUR_LABEL[tour]} rankings`} width={640} card={<TennisRankingsExportCard tourLabel={TOUR_LABEL[tour]} title={`${TOUR_LABEL[tour]} rankings`} subtitle="Official tour rankings with movement since last week" rankings={rankings} />} />
+          <ImageActions filename={`tennis-${tour}-rankings`} shareTitle={`${TOUR_LABEL[tour]} rankings`} width={640} card={<TennisRankingsExportCard tourLabel={TOUR_LABEL[tour]} title={`${TOUR_LABEL[tour]} rankings`} subtitle={subtitle} rankings={rankings} />} />
+          {stale && <p className="text-xs text-[var(--text-muted)]">{stale}</p>}
           <div className="card overflow-hidden">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -43,7 +49,7 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
                   <th className="py-2 pl-4 font-medium">Rank</th>
                   <th className="px-2 py-2 font-medium">Player</th>
                   <th className="px-2 py-2 text-right font-medium">Points</th>
-                  <th className="py-2 pr-4 text-right font-medium">Prev.</th>
+                  <th className="py-2 pr-4 text-right font-medium">Move</th>
                 </tr>
               </thead>
               <tbody>

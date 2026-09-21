@@ -4,6 +4,7 @@
 import { pool } from "./db";
 import { easternDay, parseTennisEvent, TENNIS_HEADER_URL, type FeedMatch } from "./tennisFeed";
 import type { TennisMatch, TennisSide } from "./tennis";
+import { idsFollowingOnCourt, occupiesCourt } from "./tennisDisplay";
 
 const LIVE_REVALIDATE = 10;
 
@@ -37,7 +38,10 @@ function toSide(s: FeedMatch["sides"][0], slugs: Map<string, string>): TennisSid
  */
 export async function overlayLiveTennis(day: string, rows: TennisMatch[], tour?: "atp" | "wta"): Promise<{ matches: TennisMatch[]; live: boolean }> {
   if (day !== easternDay(new Date().toISOString())) return { matches: rows, live: false };
-  const feed = (await fetchDayFeed(day)).filter((m) => m.day === day && (!tour || m.tour === tour));
+  const dayFeed = (await fetchDayFeed(day)).filter((m) => m.day === day);
+  // Judged over every match of the day, not just this tour's: a Slam's courts are shared by both tours.
+  const following = idsFollowingOnCourt(dayFeed.map((m) => ({ id: m.id, tournament: m.tournamentId, court: m.court, day: m.day, date: m.date, occupies: occupiesCourt({ status_detail: m.statusDetail, completed: m.completed }) })));
+  const feed = dayFeed.filter((m) => !tour || m.tour === tour);
   if (feed.length === 0) return { matches: rows, live: rows.some((r) => r.status_state === "in") };
 
   const ids = new Set(feed.flatMap((m) => [...m.sides[0].ids, ...m.sides[1].ids]));
@@ -70,6 +74,7 @@ export async function overlayLiveTennis(day: string, rows: TennisMatch[], tour?:
       status_state: m.statusState,
       status_detail: m.statusDetail,
       winner_side: m.winnerSide,
+      after_court_match: following.has(m.id),
       side1: toSide(m.sides[0], tourSlugs),
       side2: toSide(m.sides[1], tourSlugs),
     };

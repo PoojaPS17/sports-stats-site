@@ -10,6 +10,10 @@ import { formatLocalTime, type LocalTimeFormat } from "@/lib/localTime";
 // replaced after hydration. `suppressHydrationWarning` covers the expected text
 // difference; the element is the same either way.
 //
+// `showZone` prints the zone's short name after the clock time ("4:00 AM EDT"). Tennis uses it: a match's time is
+// otherwise a bare clock reading with nothing to say which zone it is in, and the server's fallback (Eastern) and
+// the visitor's own differ.
+//
 // `serverTimeZone` is the zone of that first-paint fallback only. A caller rendering an NFL or NBA
 // game passes dayTimeZone(league), so the HTML the server sends (and what a crawler or a visitor
 // with JavaScript off reads) shows the Eastern date the league files the game under, instead of a
@@ -24,12 +28,14 @@ export function LocalTime({
   className = "",
   serverTimeZone,
   league,
+  showZone = false,
 }: {
   iso: string;
   format?: LocalTimeFormat;
   className?: string;
   serverTimeZone?: string;
   league?: League;
+  showZone?: boolean;
 }) {
   const [label, setLabel] = useState<string | null>(null);
   const clock24 = league !== undefined && isSoccerLeague(league);
@@ -37,12 +43,12 @@ export function LocalTime({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLabel(formatLocalTime(iso, fmt, { clock24 }));
-  }, [iso, fmt, clock24]);
+    setLabel(formatLocalTime(iso, fmt, { clock24, showZone }));
+  }, [iso, fmt, clock24, showZone]);
 
   return (
     <time dateTime={iso} className={`tabular-nums ${className}`} suppressHydrationWarning>
-      {label ?? formatLocalTime(iso, fmt, { clock24, timeZone: firstPaintZone })}
+      {label ?? formatLocalTime(iso, fmt, { clock24, showZone, timeZone: firstPaintZone })}
     </time>
   );
 }

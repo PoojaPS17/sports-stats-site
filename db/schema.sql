@@ -352,6 +352,11 @@ create table if not exists tennis_rankings (
 
 create index if not exists tennis_rankings_rank_idx on tennis_rankings (tour, rank);
 
+-- Which ranking the rows are: ESPN's week number and its `lastUpdated` (the Thursday of that week; the tour
+-- publishes the ranking the Monday after). Filled by the next fetch-tennis-rankings run; empty until then.
+alter table tennis_rankings add column if not exists ranking_week int;
+alter table tennis_rankings add column if not exists espn_updated timestamptz;
+
 -- Day-by-day tennis, every tournament ESPN lists (tour events, Slams, Challengers,
 -- 125s), from the cross-tour daily feed (see scripts/fetch-tennis-daily.ts). A match
 -- keeps player1/player2 for singles; `side1`/`side2` carry everything the feed gives

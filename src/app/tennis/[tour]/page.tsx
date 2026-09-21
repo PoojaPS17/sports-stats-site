@@ -9,7 +9,9 @@ import { TennisRankingsExportCard, TennisScoresExportCard } from "@/components/T
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { Flag, TennisDayStrip, TennisDayView, TournamentCard, formatDayLabel } from "@/components/TennisScores";
-import { isTour, getTennisDay, getTennisDaysAround, getLatestTennisDay, getTennisRankings, getTennisTournamentsAround, TOUR_LABEL } from "@/lib/tennis";
+import { tennisToday } from "@/lib/tennisDates";
+import { rankingLabel } from "@/lib/tennisRankings";
+import { isTour, getTennisDay, getTennisDaysAround, getLatestTennisDay, getTennisRankings, getTennisRankingsAsOf, getTennisTournamentsAround, TOUR_LABEL } from "@/lib/tennis";
 import { overlayLiveTennis } from "@/lib/tennisLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
 
@@ -25,11 +27,17 @@ export default async function TennisTourPage({ params }: { params: Promise<{ tou
   const { tour } = await params;
   if (!isTour(tour)) notFound();
 
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const today = tennisToday();
   const [todayMatches, latest] = await Promise.all([getTennisDay(today, tour), getLatestTennisDay()]);
   const day = todayMatches.length > 0 ? today : (latest ?? today);
   const stored = day === today ? todayMatches : await getTennisDay(day, tour);
-  const [{ matches, live }, days, tournaments, rankings] = await Promise.all([overlayLiveTennis(day, stored, tour), getTennisDaysAround(day), getTennisTournamentsAround(today), getTennisRankings(tour, 10)]);
+  const [{ matches, live }, days, tournaments, rankings, { asOf }] = await Promise.all([
+    overlayLiveTennis(day, stored, tour),
+    getTennisDaysAround(day),
+    getTennisTournamentsAround(today),
+    getTennisRankings(tour, 10),
+    getTennisRankingsAsOf(tour),
+  ]);
   const tourTournaments = tournaments.filter((t) => t.tour === tour || t.tour === "both");
 
   return (
@@ -71,8 +79,9 @@ export default async function TennisTourPage({ params }: { params: Promise<{ tou
 
       <section>
         <SectionHeader
+          description={rankingLabel(asOf)}
           action={{ label: "Top 100", href: `/tennis/${tour}/rankings` }}
-          tools={rankings.length > 0 && <ImageActions filename={`tennis-${tour}-top-10`} shareTitle={`${TOUR_LABEL[tour]} top 10`} width={640} card={<TennisRankingsExportCard tourLabel={TOUR_LABEL[tour]} title={`${TOUR_LABEL[tour]} top 10`} subtitle="Official world rankings" rankings={rankings} />} />}
+          tools={rankings.length > 0 && <ImageActions filename={`tennis-${tour}-top-10`} shareTitle={`${TOUR_LABEL[tour]} top 10`} width={640} card={<TennisRankingsExportCard tourLabel={TOUR_LABEL[tour]} title={`${TOUR_LABEL[tour]} top 10`} subtitle={rankingLabel(asOf)} rankings={rankings} />} />}
         >
           {TOUR_LABEL[tour]} rankings
         </SectionHeader>

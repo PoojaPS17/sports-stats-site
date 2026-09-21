@@ -10,7 +10,9 @@ import { AdSlot } from "@/components/AdSlot";
 import { Flag, TennisDayStrip, TennisDayView, TournamentCard, formatDayLabel } from "@/components/TennisScores";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { overlayLiveTennis } from "@/lib/tennisLive";
-import { getLatestTennisDay, getTennisDay, getTennisDaysAround, getTennisRankings, getTennisTournamentsAround, TOURS, TOUR_LABEL } from "@/lib/tennis";
+import { tennisToday } from "@/lib/tennisDates";
+import { rankingLabel } from "@/lib/tennisRankings";
+import { getLatestTennisDay, getTennisDay, getTennisDaysAround, getTennisRankings, getTennisRankingsAsOf, getTennisTournamentsAround, TOURS, TOUR_LABEL } from "@/lib/tennis";
 
 export const revalidate = 15;
 
@@ -20,24 +22,22 @@ export const metadata: Metadata = pageMeta(
   "/tennis"
 );
 
-// Today in US Eastern, the calendar ESPN files matches under.
-function easternToday(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-}
-
 export default async function TennisHubPage() {
-  const today = easternToday();
+  const today = tennisToday();
   const [todayMatches, latest] = await Promise.all([getTennisDay(today), getLatestTennisDay()]);
   // A quiet Monday between tournaments falls back to the last day with play.
   const day = todayMatches.length > 0 ? today : (latest ?? today);
   const stored = day === today ? todayMatches : await getTennisDay(day);
-  const [{ matches, live }, days, tournaments, atp, wta] = await Promise.all([
+  const [{ matches, live }, days, tournaments, atp, wta, atpWeek, wtaWeek] = await Promise.all([
     overlayLiveTennis(day, stored),
     getTennisDaysAround(day),
     getTennisTournamentsAround(today),
     getTennisRankings("atp", 5),
     getTennisRankings("wta", 5),
+    getTennisRankingsAsOf("atp"),
+    getTennisRankingsAsOf("wta"),
   ]);
+  const asOf = { atp: atpWeek.asOf, wta: wtaWeek.asOf };
 
   return (
     <div className="flex flex-col gap-8">
@@ -87,8 +87,9 @@ export default async function TennisHubPage() {
         ).map(([tour, rows]) => (
           <div key={tour}>
             <SectionHeader
+              description={rankingLabel(asOf[tour])}
               action={{ label: "Top 100", href: `/tennis/${tour}/rankings` }}
-              tools={rows.length > 0 && <ImageActions filename={`tennis-${tour}-top-${rows.length}`} shareTitle={`${TOUR_LABEL[tour]} top ${rows.length}`} width={640} card={<TennisRankingsExportCard tourLabel={TOUR_LABEL[tour]} title={`${TOUR_LABEL[tour]} top ${rows.length}`} subtitle="Official world rankings" rankings={rows} />} />}
+              tools={rows.length > 0 && <ImageActions filename={`tennis-${tour}-top-${rows.length}`} shareTitle={`${TOUR_LABEL[tour]} top ${rows.length}`} width={640} card={<TennisRankingsExportCard tourLabel={TOUR_LABEL[tour]} title={`${TOUR_LABEL[tour]} top ${rows.length}`} subtitle={rankingLabel(asOf[tour])} rankings={rows} />} />}
             >
               {TOUR_LABEL[tour]} rankings
             </SectionHeader>

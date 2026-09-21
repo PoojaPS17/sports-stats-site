@@ -1,21 +1,24 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/LocalTime";
-import { tennisMatchStatus } from "@/lib/tennisDisplay";
+import { ESTIMATED, ESTIMATED_TITLE, setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
+import { displayCountry } from "@/lib/tennisCountry";
+import { formatTournamentRange, TENNIS_ZONE, tournamentInPlay } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type TennisMatch, type TennisSide, type TennisTournament } from "@/lib/tennis";
 
 /* ------------------------------------------------------------------------ */
 /* Small pieces                                                              */
 /* ------------------------------------------------------------------------ */
 
-// ESPN's country flag set, keyed by the three-letter code its feeds use.
+// ESPN's country flag set, keyed by the three-letter code its feeds use. The image is looked up by the stored code;
+// the label (alt and tooltip) is the code the tours print.
 export function Flag({ code, size = 16 }: { code: string | null | undefined; size?: number }) {
   if (!code) return <span style={{ width: size, height: Math.round(size * 0.7) }} className="inline-block shrink-0" />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={`https://a.espncdn.com/i/teamlogos/countries/500/${code.toLowerCase()}.png`}
-      alt={code}
-      title={code}
+      alt={displayCountry(code) ?? code}
+      title={displayCountry(code) ?? code}
       width={size}
       height={size}
       style={{ width: size, height: size }}
@@ -31,18 +34,6 @@ export function formatDayLabel(day: string, style: "short" | "long" = "long"): s
     : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-export function formatDateRange(start: string | null, end: string | null): string | null {
-  if (!start) return null;
-  const s = new Date(start);
-  const e = end ? new Date(end) : null;
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
-  if (!e) return s.toLocaleDateString("en-US", { ...opts, year: "numeric" });
-  const sameMonth = s.getUTCMonth() === e.getUTCMonth() && s.getUTCFullYear() === e.getUTCFullYear();
-  const left = s.toLocaleDateString("en-US", opts);
-  const right = sameMonth ? e.getUTCDate() : e.toLocaleDateString("en-US", opts);
-  return `${left} – ${right}, ${e.getUTCFullYear()}`;
-}
-
 function shiftDay(day: string, delta: number): string {
   const d = new Date(`${day}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + delta);
@@ -53,7 +44,7 @@ function shiftDay(day: string, delta: number): string {
 /* One match, ESPN-style: a status line, then one row per side              */
 /* ------------------------------------------------------------------------ */
 
-function SideRow({ tour, side, won, decided, setCount }: { tour: string; side: TennisSide; won: boolean; decided: boolean; setCount: number }) {
+function SideRow({ tour, side, other, won, decided, setCount }: { tour: string; side: TennisSide; other: TennisSide; won: boolean; decided: boolean; setCount: number }) {
   const loser = decided && !won;
   const nameClass = loser ? "text-[var(--text-muted)]" : "font-semibold text-[var(--text)]";
   return (
@@ -90,10 +81,11 @@ function SideRow({ tour, side, won, decided, setCount }: { tour: string; side: T
         <div className="flex shrink-0 gap-2.5 tabular-nums">
           {Array.from({ length: setCount }, (_, i) => {
             const set = side.sets[i];
+            const cell = setCell(set, other.sets[i]);
             return (
-              <span key={i} className={`w-5 text-right text-[15px] ${set?.winner ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
-                {set ? set.games : ""}
-                {set?.tiebreak != null && <sup className="ml-px text-[9px] font-medium">{set.tiebreak}</sup>}
+              <span key={i} className={`${cell?.wide ? "w-8" : "w-5"} text-right text-[15px] ${set?.winner ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+                {cell?.text}
+                {cell?.sup != null && <sup className="ml-px text-[9px] font-medium">{cell.sup}</sup>}
               </span>
             );
           })}
@@ -119,9 +111,12 @@ export function TennisMatchLine({ match, showTournament = false }: { match: Tenn
             <span className="pill pill-live">{status.label}</span>
           ) : status.kind === "result" || status.kind === "called-off" ? (
             <span className="pill pill-final">{status.label}</span>
+          ) : status.label ? (
+            <span className="pill pill-upcoming">{status.label}</span>
           ) : (
-            <span className="pill pill-upcoming">
-              <LocalTime iso={match.date} format="time" />
+            <span className="pill pill-upcoming" title={match.after_court_match ? ESTIMATED_TITLE : undefined}>
+              {match.after_court_match && `${ESTIMATED} `}
+              <LocalTime iso={match.date} format="time" showZone serverTimeZone={TENNIS_ZONE} />
             </span>
           )}
           {showTournament && (
@@ -132,8 +127,8 @@ export function TennisMatchLine({ match, showTournament = false }: { match: Tenn
         </span>
         {where && <span className="shrink-0 truncate text-[var(--text-faint)]">{where}</span>}
       </div>
-      <SideRow tour={tourForLinks} side={match.side1} won={match.winner_side === 1} decided={decided} setCount={setCount} />
-      <SideRow tour={tourForLinks} side={match.side2} won={match.winner_side === 2} decided={decided} setCount={setCount} />
+      <SideRow tour={tourForLinks} side={match.side1} other={match.side2} won={match.winner_side === 1} decided={decided} setCount={setCount} />
+      <SideRow tour={tourForLinks} side={match.side2} other={match.side1} won={match.winner_side === 2} decided={decided} setCount={setCount} />
       {!decided && status.kind === "result" && match.status_detail && match.status_detail !== "Final" && (
         <p className="mt-1 text-xs text-[var(--text-muted)]">{match.status_detail}</p>
       )}
@@ -258,8 +253,8 @@ export function TennisDayStrip({ day, daysWithPlay, basePath = "/tennis/scores" 
 /* ------------------------------------------------------------------------ */
 
 export function TournamentCard({ t, today }: { t: TennisTournament; today?: string }) {
-  const range = formatDateRange(t.start_date, t.end_date);
-  const inPlay = today && t.start_date && t.end_date && t.start_date.slice(0, 10) <= today && t.end_date.slice(0, 10) >= today;
+  const range = formatTournamentRange(t.start_date, t.end_date);
+  const inPlay = today ? tournamentInPlay(t, today) : false;
   const tourLabel = t.tour === "both" ? "ATP · WTA" : t.tour.toUpperCase();
   return (
     <Link href={`/tennis/tournaments/${t.espn_id}`} className="card card-link flex flex-col gap-1 px-4 py-3">

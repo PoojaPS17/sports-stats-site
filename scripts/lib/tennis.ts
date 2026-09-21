@@ -85,3 +85,25 @@ export async function pruneStaleRankings(db: Pick<Pool, "query">, tour: Tour, cu
   const res = await db.query(`delete from tennis_rankings where tour = $1 and not (player_espn_id = any($2::text[]))`, [tour, currentPlayerIds]);
   return res.rowCount ?? 0;
 }
+
+/**
+ * Store one ranked player's row for the tour's CURRENT ranking, with which ranking it is: ESPN's week number
+ * (`occurrence.number`) and `lastUpdated`, both from the same resource as the ranks. A feed that gives neither
+ * stores nulls, never last week's values.
+ */
+export async function upsertRanking(
+  db: Pick<Pool, "query">,
+  tour: Tour,
+  athleteId: string,
+  rank: { current: number; previous?: number | null; points?: number | null },
+  meta: { week: number | null; lastUpdated: string | null }
+): Promise<void> {
+  await db.query(
+    `insert into tennis_rankings (tour, player_espn_id, rank, previous_rank, points, ranking_week, espn_updated, updated_at)
+     values ($1, $2, $3, $4, $5, $6, $7::timestamptz, now())
+     on conflict (tour, player_espn_id) do update set
+       rank = excluded.rank, previous_rank = excluded.previous_rank, points = excluded.points,
+       ranking_week = excluded.ranking_week, espn_updated = excluded.espn_updated, updated_at = now()`,
+    [tour, athleteId, rank.current, rank.previous ?? null, rank.points ?? null, meta.week, meta.lastUpdated]
+  );
+}

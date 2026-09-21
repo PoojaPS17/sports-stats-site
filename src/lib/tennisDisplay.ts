@@ -4,10 +4,21 @@
 // ESPN's tennis listing files a finished match, a retirement and a walkover all as state "post"; the scraper stores
 // state "post" as completed, so a postponed match can be stored completed with no winner. Called off is therefore
 // decided by the status text and there being no winner, not by the completed flag alone.
-import { calledOffLabel, isCalledOff } from "./gameStatus";
-import type { TennisMatch } from "./tennis";
+import { calledOffLabel, isCalledOff, isNeverPlayed } from "./gameStatus";
+import type { TennisMatch, TennisSet } from "./tennis";
 
-type Fields = Pick<TennisMatch, "completed" | "status_state" | "status_detail" | "winner_side">;
+// The sides are optional so a caller that only has the status fields (and older tests) still type-checks; a missing
+// side reads as no score.
+/** Prefix of the start time of a match that follows another on its court: ESPN's time for it is an estimate. */
+export const ESTIMATED = "Est.";
+/** What that prefix means, for a tooltip. */
+export const ESTIMATED_TITLE = "Followed by the previous match on this court; the start time is an estimate";
+
+type Fields = Pick<TennisMatch, "completed" | "status_state" | "status_detail" | "winner_side"> & {
+  side1?: { sets?: unknown[] };
+  side2?: { sets?: unknown[] };
+  after_court_match?: boolean;
+};
 
 export type TennisMatchStatus = { kind: "live" | "result" | "called-off" | "upcoming"; label: string | null };
 
@@ -15,18 +26,75 @@ export type TennisMatchStatus = { kind: "live" | "result" | "called-off" | "upco
  * - in play: live, with ESPN's own detail ("2nd Set", "Suspended" for a rain stoppage), never called off;
  * - a winner, or a finished match: a result, "Final" or ESPN's text ("Retired", "Walkover");
  * - not in play, no winner, and a called-off status: called off, with the reason;
+ * - still "pre" but with a score on the board: play started and stopped and ESPN never moved it out of "pre"
+ *   (the SP Open doubles final stood at 4-3 with a start time in the past): suspended, never a start time;
+ * - a start time ESPN has not set ("M/d - 'TBD'", with a placeholder date of midnight Eastern): "Time TBD";
  * - anything else: upcoming.
  */
 export function tennisMatchStatus(m: Fields): TennisMatchStatus {
   if (m.status_state === "in") return { kind: "live", label: m.status_detail ?? "Live" };
   if (m.winner_side == null && isCalledOff(m.status_detail)) return { kind: "called-off", label: calledOffLabel(m.status_detail) };
   if (m.completed || m.winner_side != null) return { kind: "result", label: m.status_detail && m.status_detail !== "Final" ? m.status_detail : "Final" };
+  if (m.status_state === "pre" && ((m.side1?.sets?.length ?? 0) > 0 || (m.side2?.sets?.length ?? 0) > 0)) return { kind: "called-off", label: "Suspended" };
+  if (m.status_detail && /\bTBD\b/i.test(m.status_detail)) return { kind: "upcoming", label: "Time TBD" };
   return { kind: "upcoming", label: null };
 }
 
 /** The caption above a match on a share image: state (start time in UTC for an upcoming match), round and court. */
 export function tennisMatchCaption(m: Fields & Pick<TennisMatch, "date" | "round" | "court">): string {
   const s = tennisMatchStatus(m);
-  const state = s.label ?? `${new Date(m.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" })} UTC`;
-  return [state, m.round, m.court].filter(Boolean).join(" · ");
+  const clock = `${new Date(m.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" })} UTC`;
+  const state = s.label ?? (m.after_court_match ? `${ESTIMATED} ${clock}` : clock);
+  // A finished final would read "Final · Final": say it once.
+  return [state, m.round === state ? null : m.round, m.court].filter(Boolean).join(" · ");
+}
+
+export type SetCell = { text: string; sup: string | null; wide?: true };
+
+/**
+ * One side's cell for one set, given the opponent's set. The feed carries both players' points for a tie-break
+ * ("7-6(8-6)"); the convention, and ESPN's scores page, shows only the loser's, on the loser's games: 7-6(6). A set
+ * still in play has no loser yet, so each side shows its own points. A match tie-break (a doubles decider, played
+ * as a "set" of 1-0 with points 10-6) is bracketed points, [10] and [6], never a set score with superscripts.
+ */
+export function setCell(own: TennisSet | undefined, other: TennisSet | undefined): SetCell | null {
+  if (!own) return null;
+  if (own.tiebreak != null && own.games <= 1 && (other?.games ?? 0) <= 1) return { text: `[${own.tiebreak}]`, sup: null, wide: true };
+  const decided = own.winner || other?.winner === true;
+  const shows = own.tiebreak != null && (!decided || !own.winner);
+  return { text: String(own.games), sup: shows ? String(own.tiebreak) : null };
+}
+
+/**
+ * The ids of the matches that follow another on the same tournament, court and day, given every match of that day.
+ * ESPN gives the first match on a court its real start and the rest an estimate that moves with the play before it.
+ * Rows with `occupies: false` (occupiesCourt) are not counted as "earlier". The SQL twin is `after_court_match` in tennis.ts.
+ */
+export function idsFollowingOnCourt(rows: { id: string; tournament: string | null; court: string | null; day: string | null; date: string; occupies?: boolean }[]): Set<string> {
+  const key = (r: (typeof rows)[number]) => (r.tournament && r.court && r.day ? `${r.tournament}|${r.court}|${r.day}` : null);
+  const first = new Map<string, number>();
+  for (const r of rows) {
+    const k = key(r);
+    // a row with no real start (see occupiesCourt) cannot be what a later match follows
+    if (k && r.occupies !== false) first.set(k, Math.min(first.get(k) ?? Infinity, Date.parse(r.date)));
+  }
+  const out = new Set<string>();
+  for (const r of rows) {
+    const k = key(r);
+    if (k && Date.parse(r.date) > (first.get(k) as number)) out.add(r.id);
+  }
+  return out;
+}
+
+/**
+ * Whether a match holds its court at its listed time, so a later match on that court follows it. A match with no time
+ * yet (ESPN's "M/d - 'TBD'", stored at a midnight-Eastern placeholder), one that was postponed or cancelled (stored
+ * completed by the older scraper, so `completed` is ignored for those), and one stopped before it was finished
+ * (suspended) do not; a finished match, even an abandoned one, and one in play do. The SQL twin is `OCCUPIES_COURT_SQL`
+ * in tennis.ts. (Midnight Eastern alone is not a marker: a noon start in Shanghai is 00:00 Eastern.)
+ */
+export function occupiesCourt(m: { status_detail: string | null; completed: boolean }): boolean {
+  const d = m.status_detail ?? "";
+  if (/\bTBD\b/i.test(d) || isNeverPlayed(d)) return false;
+  return m.completed || !isCalledOff(d);
 }

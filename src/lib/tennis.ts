@@ -1,5 +1,7 @@
 import { pool } from "./db";
 import type { Tour } from "./tennisTours";
+import { easternDateSql, TENNIS_ZONE } from "./tennisDates";
+import { rankingAsOf } from "./tennisRankings";
 
 export type { Tour } from "./tennisTours";
 export { TOURS, TOUR_LABEL, isTour } from "./tennisTours";
@@ -32,11 +34,21 @@ export async function getTennisRankings(tour: Tour, limit = 100): Promise<Tennis
   return rows;
 }
 
+/** Which ranking the stored rows are: ESPN's week number and the Monday the tour dates it (null until the loader has stored one). */
+export async function getTennisRankingsAsOf(tour: Tour): Promise<{ week: number | null; asOf: string | null }> {
+  const { rows } = await pool.query(
+    `select max(ranking_week)::int as week, to_char(max(espn_updated) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as updated from tennis_rankings where tour = $1`,
+    [tour]
+  );
+  const { week, updated } = rows[0] ?? {};
+  return { week: week ?? null, asOf: updated ? rankingAsOf(updated) : null };
+}
+
 /* ------------------------------------------------------------------------ */
 /* Matches                                                                   */
 /* ------------------------------------------------------------------------ */
 
-export type CompetitionType = "mens-singles" | "womens-singles" | "mens-doubles" | "womens-doubles" | "mixed-doubles";
+export type CompetitionType = "mens-singles" | "womens-singles" | "mens-doubles" | "womens-doubles" | "mixed-doubles" | "team-cup";
 
 export const COMPETITION_LABEL: Record<CompetitionType, string> = {
   "mens-singles": "Men's Singles",
@@ -44,10 +56,12 @@ export const COMPETITION_LABEL: Record<CompetitionType, string> = {
   "mens-doubles": "Men's Doubles",
   "womens-doubles": "Women's Doubles",
   "mixed-doubles": "Mixed Doubles",
+  // Davis Cup, United Cup...: ESPN files the singles and the doubles rubbers of a tie under this one type.
+  "team-cup": "Team Cup",
 };
 
 // Display order within a tournament: singles first, then the doubles draws.
-export const COMPETITION_ORDER: CompetitionType[] = ["mens-singles", "womens-singles", "mens-doubles", "womens-doubles", "mixed-doubles"];
+export const COMPETITION_ORDER: CompetitionType[] = ["mens-singles", "womens-singles", "mens-doubles", "womens-doubles", "mixed-doubles", "team-cup"];
 
 export interface TennisSet {
   games: number;
@@ -84,6 +98,8 @@ export interface TennisMatch {
   status_state: string | null;
   status_detail: string | null;
   winner_side: 1 | 2 | null;
+  /** Another match on the same court that day starts earlier, so this start time is an estimate (see tennisDisplay). */
+  after_court_match?: boolean;
   side1: TennisSide;
   side2: TennisSide;
 }
@@ -103,6 +119,12 @@ const SIDE_SQL = (side: "side1" | "side2", player: "player1_espn_id" | "player2_
     'seed', null, 'rank', null, 'score', case when m.winner_espn_id = m.${player} then m.score_display end, 'sets', '[]'::jsonb)
   end as ${side}`;
 
+// SQL twin of occupiesCourt (tennisDisplay.ts), on alias `o`: a match with no time yet (TBD), or postponed or cancelled,
+// or stopped before it was finished (suspended, abandoned and not completed) does not hold the court, so it is not
+// what a later match on that court follows.
+const OCCUPIES_COURT_SQL = `not (coalesce(o.status_detail, '') ~* '\\mTBD\\M|postpon|cancel'
+                                 or (not o.completed and coalesce(o.status_detail, '') ~* 'suspend|abandon'))`;
+
 const MATCH_SELECT = `
   select m.espn_id, m.tour, m.tournament_espn_id, m.tournament_name, t.location as tournament_location, coalesce(t.major, false) as major,
          m.competition_type, m.round, m.round_number, m.court,
@@ -110,6 +132,9 @@ const MATCH_SELECT = `
          m.completed, m.status_state, m.status_detail,
          case when m.winner_espn_id is null then null
               when m.winner_espn_id = m.player1_espn_id then 1 else 2 end as winner_side,
+         exists (select 1 from tennis_matches o
+                 where o.tournament_espn_id = m.tournament_espn_id and o.court = m.court and o.day = m.day and o.date < m.date
+                   and ${OCCUPIES_COURT_SQL}) as after_court_match,
          ${SIDE_SQL("side1", "player1_espn_id")},
          ${SIDE_SQL("side2", "player2_espn_id")}
   from tennis_matches m
@@ -122,7 +147,7 @@ const MATCH_SELECT = `
 // doubles, then the later rounds first, then by start time.
 const MATCH_ORDER = `
   order by coalesce(t.major, false) desc, m.tournament_name,
-           array_position(array['mens-singles','womens-singles','mens-doubles','womens-doubles','mixed-doubles'], m.competition_type),
+           array_position(array['mens-singles','womens-singles','mens-doubles','womens-doubles','mixed-doubles','team-cup'], m.competition_type),
            m.round_number desc nulls last, m.date asc`;
 
 /** Every match ESPN files under one calendar day (US Eastern), all tours. */
@@ -164,6 +189,7 @@ export interface TennisTournament {
   name: string;
   location: string | null;
   major: boolean;
+  /** The US Eastern calendar dates ESPN files the event under, 'YYYY-MM-DD' (see tennisDates.ts). */
   start_date: string | null;
   end_date: string | null;
   match_count: number;
@@ -172,10 +198,19 @@ export interface TennisTournament {
   champions: { competition_type: CompetitionType; names: string[]; slugs: (string | null)[] }[];
 }
 
+// A rubber of a team event, on the given alias: ESPN files Davis Cup, ATP Cup, Billie Jean King Cup and Laver Cup
+// rubbers under competition_type 'team-cup', and every United Cup rubber under 'mixed-doubles', its singles rubbers
+// with a one-player side. ESPN also labels the rubbers of a final tie "Final", so such a row must never be read as a
+// tournament final (a title, a champion). A real mixed-doubles match has two-player sides.
+// Null-safe on purpose: a row with no competition_type (the early Slam backfill) makes both comparisons NULL, and
+// `not NULL` is NULL, which would drop the row from a FILTER or WHERE. coalesce makes it a plain false.
+const TEAM_RUBBER_SQL = (a: string) => `coalesce(${a}.competition_type = 'team-cup'
+       or (${a}.competition_type = 'mixed-doubles' and ${a}.side1 is not null and jsonb_array_length(${a}.side1 -> 'ids') = 1), false)`;
+
 const TOURNAMENT_SELECT = `
   select t.espn_id, t.tour, t.tournament_id, t.season, t.name, t.location, t.major,
-         to_char(t.start_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as start_date,
-         to_char(t.end_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as end_date,
+         ${easternDateSql("t.start_date")} as start_date,
+         ${easternDateSql("t.end_date")} as end_date,
          (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id)::int as match_count,
          (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id and m.completed)::int as completed_count,
          coalesce((
@@ -190,7 +225,10 @@ const TOURNAMENT_SELECT = `
                         case when m.winner_espn_id = m.player1_espn_id then m.side1 else m.side2 end as w
                  from tennis_matches m
                  where m.tournament_espn_id = t.espn_id and m.completed and m.winner_espn_id is not null
-                   and m.side1 is not null and lower(m.round) = 'final') f
+                   and m.side1 is not null and lower(m.round) = 'final'
+                   -- a team event (Davis Cup, United Cup...) has no per-draw champion: its Final tie is several rubbers,
+                   -- and the tie's mixed-doubles rubber has two-player sides, so the event is recognised as a whole
+                   and not exists (select 1 from tennis_matches x where x.tournament_espn_id = t.espn_id and ${TEAM_RUBBER_SQL("x")})) f
          ), '[]'::jsonb) as champions
   from tennis_tournaments t`;
 
@@ -224,7 +262,9 @@ export async function getTennisTournamentMatches(espnId: string): Promise<Tennis
 export async function getTennisTournamentsAround(day: string): Promise<TennisTournament[]> {
   const { rows } = await pool.query(
     `${TOURNAMENT_SELECT}
-     where (t.start_date is not null and t.start_date::date <= $1::date + 7 and coalesce(t.end_date::date, t.start_date::date + 14) >= $1::date)
+     where (t.start_date is not null
+            and (t.start_date at time zone '${TENNIS_ZONE}')::date <= $1::date + 7
+            and coalesce((t.end_date at time zone '${TENNIS_ZONE}')::date, (t.start_date at time zone '${TENNIS_ZONE}')::date + 14) >= $1::date)
         or exists (select 1 from tennis_matches m where m.tournament_espn_id = t.espn_id and m.day between $1::date - 1 and $1::date + 7)
      order by t.major desc, t.start_date nulls last, t.name`,
     [day]
@@ -260,6 +300,23 @@ export async function getTennisPlayerMatches(tour: Tour, playerEspnId: string, l
   return rows;
 }
 
+// What counts as a singles match in a player's record, head-to-head and rivals (SQL, on alias `m`).
+//  - the singles draws, plus a row with no draw type (the early Slam backfill stored singles only);
+//  - a team-event singles rubber, told from a doubles rubber by both sides being one player. ESPN files every rubber
+//    of Davis Cup (ids 810, 862, 928, 968...), ATP Cup (827-838, 878) and Billie Jean King Cup (863, 929, 967) under
+//    competition_type 'team-cup', and every United Cup (918) rubber under 'mixed-doubles', so both types are read this
+//    way. The tours count those in a player's record;
+//  - but not the Laver Cup (id 840, also typed 'team-cup'): an exhibition that neither the ATP, the WTA nor Wikipedia
+//    counts. Excluded by tournament id, and by name when a row has no usable id. No other exhibition was typed
+//    team-cup in the feed samples 2021-2025.
+const SINGLES_SQL = `(m.competition_type is null or m.competition_type like '%singles'
+       or (m.competition_type in ('team-cup', 'mixed-doubles') and m.side1 is not null
+           and jsonb_array_length(m.side1 -> 'ids') = 1 and jsonb_array_length(m.side2 -> 'ids') = 1
+           and coalesce(m.tournament_espn_id, '') !~ '^840-' and m.tournament_name !~* '^laver cup'))`;
+// A walkover is not a match played: neither player's win nor loss (ESPN's detail is "Walkover"; a retirement, which
+// has a score and a result, is played and counts).
+const PLAYED_SQL = `coalesce(m.status_detail, '') not ilike 'walkover'`;
+
 export interface TennisSeasonRecord {
   season: number;
   wins: number;
@@ -267,17 +324,20 @@ export interface TennisSeasonRecord {
   titles: number;
 }
 
-/** Singles win–loss and titles by season, from matches on file. */
+/**
+ * Singles win–loss and titles by season, from matches on file: team-cup singles included, walkovers not, and a win in
+ * a team event's Final tie is a win but no title.
+ */
 export async function getTennisPlayerSeasonRecords(tour: Tour, playerEspnId: string): Promise<TennisSeasonRecord[]> {
   const { rows } = await pool.query(
     `select extract(year from m.date)::int as season,
-            count(*) filter (where m.winner_espn_id = $2)::int as wins,
-            count(*) filter (where m.winner_espn_id is not null and m.winner_espn_id <> $2)::int as losses,
-            count(*) filter (where m.winner_espn_id = $2 and lower(m.round) = 'final')::int as titles
+            count(*) filter (where ${PLAYED_SQL} and m.winner_espn_id = $2)::int as wins,
+            count(*) filter (where ${PLAYED_SQL} and m.winner_espn_id is not null and m.winner_espn_id <> $2)::int as losses,
+            count(*) filter (where m.winner_espn_id = $2 and lower(m.round) = 'final' and not ${TEAM_RUBBER_SQL("m")})::int as titles
      from tennis_matches m
      where m.tour = $1 and m.completed and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
-       and (m.competition_type is null or m.competition_type like '%singles')
-     group by 1 order by 1 desc`,
+       and ${SINGLES_SQL}
+     group by 1 having count(*) filter (where ${PLAYED_SQL}) > 0 order by 1 desc`,
     [tour, playerEspnId]
   );
   return rows;
@@ -302,7 +362,7 @@ export async function getTennisPlayerRanking(tour: Tour, playerEspnId: string): 
 export async function getTennisHeadToHead(tour: Tour, playerAEspnId: string, playerBEspnId: string): Promise<TennisMatch[]> {
   const { rows } = await pool.query(
     `${MATCH_SELECT}
-     where m.tour = $1 and (m.competition_type is null or m.competition_type like '%singles')
+     where m.tour = $1 and ${SINGLES_SQL} and ${PLAYED_SQL}
        and ((m.player1_espn_id = $2 and m.player2_espn_id = $3) or (m.player1_espn_id = $3 and m.player2_espn_id = $2))
      order by m.date desc`,
     [tour, playerAEspnId, playerBEspnId]
@@ -318,7 +378,7 @@ export async function getTennisPlayerRivals(tour: Tour, playerEspnId: string, li
      join players p on p.league = m.tour and p.espn_id = case when m.player1_espn_id = $2 then m.player2_espn_id else m.player1_espn_id end
      -- a match with no winner (postponed or cancelled, which the scraper can store as completed) is not one played
      where m.tour = $1 and m.completed and m.winner_espn_id is not null and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
-       and (m.competition_type is null or m.competition_type like '%singles')
+       and ${SINGLES_SQL} and ${PLAYED_SQL}
      group by 1, 2, 3 order by matches desc, wins desc limit $3`,
     [tour, playerEspnId, limit]
   );
