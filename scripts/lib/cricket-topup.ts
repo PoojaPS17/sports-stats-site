@@ -12,13 +12,14 @@ import { pool } from "./db";
 import { SPORT_PATH, fetchCricketSummary, type League } from "./espn";
 import { extractCricketMatchStats } from "./cricket-career";
 import { isScorecardOverdue, overdueWarning, scorecardHasRowsSql, storeCricketDetailsIfMissing, writeCricketPlayerRows } from "./cricket-player-rows";
+import { CRICSHEET_REPORT_SQL } from "./cricsheet-report";
 import { cricketSummaryPaths, type CricketSummaryOptions } from "../../src/lib/cricketSummary";
 import { extractGameDetails } from "../../src/lib/matchDetail";
 
 /**
  * Competitions ESPN feeds directly, plus the international formats and the IPL/BBL, which
  * Cricsheet also fills (a match whose stored report is Cricsheet's is never touched: see
- * CRICSHEET_SHAPED_SQL). Tests, women's ODIs and T20Is are ESPN's alone.
+ * CRICSHEET_REPORT_SQL). Tests, women's ODIs and T20Is are ESPN's alone.
  */
 export const TOPUP_LEAGUES = ["wpl", "wbbl", "cwc", "t20wc", "wcwc", "wt20wc", "ipl", "bbl", "odi", "t20i", "wodi", "wt20i", "test"] as const;
 export const DEFAULT_TOPUP_CAP = 40;
@@ -26,15 +27,10 @@ export const DEFAULT_TOPUP_CAP = 40;
 const SETTLED_AFTER_DAYS = 3;
 
 // A Cricsheet report's batting rows carry no `dismissal` (ESPN's parser writes one), and Cricsheet
-// only feeds these four leagues, so anywhere else a stored report is ESPN's by definition. The row
-// looked at is the first of the first team entry that has any. Same rule as the Cricsheet importer
-// and the card refresh use to keep their hands off each other's matches; kept here as a fragment
-// for a query that aliases game_details as `d`.
-const FIRST_BATTING_ROW_SQL = `(select t.value -> 'battingRows' -> 0
-    from jsonb_array_elements(case when jsonb_typeof(d.details -> 'scorecard') = 'array' then d.details -> 'scorecard' else '[]'::jsonb end) with ordinality as t(value, n)
-    where jsonb_typeof(t.value -> 'battingRows') = 'array' and jsonb_array_length(t.value -> 'battingRows') > 0
-    order by t.n limit 1)`;
-export const CRICSHEET_SHAPED_SQL = `(d.league in ('odi', 't20i', 'ipl', 'bbl') and ${FIRST_BATTING_ROW_SQL} is not null and not (${FIRST_BATTING_ROW_SQL} ? 'dismissal'))`;
+// only feeds the leagues in CRICSHEET_LEAGUES, so anywhere else a stored report is ESPN's by
+// definition. That rule lives once, in ./cricsheet-report, shared with the Cricsheet importer and
+// the card refresh so the three keep their hands off each other's matches; the fragment aliases
+// game_details as `d`, which is how this query names it.
 const EMPTY_SCORECARD_SQL = `not ${scorecardHasRowsSql("d.details")}`;
 
 export interface TopUpCandidate {
@@ -51,7 +47,7 @@ export async function findTopUpCandidates(cap: number, leagues: readonly string[
        and not exists (select 1 from player_game_stats s where s.league = g.league and s.game_espn_id = g.espn_id)
        and not exists (
          select 1 from game_details d where d.league = g.league and d.game_espn_id = g.espn_id
-           and (${CRICSHEET_SHAPED_SQL}
+           and ((${CRICSHEET_REPORT_SQL})
                 or (${EMPTY_SCORECARD_SQL} and d.fetched_at > g.date + interval '${SETTLED_AFTER_DAYS} days')))`;
   const [{ rows: games }, { rows: count }] = await Promise.all([
     pool.query(
