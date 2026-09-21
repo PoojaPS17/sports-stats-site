@@ -92,7 +92,7 @@ test("ingest: a second run does not ask again for a driver whose status is store
   const sainz = (await db.pool.query(`select status, laps from f1_session_results where session_espn_id = $1 and driver_espn_id = '4686'`, [bahrain.event.competition])).rows[0];
   assert.deepEqual(sainz, { status: "STATUS_RETIRED", laps: 29 });
   // a driver ESPN's feed gives no status for (a scoreboard without refs) keeps the stored one too
-  const bare = { ...event, competitions: [{ ...event.competitions[0], competitors: event.competitions[0].competitors.map((c: any) => ({ ...c, status: undefined, statistics: undefined })) }] };
+  const bare = { ...event, competitions: [{ ...event.competitions[0], competitors: event.competitions[0].competitors.map((c: object) => ({ ...c, status: undefined, statistics: undefined })) }] };
   await weekend.upsertF1Weekend(db.pool, bare, 2016);
   assert.equal((await db.pool.query(`select status from f1_session_results where session_espn_id = $1 and driver_espn_id = '312'`, [bahrain.event.competition])).rows[0].status, "STATUS_RETIRED");
 });

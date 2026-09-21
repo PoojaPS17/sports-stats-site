@@ -52,12 +52,12 @@ test("retirements level on laps keep ESPN's order, and a retirement with no laps
 test("2016: retirements ESPN gave no order are ordered by laps completed and labelled Ret", () => {
   const raw = JSON.parse(readFileSync("tests/fixtures/f1/espn-race-competitors-2016-bahrain.json", "utf8"));
   const rows = raw.competitors
-    .filter((c: any) => c.startOrder !== 0)
-    .map((c: any) => ({
+    .filter((c: { startOrder: number }) => c.startOrder !== 0)
+    .map((c: { id: string; order?: number }) => ({
       driver_espn_id: c.id as string,
       position: (c.order ?? null) as number | null,
       status: raw.status[c.id].type.name as string,
-      laps: raw.statistics[c.id].splits.categories[0].stats.find((s: any) => s.name === "lapsCompleted").value as number,
+      laps: raw.statistics[c.id].splits.categories[0].stats.find((s: { name: string }) => s.name === "lapsCompleted").value as number,
     }));
   const out = orderF1Classification("18771", rows);
   // Rosberg won and Magnussen finished 11th; then the retirements by laps: Sainz 29, Button 6, Vettel 0 (Vettel's ESPN order is none, like theirs).
