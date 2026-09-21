@@ -17,6 +17,8 @@ const realFetch = globalThis.fetch;
 const calls: string[] = [];
 /** What the mock answers to a `?seasontype=3` request; null means the Butler fixture. */
 let postseasonAnswer: (() => Response) | null = null;
+/** What the mock answers to the regular-season request; null means the Butler fixture. */
+let regularAnswer: (() => Response) | null = null;
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 before(async () => {
@@ -26,6 +28,7 @@ before(async () => {
     const url = String(input);
     calls.push(url);
     if (url.includes("seasontype=3") && postseasonAnswer) return postseasonAnswer();
+    if (!url.includes("seasontype=3") && regularAnswer) return regularAnswer();
     return json(url.includes("seasontype=3") ? fixture.postseason : fixture.regular);
   }) as typeof fetch;
 });
@@ -33,6 +36,7 @@ before(async () => {
 afterEach(() => {
   calls.length = 0;
   postseasonAnswer = null;
+  regularAnswer = null;
 });
 
 after(async () => {
@@ -136,4 +140,24 @@ test("postseasonCategoriesOf: the postseason categories for seasontype 3, nothin
   assert.throws(() => postseasonCategoriesOf(null), /no categories array/);
   assert.throws(() => postseasonCategoriesOf({ categories: [] }), /no seasontype filter/);
   assert.deepEqual(postseasonCategoriesOf({ filters: [{ name: "seasontype", value: 3 }], categories: [] }), []);
+});
+
+test("a stat-less rostered player (ESPN answers with no categories and no seasontype filter, twice) is silently 0: nothing written, no failure", async () => {
+  // Real answers for athletes 5142718 and 5105841 (0 years of experience): neither response carries `categories` or a `seasontype` filter.
+  regularAnswer = () => json({ filters: [], glossary: [], teams: {} });
+  postseasonAnswer = () => json({ filters: [], glossary: [], teams: {} });
+  assert.equal(await loader.upsertPlayerSeasonStats("nba", "5142718", null), 0);
+  assert.equal((await db.pool.query(`select count(*)::int as n from player_season_stats where player_espn_id = '5142718'`)).rows[0].n, 0);
+  assert.equal(calls.filter((u) => u.includes("seasontype=3")).length, 0, "no postseason request for a player with no stats");
+  // The same for an error body that getJson parsed (as before Task 5's guard): a silent 0, the stored rows of others untouched.
+  regularAnswer = () => json({ code: 500, message: "internal error" }, 500);
+  assert.equal(await loader.upsertPlayerSeasonStats("nba", "5105841", null), 0);
+});
+
+test("a regular response WITH categories still throws when the postseason answer has neither categories nor a seasontype filter, and stores nothing new", async () => {
+  await loader.upsertPlayerSeasonStats("nba", "6430", null);
+  const before = await stored(2017);
+  postseasonAnswer = () => json({ filters: [], glossary: [], teams: {} });
+  await assert.rejects(() => loader.upsertPlayerSeasonStats("nba", "6430", null), /no categories array/);
+  assert.deepEqual(await stored(2017), before);
 });

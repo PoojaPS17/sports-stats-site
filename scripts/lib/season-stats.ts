@@ -118,11 +118,15 @@ export async function upsertPlayerSeasonStats(
   yearsBack?: number
 ): Promise<number> {
   const data = await fetchAthleteSeasonStats(league, playerEspnId);
-  const categories: any[] = data.categories ?? [];
-  // NBA: one more request for the postseason line (seasontype=3). A response that is not a real answer (no categories array: an
-  // error body that `getJson` parsed anyway) throws, which fails the player's whole update instead of rewriting the stored row
-  // without the `postseason_*` keys a previous run stored (`categories = excluded.categories`). The regular-season response has
-  // no such hole: with no categories nothing is written at all.
+  // ESPN answers a rostered player with no stats at all (0 years of experience) with no `categories` array: he has no season to
+  // store, silently, and nothing is asked about his postseason (whose answer would be just as empty). An error body that
+  // `getJson` parsed anyway looks the same and has always been a silent 0 here: nothing is written either way.
+  if (!Array.isArray(data.categories)) return 0;
+  const categories: any[] = data.categories;
+  // NBA: one more request for the postseason line (seasontype=3), for a player whose regular-season response HAS categories. Then
+  // a response that is not a real answer (no categories array, no seasontype filter: an error body `getJson` parsed anyway) throws,
+  // which fails the player's whole update instead of rewriting the stored row without the `postseason_*` keys a previous run
+  // stored (`categories = excluded.categories`).
   const postseasonCategories = league === "nba" ? postseasonCategoriesOf(await fetchAthleteSeasonStats(league, playerEspnId, 3)) : [];
   // An explicit `yearsBack` is a relative window; the default is the league's pinned start (seasonWindowStart).
   const currentYear = new Date().getUTCFullYear();
