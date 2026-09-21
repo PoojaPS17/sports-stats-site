@@ -3,6 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { isCricketLeague, isSoccerLeague, isCupCompetition, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
 import { hasTies } from "@/lib/leagues";
+import { cricketPlayed, hasCricketTies, qualifierLegend, showQualifiers } from "@/lib/cricketStandings";
 import type { StandingRow, League } from "@/lib/queries";
 
 interface Zone {
@@ -79,7 +80,7 @@ export function groupStandings(league: League, standings: StandingRow[]) {
   return { mode, useDivisions, sections } as const;
 }
 
-export function StandingsTable({ league, standings }: { league: League; standings: StandingRow[] }) {
+export function StandingsTable({ league, standings, seasonFinished = false }: { league: League; standings: StandingRow[]; seasonFinished?: boolean }) {
   const { mode, useDivisions, sections } = groupStandings(league, standings);
 
   if (standings.length === 0) {
@@ -92,6 +93,7 @@ export function StandingsTable({ league, standings }: { league: League; standing
   const showZones = mode === "soccer" && sections.every(([, rows]) => rows.length === sectionSize && !notStarted(rows)) && zoneRules(league, sectionSize) !== null;
   const ties = mode === "default" && hasTies(league);
   const legend = showZones ? legendFor(league, sectionSize) : [];
+  const qualifiers = mode === "cricket" && showQualifiers(standings, seasonFinished);
   const numCell = "px-2 py-2.5 text-right tabular-nums";
 
   return (
@@ -114,6 +116,7 @@ export function StandingsTable({ league, standings }: { league: League; standing
                     {mode === "soccer" && <th className={`${numCell} font-semibold`}>D</th>}
                     <th className={`${numCell} font-semibold`}>L</th>
                     {ties && <th className={`${numCell} font-semibold`}>T</th>}
+                    {mode === "cricket" && hasCricketTies(rows) && <th className={`${numCell} font-semibold`}>T</th>}
                     {mode === "soccer" && (
                       <>
                         <th className={`${numCell} font-semibold`}>GF</th>
@@ -152,16 +155,20 @@ export function StandingsTable({ league, standings }: { league: League; standing
                             </span>
                             <TeamLogo name={teamDisplayName(r.name)} logoUrl={r.logo_url} color={r.color} size={22} />
                             <span className="truncate">{teamDisplayName(r.name)}</span>
+                            {qualifiers && r.qualified === true && (
+                              <span className="text-[10px] font-bold text-[var(--accent)]" title={qualifierLegend(league)} aria-label={qualifierLegend(league)}>
+                                Q
+                              </span>
+                            )}
                           </Link>
                         </td>
-                        {mode === "cricket" && (
-                          <td className={`${numCell} text-[var(--text-muted)]`}>{r.wins + r.losses + (r.no_result ?? 0)}</td>
-                        )}
+                        {mode === "cricket" && <td className={`${numCell} text-[var(--text-muted)]`}>{cricketPlayed(r)}</td>}
                         {mode === "soccer" && <td className={`${numCell} text-[var(--text-muted)]`}>{r.wins + (r.draws ?? 0) + r.losses}</td>}
                         <td className={numCell}>{r.wins}</td>
                         {mode === "soccer" && <td className={numCell}>{r.draws ?? 0}</td>}
                         <td className={numCell}>{r.losses}</td>
                         {ties && <td className={numCell}>{r.draws ?? 0}</td>}
+                        {mode === "cricket" && hasCricketTies(rows) && <td className={numCell}>{r.draws ?? 0}</td>}
                         {mode === "soccer" && (
                           <>
                             <td className={`${numCell} text-[var(--text-muted)]`}>{r.goals_for ?? "—"}</td>
@@ -198,6 +205,11 @@ export function StandingsTable({ league, standings }: { league: League; standing
           </section>
         ))}
       </div>
+      {qualifiers && (
+        <p className="text-xs text-[var(--text-muted)]">
+          <span className="font-bold text-[var(--accent)]">Q</span> {qualifierLegend(league)}
+        </p>
+      )}
       {legend.length > 0 && (
         <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-[var(--text-muted)]">
           {legend.map((z) => (

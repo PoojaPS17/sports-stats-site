@@ -200,6 +200,8 @@ export interface StandingRow {
   net_run_rate: string | null;
   /** ESPN's own position in its table (head-to-head and the other tie-breaks applied); null when the feed sent none. */
   rank: number | null;
+  /** Cricket: ESPN marks the teams through to the playoffs or the next stage; null when the feed does not say. */
+  qualified?: boolean | null;
   /** Set by sortStandings on every row of a table nobody has played in yet: it has no order, so no positions are shown. */
   unranked?: boolean;
 }
@@ -207,7 +209,8 @@ export interface StandingRow {
 const STANDING_SELECT = `
   select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
          s.conference, s.division, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
-         s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate, s.rank
+         s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate, s.rank,
+         s.qualified
   from standings s
   join teams t on t.league = s.league and t.espn_id = s.team_espn_id
 `;

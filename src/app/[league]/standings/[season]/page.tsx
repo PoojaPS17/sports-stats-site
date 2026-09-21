@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeague, hasStandings, LEAGUE_LABEL, getStandingsBySeason, getStandingsSeasons, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
 import { summarizePlayoffs } from "@/lib/seasonSummary";
+import { seasonHasFinal } from "@/lib/cricketStandings";
 import { getComputedTable, getCurrentSeason, supportsScoreAnalytics, type TableScope } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
@@ -112,10 +113,10 @@ export default async function StandingsSeasonPage({
             filename={`${league}-standings-${season}`}
             shareTitle={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`}
             width={standingsExportWidth(league, standings)}
-            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={`${formatSeasonLabel(league, season)} season`} context={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`} />}
+            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={`${formatSeasonLabel(league, season)} season`} context={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`} seasonFinished={seasonHasFinal(playoffGames)} />}
           />
         )}
-        <StandingsTable league={league} standings={standings} />
+        <StandingsTable league={league} standings={standings} seasonFinished={seasonHasFinal(playoffGames)} />
       </div>
     </div>
   );

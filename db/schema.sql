@@ -240,6 +240,9 @@ alter table standings add column if not exists division text;
 -- tie-breaks that points, goal difference and goals scored cannot. Soccer and cricket tables
 -- order by it; null when the feed sent none (older rows until `npm run backfill:standings`).
 alter table standings add column if not exists rank int;
+-- Cricket: ESPN's `qualified` stat ("Y") on a team through to the playoffs or the next stage. Only the
+-- qualifiers carry it, so null means not known; filled by `npm run backfill:standings <league>`.
+alter table standings add column if not exists qualified boolean;
 -- One row per stage table a team appears in (a T20 World Cup side has a group row and a Super
 -- Eights row), which is the conflict target scripts/lib/standings.ts upserts on. The table was
 -- created with a (league, season, team_espn_id) primary key; drop it and key on the conference too.

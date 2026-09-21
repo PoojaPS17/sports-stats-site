@@ -24,6 +24,13 @@ export function espnRank(value: string | undefined): number | null {
   return value !== undefined && Number.isFinite(n) && n >= 1 ? n : null;
 }
 
+// A cricket table marks the teams through to the next stage with a `qualified` stat ("Y"). Only the
+// qualifiers carry it, so a missing stat is "not known", not "no"; an explicit "N" is stored as false.
+export function espnQualified(value: string | undefined): boolean | null {
+  const v = value?.trim().toUpperCase();
+  return v === "Y" ? true : v === "N" ? false : null;
+}
+
 function collectEntries(node: any, conference: string | null, out: any[]) {
   if (node.standings?.entries) {
     // A group nested under a conference that is not itself a conference is a
@@ -49,19 +56,23 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
 
   for (const { entry, conference, division } of entries) {
     const stats = entry.stats ?? [];
-    const draws = statValue(stats, "ties");
+    // Football and the NFL send `ties`; a cricket table sends `matchesTied` (never both).
+    const draws = statValue(stats, "ties", "matchesTied");
     const points = statValue(stats, "points", "matchPoints");
     const goalsFor = statValue(stats, "pointsFor");
     const goalsAgainst = statValue(stats, "pointsAgainst");
     const noResult = statValue(stats, "noresult");
     const netRunRate = statValue(stats, "netrr");
     const rank = espnRank(statValue(stats, "rank"));
+    const qualified = espnQualified(statValue(stats, "qualified"));
     await pool.query(
       `insert into standings (
          league, season, team_espn_id, conference, wins, losses,
          win_percent, streak, playoff_seed, games_behind,
-         draws, points, goals_for, goals_against, no_result, net_run_rate, division, rank, updated_at
-       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18, now())
+         draws, points, goals_for, goals_against, no_result, net_run_rate, division, rank,
+         qualified, updated_at
+       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
+         $19, now())
        on conflict (league, season, team_espn_id, coalesce(conference, '')) do update set
          division = coalesce(excluded.division, standings.division),
          wins = excluded.wins, losses = excluded.losses,
@@ -71,6 +82,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          goals_for = excluded.goals_for, goals_against = excluded.goals_against,
          no_result = excluded.no_result, net_run_rate = excluded.net_run_rate,
          rank = excluded.rank,
+         qualified = excluded.qualified,
          updated_at = now()`,
       [
         league,
@@ -96,6 +108,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
         netRunRate !== undefined ? Number(netRunRate) : null,
         division,
         rank,
+        qualified,
       ]
     );
   }

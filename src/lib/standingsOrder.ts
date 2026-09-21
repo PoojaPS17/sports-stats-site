@@ -4,7 +4,8 @@
 // The three families of competition order differently:
 //   - Soccer and cricket: ESPN's own `rank` is the source of truth (it applies head-to-head and the
 //     other tie-breaks a points table cannot see). Rows without a rank fall back to points,
-//     goal difference, goals scored, net run rate, wins, fewer losses.
+//     goal difference, goals scored, then wins before net run rate, fewer losses. The Big Bash
+//     leagues (bbl, wbbl) take net run rate before wins, as Cricinfo and Wikipedia do.
 //   - NFL and NBA: win percentage (ESPN's figure already counts a tie as half a win), then playoff
 //     seed, then wins. ESPN sends the NFL no `points` stat, so a points-first sort silently
 //     becomes a point-differential sort and puts 8-9 Baltimore above 10-7 Pittsburgh.
@@ -37,6 +38,9 @@ export interface OrderableStanding extends RankableStanding {
 }
 
 const usesEspnRank = (league: League) => isSoccerLeague(league) || isCricketLeague(league);
+// Cricket points tables split teams level on points by wins (IPL, WPL and the World Cups) or, in the
+// Big Bash leagues, by net run rate first. Only read when a row has no ESPN rank.
+const netRunRateBeforeWins = (league: League) => league === "bbl" || league === "wbbl";
 export const usesRecordOrder = (league: League) => league === "nfl" || league === "nba";
 
 const num = (v: string | number | null | undefined): number | null => {
@@ -68,13 +72,15 @@ export function standingsComparator<T extends RankableStanding>(league: League, 
       : (a, b) => byNumber(num(a.win_percent), num(b.win_percent), "desc") || byNumber(a.playoff_seed, b.playoff_seed, "asc") || b.wins - a.wins;
   }
   const useRank = usesEspnRank(league);
+  const nrrFirst = netRunRateBeforeWins(league);
+  const byNrr: Compare<T> = (a, b) => byNumber(num(a.net_run_rate), num(b.net_run_rate), "desc");
+  const byWins: Compare<T> = (a, b) => b.wins - a.wins;
   return (a, b) =>
     (useRank ? byNumber(a.rank, b.rank, "asc") : 0) ||
     byNumber(a.points, b.points, "desc") ||
     byNumber(goalDifference(a), goalDifference(b), "desc") ||
     byNumber(a.goals_for, b.goals_for, "desc") ||
-    byNumber(num(a.net_run_rate), num(b.net_run_rate), "desc") ||
-    b.wins - a.wins ||
+    (nrrFirst ? byNrr(a, b) || byWins(a, b) : byWins(a, b) || byNrr(a, b)) ||
     a.losses - b.losses;
 }
 
