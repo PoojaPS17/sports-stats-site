@@ -1,7 +1,7 @@
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
 
-import { postseasonRows, seasonGamesPlayed, seasonRow, seasonWindowStart } from "./season-row";
+import { postseasonCategoriesOf, postseasonRows, seasonGamesPlayed, seasonRow, seasonWindowStart } from "./season-row";
 
 // Which of a category's rows a season stores (ESPN's Totals row for a traded player, and the
 // league filter for soccer), and an NFL season's games played (ESPN's own GP, summed over a traded
@@ -119,9 +119,11 @@ export async function upsertPlayerSeasonStats(
 ): Promise<number> {
   const data = await fetchAthleteSeasonStats(league, playerEspnId);
   const categories: any[] = data.categories ?? [];
-  // NBA: one more request for the postseason line (seasontype=3). A failure here fails the player's whole update rather
-  // than storing the row without its postseason keys, which would overwrite ones a previous run stored.
-  const postseasonCategories: any[] = league === "nba" ? ((await fetchAthleteSeasonStats(league, playerEspnId, 3)).categories ?? []) : [];
+  // NBA: one more request for the postseason line (seasontype=3). A response that is not a real answer (no categories array: an
+  // error body that `getJson` parsed anyway) throws, which fails the player's whole update instead of rewriting the stored row
+  // without the `postseason_*` keys a previous run stored (`categories = excluded.categories`). The regular-season response has
+  // no such hole: with no categories nothing is written at all.
+  const postseasonCategories = league === "nba" ? postseasonCategoriesOf(await fetchAthleteSeasonStats(league, playerEspnId, 3)) : [];
   // An explicit `yearsBack` is a relative window; the default is the league's pinned start (seasonWindowStart).
   const currentYear = new Date().getUTCFullYear();
   const minYear = yearsBack === undefined ? seasonWindowStart(league, currentYear) : currentYear - yearsBack;

@@ -37,7 +37,7 @@ test("NBA wording: since 2014-15, in every place a career was named", () => {
   assert.equal(w.playinTotal, "Play-in since 2014-15");
   assert.equal(w.cardContext, "NBA stats since 2014-15");
   assert.equal(w.compareNote, "Totals since 2014-15");
-  assert.equal(w.allSeasonsLabel("LeBron James"), "LeBron James since 2014-15");
+  assert.equal(w.allSeasonsLabel("LeBron James"), "LeBron James, all seasons on this site");
 });
 
 test("NFL wording: since 2015, the season the box scores start", () => {
@@ -59,11 +59,38 @@ test("soccer wording: each league's own first season, with no regular-season sta
   assert.equal(careerWording("epl", false).cardContext, "Premier League stats since 2015-16");
 });
 
-test("the strip says earlier seasons are missing only when the first season shown is the first on the site", () => {
-  assert.equal(careerStripSuffix("nba", 2015), " Earlier seasons are not on this site.");
-  assert.equal(careerStripSuffix("nba", 2020), "");
-  assert.equal(careerStripSuffix("nfl", 2015), " Earlier seasons are not on this site.");
-  assert.equal(careerStripSuffix("nba", null), "");
+test("the strip says earlier seasons are missing only over several seasons, and only when the first is the first on the site", () => {
+  assert.equal(careerStripSuffix("nba", 2015, true), " Earlier seasons are not on this site.");
+  assert.equal(careerStripSuffix("nba", 2020, true), "");
+  assert.equal(careerStripSuffix("nfl", 2015, true), " Earlier seasons are not on this site.");
+  assert.equal(careerStripSuffix("nba", null, true), "");
+  // A single-season page never says it.
+  assert.equal(careerStripSuffix("nba", 2015, false), "");
+});
+
+test("the hero note that these are not career totals shows only for a player whose record starts where the site's does", () => {
+  const note = "Games before 2014-15 are not on this site, so these are not career totals.";
+  assert.equal(careerWording("nba", true, 2015).heroNote, note);
+  // A 2019 rookie's whole career is on the site: nothing to disclose, and the header is still true.
+  assert.equal(careerWording("nba", true, 2020).heroNote, null);
+  assert.equal(careerWording("nba", true, 2020).heroTitle, "Regular season since 2014-15");
+  assert.equal(careerWording("nba", true, null).heroNote, null);
+  // Left out, the note is unconditional (callers that do not know the first season).
+  assert.equal(careerWording("nba", true).heroNote, note);
+  assert.equal(careerWording("nfl", true, 2015).heroNote, "Games before 2015 are not on this site, so these are not career totals.");
+  assert.equal(careerWording("nfl", true, 2018).heroNote, null);
+  assert.equal(careerWording("epl", false, 2015).heroNote, "Games before 2015-16 are not on this site, so these are not career totals.");
+  assert.equal(careerWording("epl", false, 2019).heroNote, null);
+});
+
+test("cricket keeps its plain wording: its totals are whole careers, not 'since 2008'", () => {
+  for (const league of ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc", "test", "odi", "t20i"] as League[]) {
+    const w = careerWording(league, true);
+    assert.equal(w.since, null, league);
+    assert.equal(w.compareNote, "Career figures on record", league);
+    assert.equal(w.seasonTotal, "Career on record", league);
+    assert.equal(w.heroNote, null, league);
+  }
 });
 
 function row(id: string, season: number, stats: Stats, stage: PlayerLogRow["stage"] = "regular"): PlayerLogRow {
@@ -89,6 +116,13 @@ test("the career strip reads 'NBA regular season, 2014-15 to 2025-26. Earlier se
   assert.doesNotMatch(rookieText, /Earlier seasons/);
 });
 
+test("a single-season page's strip (the season page) does not say earlier seasons are missing", () => {
+  const only2015 = buildStagedProfile("nba", [nba("a", 2015), nba("b", 2015)]).regular;
+  const text = html(createElement(PlayerCareerStrip, { league: "nba", profile: only2015 }));
+  assert.match(text, /NBA regular season, 2014-15\./);
+  assert.doesNotMatch(text, /Earlier seasons/);
+});
+
 test("the NFL career strip names the regular season and the first season on the site", () => {
   const profile = buildStagedProfile("nfl", [nfl("a", 2015), nfl("b", 2025)]).regular;
   const text = html(createElement(PlayerCareerStrip, { league: "nfl", profile }));
@@ -109,6 +143,28 @@ test("the season table's totals row says 'Total since 2014-15' unless a caller n
   assert.match(html(createElement(PlayerSeasonTable, { ...base, profile: staged.regular })), /Total since 2014-15/);
   assert.match(html(createElement(PlayerSeasonTable, { ...base, profile: staged.playoffs!, careerLabel: careerWording("nba", true).playoffsTotal })), /Playoffs since 2014-15/);
   assert.doesNotMatch(html(createElement(PlayerSeasonTable, { ...base, profile: staged.regular })), /Career/);
+});
+
+test("the playoffs table renders ESPN's line for a season with no logged game (Butler 2014-15: 42.2 min, 22.9 ppg, the dagger on 12)", async () => {
+  const { EspnSeasons, espnSeasonTotals } = await import("../src/lib/espnSeason");
+  const post2015 = {
+    postseason_averages: { labels: ["GP", "GS", "MIN", "FG", "FG%", "3PT", "3P%", "FT", "FT%", "OR", "DR", "REB", "AST", "BLK", "STL", "PF", "TO", "PTS"], values: ["12", "12", "42.2", "7.8-17.8", "44.1", "2.3-6.0", "38.9", "4.9-6.0", "81.9", "1.5", "4.1", "5.6", "3.2", "0.8", "2.4", "2.3", "1.8", "22.9"] },
+    postseason_totals: { labels: ["FG", "FG%", "3PT", "3P%", "FT", "FT%", "OR", "DR", "REB", "AST", "BLK", "STL", "PF", "TO", "PTS"], values: ["94-213", "44.1", "28-72", "38.9", "59-72", "81.9", "18", "49", "67", "38", "9", "29", "27", "21", "275"] },
+  };
+  const line = espnSeasonTotals(post2015, "postseason_")!;
+  const blank = Array.from({ length: 12 }, (_, i) => ({ ...nba(`b${i}`, 2015, "playoffs"), stats: { box: { MIN: "--", PTS: "0", REB: "0", AST: "0" } }, no_box_score: true }));
+  const rows = [nba("r1", 2015), ...blank];
+  const base = { league: "nba" as const, basePath: "/nba/players/x" };
+  const withEspn = buildStagedProfile("nba", rows, undefined, new EspnSeasons([], [[2015, line]])).playoffs!;
+  const text = html(createElement(PlayerSeasonTable, { ...base, profile: withEspn, careerLabel: careerWording("nba", true).playoffsTotal }));
+  assert.match(text, /22\.9/);
+  assert.match(text, /42\.2/);
+  assert.match(text, /12†/);
+  // Without the ESPN row the season shows dashes, never 0.0 or a partial average.
+  const without = buildStagedProfile("nba", rows).playoffs!;
+  const dashed = html(createElement(PlayerSeasonTable, { ...base, profile: without }));
+  assert.doesNotMatch(dashed, /22\.9|42\.2|0\.0/);
+  assert.match(dashed, /12†/);
 });
 
 test("the downloadable card says what its numbers cover", () => {

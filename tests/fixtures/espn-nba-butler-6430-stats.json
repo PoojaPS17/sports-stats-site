@@ -1,5 +1,39 @@
 {
  "regular": {
+  "filters": [
+   {
+    "displayName": "League",
+    "name": "league",
+    "value": "nba",
+    "options": [
+     {
+      "value": "mens-college-basketball",
+      "displayValue": "NCAA Men's Basketball",
+      "shortDisplayName": "NCAAM"
+     },
+     {
+      "value": "nba",
+      "displayValue": "National Basketball Association",
+      "shortDisplayName": "NBA"
+     }
+    ]
+   },
+   {
+    "displayName": "Season",
+    "name": "seasontype",
+    "value": "2",
+    "options": [
+     {
+      "value": "2",
+      "displayValue": "Regular Season"
+     },
+     {
+      "value": "3",
+      "displayValue": "Postseason"
+     }
+    ]
+   }
+  ],
   "categories": [
    {
     "name": "averages",
@@ -422,6 +456,40 @@
   ]
  },
  "postseason": {
+  "filters": [
+   {
+    "displayName": "League",
+    "name": "league",
+    "value": "nba",
+    "options": [
+     {
+      "value": "mens-college-basketball",
+      "displayValue": "NCAA Men's Basketball",
+      "shortDisplayName": "NCAAM"
+     },
+     {
+      "value": "nba",
+      "displayValue": "National Basketball Association",
+      "shortDisplayName": "NBA"
+     }
+    ]
+   },
+   {
+    "displayName": "Season",
+    "name": "seasontype",
+    "value": "3",
+    "options": [
+     {
+      "value": "2",
+      "displayValue": "Regular Season"
+     },
+     {
+      "value": "3",
+      "displayValue": "Postseason"
+     }
+    ]
+   }
+  ],
   "categories": [
    {
     "name": "averages",

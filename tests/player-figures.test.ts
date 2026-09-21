@@ -180,6 +180,44 @@ test("a stage season where ESPN counts the same games as the log keeps the box l
   assert.equal(po.line.pts, 20);
 });
 
+/** Butler 2014-15 playoffs as ESPN publishes them (real output): 12 GP, 42.2 min, 22.9 ppg, totals 275 points. */
+const butlerPostseason2015 = () => {
+  const cats = Object.fromEntries(butler.postseason.categories.filter((c) => c.name !== "miscellaneous").map((c) => [`postseason_${c.name}`, { labels: c.labels, values: c.statistics.find((x) => x.season.year === 2015)!.stats }]));
+  return espnSeasonTotals(cats, "postseason_")!;
+};
+/** The 2014-15 playoffs as the database has them: every game blank (ESPN published no box score), so 12 listed rows and none recorded. */
+const blankPlayoffs2015 = () => listedRows(12, { season: 2015, stage: "playoffs", prefix: "b" });
+const regular2015 = () => nbaGames(["37", "37", "37"], { season: 2015, stage: "regular", prefix: "r15" });
+
+test("a stage season with no logged game and ESPN's postseason row shows ESPN's line (Butler 2014-15: 12 GP, 42.2 min, 22.9 ppg)", () => {
+  const line = butlerPostseason2015();
+  assert.equal(line.games, 12);
+  const s = buildStagedProfile("nba", [...regular2015(), ...blankPlayoffs2015()], undefined, new EspnSeasons([], [[2015, line]]));
+  const po = s.playoffs!.seasons[0];
+  assert.equal(po.recorded, 0);
+  assert.equal(po.games, 12);
+  assert.equal(po.lineSource, "espn");
+  assert.equal(po.gamesSource, "espn");
+  assert.equal(po.record, null);
+  const specs = (key: string) => s.playoffs!.profile.specs.find((x) => x.key === key)!;
+  assert.equal(formatStat(specs("min"), po.line.min), "42.2");
+  assert.equal(formatStat(specs("pts"), po.line.pts), "22.9");
+  assert.equal(formatStat(specs("gs"), po.line.gs), "12");
+  assert.equal(noBoxScoreGames("nba", po.games, po.recorded), 12);
+  assert.equal(formatStat(specs("pts"), s.playoffs!.career.pts), "22.9");
+});
+
+test("a stage season with no logged game and no ESPN line shows dashes (the interim rule), not zeros", () => {
+  const s = buildStagedProfile("nba", [...regular2015(), ...blankPlayoffs2015()]);
+  const po = s.playoffs!.seasons[0];
+  assert.equal(po.recorded, 0);
+  assert.equal(po.games, 12);
+  assert.equal(po.lineSource, "box");
+  for (const spec of sportProfile("nba", []).specs) assert.equal(po.line[spec.key], null, spec.key);
+  // Nothing from a regular-season row leaks in.
+  assert.equal(s.regular.seasons[0].line.min, 37);
+});
+
 // ---------------------------------------------------------------------------
 // Item 5: passer rating from the line's totals.
 // ---------------------------------------------------------------------------
@@ -224,6 +262,22 @@ test("passer rating: season, career and split lines are computed from the totals
   const spec = p.profile.specs.find((x) => x.key === "pass_rtg")!;
   assert.equal(spec.value(QB[0].stats), 90);
   assert.equal(formatStat(spec, s2024.line.pass_rtg), "93.5");
+});
+
+test("passer rating: Mahomes 2022 (435/648, 5,250 yards, 41 TD, 12 INT) is NFL.com's 105.2, and a career line is over the summed totals", () => {
+  assert.equal(passerRating(435, 648, 5250, 41, 12), 105.2);
+  // Two games summing to the 2022 totals, whose own ratings average 105.0, not 105.2; and the 2024 games from above.
+  const mahomes = [
+    row("m1", "2022-09-11", pass(200, 300, 2400, 19, 6, "110.0"), { season: 2022 }),
+    row("m2", "2022-09-18", pass(235, 348, 2850, 22, 6, "100.0"), { season: 2022 }),
+    ...QB.slice(0, 2),
+  ];
+  const p = buildProfile("nfl", mahomes);
+  assert.equal(p.seasons.find((x) => x.season === 2022)!.line.pass_rtg, 105.2);
+  assert.equal(p.seasons.find((x) => x.season === 2024)!.line.pass_rtg, 93.5);
+  // Career: the two seasons' totals together (827/1,229, 9,178 yards, 67 TD, 23 INT), not the mean of 105.2 and 93.5 (99.35).
+  assert.equal(p.career.pass_rtg, passerRating(827, 1229, 9178, 67, 23));
+  assert.notEqual(p.career.pass_rtg, 99.4);
 });
 
 test("passer rating: a season with no attempts shows a dash", () => {

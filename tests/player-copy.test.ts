@@ -124,14 +124,18 @@ test("the GS header tooltip: ESPN's count for an ESPN season, else box-score gam
 });
 
 test("the source-limit notes are one short line each", async () => {
-  const { NFL_PLAYER_DATA_NOTE, ROSTER_SOURCE_NOTE, SOCCER_CARDS_NOTE, rosterSourceNote } = await import("../src/lib/playerCopy");
+  const { NFL_PLAYER_DATA_NOTE, NFL_ROSTER_SOURCE_NOTE, ROSTER_SOURCE_NOTE, SOCCER_CARDS_NOTE, rosterSourceNote } = await import("../src/lib/playerCopy");
   assert.equal(NFL_PLAYER_DATA_NOTE, "Figures are summed from ESPN box scores; ESPN occasionally leaves a stat unrecorded or uncorrected (for example a tackle credited to the wrong game).");
   assert.equal(SOCCER_CARDS_NOTE, "Cards as reported by ESPN; occasional omissions.");
+  // The NBA's wording is the brief's; "two-way" is an NBA term and the lag is not measured for the NFL, so its note is generic.
   assert.equal(ROSTER_SOURCE_NOTE, "Roster as listed by ESPN; camp and two-way signings appear when ESPN adds them.");
+  assert.equal(NFL_ROSTER_SOURCE_NOTE, "Roster as listed by ESPN; recent signings appear when ESPN adds them.");
   assert.equal(rosterSourceNote("nba"), ROSTER_SOURCE_NOTE);
-  assert.equal(rosterSourceNote("nfl"), ROSTER_SOURCE_NOTE);
-  // Soccer has no camp or two-way signings.
+  assert.equal(rosterSourceNote("nfl"), NFL_ROSTER_SOURCE_NOTE);
+  assert.equal(NFL_ROSTER_SOURCE_NOTE.includes("two-way"), false);
+  // Soccer has no camp or two-way signings, and cricket has no roster feed.
   assert.equal(rosterSourceNote("epl"), undefined);
+  assert.equal(rosterSourceNote("ipl"), undefined);
 });
 
 test("the pages use the source-limit notes where the figures appear", async () => {

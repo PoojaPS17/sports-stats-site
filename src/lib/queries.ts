@@ -1055,8 +1055,11 @@ export interface SearchResult {
 
 // A player has "games on record" when the site holds a box score row for one of his completed games. Tennis players and F1
 // drivers have no box scores here (their results live in other tables), so they are not held back by the rule.
-const HAS_GAMES_SQL = `exists (select 1 from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
-                                where s.league = p.league and s.player_espn_id = p.espn_id and g.completed)`;
+// `player_game_stats` has no index on the player, so this is read ONCE, as a distinct (league, player) set joined to the matched
+// players, never as a per-row EXISTS: that scanned the table once per matched player (seconds for a one-letter query).
+const PLAYERS_WITH_GAMES_SQL = `select distinct s.league, s.player_espn_id from player_game_stats s
+                                 join games g on g.league = s.league and g.espn_id = s.game_espn_id
+                                 where g.completed`;
 
 // Results with games on record come first, then by name: a roster-only namesake (the Browns' Justin Jefferson holds the bare slug
 // because he was inserted first; the Vikings receiver has an id suffix) must not outrank the player people are looking for.
@@ -1069,8 +1072,9 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
        from teams where name ilike $1
        union all
        select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image,
-              (p.league in ('atp', 'wta', 'f1') or ${HAS_GAMES_SQL}) as has_games
+              (p.league in ('atp', 'wta', 'f1') or h.player_espn_id is not null) as has_games
        from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+       left join (${PLAYERS_WITH_GAMES_SQL}) h on h.league = p.league and h.player_espn_id = p.espn_id
        where p.name ilike $1 and ${notPseudoAthleteSql()}
        union all
        -- Every cricket series and tournament in the database, current or past (Ranji Trophy, PSL, a bilateral tour).
@@ -1094,12 +1098,13 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
  * point to. The namesake with the most games; null when there is none. */
 export async function getSameNamePlayerWithGames(league: League, name: string, excludeEspnId: string): Promise<{ slug: string; name: string; position: string | null; team_name: string | null } | null> {
   const { rows } = await pool.query(
-    `select p.slug, p.name, p.position, t.name as team_name,
-            (select count(*) from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
-             where s.league = p.league and s.player_espn_id = p.espn_id and g.completed) as games
+    `select p.slug, p.name, p.position, t.name as team_name, h.games
      from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-     where p.league = $1 and lower(p.name) = lower($2) and p.espn_id <> $3 and ${notPseudoAthleteSql()} and ${HAS_GAMES_SQL}
-     order by games desc, p.slug
+     join (select s.player_espn_id, count(*) as games from player_game_stats s
+           join games g on g.league = s.league and g.espn_id = s.game_espn_id
+           where s.league = $1 and g.completed group by s.player_espn_id) h on h.player_espn_id = p.espn_id
+     where p.league = $1 and lower(p.name) = lower($2) and p.espn_id <> $3 and ${notPseudoAthleteSql()}
+     order by h.games desc, p.slug
      limit 1`,
     [league, name, excludeEspnId]
   );

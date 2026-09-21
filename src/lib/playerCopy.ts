@@ -1,6 +1,6 @@
 // Copy for the NFL player pages, which show ESPN's games played but total stats from the box scores, and for the
 // NBA player pages, where ESPN's box scores have no stat line for some games.
-import { formatSeasonLabel, HISTORY_START, LEAGUE_LABEL, type League } from "./leagues";
+import { formatSeasonLabel, HISTORY_START, isSoccerLeague, LEAGUE_LABEL, type League } from "./leagues";
 import type { GamesSource } from "./playerProfile";
 
 const NFL_REGULAR_SEASON_ESPN_NOTE =
@@ -125,12 +125,17 @@ export interface CareerWording {
   allSeasonsLabel: (name: string) => string;
 }
 
-/** `split` is true where the regular season, playoffs and play-in are separate tables (NBA, NFL). */
-export function careerWording(league: League, split: boolean): CareerWording {
-  const since = formatSeasonLabel(league, HISTORY_START[league] ?? null);
+/** `split` is true where the regular season, playoffs and play-in are separate tables (NBA, NFL). `firstSeason` is the first
+ * season the player has on the site (ESPN's year), when the caller knows it: the note that these are not career totals then
+ * shows only for a player whose record starts where the site's does (anyone whose first season is later has all of it here).
+ * Left out, the note always shows. Only the leagues whose player pages total from box scores that begin at HISTORY_START (NBA,
+ * NFL, soccer) say "since"; cricket totals are whole careers (Cricsheet, ESPN) and keep the plain wording. */
+export function careerWording(league: League, split: boolean, firstSeason?: number | null): CareerWording {
+  const boxScoreLeague = league === "nba" || league === "nfl" || isSoccerLeague(league);
+  const since = boxScoreLeague ? formatSeasonLabel(league, HISTORY_START[league] ?? null) : null;
   const label = LEAGUE_LABEL[league];
   if (!since) {
-    // A league with no pinned start keeps the plain wording; no player page is in one today.
+    // A league with no box-score history start (cricket) keeps the plain wording.
     return {
       since: null,
       heroTitle: split ? "Career (regular season)" : "Career",
@@ -146,21 +151,22 @@ export function careerWording(league: League, split: boolean): CareerWording {
   return {
     since,
     heroTitle: split ? `Regular season since ${since}` : `Since ${since}`,
-    heroNote: `Games before ${since} are not on this site, so these are not career totals.`,
+    heroNote: firstSeason !== undefined && firstSeason !== HISTORY_START[league] ? null : `Games before ${since} are not on this site, so these are not career totals.`,
     seasonTotal: `Total since ${since}`,
     playoffsTotal: `Playoffs since ${since}`,
     playinTotal: `Play-in since ${since}`,
     cardContext: `${label} stats since ${since}`,
     compareNote: `Totals since ${since}`,
-    allSeasonsLabel: (name) => `${name} since ${since}`,
+    allSeasonsLabel: (name) => `${name}, all seasons on this site`,
   };
 }
 
 /** The line under the totals strip: the competition, the span of the seasons shown, and (when the first season shown is the
  * first on the site, so the player may have played earlier) that earlier seasons are not here. `firstSeason` is the first
- * season shown, in ESPN's year. */
-export function careerStripSuffix(league: League, firstSeason: number | null): string {
-  return firstSeason !== null && firstSeason === HISTORY_START[league] ? " Earlier seasons are not on this site." : "";
+ * season shown, in ESPN's year. Only a strip over several seasons says it: a single-season page ("2014-15") is one season,
+ * and "earlier seasons" there would point at seasons that are on the site. */
+export function careerStripSuffix(league: League, firstSeason: number | null, multiSeason: boolean): string {
+  return multiSeason && firstSeason !== null && firstSeason === HISTORY_START[league] ? " Earlier seasons are not on this site." : "";
 }
 
 // Data notes: the limits of the source, said once where the figures appear.
@@ -171,6 +177,8 @@ export const NFL_PLAYER_DATA_NOTE = "Figures are summed from ESPN box scores; ES
 /** Under a soccer match's timeline, where the cards are. */
 export const SOCCER_CARDS_NOTE = "Cards as reported by ESPN; occasional omissions.";
 
-/** Under a team's "Current roster": ESPN's roster lags the league's own (camp and two-way signings). NBA and NFL only. */
+/** Under a team's "Current roster": ESPN's roster lags the league's own. The NBA's wording names camp and two-way signings
+ * (measured against NBA.com); the NFL's is generic, since the lag is not measured there. Soccer gets none. */
 export const ROSTER_SOURCE_NOTE = "Roster as listed by ESPN; camp and two-way signings appear when ESPN adds them.";
-export const rosterSourceNote = (league: League): string | undefined => (league === "nba" || league === "nfl" ? ROSTER_SOURCE_NOTE : undefined);
+export const NFL_ROSTER_SOURCE_NOTE = "Roster as listed by ESPN; recent signings appear when ESPN adds them.";
+export const rosterSourceNote = (league: League): string | undefined => (league === "nba" ? ROSTER_SOURCE_NOTE : league === "nfl" ? NFL_ROSTER_SOURCE_NOTE : undefined);

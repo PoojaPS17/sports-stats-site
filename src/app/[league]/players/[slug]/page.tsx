@@ -171,7 +171,7 @@ export default async function PlayerPage({
   // No box-score row in the regular season (ESPN lists games for the player and no stat line): games only, no stats, clubs or log.
   const storedOnly = storedGamesOnly(profile);
   const split = staged.split;
-  const wording = careerWording(league, split);
+  const wording = careerWording(league, split, profile.seasons[profile.seasons.length - 1]?.season ?? null);
   const latestRegular = profile.seasons[0]?.season ?? null;
   const seasons = [...new Set([...staged.counted.seasons.map((s) => s.season), ...feedSeasons])].sort((a, b) => b - a);
   const latest = seasons[0] ?? null;
