@@ -26,11 +26,16 @@ test("Imola is not in Rome, the Nürburgring not in Nuremberg", () => {
   assert.equal(v("x", 2020, "Nürburgring", "Nuremberg", "Germany").city, "Nürburg");
 });
 
-test("a state or region ESPN stores as the city is replaced by the city (Miami, Las Vegas, Mugello, Spa)", () => {
+test("a state or region ESPN stores as the city is replaced by the city (Miami, Las Vegas, Mugello)", () => {
   assert.equal(v("x", 2024, "Miami International Autodrome", "Florida", "USA").city, "Miami");
   assert.equal(v("x", 2024, "Las Vegas Street Circuit", "Nevada", "USA").city, "Las Vegas");
   assert.equal(v("x", 2020, "Autodromo Internazionale del Mugello", "Tuscany", "Italy").city, "Mugello");
-  assert.equal(v("x", 2023, "Circuit de Spa-Francorchamps", "Stavelot", "Belgium").city, "Spa");
+});
+
+test("Wikipedia's locations: Spa stays Stavelot (as ESPN has it), the Hungaroring is at Mogyoród, Sepang is at Sepang", () => {
+  assert.equal(v("x", 2023, "Circuit de Spa-Francorchamps", "Stavelot", "Belgium").city, "Stavelot");
+  assert.equal(v("x", 2019, "Hungaroring", "Budapest", "Hungary").city, "Mogyoród");
+  assert.equal(v("x", 2017, "Sepang International Circuit", "Kuala Lumpur", "Malaysia").city, "Sepang");
 });
 
 test("Silverstone is in the UK, not 'Britain'", () => {

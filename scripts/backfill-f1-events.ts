@@ -13,9 +13,11 @@
 //
 // The exception is a race or sprint driver's status and laps completed (Ret / DSQ labels, the order of the back of the
 // field): those are bare refs too, so each such driver costs one request (his status) and one more when he did not
-// finish. That is the bulk of a full run: about 5,200 status requests plus the laps of the drivers who did not finish
-// (some 800), on top of roughly 400 for the event lists, events, drivers and circuits, about 6,400 in all. A driver
-// already stored with his status is skipped, so the run can be repeated safely and cheaply. The total is logged at the end.
+// finish, and for the winner of each session (his laps are the distance the 90% classification line is measured from).
+// That is the bulk of a full run: about 5,200 status requests, plus laps for some 800 drivers who did not finish and about
+// 300 winners, on top of roughly 400 for the event lists, events, drivers and circuits, about 6,700 in all. A driver
+// already stored with his status (and laps, where they are read) is skipped, so the run can be repeated safely and cheaply.
+// The total is logged at the end; a failed status/laps request is counted, listed and makes the run exit non-zero.
 import { pool } from "./lib/db";
 import { fetchF1SeasonEventRefs, fetchByRef as fetchEspnRef } from "./lib/f1";
 import { uniqueSlugFor } from "./lib/players";
@@ -27,6 +29,8 @@ const CONCURRENCY = 6;
 
 // Sessions (event id/session id) whose status could not be read; the run exits non-zero when there are any.
 const statusUnread: string[] = [];
+// Driver status / laps requests that failed; those drivers keep what is stored (null on a first run), and the run exits non-zero.
+const lookupsFailed: string[] = [];
 
 // Every ESPN request this run makes goes through here, so the total is logged at the end.
 let espnRequests = 0;
@@ -102,7 +106,7 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
       const name = await resolveDriverName(athleteRef, c.id);
       if (!name) continue;
       await upsertDriver(c.id, name);
-      const detail = f1SessionHasStatuses(sessionType) ? await f1CompetitorDetail(c, fetchByRef, known?.get(c.id)) : { status: null, laps: null };
+      const detail = f1SessionHasStatuses(sessionType) ? await f1CompetitorDetail(c, fetchByRef, known?.get(c.id), (ref) => lookupsFailed.push(ref)) : { status: null, laps: null };
       if (await saveF1CompetitorResult(pool, comp.id, sessionType, c, detail)) resultCount++;
     }
     if (sessionType === "Race") await addF1DidNotStartRows(pool, event.id, comp.id);
@@ -145,6 +149,7 @@ async function main() {
 
   for (let year = currentYear - YEARS_BACK; year <= currentYear; year++) {
     try {
+      espnRequests++;
       const refs = await fetchF1SeasonEventRefs(year);
       for (const item of refs.items ?? []) jobs.push({ seasonYear: year, eventRef: item["$ref"] });
     } catch (err) {
@@ -158,10 +163,13 @@ async function main() {
 
   await pool.end();
 
+  if (lookupsFailed.length > 0) {
+    console.error(`[backfill-f1-events] ERROR: ${lookupsFailed.length} driver status/laps request(s) failed, so those drivers have no status yet (a driver already stored keeps his). Run the backfill again; it only asks about the drivers still without one. First: ${lookupsFailed.slice(0, 3).join(", ")}`);
+  }
   if (statusUnread.length > 0) {
     console.error(`[backfill-f1-events] ERROR: the status of ${statusUnread.length} empty session(s) could not be read, so their stored status was left as it was: ${statusUnread.join(", ")}. Run the backfill again.`);
-    process.exit(1);
   }
+  if (statusUnread.length > 0 || lookupsFailed.length > 0) process.exit(1);
 }
 
 main().catch((err) => {

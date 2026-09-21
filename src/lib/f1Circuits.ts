@@ -1,6 +1,6 @@
 // Where a Grand Prix is held, for display. ESPN's circuit records are wrong in a few places: the Spanish circuit's record was
 // renamed to the Madrid circuit for 2026 and so reads that for every year since 2016, Imola is filed under Rome, and a
-// region stands in for the city at Miami, Las Vegas, Mugello and Spa. The stored values stay as ESPN sent them; corrections are
+// region stands in for the city at Miami, Las Vegas and Mugello. The stored values stay as ESPN sent them; corrections are
 // keyed on ESPN's circuit name and the season, and applied where an event is read (src/lib/f1.ts).
 
 export interface F1Venue {
@@ -28,7 +28,9 @@ const CIRCUIT_FIXES: CircuitFix[] = [
   { circuit: "Miami International Autodrome", set: { city: "Miami" } }, // ESPN: Florida
   { circuit: "Las Vegas Street Circuit", set: { city: "Las Vegas" } }, // ESPN: Nevada
   { circuit: "Autodromo Internazionale del Mugello", set: { city: "Mugello" } }, // ESPN: Tuscany
-  { circuit: "Circuit de Spa-Francorchamps", set: { city: "Spa" } }, // ESPN: Stavelot
+  // Wikipedia's circuit pages and its season calendars give the location as ESPN does for Spa (Stavelot), so it is left as stored.
+  { circuit: "Sepang International Circuit", set: { city: "Sepang" } }, // ESPN: Kuala Lumpur; Wikipedia's circuit page: Sepang, Selangor
+  { circuit: "Hungaroring", set: { city: "Mogyoród" } }, // ESPN: Budapest; Wikipedia: Mogyoród, Pest County
   { circuit: "Silverstone Circuit", set: { country: "UK" } }, // ESPN: Britain
 ];
 
