@@ -79,7 +79,7 @@ test("gameAccessibleLabel: an upcoming game reads as a fixture, a called-off one
 
 test("gameAccessibleLabel: a finished game reads as a result", () => {
   assert.equal(gameAccessibleLabel(LEAGUE, finished()), "Arsenal 2, Chelsea 1, final");
-  assert.equal(gameAccessibleLabel(LEAGUE, game({ completed: true, status_detail: "Abandoned", round: "Match abandoned", home_score: 1, away_score: 1 })), "Arsenal 1, Chelsea 1, Match abandoned");
+  assert.equal(gameAccessibleLabel(LEAGUE, game({ completed: true, status_detail: "Abandoned", round: "Match abandoned", home_score: 1, away_score: 1 })), "Arsenal 1, Chelsea 1, Match abandoned, final");
 });
 
 test("scoreboardTileStatus: an upcoming game shows its kickoff, a called-off one shows why it is off", () => {

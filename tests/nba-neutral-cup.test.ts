@@ -11,6 +11,9 @@ import { finishedPillLabel, gameRoundLabel } from "../src/lib/stage";
 import type { ComputedTableRow, ResultRow, TeamRef } from "../src/lib/analytics";
 import { buildProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import { StatusPill } from "../src/components/StatusPill";
+import { gameAccessibleLabel, scoreboardTileStatus } from "../src/lib/gameDisplay";
+import type { Matchweek } from "../src/lib/matchweeks";
+import type { GameRow } from "../src/lib/queries";
 
 let db: TestDb;
 let games: typeof import("../scripts/lib/games");
@@ -200,4 +203,66 @@ test("a player's Home and Away splits leave out a neutral-site game; the season 
   assert.equal(profile.seasons[0].games, 4);
   assert.equal(games("home"), 1);
   assert.equal(games("away"), 2, "a row with no neutral flag stays where it was");
+});
+
+/* ------------------------------------------------------------------------ */
+/* Fix round 1: the weekly tally, the note on every game select, other surfaces */
+/* ------------------------------------------------------------------------ */
+
+const weekGame = (id: string, hs: number, as: number, neutral?: boolean | null): GameRow =>
+  ({ espn_id: id, league: "nba", completed: true, status_state: "post", status_detail: "Final", home_score: hs, away_score: as, ...(neutral === undefined ? {} : { neutral_site: neutral }) }) as GameRow;
+const weekOf = (gs: GameRow[]) => ({ games: gs, calledOff: 0 }) as unknown as Matchweek;
+
+test("summarizeWeek: a neutral-site game is neither a home win nor an away win, and null or false counts as before", async () => {
+  const { summarizeWeek } = await import("../src/lib/matchweeks");
+  const s = summarizeWeek(weekOf([weekGame("1", 100, 90, false), weekGame("2", 90, 100, null), weekGame("3", 101, 99), weekGame("4", 105, 95, true), weekGame("5", 90, 100, true)]));
+  assert.equal(s.played, 5);
+  assert.equal(s.homeWins, 2, "games 1 and 3");
+  assert.equal(s.awayWins, 1, "game 2");
+  assert.equal(s.neutral, 2, "games 4 and 5, counted apart");
+  assert.equal(s.homeWins + s.awayWins + s.neutral + s.draws, s.played);
+  assert.equal(s.totalScore, 190 + 190 + 200 + 200 + 190, "a neutral game still counts toward played and points");
+});
+
+const CUP = "NBA Cup - Group Play";
+async function seedCupGame() {
+  for (const [id, name] of [["1", "Alpha"], ["2", "Bravo"]]) await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('nba', $1, $2, $3) on conflict do nothing`, [id, name, name.toLowerCase()]);
+  await db.pool.query(
+    `insert into games (league, espn_id, date, name, season_year, home_team_espn_id, away_team_espn_id, home_score, away_score, completed, season_type, competition_type, status_state, status_detail, note, neutral_site)
+     values ('nba', 'cup1', now() - interval '1 day', 'x', 2026, '1', '2', 100, 90, true, 2, 'STD', 'post', 'Final', $1, true)`,
+    [CUP]
+  );
+  await db.pool.query(`insert into game_views (league, game_espn_id) values ('nba', 'cup1')`);
+}
+
+test("the note and neutral flag come back from every select that builds a GameRow the cards use", async () => {
+  await seedCupGame();
+  const queries = await import("../src/lib/queries");
+  const h2h = await analytics.getHeadToHead("nba", "alpha", "bravo");
+  const selects: [string, GameRow | undefined][] = [
+    ["getGameByEspnId", (await queries.getGameByEspnId("nba", "cup1")) ?? undefined],
+    ["getSeasonGames (GAME_SELECT)", (await (await import("../src/lib/matchweeks")).getSeasonGames("nba", 2026))[0]],
+    ["getTopGames", (await queries.getTopGames("alltime"))[0]],
+    ["getHeadToHead", h2h?.games[0]],
+  ];
+  for (const [name, g] of selects) {
+    assert.ok(g, `${name} returned the game`);
+    assert.equal(g.note, CUP, `${name} carries the note`);
+    assert.equal(gameRoundLabel(g), "NBA Cup · Group play", `${name} yields the Cup label`);
+  }
+  // the neutral flag is on GAME_SELECT rows (the weekly tally reads it)
+  assert.equal(selects[1][1]!.neutral_site, true);
+});
+
+test("the calendar feed, the scoreboard tile and the accessible name carry the Cup label", async () => {
+  const ics = await import("../src/lib/ics");
+  const g = { league: "nba", espn_id: "c", date: "2025-11-15T02:30:00.000Z", completed: true, status_state: "post", status_detail: "Final", status_summary: null, round: null, stage: "regular", competition_type: "STD", note: CUP, home_score: 100, away_score: 90, home_score_display: null, away_score_display: null, home_name: "Alpha", away_name: "Bravo", home_team_espn_id: "1", away_team_espn_id: "2" } as unknown as GameRow;
+  const event = ics.gameEvent("nba", g);
+  assert.match(event.description ?? "", /NBA Cup · Group play/);
+  assert.equal(scoreboardTileStatus("nba", g, false), "NBA Cup · Group play");
+  assert.equal(scoreboardTileStatus("nba", g, true), "Nov 14, 2025 · NBA Cup · Group play");
+  assert.equal(gameAccessibleLabel("nba", g), "Bravo 90, Alpha 100, NBA Cup · Group play, final");
+  assert.equal(gameAccessibleLabel("nba", { ...g, note: null }), "Bravo 90, Alpha 100, final");
+  assert.equal(gameAccessibleLabel("nba", { ...g, note: null, stage: "playin" }), "Bravo 90, Alpha 100, Play-In, final");
+  assert.equal(gameAccessibleLabel("nba", { ...g, status_detail: "Final/OT" }), "Bravo 90, Alpha 100, NBA Cup · Group play · Final/OT");
 });

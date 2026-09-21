@@ -50,7 +50,10 @@ export function gameAccessibleLabel(
     const homeScore = game.home_score_display ?? game.home_score ?? "";
     const awayScore = game.away_score_display ?? game.away_score ?? "";
     const line = homeFirst ? `${home} ${homeScore}, ${away} ${awayScore}` : `${away} ${awayScore}, ${home} ${homeScore}`;
-    return `${line}, ${finishedPillLabel(league, game, "final")}`;
+    // A stage label replaces the plain word, so "final" follows it: the name always says the game is over
+    // ("..., NBA Cup · Group play, final"). Overtime already says it ("..., Final/OT").
+    const label = finishedPillLabel(league, game, "final");
+    return `${line}, ${label === "final" || overtimeFinal(game.status_detail) ? label : `${label}, final`}`;
   }
   const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" });
   const label = homeFirst ? `${home} v ${away}, ${date}` : `${away} at ${home}, ${date}`;

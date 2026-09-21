@@ -39,6 +39,8 @@ export interface GameRow {
   competition_type?: string | null;
   /** The event note ESPN gives the game (games.note): the NBA Cup's group play and semifinals are named only here. Absent on rows from a query that does not select it. */
   note?: string | null;
+  /** games.neutral_site: played at neither club's ground, so it is neither a home nor an away game (NBA only). Absent on rows from a query that does not select it; null where the feed did not say. */
+  neutral_site?: boolean | null;
   completed: boolean;
   /** Official week number from the feed (NFL only). */
   week?: number | null;
@@ -71,7 +73,7 @@ export const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-    g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed, g.week, g.first_seen_date,
+    g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
     g.home_team_espn_id, g.away_team_espn_id,
     ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
     at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color

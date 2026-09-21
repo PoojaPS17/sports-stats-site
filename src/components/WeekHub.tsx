@@ -177,7 +177,7 @@ export async function WeekHub({
           {[
             { label: "Games played", value: `${summary.played}${summary.scheduled > 0 ? ` of ${summary.played + summary.scheduled}` : ""}`, sub: calledOffNote(week) ?? "" },
             { label: `Total ${scoreWord}`, value: summary.totalScore, sub: `${(summary.totalScore / summary.played).toFixed(1)} per game` },
-            { label: "Home wins", value: summary.homeWins, sub: `${summary.awayWins} away${soccer ? `, ${summary.draws} drawn` : ""}` },
+            { label: "Home wins", value: summary.homeWins, sub: `${summary.awayWins} away${soccer ? `, ${summary.draws} drawn` : ""}${summary.neutral > 0 ? `, ${summary.neutral} at a neutral site` : ""}` },
             {
               label: "Biggest margin",
               value: summary.biggest ? Math.abs(summary.biggest.home_score! - summary.biggest.away_score!) : "—",
