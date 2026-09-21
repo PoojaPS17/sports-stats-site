@@ -72,6 +72,7 @@ job_daily() {
   run fetch:tennis-rankings
   run fetch:tennis-daily -- --calendar --days 1 --ahead 1
   run import:cricket-espn
+  run sweep:cricket-seasons
   run fetch:fixtures
   run seed:f1-teams
 }

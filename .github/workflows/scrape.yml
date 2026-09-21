@@ -92,6 +92,15 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run import:cricket-espn
 
+      # Matches of the eight ESPN-fed cricket competitions the scores scrape never saw (a whole
+      # past season, as with WBBL 2025): the previous and current season's scoreboard, missing
+      # games only. Two requests per competition.
+      - name: Fill missing cricket competition games
+        if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run sweep:cricket-seasons
+
       # Whole-season schedules (every remaining fixture, plus NFL week numbers) —
       # once a day is plenty; the 15-minute tick only needs the scoreboard window.
       - name: Fetch full-season fixtures
