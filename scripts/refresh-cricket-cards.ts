@@ -130,9 +130,8 @@ async function main() {
   console.log(
     `[refresh-cricket-cards] ${league}: ${dryRun ? "would refresh" : "refreshed"} ${done}/${todo.length} matches, ${inserted} player rows ${dryRun ? "to insert" : "inserted"}, ${updated} ${dryRun ? "to rewrite" : "rewritten"}, ${reports} reports ${dryRun ? "to rebuild" : "rebuilt"}; ${cricsheet} skipped (Cricsheet report), ${skipped} skipped (rebuilt report thinner), ${failed} failed`
   );
-  // The refresh does not create players. An inserted row for a player with no `players` row has no
-  // page and adds nothing to a leader board until backfill-cricket-player-stats.ts (which creates him) is run.
-  console.log(`[refresh-cricket-cards] ${league}: ${orphans} of the ${dryRun ? "rows to insert" : "inserted rows"} have a player with no players row; ${duplicates} ${dryRun ? "would be" : "were"} left out because the match already has a row for the same name and side under another id`);
+  // A real run creates the players it finds without a `players` row (an existing player is never changed).
+  console.log(`[refresh-cricket-cards] ${league}: ${orphans} of the ${dryRun ? "rows to insert" : "inserted rows"} had a player with no players row${dryRun ? "" : ", created now"}; ${duplicates} ${dryRun ? "would be" : "were"} left out because the match already has a row for the same name and side under another id`);
   await pool.end();
 }
 

@@ -3,7 +3,7 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { startTestDb, type TestDb } from "./helpers/testDb";
-import { refreshMatchCards } from "../scripts/lib/cricket-cards-refresh";
+import { createMissingCricketPlayers, refreshMatchCards } from "../scripts/lib/cricket-cards-refresh";
 
 let db: TestDb;
 let queries: typeof import("../src/lib/queries");
@@ -176,6 +176,7 @@ test("the refresh rebuilds the stored scorecard and leaves every other key of th
 });
 
 test("a dry run reads and reports but writes nothing", async () => {
+  await noPlayers("ipl");
   await seedMatch("ipl", "r2", { scorecard: oldScorecard, venue: "Ground" });
   const result = await refresh("ipl", "r2", summary, true);
   assert.deepEqual(result, { skipped: null, inserted: 3, updated: 1, duplicates: 0, orphans: 3, battingRows: { before: 1, after: 2 } });
@@ -278,6 +279,7 @@ test("a rebuilt report with no innings totals is not written when the stored one
 });
 
 test("a player already stored under another id (same name, same side) is not inserted a second time", async () => {
+  await noPlayers("ipl");
   await seedMatch("ipl", "r10", { scorecard: oldScorecard });
   // Cricsheet filed player 12 as cs-abc when the register had no Cricinfo id for him; the row is on side 1.
   await db.pool.query(`insert into players (league, espn_id, name, slug) values ('ipl', 'cs-abc', 'Player 12', 'player-12')`);
@@ -290,10 +292,51 @@ test("a player already stored under another id (same name, same side) is not ins
 });
 
 test("an inserted row counts as an orphan only when its player has no players row", async () => {
+  await noPlayers("ipl");
   await seedMatch("ipl", "r11", { scorecard: oldScorecard });
   for (const id of ["11", "12"]) await db.pool.query(`insert into players (league, espn_id, name, slug) values ('ipl', $1, $1, $1)`, [id]);
   const result = await refresh("ipl", "r11");
   assert.deepEqual([result.inserted, result.orphans], [3, 1]);
+});
+
+// A real refresh now creates the players it finds, and the tests below share one database: start from no player of the league.
+const noPlayers = (league: string) => db.pool.query(`delete from players where league = $1`, [league]);
+
+const playersOf = async (league: string) => (await db.pool.query(`select espn_id, team_espn_id, name, slug from players where league = $1 order by 1`, [league])).rows;
+
+test("a real refresh creates the players it finds without a players row and never changes a stored one; a dry run creates none", async () => {
+  // Player 11 is already stored (under other details); player 10 has a card row but no players row; a stranger holds the slug player-12.
+  await seedMatch("wpl", "o1", { scorecard: oldScorecard });
+  await db.pool.query(`insert into players (league, espn_id, team_espn_id, name, slug) values ('wpl', '11', '7', 'Someone Else', 'someone-else'), ('wpl', 'zz', '7', 'Player 12', 'player-12')`);
+  await seedMatch("wbbl", "o2", { scorecard: oldScorecard });
+
+  await refresh("wbbl", "o2", summary, true);
+  assert.deepEqual(await playersOf("wbbl"), [], "a dry run creates no player");
+
+  await refresh("wpl", "o1");
+  assert.deepEqual(await playersOf("wpl"), [
+    { espn_id: "10", team_espn_id: "1", name: "Player 10", slug: "player-10" },
+    { espn_id: "11", team_espn_id: "7", name: "Someone Else", slug: "someone-else" },
+    { espn_id: "12", team_espn_id: "1", name: "Player 12", slug: "player-12-12" },
+    { espn_id: "20", team_espn_id: "2", name: "Player 20", slug: "player-20" },
+    { espn_id: "zz", team_espn_id: "7", name: "Player 12", slug: "player-12" },
+  ]);
+  // Every card row of the match now has a player.
+  const orphans = await db.pool.query(`select 1 from player_game_stats s left join players p on p.league = s.league and p.espn_id = s.player_espn_id where s.league = 'wpl' and s.game_espn_id = 'o1' and p.espn_id is null`);
+  assert.equal(orphans.rowCount, 0);
+});
+
+test("createMissingCricketPlayers creates each player once and leaves a stored one as it is", async () => {
+  const people = [
+    { athleteId: "a1", teamId: "1", name: "Ana Ng" },
+    { athleteId: "a2", teamId: "1", name: "Ana Ng" },
+  ];
+  assert.equal(await createMissingCricketPlayers(db.pool, "wcwc", people), 2);
+  assert.deepEqual((await playersOf("wcwc")).map((r) => [r.espn_id, r.slug]), [["a1", "ana-ng"], ["a2", "ana-ng-a2"]], "two people with one name get distinct slugs");
+  assert.equal(await createMissingCricketPlayers(db.pool, "wcwc", [{ athleteId: "a3", teamId: "1", name: "李" }]), 1);
+  assert.equal((await playersOf("wcwc")).find((r) => r.espn_id === "a3")?.slug, "player-a3", "a name with no Latin letters still gets a slug");
+  assert.equal(await createMissingCricketPlayers(db.pool, "wcwc", [{ athleteId: "a1", teamId: "9", name: "Renamed" }]), 0);
+  assert.deepEqual((await playersOf("wcwc")).find((r) => r.espn_id === "a1"), { espn_id: "a1", team_espn_id: "1", name: "Ana Ng", slug: "ana-ng" });
 });
 
 // An ESPN report stored before fe9fbff has no dismissal on its batting rows, like a Cricsheet one; only a league

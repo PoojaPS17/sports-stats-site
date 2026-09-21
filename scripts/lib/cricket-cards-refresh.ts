@@ -5,6 +5,7 @@ import { isCricketLeague, isFirstClassCricket, type League } from "../../src/lib
 import { parseCricketScorecard } from "../../src/lib/matchDetail";
 import { CARD_VERSION, extractCricketMatchStats } from "./cricket-career";
 import { isCricsheetReport, isEspnReport } from "./cricsheet-report";
+import { slugify } from "./espn";
 
 // A player absent from the current ESPN summary keeps the old v<3 row, so the match is selected again on every
 // run; v3 is a superset of v2, so this should not arise. The report update and the card upsert below are not one
@@ -17,10 +18,30 @@ export interface RefreshResult {
   updated: number;
   /** Rows not inserted because the match already has a row for the same name and side under another id. */
   duplicates: number;
-  /** Of the inserted rows, how many have no `players` row, so no player page until one is created. */
+  /** Of the inserted rows, how many had no `players` row before the refresh (a real run creates it; a dry run does not). */
   orphans: number;
   /** Batting rows in the stored report before and after; null when the report is left alone. */
   battingRows: { before: number; after: number } | null;
+}
+
+/**
+ * Creates the players of `players` that have no `players` row (a card row with no player has no page and adds nothing
+ * to a leader board). A player already stored is left exactly as it is: no name, club or slug change. Returns the
+ * number created. The slug rule is uniqueSlugFor's (lib/players.ts, which cannot be imported here: it opens the
+ * database pool when loaded); the players are inserted one by one so each sees the slugs of those before it.
+ */
+export async function createMissingCricketPlayers(db: Pick<Pool, "query">, league: string, players: { athleteId: string; teamId: string; name: string }[]): Promise<number> {
+  let created = 0;
+  for (const p of players) {
+    const base = slugify(p.name) || `player-${p.athleteId}`; // a name with no Latin letters or digits slugifies to nothing
+    const { rows } = await db.query(`select 1 from players where league = $1 and slug = $2 and espn_id != $3 limit 1`, [league, base, p.athleteId]);
+    const { rowCount } = await db.query(
+      `insert into players (league, espn_id, team_espn_id, name, slug) values ($1, $2, $3, $4, $5) on conflict (league, espn_id) do nothing`,
+      [league, p.athleteId, p.teamId, p.name, rows.length === 0 ? base : `${base}-${p.athleteId}`]
+    );
+    created += rowCount ?? 0;
+  }
+  return created;
 }
 
 const battingRowCount = (scorecard: any): number => (Array.isArray(scorecard) ? scorecard.reduce((n, t) => n + (t?.battingRows?.length ?? 0), 0) : 0);
@@ -98,6 +119,8 @@ export async function refreshMatchCards(db: Pick<Pool, "query">, league: string,
   if (rebuildReport) {
     await db.query(`update game_details set details = details || jsonb_build_object('scorecard', $3::jsonb) where league = $1 and game_espn_id = $2`, [league, gameId, JSON.stringify(scorecard)]);
   }
+  // A player with no players row is created (never changed if stored), so no card row is left without a player page.
+  await createMissingCricketPlayers(db, league, rows);
   // An existing row keeps the side it was filed under.
   await db.query(
     `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
