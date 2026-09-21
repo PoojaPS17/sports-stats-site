@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { League } from "../src/lib/leagues";
 import type { StandingRow } from "../src/lib/queries";
-import { legendFor, relegationSummary, zoneFromNote, zoneRules, zonesFor, UPCOMING_CAPTION } from "../src/lib/standingsZones";
+import { legendFor, placeCounts, relegationSummary, zoneFromNote, zoneRules, zonesFor, UPCOMING_CAPTION } from "../src/lib/standingsZones";
 import { tableComplete } from "../src/lib/standingsOrder";
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
@@ -81,7 +81,7 @@ const EXPECTED: Record<string, [string, string] | null> = {
   Relegated: ["zone-3", "Relegation"],
   "Relegation playoff": ["zone-2", "Relegation play-off"],
   "Relegation via playoffs": ["zone-2", "Relegation play-off"],
-  "Relegated via playoff": ["zone-2", "Relegation play-off"],
+  "Relegated via playoff": ["zone-3", "Relegation"],
 };
 
 test("every distinct ESPN note string maps to a band and a label", () => {
@@ -197,10 +197,10 @@ test("relegation summary: the Bundesliga relegates 17th and 18th; 16th is a play
 });
 
 test("relegation summary prefers the stored notes of a finished season", () => {
-  // Serie A 2022-23: 17th went through a play-off, only 19th and 20th went straight down.
+  // Serie A 2022-23: ESPN's "Relegated via playoff" (Spezia, 17th) is a relegation: they lost the play-off and went down.
   const s = relegationSummary("seriea", table(20, { 17: "Relegated via playoff", 19: "Relegated", 20: "Relegated" }));
-  assert.deepEqual(s.relegated.map((r) => r.rank), [19, 20]);
-  assert.deepEqual(s.playoff.map((r) => r.rank), [17]);
+  assert.deepEqual(s.relegated.map((r) => r.rank), [17, 19, 20]);
+  assert.deepEqual(s.playoff, []);
   // A Bundesliga season whose feed has no play-off note for 16th still has one.
   const b = relegationSummary("bundesliga", table(18, { 17: "Relegation", 18: "Relegation", 1: "Champions League" }));
   assert.deepEqual(b.relegated.map((r) => r.rank), [17, 18]);
@@ -208,6 +208,84 @@ test("relegation summary prefers the stored notes of a finished season", () => {
   // Notes that name the play-off are used as they are.
   const b2 = relegationSummary("bundesliga", table(18, { 16: "Relegation playoff", 17: "Relegation", 18: "Relegation" }));
   assert.deepEqual(b2.playoff.map((r) => r.rank), [16]);
+  assert.deepEqual(b2.relegated.map((r) => r.rank), [17, 18]);
+});
+
+test("a relegated wording wins over a play-off wording; a play-off place is not counted as relegated", () => {
+  assert.equal(zoneFromNote("Relegated via playoff")?.label, "Relegation");
+  assert.equal(zoneFromNote("relegated via play-off")?.cls, "zone-3");
+  assert.equal(zoneFromNote("Relegation playoff")?.label, "Relegation play-off");
+  assert.equal(zoneFromNote("Relegation via playoffs")?.label, "Relegation play-off");
+  const b = relegationSummary("bundesliga", table(18, { 16: "Relegation via playoffs", 17: "Relegation", 18: "Relegation" }));
+  assert.deepEqual(b.relegated.map((r) => r.rank), [17, 18], "the play-off place is not in Relegated");
+  assert.deepEqual(b.playoff.map((r) => r.rank), [16]);
+  // La Liga has no play-off place: a stray play-off note would still not be counted as relegated
+  const l = relegationSummary("laliga", table(20, { 18: "Relegation", 19: "Relegation", 20: "Relegation" }));
+  assert.deepEqual(l.playoff, []);
+});
+
+// Real ESPN standings for finished seasons (tests/fixtures/espn-finished-zones.json): each entry's rank, record and note.
+type FixtureEntry = { rank: number; team: string; wins: number; losses: number; ties: number; points: number; gf: number; ga: number; note: string | null };
+const finished = fixture("espn-finished-zones.json") as Record<string, FixtureEntry[]>;
+function fixtureTable(key: string, season: number): StandingRow[] {
+  return finished[key].map((e) => row(e.team, { season, rank: e.rank, wins: e.wins, losses: e.losses, draws: e.ties, points: e.points, goals_for: e.gf, goals_against: e.ga, zone: e.note }));
+}
+const bandNames = (league: League, rows: StandingRow[]) => {
+  const zones = zonesFor(league, [["t", rows]])!;
+  return { at: (rank: number) => zones.zoneAt(rows, rank - 1)?.label ?? null, legend: zones.legend.map((z) => z.label) };
+};
+
+test("a finished Bundesliga table has the 16th-place Relegation play-off band and legend entry whether or not ESPN noted it", () => {
+  // ESPN 2016 and 2023: 16th (Wolfsburg, Bochum) has no note; 17th and 18th are "Relegation".
+  for (const [key, season] of [["ger.1-2016", 2016], ["ger.1-2023", 2023]] as const) {
+    const rows = fixtureTable(key, season);
+    assert.equal(rows[15].zone, null, `${key}: ESPN has no note for 16th`);
+    const t = bandNames("bundesliga", rows);
+    assert.deepEqual([15, 16, 17, 18].map(t.at), [null, "Relegation play-off", "Relegation", "Relegation"], key);
+    assert.ok(t.legend.includes("Relegation play-off"), `${key} legend`);
+    assert.deepEqual(t.legend.slice(-2), ["Relegation play-off", "Relegation"], `${key}: in table order`);
+    // the season summary on the same page names the same clubs
+    const s = relegationSummary("bundesliga", rows);
+    assert.deepEqual(s.relegated.map((r) => r.rank), [17, 18], key);
+    assert.deepEqual(s.playoff.map((r) => r.rank), [16], key);
+  }
+});
+
+test("where ESPN does note the Bundesliga 16th (2018, 2025) the table and summary say the same thing", () => {
+  for (const [key, season] of [["ger.1-2018", 2018], ["ger.1-2025", 2025]] as const) {
+    const rows = fixtureTable(key, season);
+    assert.ok(rows[15].zone, `${key}: ESPN notes 16th`);
+    const t = bandNames("bundesliga", rows);
+    assert.deepEqual([16, 17, 18].map(t.at), ["Relegation play-off", "Relegation", "Relegation"], key);
+    assert.equal(t.legend.filter((l) => l === "Relegation play-off").length, 1);
+    const s = relegationSummary("bundesliga", rows);
+    assert.deepEqual([s.relegated.map((r) => r.rank), s.playoff.map((r) => r.rank)], [[17, 18], [16]], key);
+  }
+});
+
+test("Serie A 2022-23 (real ESPN notes): Spezia, Cremonese and Sampdoria are relegated; there is no play-off band", () => {
+  const rows = fixtureTable("ita.1-2022", 2022);
+  assert.equal(rows[16].name, "Spezia");
+  assert.equal(rows[16].zone, "Relegated via playoff");
+  const t = bandNames("seriea", rows);
+  assert.deepEqual([16, 17, 18, 19, 20].map(t.at), [null, "Relegation", null, "Relegation", "Relegation"]);
+  assert.ok(!t.legend.includes("Relegation play-off"));
+  const s = relegationSummary("seriea", rows);
+  assert.deepEqual(s.relegated.map((r) => r.name), ["Spezia", "Cremonese", "Sampdoria"]);
+  assert.deepEqual(s.playoff, []);
+});
+
+test("a finished La Liga table never gets a play-off band", () => {
+  const rows = table(20, LALIGA_2025_NOTES);
+  assert.ok(!zonesFor("laliga", [["t", rows]])!.legend.some((z) => /play-off/.test(z.label)));
+  assert.deepEqual(relegationSummary("laliga", rows).playoff, []);
+});
+
+test("placeCounts: the places the projections page words its columns for, from the table's own rule", () => {
+  for (const league of ["epl", "laliga", "seriea"] as League[]) assert.deepEqual(placeCounts(league), { champions: 4, relegation: 3, relegationPlayoff: 0 }, league);
+  assert.deepEqual(placeCounts("bundesliga"), { champions: 4, relegation: 2, relegationPlayoff: 1 });
+  assert.equal(placeCounts("ucl"), null);
+  assert.equal(placeCounts("nba"), null);
 });
 
 test("relegation summary: notes with no relegation in them fall back to the league's rule", () => {

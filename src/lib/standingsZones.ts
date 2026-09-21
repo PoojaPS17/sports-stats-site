@@ -86,8 +86,25 @@ export function zoneFromNote(description: string | null | undefined): Zone | nul
   }
   if (t.includes("europa league")) return { cls: EUROPA.cls, label: qualifying ? "Europa League qualifying" : EUROPA.label };
   if (t.includes("champions league")) return { cls: CHAMPIONS.cls, label: qualifying ? "Champions League qualifying" : CHAMPIONS.label };
+  // "Relegated" (past tense: the outcome is known) is a relegation, even "Relegated via playoff" (Serie A
+  // 2022-23 Spezia, who lost the play-off and went down). Only a place, "Relegation playoff(s)" or
+  // "Relegation via playoffs", is the play-off band.
+  if (t.includes("relegated")) return RELEGATION;
   if (t.includes("relegat")) return /play-?off/.test(t) ? RELEGATION_PLAYOFF : RELEGATION;
   return null;
+}
+
+/**
+ * The bands of a finished table's rows from their notes, one per row (null for none). The Bundesliga's
+ * 16th place plays a relegation play-off every season, but ESPN notes it in only some (2018, 2020,
+ * 2025), so once the table carries relegation notes at all a 16th that is not itself relegated is
+ * banded as the play-off: the table, its legend and the season summary then agree.
+ */
+function bandsFromNotes(league: League, rows: StandingRow[]): (Zone | null)[] {
+  const noted = rows.map((r) => zoneFromNote(r.zone));
+  const hasRelegation = noted.some((z) => z?.label === RELEGATION.label || z?.label === RELEGATION_PLAYOFF.label);
+  if (league === "bundesliga" && rows.length === 18 && hasRelegation && noted[15]?.label !== RELEGATION.label) noted[15] = RELEGATION_PLAYOFF;
+  return noted;
 }
 
 export interface TableZones {
@@ -117,11 +134,11 @@ export function zonesFor(league: League, sections: [string, StandingRow[]][]): T
     const rows = sections[0][1];
     finished = tableComplete(rows);
     if (finished) {
-      const noted = rows.map((r) => zoneFromNote(r.zone));
+      const noted = bandsFromNotes(league, rows);
       if (noted.some((z) => z !== null)) {
         const legend = new Map<string, Zone>();
         for (const z of noted) if (z && !legend.has(z.label)) legend.set(z.label, z);
-        return { zoneAt: (r, i) => zoneFromNote(r[i]?.zone), legend: [...legend.values()], caption: null };
+        return { zoneAt: (r, i) => (r === rows ? noted : bandsFromNotes(league, r))[i] ?? null, legend: [...legend.values()], caption: null };
       }
     }
   }
@@ -134,21 +151,40 @@ export function zonesFor(league: League, sections: [string, StandingRow[]][]): T
 
 /**
  * Who went down at the end of a finished domestic season, and who is in a relegation play-off.
- * The stored notes decide when the season has any relegation note (Serie A 2022-23 had a play-off
- * place at 17th); otherwise the league's rule: three clubs in the Premier League, La Liga and Serie
- * A; two in the Bundesliga, whose 16th-placed club plays a play-off and is not relegated yet.
+ * The stored notes decide when the season has any relegation note (Serie A 2022-23: Spezia, ESPN's
+ * "Relegated via playoff", went down with Cremonese and Sampdoria); otherwise the league's rule: three
+ * clubs in the Premier League, La Liga and Serie A; two in the Bundesliga, whose 16th-placed club plays
+ * a play-off and is not relegated yet. The table's bands use the same notes, so they agree.
  */
 export function relegationSummary<T extends StandingRow>(league: League, standings: T[]): { relegated: T[]; playoff: T[] } {
   const bundesliga = league === "bundesliga";
-  const noted = standings.map((r) => zoneFromNote(r.zone));
+  const noted = bandsFromNotes(league, standings);
   if (noted.some((z) => z?.label === RELEGATION.label || z?.label === RELEGATION_PLAYOFF.label)) {
-    const relegated = standings.filter((_, i) => noted[i]?.label === RELEGATION.label);
-    let playoff = standings.filter((_, i) => noted[i]?.label === RELEGATION_PLAYOFF.label);
-    // The Bundesliga's 16th always plays a play-off, whether or not the feed says so.
-    const sixteenth = standings[standings.length - 3];
-    if (bundesliga && playoff.length === 0 && sixteenth && !relegated.includes(sixteenth)) playoff = [sixteenth];
-    return { relegated, playoff };
+    return { relegated: standings.filter((_, i) => noted[i]?.label === RELEGATION.label), playoff: standings.filter((_, i) => noted[i]?.label === RELEGATION_PLAYOFF.label) };
   }
   const down = bundesliga ? 2 : 3;
   return { relegated: standings.slice(-down), playoff: bundesliga && standings.length > down ? [standings[standings.length - down - 1]] : [] };
+}
+
+/** The number of clubs in each domestic league's table, which the positional rules above assume. */
+export const DOMESTIC_TABLE_SIZE: Partial<Record<League, number>> = { epl: 20, laliga: 20, seriea: 20, bundesliga: 18 };
+
+/**
+ * How many places of a domestic league's table the start-of-season bands give the Champions League,
+ * direct relegation, and a relegation play-off (the Bundesliga's 16th): the same rule the table
+ * bands by, so the projections page words its columns the way the table shades them. Null for a
+ * league with no such table.
+ */
+export function placeCounts(league: League): { champions: number; relegation: number; relegationPlayoff: number } | null {
+  const size = DOMESTIC_TABLE_SIZE[league];
+  const rules = size ? zoneRules(league, size) : null;
+  if (!size || !rules) return null;
+  const counts = { champions: 0, relegation: 0, relegationPlayoff: 0 };
+  for (let p = 1; p <= size; p++) {
+    const label = rules(p)?.label;
+    if (label === CHAMPIONS.label) counts.champions++;
+    else if (label === RELEGATION.label) counts.relegation++;
+    else if (label === RELEGATION_PLAYOFF.label) counts.relegationPlayoff++;
+  }
+  return counts;
 }

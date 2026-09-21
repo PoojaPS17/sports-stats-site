@@ -270,10 +270,10 @@ test("the season summary for the Premier League still relegates the bottom three
   assert.deepEqual(lines, ["ChampionClub 01", "RelegatedClub 18, Club 19, Club 20"]);
 });
 
-test("the season summary uses a finished season's notes: a Serie A play-off place is not 'Relegated'", () => {
+test("the season summary uses a finished season's notes: Serie A 2022-23's Spezia (relegated via the play-off) is 'Relegated'", () => {
   const notes: Record<number, string> = { 17: "Relegated via playoff", 19: "Relegated", 20: "Relegated" };
   const rows = sortStandings("seriea", Array.from({ length: 20 }, (_, i) => row(`Club ${String(i + 1).padStart(2, "0")}`, { season: 2022, conference: "g", rank: i + 1, wins: 19, draws: 0, losses: 19, points: 100 - i, zone: notes[i + 1] ?? null })));
   const markup = html(createElement(SeasonSummary, { league: "seriea" as League, playoffResults: [], standings: rows }));
   const lines = [...markup.matchAll(/<p class="text-sm">([\s\S]*?)<\/p>/g)].map((m) => text(m[1]));
-  assert.deepEqual(lines, ["ChampionClub 01", "RelegatedClub 19, Club 20", "Relegation play-offClub 17"]);
+  assert.deepEqual(lines, ["ChampionClub 01", "RelegatedClub 17, Club 19, Club 20"]);
 });
