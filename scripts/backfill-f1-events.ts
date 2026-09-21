@@ -55,8 +55,10 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
     `insert into f1_events (espn_id, name, short_name, date, end_date, season_year, circuit_name, circuit_city, circuit_country, updated_at)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
      on conflict (espn_id) do update set
-       date = excluded.date, end_date = excluded.end_date, circuit_name = excluded.circuit_name,
-       circuit_city = excluded.circuit_city, circuit_country = excluded.circuit_country, updated_at = now()`,
+       date = excluded.date, end_date = excluded.end_date,
+       circuit_name = coalesce(excluded.circuit_name, f1_events.circuit_name),
+       circuit_city = coalesce(excluded.circuit_city, f1_events.circuit_city),
+       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()`,
     [event.id, event.name, event.shortName ?? null, event.date, event.endDate ?? null, seasonYear, circuit?.name ?? null, circuit?.city ?? null, circuit?.country ?? null]
   );
 

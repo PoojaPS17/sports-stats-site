@@ -18,7 +18,8 @@ async function upsertDriver(pool: Pool, athleteId: string, name: string) {
  * so a rescheduled session or a corrected name reaches the site.
  */
 export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number | null): Promise<{ sessions: number; results: number }> {
-  const circuit = event.competitions?.[0]?.circuit;
+  // ESPN's scoreboard puts the circuit on the event itself; a session carrying it is the older shape.
+  const circuit = event.circuit ?? event.competitions?.[0]?.circuit;
   await pool.query(
     `insert into f1_events (espn_id, name, short_name, date, end_date, season_year, circuit_name, circuit_city, circuit_country, updated_at)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
@@ -26,8 +27,10 @@ export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number
        name = excluded.name, short_name = coalesce(excluded.short_name, f1_events.short_name),
        date = excluded.date, end_date = excluded.end_date,
        season_year = coalesce(excluded.season_year, f1_events.season_year),
-       circuit_name = excluded.circuit_name, circuit_city = excluded.circuit_city,
-       circuit_country = excluded.circuit_country, updated_at = now()`,
+       -- a run whose feed has no circuit keeps the stored one rather than blanking the venue
+       circuit_name = coalesce(excluded.circuit_name, f1_events.circuit_name),
+       circuit_city = coalesce(excluded.circuit_city, f1_events.circuit_city),
+       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()`,
     [
       event.id,
       event.name,

@@ -60,3 +60,29 @@ test("a run whose feed omits shortName keeps the stored short name", async () =>
   const event = (await db.pool.query("select short_name from f1_events where espn_id = 'evt-short'")).rows[0];
   assert.equal(event.short_name, "GP");
 });
+
+// BUG-6. ESPN's scoreboard puts the circuit on the event itself (event.circuit), not on its sessions: this is
+// sports.core/site.api's real 2026 Azerbaijan Grand Prix weekend (site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard).
+const BAKU = { id: "607", fullName: "Baku City Circuit", address: { city: "Baku", country: "Azerbaijan" } };
+function scoreboardEvent(o: { id: string; circuit?: typeof BAKU }) {
+  return {
+    id: o.id,
+    name: "Qatar Airways Azerbaijan Grand Prix",
+    date: "2026-09-24T08:30Z",
+    endDate: "2026-09-26T11:00Z",
+    circuit: o.circuit,
+    competitions: [{ id: `${o.id}-race`, date: "2026-09-26T11:00Z", type: { abbreviation: "Race" }, status: { type: { state: "pre", detail: "Sat", completed: false } }, competitors: [] }],
+  };
+}
+
+test("the circuit on the scoreboard event itself is saved (2026 Azerbaijan Grand Prix had no venue)", async () => {
+  await lib.upsertF1Weekend(db.pool, scoreboardEvent({ id: "evt-baku", circuit: BAKU }), 2026);
+  const e = (await db.pool.query("select circuit_name, circuit_city, circuit_country from f1_events where espn_id = 'evt-baku'")).rows[0];
+  assert.deepEqual(e, { circuit_name: "Baku City Circuit", circuit_city: "Baku", circuit_country: "Azerbaijan" });
+});
+
+test("a run whose feed carries no circuit keeps the stored one", async () => {
+  await lib.upsertF1Weekend(db.pool, scoreboardEvent({ id: "evt-baku" }), 2026);
+  const e = (await db.pool.query("select circuit_name, circuit_city, circuit_country from f1_events where espn_id = 'evt-baku'")).rows[0];
+  assert.deepEqual(e, { circuit_name: "Baku City Circuit", circuit_city: "Baku", circuit_country: "Azerbaijan" });
+});

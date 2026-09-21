@@ -4,8 +4,7 @@ import { pool } from "./db";
 import { GAME_SELECT, type GameRow, type League } from "./queries";
 import { ALL_LEAGUES } from "./leagues";
 import { CALLED_OFF } from "./gameStatus";
-import { type F1EventRow } from "./f1";
-import { f1RaceName } from "./f1RaceNames";
+import { displayF1Event, type F1EventRow } from "./f1";
 
 // Which competitions lead the upcoming list when fixtures fall on the same day.
 const LEAGUE_PRIORITY: League[] = ["ucl", "nfl", "nba", "epl", "cwc", "t20wc", "wcwc", "wt20wc", "ipl", "test", "odi", "laliga", "bundesliga", "seriea", "t20i", "wodi", "wt20i", "bbl", "wpl", "wbbl"];
@@ -92,5 +91,5 @@ export async function getNextF1Event(withinDays = 7): Promise<F1EventRow | null>
      order by e.date limit 1`,
     [withinDays, CALLED_OFF.source]
   );
-  return rows[0] ? { ...rows[0], name: f1RaceName(rows[0].espn_id, rows[0].name) } : null;
+  return rows[0] ? displayF1Event(rows[0]) : null;
 }

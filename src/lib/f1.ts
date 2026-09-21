@@ -2,6 +2,7 @@ import { pool } from "./db";
 import { applyF1StandingsCorrections } from "./f1Corrections";
 import { f1ConstructorEspnName, f1TeamLabel } from "./f1Names";
 import { f1RaceName } from "./f1RaceNames";
+import { f1Venue } from "./f1Circuits";
 
 export interface F1EventRow {
   espn_id: string;
@@ -55,19 +56,20 @@ export async function getF1Seasons(): Promise<number[]> {
   return rows.map((r) => r.season_year as number);
 }
 
-/** The event as it is shown: the race's plain name, without ESPN's title sponsor or its mistakes (f1RaceNames.ts). */
-function displayEvent(row: F1EventRow): F1EventRow {
-  return { ...row, name: f1RaceName(row.espn_id, row.name) };
+/** The event as it is shown: the race's plain name, without ESPN's title sponsor or its mistakes (f1RaceNames.ts), and its real venue (f1Circuits.ts). */
+export function displayF1Event(row: F1EventRow): F1EventRow {
+  const venue = f1Venue({ eventId: row.espn_id, season: row.season_year, name: row.circuit_name, city: row.circuit_city, country: row.circuit_country });
+  return { ...row, name: f1RaceName(row.espn_id, row.name), circuit_name: venue.name, circuit_city: venue.city, circuit_country: venue.country };
 }
 
 export async function getF1Calendar(seasonYear: number): Promise<F1EventRow[]> {
   const { rows } = await pool.query(`${EVENT_SELECT} where e.season_year = $1 order by e.date asc`, [seasonYear]);
-  return rows.map(displayEvent);
+  return rows.map(displayF1Event);
 }
 
 export async function getF1Event(espnId: string): Promise<F1EventRow | null> {
   const { rows } = await pool.query(`${EVENT_SELECT} where e.espn_id = $1`, [espnId]);
-  return rows[0] ? displayEvent(rows[0]) : null;
+  return rows[0] ? displayF1Event(rows[0]) : null;
 }
 
 export interface F1SessionResultRow {
