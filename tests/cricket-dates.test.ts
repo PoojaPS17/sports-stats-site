@@ -53,7 +53,7 @@ test("matchdays notes are read when the description carries no date, in each wor
     ["7 March 2024", "2024-03-07", null],
   ];
   for (const [text, first, last] of cases) {
-    const r = parseCricketLocalDates(noDate, note(text), "2000-01-01T00:00Z");
+    const r = parseCricketLocalDates(noDate, note(text), `${first}T12:00Z`);
     assert.deepEqual([r.localDate, r.endDate, r.source], [first, last, "notes"], text);
   }
 });
@@ -94,4 +94,19 @@ test("an impossible date is not trusted", () => {
   const r = parseCricketLocalDates("Test, X at Y, Dec 30-Dec 3 2024", null, "2024-12-30T10:00Z");
   assert.equal(r.localDate, "2024-12-30");
   assert.equal(r.endDate, null);
+});
+
+test("a date more than a day from the UTC day of the start is not that match's own, so the UTC day is used", () => {
+  // a postponed match whose description kept the old day, or a mistyped year
+  const stale = parseCricketLocalDates("4th Test, X tour of Y at Z, Dec 26-27 2025", null, "2025-03-04T09:30Z");
+  assert.deepEqual(stale, { localDate: "2025-03-04", endDate: null, source: "utc" });
+  const staleNote = parseCricketLocalDates("4th Test, X tour of Y at Z", note("26,27 December 2025 (5-day match)"), "2025-03-04T09:30Z");
+  assert.deepEqual(staleNote, { localDate: "2025-03-04", endDate: null, source: "utc" });
+  // a bad description falls through to a good note
+  const rescued = parseCricketLocalDates("4th Test, X tour of Y at Z, Dec 26-27 2024", note("26,27 December 2025 (5-day match)"), "2025-12-25T23:30Z");
+  assert.deepEqual([rescued.localDate, rescued.source], ["2025-12-26", "notes"]);
+  // exactly one day away either side is the normal case (Melbourne is +1 day, Honolulu -1)
+  assert.equal(parseCricketLocalDates("Match, X at Y, Dec 26 2025", null, "2025-12-25T23:30Z").source, "description");
+  assert.equal(parseCricketLocalDates("Match, X at Y, Dec 25 2025", null, "2025-12-26T04:00Z").source, "description");
+  assert.equal(parseCricketLocalDates("Match, X at Y, Dec 27 2025", null, "2025-12-25T23:30Z").source, "utc");
 });

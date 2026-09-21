@@ -112,19 +112,28 @@ function fromMatchdays(text: unknown): CricketLocalDates | null {
 /**
  * The local first and last day of a cricket match. The description is read first (both feeds carry
  * it, in a regular form), then the "matchdays" entries of `notes` (the summary feed only), and when
- * neither has a date the UTC day of `startIso`, which is right except for a match on the far side of
- * the date line from Greenwich. `endDate` is set only for a match that ran past its first day.
+ * neither has a date (or its date is more than a day from the UTC day of `startIso`, so cannot be this
+ * match's own) the UTC day of `startIso`. `endDate` is set only for a match that ran past its first day.
  */
 export function parseCricketLocalDates(description: unknown, notes: unknown, startIso: string): CricketLocalDates {
+  const utc = new Date(startIso);
+  const utcDay = Number.isNaN(utc.getTime()) ? null : utc.toISOString().slice(0, 10);
+  // The local day is never more than a day from the UTC day of the start (zones run from -12 to +14). A
+  // date further away is a stale or mistyped description (a postponed match whose text kept the old day),
+  // and is not trusted: the UTC day is used instead.
+  const plausible = (parsed: CricketLocalDates | null): parsed is CricketLocalDates => {
+    if (!parsed) return false;
+    if (utcDay === null) return true;
+    return Math.abs(Date.parse(`${parsed.localDate}T00:00:00Z`) - Date.parse(`${utcDay}T00:00:00Z`)) <= 86_400_000;
+  };
   const fromDesc = fromDescription(description);
-  if (fromDesc) return fromDesc;
+  if (plausible(fromDesc)) return fromDesc;
   if (Array.isArray(notes)) {
     for (const n of notes) {
       if (n?.type !== "matchdays") continue;
       const parsed = fromMatchdays(n.text);
-      if (parsed) return parsed;
+      if (plausible(parsed)) return parsed;
     }
   }
-  const utc = new Date(startIso);
-  return { localDate: Number.isNaN(utc.getTime()) ? "" : utc.toISOString().slice(0, 10), endDate: null, source: "utc" };
+  return { localDate: utcDay ?? "", endDate: null, source: "utc" };
 }
