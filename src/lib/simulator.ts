@@ -6,6 +6,7 @@ import { isSoccer, getEloRatings, homeWinProbability, type TeamRef } from "./ana
 import { GAME_SELECT, isCupCompetition, isSoccerLeague, type GameRow, type League } from "./queries";
 import { getSeasonsWithGames } from "./matchweeks";
 import { isCalledOff } from "./gameStatus";
+import { placeCounts } from "./standingsZones";
 
 export function supportsProjections(league: League): boolean {
   return isSoccerLeague(league) || league === "nfl" || league === "nba";
@@ -100,7 +101,21 @@ function mulberry32(seed: number) {
   };
 }
 
-function columnsFor(league: League): OutcomeColumn[] {
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six"];
+const word = (n: number) => NUMBER_WORDS[n] ?? String(n);
+
+/**
+ * Where a domestic league's table puts its top places and its relegation places, from the same
+ * start-of-season rule the standings table is banded by (src/lib/standingsZones.ts), so the
+ * projections page and the table describe the same places: four Champions League places, and three
+ * relegation places, or in the Bundesliga two plus a relegation play-off (16th).
+ */
+export function soccerPlaces(league: League): { top: number; relegation: number; relegationPlayoff: number } | null {
+  const counts = placeCounts(league);
+  return counts ? { top: counts.champions, relegation: counts.relegation, relegationPlayoff: counts.relegationPlayoff } : null;
+}
+
+export function columnsFor(league: League): OutcomeColumn[] {
   if (league === "ucl") {
     return [
       { key: "first", label: "1st", title: "Finish first in the league phase" },
@@ -110,11 +125,19 @@ function columnsFor(league: League): OutcomeColumn[] {
     ];
   }
   if (isSoccer(league)) {
+    const places = soccerPlaces(league);
+    const top = places?.top ?? 4;
     return [
       { key: "title", label: "Title", title: "Finish first" },
-      { key: "top4", label: "Top 4", title: "Finish in the top four (Champions League places)" },
+      { key: "top4", label: `Top ${top}`, title: places ? `Finish in the top ${word(top)} (the Champions League places at the start of the season)` : "Finish in the top four" },
       { key: "top6", label: "Top 6", title: "Finish in the top six" },
-      { key: "relegation", label: "Relegation", title: "Finish in the bottom three" },
+      {
+        key: "relegation",
+        label: "Relegation",
+        title: !places
+          ? "Finish in the relegation places"
+          : `Finish in the bottom ${word(places.relegation)} (the relegation places)${places.relegationPlayoff > 0 ? "; the club just above them plays a relegation play-off, which is not counted here" : ""}`,
+      },
     ];
   }
   if (league === "nfl") {
@@ -216,6 +239,10 @@ export async function getSeasonProjection(league: League): Promise<SeasonProject
     .filter((f): f is NonNullable<typeof f> => f !== null);
 
   const columns = columnsFor(league);
+  // The places the columns are worded for (a league with no rule counts no relegation rather than a guessed three).
+  const places = soccer ? soccerPlaces(league) : null;
+  const topPlaces = places?.top ?? 4;
+  const relegationPlaces = places?.relegation ?? 0;
   const simulations = league === "nba" ? 3000 : 5000;
   const n = states.length;
   const counts = states.map(() => Object.fromEntries(columns.map((c) => [c.key, 0])) as Record<string, number>);
@@ -270,9 +297,9 @@ export async function getSeasonProjection(league: League): Promise<SeasonProject
     } else if (soccer) {
       order.forEach((i, pos) => {
         if (pos === 0) counts[i].title++;
-        if (pos < 4) counts[i].top4++;
+        if (pos < topPlaces) counts[i].top4++;
         if (pos < 6) counts[i].top6++;
-        if (pos >= n - 3) counts[i].relegation++;
+        if (pos >= n - relegationPlaces) counts[i].relegation++;
       });
     } else if (league === "nfl") {
       counts[order[0]].best++;
