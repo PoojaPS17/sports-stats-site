@@ -2,7 +2,9 @@
 // completed with a called-off status; it must never read as a fixture still to come, so every "upcoming" test and
 // kickoff time goes through here.
 import type { GameRow } from "./queries";
-import { dayTimeZone, dayZoneLabel, formatGameDate, formatGameTime } from "./gameDay";
+import { dayTimeZone, dayZoneLabel, formatGameDate, formatGameTime, gameDayIso } from "./gameDay";
+import { scoreLineOrder } from "./cricketOrder";
+import type { CricketTeamScorecard } from "./matchDetail";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
 import { isCricketLeague, LEAGUE_LABEL } from "./leagues";
 import { teamDisplayName } from "./teamName";
@@ -111,12 +113,33 @@ export function scoresDayDescription(league: League, dayLabel: string, games: (S
  * The status word over a game's share image: the reason for a called-off game, "Final" for a scored result,
  * "Result" for a finished match with no scores (abandoned, no result), null for a fixture or a game in play.
  * A finished cricket match is never "Final" unless it is the final: it says its stage when it has one
- * ("Qualifier 1", "Final") and "Result" otherwise, as the match header does. Pass `league` for that.
+ * ("Qualifier 1", "Final") and "Result" otherwise, as the match header does. `league` is required so a caller
+ * cannot forget it and put "Final" back on a cricket match.
  */
-export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary"> & { round?: string | null }, league?: League): string | null {
+export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary"> & { round?: string | null }, league: League): string | null {
   const off = gameCalledOffLabel(g);
   if (off) return off;
   if (!g.completed) return null;
-  if (league && isCricketLeague(league)) return normalizeStage(g.round) ?? finishedLabel(league);
+  if (isCricketLeague(league)) return normalizeStage(g.round) ?? finishedLabel(league);
   return finishedNoScoreNote(g) ? "Result" : "Final";
+}
+
+/**
+ * What a match's share image decides beyond its layout: the status word and the order of the two sides
+ * (the batting-first side first for cricket, from the stored scorecard when the route has it, else the
+ * score lines; away then home for every other sport). The image route calls this and nothing else for
+ * either, so it can be tested without rendering an image.
+ */
+export function shareImageModel(game: GameRow, scorecard?: CricketTeamScorecard[] | null): { status: string | null; order: ["away", "home"] | ["home", "away"] } {
+  return { status: shareImageStatus(game, game.league), order: scoreLineOrder(game, scorecard) };
+}
+
+/**
+ * The day a scores share image is filed under: its ISO day (the file name) and year (the subtitle), read
+ * from the first game's local date when it has one, so a 1 January local match that is 31 December in
+ * UTC is a January file of the new year. The league page calls this for each day's image.
+ */
+export function scoresImageDay(league: League, first: Pick<GameRow, "date" | "local_date">): { iso: string; year: string } {
+  const iso = gameDayIso(first.date, league, first.local_date);
+  return { iso, year: iso.slice(0, 4) };
 }
