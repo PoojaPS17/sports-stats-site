@@ -120,10 +120,18 @@ export default async function F1StandingsPage({
                   <tr key={c.team_espn_id} className="table-row">
                     <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{c.position ?? "—"}</td>
                     <td className="py-2">
-                      <Link href={`/f1/teams/${c.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
-                        <TeamLogo name={c.name} logoUrl={c.logo_url} color={c.color} size={24} />
-                        {c.name}
-                      </Link>
+                      {c.slug ? (
+                        <Link href={`/f1/teams/${c.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
+                          <TeamLogo name={c.name} logoUrl={c.logo_url} color={c.color} size={24} />
+                          {c.name}
+                        </Link>
+                      ) : (
+                        // A team that no longer races has no page.
+                        <span className="flex items-center gap-2.5 font-medium">
+                          <TeamLogo name={c.name} logoUrl={c.logo_url} color={c.color} size={24} />
+                          {c.name}
+                        </span>
+                      )}
                     </td>
                     <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{c.wins ?? 0}</td>
                     <td className="py-2 pr-4 text-right font-bold tabular-nums">{c.points ?? 0}</td>
@@ -134,6 +142,7 @@ export default async function F1StandingsPage({
           </div>
         </div>
       )}
+      <p className="text-xs text-[var(--text-muted)]">Corrected to the FIA final classification where ESPN&apos;s feed differs.</p>
     </div>
   );
 }

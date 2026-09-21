@@ -1,4 +1,6 @@
 import { pool } from "./db";
+import { applyF1StandingsCorrections } from "./f1Corrections";
+import { f1ConstructorEspnName, f1TeamLabel } from "./f1Names";
 
 export interface F1EventRow {
   espn_id: string;
@@ -73,6 +75,7 @@ export interface F1SessionResultRow {
   driver_slug: string;
   position: number | null;
   winner: boolean;
+  /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
   car_number: string | null;
 }
@@ -81,15 +84,16 @@ export async function getF1EventResults(eventEspnId: string): Promise<F1SessionR
   const { rows } = await pool.query(
     `select s.espn_id as session_espn_id, s.session_type, s.date as session_date, s.status_detail, s.completed,
             p.espn_id as driver_espn_id, p.name as driver_name, p.slug as driver_slug,
-            r.position, r.winner, r.constructor_name, r.car_number
+            r.position, r.winner, r.constructor_name, r.car_number, e.season_year
      from f1_sessions s
+     join f1_events e on e.espn_id = s.event_espn_id
      join f1_session_results r on r.session_espn_id = s.espn_id
      join players p on p.league = 'f1' and p.espn_id = r.driver_espn_id
      where s.event_espn_id = $1
      order by s.date asc, r.position asc nulls last`,
     [eventEspnId]
   );
-  return rows;
+  return rows.map(({ season_year, ...r }) => ({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }
 
 export interface F1DriverStandingRow {
@@ -100,6 +104,7 @@ export interface F1DriverStandingRow {
   name: string;
   slug: string;
   headshot_url: string | null;
+  /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
 }
 
@@ -110,6 +115,9 @@ export interface F1DriverStandingRow {
 // scoping to the season being viewed matters here, unlike getF1ConstructorDrivers
 // below, which deliberately wants the all-time-most-recent team for "who's on the
 // roster right now".
+// A driver stays on the table only with points or a stored finishing position in at least one Race: ESPN also lists
+// the drivers who only took part in Friday practice (2017 would have 28 drivers, not the 23 who raced; 2018 21, not 20).
+// ESPN's figures are corrected to the FIA final classification where they differ (f1Corrections.ts).
 export async function getF1DriverStandings(seasonYear: number): Promise<F1DriverStandingRow[]> {
   const { rows } = await pool.query(
     `select fs.position, fs.points, fs.wins, p.espn_id as driver_espn_id, p.name, p.slug, p.headshot_url,
@@ -121,10 +129,16 @@ export async function getF1DriverStandings(seasonYear: number): Promise<F1Driver
      from f1_standings fs
      join players p on p.league = 'f1' and p.espn_id = fs.entity_espn_id
      where fs.standings_type = 'driver' and fs.season_year = $1
+       and (fs.points > 0 or exists (
+         select 1 from f1_session_results rr
+         join f1_sessions ss on ss.espn_id = rr.session_espn_id
+         join f1_events ee on ee.espn_id = ss.event_espn_id
+         where rr.driver_espn_id = p.espn_id and ss.session_type = 'Race' and rr.position is not null and ee.season_year = $1))
      order by fs.position asc nulls last`,
     [seasonYear]
   );
-  return rows;
+  const table = rows.map((r) => ({ ...r, points: r.points == null ? null : Number(r.points), constructor_name: f1TeamLabel(seasonYear, r.constructor_name) }));
+  return applyF1StandingsCorrections(seasonYear, "driver", table, (r) => r.driver_espn_id);
 }
 
 export interface F1ConstructorStandingRow {
@@ -132,22 +146,31 @@ export interface F1ConstructorStandingRow {
   points: number | null;
   wins: number | null;
   team_espn_id: string;
+  /** The name the team raced under that season (f1TeamLabel). */
   name: string;
-  slug: string;
+  /** Null for a team that no longer exists (Sauber, Force India, ...): it has no page to link to. */
+  slug: string | null;
   logo_url: string | null;
   color: string | null;
 }
 
+// Every constructor in the season's table, whether or not it is one of today's teams (only those are in `teams`): the
+// name of a team that is not comes from f1Names.ts by ESPN's manufacturer id, and its row has no slug.
 export async function getF1ConstructorStandings(seasonYear: number): Promise<F1ConstructorStandingRow[]> {
   const { rows } = await pool.query(
-    `select fs.position, fs.points, fs.wins, t.espn_id as team_espn_id, t.name, t.slug, t.logo_url, t.color
+    `select fs.position, fs.points, fs.wins, fs.entity_espn_id as team_espn_id, t.name as team_name, t.slug, t.logo_url, t.color
      from f1_standings fs
-     join teams t on t.league = 'f1' and t.espn_id = fs.entity_espn_id
+     left join teams t on t.league = 'f1' and t.espn_id = fs.entity_espn_id
      where fs.standings_type = 'constructor' and fs.season_year = $1
      order by fs.position asc nulls last`,
     [seasonYear]
   );
-  return rows;
+  const table: F1ConstructorStandingRow[] = rows.map(({ team_name, ...r }) => ({
+    ...r,
+    points: r.points == null ? null : Number(r.points),
+    name: f1TeamLabel(seasonYear, team_name ?? f1ConstructorEspnName(r.team_espn_id, seasonYear)) ?? `Constructor ${r.team_espn_id}`,
+  }));
+  return applyF1StandingsCorrections(seasonYear, "constructor", table, (r) => r.team_espn_id);
 }
 
 export interface F1Driver {
@@ -171,13 +194,14 @@ export interface F1DriverResultRow {
   session_date: string;
   position: number | null;
   winner: boolean;
+  /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
 }
 
 export async function getF1DriverResults(driverEspnId: string, limit = 20): Promise<F1DriverResultRow[]> {
   const { rows } = await pool.query(
     `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
-            r.position, r.winner, r.constructor_name
+            r.position, r.winner, r.constructor_name, e.season_year
      from f1_session_results r
      join f1_sessions s on s.espn_id = r.session_espn_id
      join f1_events e on e.espn_id = s.event_espn_id
@@ -186,7 +210,7 @@ export async function getF1DriverResults(driverEspnId: string, limit = 20): Prom
      limit $2`,
     [driverEspnId, limit]
   );
-  return rows;
+  return rows.map(({ season_year, ...r }) => ({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }
 
 export interface F1Constructor {
@@ -239,7 +263,7 @@ export interface F1ConstructorResultRow extends F1DriverResultRow {
 export async function getF1ConstructorResults(constructorName: string, limit = 20): Promise<F1ConstructorResultRow[]> {
   const { rows } = await pool.query(
     `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
-            r.position, r.winner, r.constructor_name, p.name as driver_name, p.slug as driver_slug
+            r.position, r.winner, r.constructor_name, e.season_year, p.name as driver_name, p.slug as driver_slug
      from f1_session_results r
      join f1_sessions s on s.espn_id = r.session_espn_id
      join f1_events e on e.espn_id = s.event_espn_id
@@ -249,5 +273,5 @@ export async function getF1ConstructorResults(constructorName: string, limit = 2
      limit $2`,
     [constructorName, limit]
   );
-  return rows;
+  return rows.map(({ season_year, ...r }) => ({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }
