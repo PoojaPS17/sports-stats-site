@@ -249,16 +249,34 @@ alter table standings add column if not exists zone text;
 -- Eights row), which is the conflict target scripts/lib/standings.ts upserts on. The table was
 -- created with a (league, season, team_espn_id) primary key; drop it and key on the conference too.
 alter table standings drop constraint if exists standings_pkey;
--- Skipped when an equivalent unique index already exists under another name (one added by hand).
+-- The upsert's `on conflict (league, season, team_espn_id, coalesce(conference, ''))` needs a unique,
+-- valid, non-partial index on exactly those four keys. Created unless one exists already under any
+-- name (a hand-made one). "Equivalent" is checked on the catalog, not on the index text: unique,
+-- valid, no WHERE predicate, four key columns and no more, and the keys are league, season,
+-- team_espn_id and COALESCE(conference, ''::text) exactly (so a partial index, an extra key column,
+-- another COALESCE default or a look-alike column name such as conference_code does not count).
+-- If a relation called standings_stage_key exists but is not that index the migration stops with
+-- an error naming it (and rolls the whole file back) rather than leave the ingest with no index to
+-- conflict on.
 do $$
+declare
+  key_defs constant text[] := array['league', 'season', 'team_espn_id', 'COALESCE(conference, ''''::text)'];
 begin
-  if not exists (
-    select 1 from pg_indexes
-    where schemaname = current_schema() and tablename = 'standings'
-      and indexdef ~* 'unique index .*\(league, season, team_espn_id, coalesce\(conference'
+  if exists (
+    select 1
+    from pg_index i
+    where i.indrelid = 'standings'::regclass
+      and i.indisunique and i.indisvalid and i.indimmediate
+      and i.indpred is null
+      and i.indnkeyatts = 4
+      and (select array_agg(pg_get_indexdef(i.indexrelid, k, true) order by k) from generate_series(1, 4) k) = key_defs
   ) then
-    create unique index standings_stage_key on standings (league, season, team_espn_id, (coalesce(conference, '')));
+    return;
   end if;
+  if to_regclass('standings_stage_key') is not null then
+    raise exception 'standings_stage_key exists but is not a valid, non-partial unique index on (league, season, team_espn_id, coalesce(conference, '''')), which the standings upsert needs; drop it (drop index standings_stage_key) and run the migration again';
+  end if;
+  create unique index standings_stage_key on standings (league, season, team_espn_id, (coalesce(conference, '')));
 end $$;
 
 -- One row per real page view of a match-detail page, recorded client-side (see

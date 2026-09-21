@@ -80,10 +80,16 @@ export function standingsComparator<T extends RankableStanding>(league: League, 
 
 const isLaterStage = (conference: string | null) => /super|second round/i.test(conference ?? "");
 // A row shows no play at all only when every figure that could show it is zero or missing. Wins,
-// losses and draws alone are not enough: a finished table whose feed sent no record stats still has
-// points, goals or a run rate, and must be ordered on them, not sorted by name as "not started".
-const hasPlayed = (r: RankableStanding) =>
-  [r.wins, r.losses, r.draws, r.no_result, r.points, r.goals_for, r.goals_against, num(r.net_run_rate), num(r.win_percent)].some((v) => (v ?? 0) !== 0);
+// losses and draws alone are not enough for soccer and cricket: a finished table whose feed sent no
+// record stats still has points, goals or a run rate, and must be ordered on them, not sorted by name
+// as "not started". The NFL and NBA are judged on their record alone: their feeds can put an unrelated
+// non-integer `points` stat in that slot (scripts/lib/standings.ts), and a stray value at 0-0 must not
+// make a new season look played.
+const hasPlayed = (league: League, r: RankableStanding) =>
+  (usesRecordOrder(league)
+    ? [r.wins, r.losses, r.draws]
+    : [r.wins, r.losses, r.draws, r.no_result, r.points, r.goals_for, r.goals_against, num(r.net_run_rate), num(r.win_percent)]
+  ).some((v) => (v ?? 0) !== 0);
 const byName = (a: OrderableStanding, b: OrderableStanding) => a.name.localeCompare(b.name);
 
 /**
@@ -112,7 +118,7 @@ export function sortStandings<T extends OrderableStanding>(league: League, rows:
   const out: T[] = [];
   for (const key of keys) {
     const table = tables.get(key)!;
-    if (!table.some(hasPlayed)) {
+    if (!table.some((r) => hasPlayed(league, r))) {
       out.push(...[...table].sort(byName).map((r) => ({ ...r, unranked: true })));
     } else {
       out.push(...[...table].sort((a, b) => cmp(a, b) || byName(a, b)));

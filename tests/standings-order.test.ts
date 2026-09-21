@@ -219,8 +219,8 @@ test("goals, a run rate or a win percentage alone also show a table has been pla
   assert.deepEqual(names(goals), ["Zzz", "Aaa"]);
   const nrr = sortStandings("ipl", [row("Aaa", { net_run_rate: "-0.5" }), row("Zzz", { net_run_rate: "1.2" })]);
   assert.deepEqual(names(nrr), ["Zzz", "Aaa"]);
-  const pct = sortStandings("nba", [row("Aaa", { win_percent: "0.400" }), row("Zzz", { win_percent: "0.700" })]);
-  assert.deepEqual(names(pct), ["Zzz", "Aaa"]);
+  // (a cricket table does not sort on win percentage, but a nonzero one is still evidence of play)
+  const pct = sortStandings("t20wc", [row("Aaa", { win_percent: "0.400" }), row("Zzz", { win_percent: "0.700" })]);
   for (const t of [goals, nrr, pct]) assert.ok(t.every((r) => !r.unranked));
 });
 
@@ -229,4 +229,30 @@ test("zero and missing figures everywhere are still a table nobody has played in
   const sorted = sortStandings("epl", rows);
   assert.deepEqual(names(sorted), ["Aaa", "Zzz"]);
   assert.ok(sorted.every((r) => r.unranked));
+});
+
+// The NFL and NBA are judged on their record alone: their feeds can carry an unrelated non-integer
+// `points` stat (rounded into that int column), and a stray value at 0-0 is not a played season.
+test("an NBA or NFL table at 0-0 stays unranked whatever stray points, goals or win percentage it carries", () => {
+  for (const league of ["nba", "nfl"] as const) {
+    const stray = { conference: "Eastern Conference", wins: 0, losses: 0, draws: 0, points: 7, goals_for: 3, goals_against: 2, win_percent: "0.5", net_run_rate: "1.5" };
+    const sorted = sortStandings(league, [row("Zzz", { ...stray }), row("Aaa", { ...stray, points: 9 })]);
+    assert.deepEqual(names(sorted), ["Aaa", "Zzz"], league);
+    assert.ok(sorted.every((r) => r.unranked), league);
+  }
+});
+
+test("an NBA table with wins on the board is ranked (by win percentage), stray points or not", () => {
+  const rows = [row("Aaa", { wins: 1, losses: 3, win_percent: "0.25", points: 99 }), row("Zzz", { wins: 3, losses: 1, win_percent: "0.75", points: 0 })];
+  const sorted = sortStandings("nba", rows);
+  assert.deepEqual(names(sorted), ["Zzz", "Aaa"]);
+  assert.ok(sorted.every((r) => !r.unranked));
+  // and a single tie is a played game in the NFL
+  assert.ok(!sortStandings("nfl", [row("Aaa", { draws: 1 }), row("Zzz")]).some((r) => r.unranked));
+});
+
+test("soccer and cricket keep the wider played-check: points, goals or a run rate at 0-0 W/L/D still count", () => {
+  assert.ok(!sortStandings("epl", [row("Aaa", { points: 3 }), row("Zzz")]).some((r) => r.unranked));
+  assert.ok(!sortStandings("ipl", [row("Aaa", { net_run_rate: "0.4" }), row("Zzz")]).some((r) => r.unranked));
+  assert.ok(sortStandings("epl", [row("Aaa", { points: 0 }), row("Zzz")]).every((r) => r.unranked));
 });

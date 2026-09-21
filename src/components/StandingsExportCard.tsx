@@ -18,7 +18,8 @@ function logo(name: string, url: string | null, color: string | null) {
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 const tone = (n: number): "win" | "loss" | "muted" => (n > 0 ? "win" : n < 0 ? "loss" : "muted");
 
-// Two tables side by side each get about (width - 112) / 2 pixels. A soccer group table has a name
+// Two tables side by side each get (width - 108) / 2 pixels (1040 -> 466, 980 -> 436: the wrapper and card
+// padding, the gap and the group borders take the rest). A soccer group table has a name
 // and eight number columns (P W D L GF GA GD Pts), which with a long club name ("Borussia
 // Mönchengladbach") is wider than a column of a 980px image, so those are wider and their tables
 // compact (tight number columns, a name that wraps rather than clips). Measured in a browser: see
