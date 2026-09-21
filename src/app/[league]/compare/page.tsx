@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getAllTeams, getStandings, formatSeasonLabel } from "@/lib/queries";
 import { getTeamComparison } from "@/lib/compare";
 import { supportsScoreAnalytics, isSoccer } from "@/lib/analytics";
+import { formatWinLossTie } from "@/lib/teamSummary";
 import { h2hPath } from "@/lib/h2h";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
@@ -80,13 +81,22 @@ export default async function CompareTeamsPage({
 
   const cmp = a && b && a !== b ? await getTeamComparison(league, a, b) : null;
   const soccer = isSoccer(league);
-  const ordinal = (n: number) => `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
-  const sideOf = (s: NonNullable<typeof cmp>["a"]) => ({
+  // 1st, 2nd, 3rd, 4th ... 11th, 12th, 13th ... 21st, 22nd (a 32-team NFL table has all of them).
+  const ordinal = (n: number) => {
+    const suffixes = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
+  };
+  type Side = NonNullable<typeof cmp>["a"];
+  const positionText = (s: Side) => (s.position ? `${ordinal(s.position)} of ${s.teamsInTable}` : s.notStarted ? "Season not started" : "Not in current table");
+  // Football writes W D L; the American leagues write W-L, and W-L-T once a team has a tie.
+  const recordText = (s: Side) => (s.overall ? (soccer ? `${s.overall.wins}W ${s.overall.draws}D ${s.overall.losses}L` : formatWinLossTie(s.overall.wins, s.overall.losses, s.overall.draws)) : null);
+  const sideOf = (s: Side) => ({
     name: teamDisplayName(s.team.name),
     logoUrl: s.team.logo_url,
     color: s.team.color,
     lines: [
-      `${s.position ? `${ordinal(s.position)} of ${s.teamsInTable}` : "Not in current table"}${s.overall ? ` · ${s.overall.wins}${soccer ? `W ${s.overall.draws}D ${s.overall.losses}L` : `-${s.overall.losses}`}` : ""}`,
+      `${positionText(s)}${recordText(s) ? ` · ${recordText(s)}` : ""}`,
       ...(s.form.length > 0 ? [`Form ${[...s.form].reverse().join(" ")}`] : []),
     ],
   });
@@ -119,8 +129,8 @@ export default async function CompareTeamsPage({
                 <span className="min-w-0">
                   <span className="block truncate text-base font-bold">{teamDisplayName(s.team.name)}</span>
                   <span className="block text-xs text-[var(--text-muted)]">
-                    {s.position ? `${s.position}${s.position === 1 ? "st" : s.position === 2 ? "nd" : s.position === 3 ? "rd" : "th"} of ${s.teamsInTable}` : "Not in current table"}
-                    {s.overall ? ` · ${s.overall.wins}${soccer ? `W ${s.overall.draws}D ${s.overall.losses}L` : `-${s.overall.losses}`}` : ""}
+                    {positionText(s)}
+                    {recordText(s) ? ` · ${recordText(s)}` : ""}
                   </span>
                   {s.form.length > 0 && (
                     <span className="mt-1 flex gap-1">

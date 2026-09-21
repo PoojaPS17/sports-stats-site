@@ -2,7 +2,7 @@
 // standings, computed tables, Elo ratings, head-to-head history and season stats
 // that already exist. Nothing here fetches from ESPN.
 import { pool } from "./db";
-import { isCricketLeague, type League } from "./leagues";
+import { hasTies, isCricketLeague, type League } from "./leagues";
 import { countRegularGames } from "./compareGames";
 import { playerSport } from "./playerProfile";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
@@ -19,6 +19,7 @@ import {
   type TeamRef,
 } from "./analytics";
 import { getPlayerCricketCareer, getStandings, type CricketCareerStats } from "./queries";
+import { leagueWideRank, usesRecordOrder } from "./standingsOrder";
 
 /* ------------------------------------------------------------------------ */
 /* Shared metric shape                                                       */
@@ -60,6 +61,8 @@ function metric(label: string, a: number | null, b: number | null, opts: { digit
 export interface TeamCompareSide {
   team: TeamRef;
   position: number | null;
+  /** In the current table, but the season has not started, so there is no position to show. */
+  notStarted: boolean;
   teamsInTable: number;
   form: ("W" | "D" | "L")[];
   eloRank: number | null;
@@ -101,14 +104,21 @@ export async function getTeamComparison(league: League, slugA: string, slugB: st
   ]);
 
   const soccer = isSoccer(league);
+  const leagueRanks = usesRecordOrder(league) ? leagueWideRank(league, standings) : null;
   const find = (rows: ComputedTableRow[], id: string) => rows.find((r) => r.team.espn_id === id) ?? null;
   const side = (t: TeamRef): TeamCompareSide => {
     const posIdx = standings.findIndex((s) => s.team_espn_id === t.espn_id);
+    // NFL and NBA tables are split by conference/division, so a league position is worked out across
+    // the whole league, by the same order as a team's finishes on its history page.
+    // A season nobody has played yet has no order, so no position either.
+    const notStarted = posIdx >= 0 && Boolean(standings[posIdx].unranked);
+    const position = notStarted ? null : leagueRanks ? leagueRanks.get(t.espn_id) ?? null : posIdx >= 0 ? posIdx + 1 : null;
     const eloIdx = power.rows.findIndex((r) => r.team.espn_id === t.espn_id);
     const ov = find(overall, t.espn_id);
     return {
       team: t,
-      position: posIdx >= 0 ? posIdx + 1 : null,
+      position,
+      notStarted,
       teamsInTable: standings.length,
       form: ov?.form ?? [],
       eloRank: eloIdx >= 0 ? eloIdx + 1 : null,
@@ -122,6 +132,8 @@ export async function getTeamComparison(league: League, slugA: string, slugB: st
   const b = side(teamB);
 
   const pg = (r: ComputedTableRow | null, v: (r: ComputedTableRow) => number) => (r && r.played ? v(r) / r.played : null);
+  // A tie is half a win where games can tie (NFL).
+  const creditedWins = (r: ComputedTableRow) => r.wins + (hasTies(league) ? r.draws / 2 : 0);
   const scoreWord = soccer ? "Goals" : "Points";
 
   const seasonGroup: MetricGroup = {
@@ -132,6 +144,7 @@ export async function getTeamComparison(league: League, slugA: string, slugB: st
       metric("Played", a.overall?.played ?? null, b.overall?.played ?? null, { noBar: true }),
       metric("Wins", a.overall?.wins ?? null, b.overall?.wins ?? null),
       ...(soccer ? [metric("Draws", a.overall?.draws ?? null, b.overall?.draws ?? null, { noBar: true })] : []),
+      ...(hasTies(league) ? [metric("Ties", a.overall?.draws ?? null, b.overall?.draws ?? null, { noBar: true })] : []),
       metric("Losses", a.overall?.losses ?? null, b.overall?.losses ?? null, { lowerIsBetter: true }),
       metric(`${scoreWord} for`, a.overall?.goalsFor ?? null, b.overall?.goalsFor ?? null),
       metric(`${scoreWord} against`, a.overall?.goalsAgainst ?? null, b.overall?.goalsAgainst ?? null, { lowerIsBetter: true }),
@@ -144,7 +157,7 @@ export async function getTeamComparison(league: League, slugA: string, slugB: st
       metric(`${scoreWord} conceded per game`, pg(a.overall, (r) => r.goalsAgainst), pg(b.overall, (r) => r.goalsAgainst), { digits: soccer ? 2 : 1, lowerIsBetter: true }),
       soccer
         ? metric("Points per game", pg(a.overall, (r) => r.points), pg(b.overall, (r) => r.points), { digits: 2 })
-        : metric("Win percentage", pg(a.overall, (r) => r.wins * 100), pg(b.overall, (r) => r.wins * 100), { digits: 1, suffix: "%" }),
+        : metric("Win percentage", pg(a.overall, (r) => creditedWins(r) * 100), pg(b.overall, (r) => creditedWins(r) * 100), { digits: 1, suffix: "%" }),
     ],
   };
 

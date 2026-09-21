@@ -1,7 +1,7 @@
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportLabel, ExportTable, EXPORT_ROW_LIMIT } from "./ExportShell";
-import { formatSeasonLabel, isCupCompetition, LEAGUE_LABEL, type League } from "@/lib/queries";
+import { formatSeasonLabel, isCupCompetition, hasTies, LEAGUE_LABEL, type League } from "@/lib/queries";
 import type { TeamSeasonRow } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 
@@ -31,12 +31,14 @@ export function TeamHistoryExportCard({
   summary: { label: string; value: string | number; sub: string }[];
 }) {
   const hasConference = played.some((h) => h.conference);
+  const ties = hasTies(league);
   const headers = [
     "Finish",
     ...(hasConference ? [isCupCompetition(league) ? "Stage" : "Conference"] : []),
     "W",
     ...(soccer ? ["D"] : []),
     "L",
+    ...(ties ? ["T"] : []),
     ...(soccer ? ["GF", "GA", "Pts"] : ["Pct"]),
   ];
   const rows = [...played].reverse().map((h) => ({
@@ -48,6 +50,7 @@ export function TeamHistoryExportCard({
       String(h.wins),
       ...(soccer ? [String(h.draws ?? 0)] : []),
       String(h.losses),
+      ...(ties ? [String(h.draws ?? 0)] : []),
       ...(soccer ? [String(h.goals_for ?? "—"), String(h.goals_against ?? "—"), String(h.points ?? "—")] : [h.win_percent ? Number(h.win_percent).toFixed(3) : "—"]),
     ],
   }));

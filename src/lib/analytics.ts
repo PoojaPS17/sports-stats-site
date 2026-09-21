@@ -3,10 +3,11 @@
 // history, and record books. Everything here is pure aggregation of data the
 // scrapers already store — nothing is fetched from ESPN.
 import { pool } from "./db";
-import { isCricketLeague, SOCCER_LEAGUES, type League } from "./leagues";
+import { hasTies, isCricketLeague, SOCCER_LEAGUES, type League } from "./leagues";
 import type { GameStage } from "./gameStage";
 import { CALLED_OFF, isCalledOff } from "./gameStatus";
 import type { GameRow } from "./queries";
+import { leagueWideRank } from "./standingsOrder";
 
 /* ------------------------------------------------------------------------ */
 /* Shared                                                                    */
@@ -100,6 +101,12 @@ export async function getCurrentSeason(league: League): Promise<number | null> {
 
 export type TableScope = "overall" | "home" | "away" | "form";
 
+/** Win percentage of a computed table row: a tie counts as half a win where games can tie (NFL). */
+export function computedWinPct(league: League, r: Pick<ComputedTableRow, "played" | "wins" | "draws">): number | null {
+  if (!r.played) return null;
+  return (r.wins + (hasTies(league) ? r.draws / 2 : 0)) / r.played;
+}
+
 export interface ComputedTableRow {
   team: TeamRef;
   played: number;
@@ -165,8 +172,8 @@ export function computeTable(league: League, results: ResultRow[], teams: Map<st
         a.team.name.localeCompare(b.team.name)
       );
     }
-    const pa = a.played ? a.wins / a.played : 0;
-    const pb = b.played ? b.wins / b.played : 0;
+    const pa = computedWinPct(league, a) ?? 0;
+    const pb = computedWinPct(league, b) ?? 0;
     return pb - pa || b.wins - a.wins || b.goalsFor - b.goalsAgainst - (a.goalsFor - a.goalsAgainst) || a.team.name.localeCompare(b.team.name);
   });
   return out;
@@ -523,29 +530,54 @@ export interface TeamSeasonRow {
   played: boolean;
 }
 
+// A cup's group-stage seasons rank within the group (finishing 2nd in Group C), not across the
+// whole competition; league seasons rank league-wide.
+const CUP_LEAGUES: League[] = ["ucl", "cwc", "t20wc", "wcwc", "wt20wc"];
+
+// Finish by season, for every season on record. Positions come from the same order the standings
+// table uses (standingsOrder.ts): ESPN's rank for soccer and cricket, and for the NFL and NBA win
+// percentage then point differential across the whole league, so "1st-place finishes", "Best
+// finish" and the compare page's league position agree with the table. Teams level on every key
+// share a position.
 export async function getTeamHistory(league: League, teamEspnId: string): Promise<TeamSeasonRow[]> {
   const { rows } = await pool.query(
-    `with ranked as (
-       select season, team_espn_id, conference, wins, losses, draws, points, goals_for, goals_against, win_percent,
-              rank() over (
-                partition by season, grp
-                order by points desc nulls last, (goals_for - goals_against) desc nulls last, goals_for desc nulls last,
-                         net_run_rate desc nulls last, win_percent desc nulls last, wins desc, losses asc
-              ) as position,
-              count(*) over (partition by season, grp) as teams_in_season,
-              sum(wins + losses + coalesce(draws, 0)) over (partition by season) as season_games
-       from (
-         -- A cup's group-stage seasons rank within the group (finishing 2nd in Group C),
-         -- not across the whole competition; league seasons rank league-wide.
-         select *, case when $1 in ('ucl', 'cwc', 't20wc', 'wcwc', 'wt20wc') then coalesce(conference, '') else '' end as grp from standings
-       ) s where league = $1
-     )
-     select season, position::int, teams_in_season::int as "teamsInSeason", wins, losses, draws, points, goals_for, goals_against, win_percent, conference,
-            (season_games > 0) as played
-     from ranked where team_espn_id = $2 order by season asc`,
-    [league, teamEspnId]
+    `select season, team_espn_id, conference, wins, losses, draws, no_result, points, goals_for, goals_against,
+            win_percent, net_run_rate, playoff_seed, rank
+     from standings where league = $1`,
+    [league]
   );
-  return rows;
+  const seasonGames = new Map<number, number>();
+  const partitions = new Map<string, typeof rows>();
+  for (const r of rows) {
+    seasonGames.set(r.season, (seasonGames.get(r.season) ?? 0) + r.wins + r.losses + (r.draws ?? 0));
+    const key = `${r.season}|${CUP_LEAGUES.includes(league) ? r.conference ?? "" : ""}`;
+    const list = partitions.get(key);
+    if (list) list.push(r);
+    else partitions.set(key, [r]);
+  }
+  const positions = new Map<string, Map<string, number>>();
+  for (const [key, list] of partitions) positions.set(key, leagueWideRank(league, list));
+
+  return rows
+    .filter((r) => r.team_espn_id === teamEspnId)
+    .sort((a, b) => a.season - b.season)
+    .map((r) => {
+      const key = `${r.season}|${CUP_LEAGUES.includes(league) ? r.conference ?? "" : ""}`;
+      return {
+        season: r.season,
+        position: positions.get(key)!.get(r.team_espn_id)!,
+        teamsInSeason: partitions.get(key)!.length,
+        wins: r.wins,
+        losses: r.losses,
+        draws: r.draws,
+        points: r.points,
+        goals_for: r.goals_for,
+        goals_against: r.goals_against,
+        win_percent: r.win_percent,
+        conference: r.conference,
+        played: (seasonGames.get(r.season) ?? 0) > 0,
+      };
+    });
 }
 
 /* ------------------------------------------------------------------------ */

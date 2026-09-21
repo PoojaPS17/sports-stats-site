@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { OffseasonRecap as Recap } from "@/lib/offseason";
 import { leagueNameWithArticle, isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
 import { formatGameDate } from "@/lib/gameDay";
+import { formatWinLossTie } from "@/lib/teamSummary";
 import { GameCard } from "./GameCard";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
@@ -9,7 +10,7 @@ import { TeamLogo } from "./TeamLogo";
 function record(league: League, r: Recap["table"][number]): string {
   if (isSoccerLeague(league)) return `${r.wins}-${r.draws ?? 0}-${r.losses}`;
   if (isCricketLeague(league)) return `${r.wins}-${r.losses}${r.no_result ? `-${r.no_result}` : ""}`;
-  return `${r.wins}-${r.losses}`;
+  return formatWinLossTie(r.wins, r.losses, r.draws);
 }
 
 // The league hub between seasons: instead of an empty window, the season just

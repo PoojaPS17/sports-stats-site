@@ -15,7 +15,7 @@ import {
   formatSeasonLabel, hasStandings, isFirstClassCricket } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
 import { teamNotFound } from "@/lib/legacySlug";
-import { summarizeTeamSeason } from "@/lib/teamSummary";
+import { formatWinLossTie, summarizeTeamSeason } from "@/lib/teamSummary";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ImageActions } from "@/components/ImageActions";
@@ -91,7 +91,7 @@ export default async function TeamPage({
   const isSoccer = (SOCCER_LEAGUES as string[]).includes(league);
   const played = summary.wins + summary.losses + summary.draws;
   // A drawn Test is common enough that "4-3-2" would be misread; spell it out as football does.
-  const record = isSoccer || isFirstClassCricket(league) ? `${summary.wins}W ${summary.draws}D ${summary.losses}L` : `${summary.wins}-${summary.losses}${summary.draws ? `-${summary.draws}` : ""}`;
+  const record = isSoccer || isFirstClassCricket(league) ? `${summary.wins}W ${summary.draws}D ${summary.losses}L` : formatWinLossTie(summary.wins, summary.losses, summary.draws);
   const meta: string[] = [];
   if (activeSeason) meta.push(`${formatSeasonLabel(league, activeSeason)} season`);
   if (played > 0) meta.push(record);

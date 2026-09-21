@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isLeague, isCupCompetition, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, isCupCompetition, hasTies, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
 import { getTeamHistory, isSoccer } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
 import { teamNotFound } from "@/lib/legacySlug";
@@ -49,6 +49,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
   const history = await getTeamHistory(league, team.espn_id);
   const played = history.filter((h) => h.played);
   const soccer = isSoccer(league);
+  const ties = hasTies(league);
 
   const best = played.length ? played.reduce((a, b) => (b.position < a.position ? b : a)) : null;
   const worst = played.length ? played.reduce((a, b) => (b.position > a.position ? b : a)) : null;
@@ -113,6 +114,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
                       <th className="px-2 py-2 text-right font-semibold">W</th>
                       {soccer && <th className="px-2 py-2 text-right font-semibold">D</th>}
                       <th className="px-2 py-2 text-right font-semibold">L</th>
+                      {ties && <th className="px-2 py-2 text-right font-semibold">T</th>}
                       {soccer ? (
                         <>
                           <th className="px-2 py-2 text-right font-semibold">GF</th>
@@ -140,6 +142,7 @@ export default async function TeamHistoryPage({ params }: { params: Promise<{ le
                         <td className="px-2 py-2.5 text-right tabular-nums">{h.wins}</td>
                         {soccer && <td className="px-2 py-2.5 text-right tabular-nums">{h.draws ?? 0}</td>}
                         <td className="px-2 py-2.5 text-right tabular-nums">{h.losses}</td>
+                        {ties && <td className="px-2 py-2.5 text-right tabular-nums">{h.draws ?? 0}</td>}
                         {soccer ? (
                           <>
                             <td className="px-2 py-2.5 text-right tabular-nums text-[var(--text-muted)]">{h.goals_for ?? "—"}</td>

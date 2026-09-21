@@ -2,7 +2,8 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import type { League } from "@/lib/queries";
-import { isSoccer, type ComputedTableRow, type TableScope } from "@/lib/analytics";
+import { hasTies } from "@/lib/leagues";
+import { computedWinPct, isSoccer, type ComputedTableRow, type TableScope } from "@/lib/analytics";
 
 const SCOPE_NOTE: Record<TableScope, string> = {
   overall: "Regular-season results only.",
@@ -13,6 +14,7 @@ const SCOPE_NOTE: Record<TableScope, string> = {
 
 export function ComputedStandingsTable({ league, rows, scope }: { league: League; rows: ComputedTableRow[]; scope: TableScope }) {
   const soccer = isSoccer(league);
+  const ties = hasTies(league);
   const numCell = "px-2 py-2.5 text-right tabular-nums";
 
   if (rows.length === 0) {
@@ -31,6 +33,7 @@ export function ComputedStandingsTable({ league, rows, scope }: { league: League
                 <th className={`${numCell} font-semibold`}>W</th>
                 {soccer && <th className={`${numCell} font-semibold`}>D</th>}
                 <th className={`${numCell} font-semibold`}>L</th>
+                {ties && <th className={`${numCell} font-semibold`}>T</th>}
                 <th className={`${numCell} font-semibold`}>{soccer ? "GF" : "PF"}</th>
                 <th className={`${numCell} font-semibold`}>{soccer ? "GA" : "PA"}</th>
                 <th className={`${numCell} font-semibold`}>{soccer ? "GD" : "Diff"}</th>
@@ -54,12 +57,13 @@ export function ComputedStandingsTable({ league, rows, scope }: { league: League
                     <td className={numCell}>{r.wins}</td>
                     {soccer && <td className={numCell}>{r.draws}</td>}
                     <td className={numCell}>{r.losses}</td>
+                    {ties && <td className={numCell}>{r.draws}</td>}
                     <td className={`${numCell} text-[var(--text-muted)]`}>{r.goalsFor}</td>
                     <td className={`${numCell} text-[var(--text-muted)]`}>{r.goalsAgainst}</td>
                     <td className={`${numCell} ${diff > 0 ? "text-[var(--win)]" : diff < 0 ? "text-[var(--loss)]" : "text-[var(--text-muted)]"}`}>
                       {diff > 0 ? `+${diff}` : diff}
                     </td>
-                    <td className={`${numCell} font-bold`}>{soccer ? r.points : r.played ? (r.wins / r.played).toFixed(3) : "—"}</td>
+                    <td className={`${numCell} font-bold`}>{soccer ? r.points : computedWinPct(league, r)?.toFixed(3) ?? "—"}</td>
                     <td className="py-2 pl-3 pr-4">
                       <span className="flex gap-1">
                         {[...r.form].reverse().map((f, j) => (

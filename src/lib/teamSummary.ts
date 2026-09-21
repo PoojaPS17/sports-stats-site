@@ -12,6 +12,11 @@ export interface TeamSeasonSummary {
   nextGame: GameRow | null;
 }
 
+/** "7-9-1", or "7-9" when there are no ties: the way American leagues write a record. */
+export function formatWinLossTie(wins: number, losses: number, ties: number | null | undefined): string {
+  return `${wins}-${losses}${ties ? `-${ties}` : ""}`;
+}
+
 function resultFor(game: GameRow, teamEspnId: string): ResultLetter | null {
   if (!game.completed) return null;
   const isHome = game.home_team_espn_id === teamEspnId;
