@@ -30,13 +30,19 @@ export async function refreshMatchCards(db: Pick<Pool, "query">, league: string,
   const skip = (skipped: string): RefreshResult => ({ skipped, inserted: 0, updated: 0, duplicates: 0, orphans: 0, battingRows: null });
 
   // Never touch a match whose stored report is Cricsheet's: those cards are computed ball by ball. (Only
-  // in a league Cricsheet feeds; anywhere else a stored report is ESPN's, see cricsheet-report.ts.)
-  const { rows: stored } = await db.query(`select details -> 'scorecard' as scorecard from game_details where league = $1 and game_espn_id = $2`, [league, gameId]);
+  // in a league Cricsheet feeds, and only when no card carries an ESPN version stamp; anywhere else, or
+  // with a stamped card, the match is ESPN's, see cricsheet-report.ts.)
+  const { rows: stored } = await db.query(
+    `select (select details -> 'scorecard' from game_details where league = $1 and game_espn_id = $2) as scorecard,
+            exists (select 1 from player_game_stats where league = $1 and game_espn_id = $2 and stats ? 'v') as espn_cards`,
+    [league, gameId]
+  );
   const storedScorecard = stored[0]?.scorecard;
-  if (isCricsheetReport(league, storedScorecard)) return skip("its stored report is Cricsheet's");
+  const espnCards: boolean = stored[0]?.espn_cards === true;
+  if (isCricsheetReport(league, storedScorecard, espnCards)) return skip("its stored report is Cricsheet's");
   // With no stored report (or none that carries a scorecard) the cards are refreshed and there is
   // nothing to rebuild: a report is never created here.
-  const rebuildReport = isEspnReport(league, storedScorecard);
+  const rebuildReport = isEspnReport(league, storedScorecard, espnCards);
 
   // A partial copy of the match (no competitors, or no class on a Test) reads wrongly rather than
   // emptily: a Test would lose its second innings. Refuse it, so the match is counted as failed and retried.

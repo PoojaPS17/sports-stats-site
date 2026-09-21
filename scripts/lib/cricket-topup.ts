@@ -26,11 +26,12 @@ export const DEFAULT_TOPUP_CAP = 40;
 /** A game whose report was fetched this long after it was played and still has no scorecard has none to give. */
 const SETTLED_AFTER_DAYS = 3;
 
-// A Cricsheet report's batting rows carry no `dismissal` (ESPN's parser writes one), and Cricsheet
-// only feeds the leagues in CRICSHEET_LEAGUES, so anywhere else a stored report is ESPN's by
-// definition. That rule lives once, in ./cricsheet-report, shared with the Cricsheet importer and
-// the card refresh so the three keep their hands off each other's matches; the fragment aliases
-// game_details as `d`, which is how this query names it.
+// A Cricsheet report's batting rows carry no `dismissal` (ESPN's parser writes one), Cricsheet
+// only feeds the leagues in CRICSHEET_LEAGUES, and its cards carry no ESPN version stamp. That rule
+// lives once, in ./cricsheet-report, shared with the Cricsheet importer and the card refresh so the
+// three keep their hands off each other's matches; the fragment aliases game_details as `d`, which
+// is how this query names it. Here only games with no player rows are candidates, so the stamp
+// clause is always true.
 const EMPTY_SCORECARD_SQL = `not ${scorecardHasRowsSql("d.details")}`;
 
 export interface TopUpCandidate {

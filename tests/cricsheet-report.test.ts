@@ -37,6 +37,15 @@ test("in a Cricsheet league a report without dismissals is Cricsheet's, from the
   }
 });
 
+test("a stamped ESPN card makes the report ESPN's in every league, dismissal or not", () => {
+  for (const league of CRICSHEET_LEAGUES) {
+    for (const [name, scorecard, , , hasRows] of cases) {
+      assert.equal(isCricsheetReport(league, scorecard, true), false, `${league}: ${name}`);
+      assert.equal(isEspnReport(league, scorecard, true), hasRows, `${league}: ${name} (espn)`);
+    }
+  }
+});
+
 test("in any other league a stored report is ESPN's, dismissals or not", () => {
   for (const league of ["test", "wodi", "wt20i", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"]) {
     for (const [name, scorecard, , , hasRows] of cases) {
@@ -61,13 +70,32 @@ test("the SQL form agrees with the JS one, league by league", async () => {
   const expected = new Map<string, boolean>();
   for (const league of leagues) {
     for (const [, scorecard] of cases) {
-      const id = `g${n++}`;
-      // The array-shaped cases only: `undefined` is no details key at all, and a non-list is stored as it is.
-      await db.pool.query(`insert into game_details (league, game_espn_id, details) values ($1, $2, $3::jsonb)`, [league, id, JSON.stringify(scorecard === undefined ? {} : { scorecard })]);
-      expected.set(`${league}/${id}`, isCricsheetReport(league, scorecard));
+      // Each case twice: a game with an unstamped card (Cricsheet's way), and one with an ESPN-stamped card.
+      for (const stamped of [false, true]) {
+        const id = `g${n++}`;
+        // The array-shaped cases only: `undefined` is no details key at all, and a non-list is stored as it is.
+        await db.pool.query(`insert into game_details (league, game_espn_id, details) values ($1, $2, $3::jsonb)`, [league, id, JSON.stringify(scorecard === undefined ? {} : { scorecard })]);
+        await db.pool.query(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ($1, $2, 'p', '1', $3::jsonb)`, [league, id, stamped ? '{"v":2}' : "{}"]);
+        expected.set(`${league}/${id}`, isCricsheetReport(league, scorecard, stamped));
+      }
     }
   }
   const { rows } = await db.pool.query(`select d.league, d.game_espn_id, (${CRICSHEET_REPORT_SQL}) as cricsheet from game_details d`);
   assert.equal(rows.length, expected.size);
   for (const r of rows) assert.equal(r.cricsheet, expected.get(`${r.league}/${r.game_espn_id}`), `${r.league} ${r.game_espn_id}`);
+});
+
+// A game is ESPN-fed on any stamped card, and only its own league's cards count.
+test("one stamped card among unstamped ones makes the game ESPN's; a stamped card of another league's game with the same id does not", async () => {
+  const bareScorecard = JSON.stringify({ scorecard: [team(bare)] });
+  const card = (league: string, id: string, player: string, stats: string) =>
+    db.pool.query(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ($1, $2, $3, '1', $4::jsonb)`, [league, id, player, stats]);
+  for (const league of ["ipl", "bbl"]) await db.pool.query(`insert into game_details (league, game_espn_id, details) values ($1, 'shared', $2::jsonb)`, [league, bareScorecard]);
+  // ipl: two Cricsheet cards and one stamped. bbl: same id, Cricsheet cards only.
+  await card("ipl", "shared", "a", "{}");
+  await card("ipl", "shared", "b", "{}");
+  await card("ipl", "shared", "c", '{"v":3}');
+  await card("bbl", "shared", "a", "{}");
+  const { rows } = await db.pool.query(`select d.league, (${CRICSHEET_REPORT_SQL}) as cricsheet from game_details d where d.game_espn_id = 'shared' order by 1`);
+  assert.deepEqual(rows, [{ league: "bbl", cricsheet: true }, { league: "ipl", cricsheet: false }]);
 });

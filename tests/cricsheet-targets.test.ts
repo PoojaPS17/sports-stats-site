@@ -8,9 +8,10 @@ let db: TestDb;
 before(async () => {
   db = await startTestDb();
   await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('ipl', '1', 'One', 'one'), ('ipl', '2', 'Two', 'two')`);
-  const game = async (id: string, rows: boolean, report: unknown) => {
+  // `stats`: '{}' is how Cricsheet stores a card; an ESPN writer stamps its version, '{"v":2}'.
+  const game = async (id: string, rows: boolean, report: unknown, stats = "{}") => {
     await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed) values ('ipl', $1, now(), 'x', '1', '2', true)`, [id]);
-    if (rows) await db.pool.query(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('ipl', $1, 'p', '1', '{}')`, [id]);
+    if (rows) await db.pool.query(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('ipl', $1, 'p', '1', $2::jsonb)`, [id, stats]);
     if (report !== undefined) await db.pool.query(`insert into game_details (league, game_espn_id, details) values ('ipl', $1, $2::jsonb)`, [id, JSON.stringify(report)]);
   };
   const espnReport = { scorecard: [{ battingRows: [{ athleteId: "p", stats: ["1"], dismissal: "not out" }] }] };
@@ -24,6 +25,12 @@ before(async () => {
   // The first team entry has no batting rows: Cricsheet's is found in the second, so is ESPN's.
   await game("cricsheet-later", true, { scorecard: [{ battingRows: [] }, ...cricsheetReport.scorecard] });
   await game("espn-later", true, { scorecard: [{ battingRows: [] }, ...espnReport.scorecard] });
+  // An IPL report ESPN stored before fe9fbff has no dismissal either; its stamped card says it is ESPN's.
+  await game("espn-old", true, cricsheetReport, '{"v":2}');
+  await game("espn-old-later", true, { scorecard: [{ battingRows: [] }, ...cricsheetReport.scorecard] }, '{"v":3}');
+  // One stamped card among Cricsheet's is enough to read as ESPN's.
+  await game("mixed", true, cricsheetReport);
+  await db.pool.query(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('ipl', 'mixed', 'q', '1', '{"v":3}')`);
   // A league Cricsheet does not feed: a report with no dismissal is ESPN's (stored before fe9fbff), never a target.
   await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('wpl', '1', 'One', 'one'), ('wpl', '2', 'Two', 'two')`);
   await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed) values ('wpl', 'old-espn', now(), 'x', '1', '2', true)`);
@@ -38,7 +45,7 @@ test("by default only games with no player rows are queued", async () => {
   assert.deepEqual((await selectCardsOnlyGames(db.pool, "ipl", false)).map((g) => g.espn_id), ["empty"]);
 });
 
-test("--rewrite-cards also queues games whose stored report was built from Cricsheet, and nothing ESPN-fed", async () => {
+test("--rewrite-cards also queues games whose stored report was built from Cricsheet, and nothing ESPN-fed (a report with no dismissal and a stamped card included)", async () => {
   const ids = (await selectCardsOnlyGames(db.pool, "ipl", true)).map((g) => g.espn_id).sort();
   assert.deepEqual(ids, ["cricsheet", "cricsheet-later", "empty"]);
 });

@@ -13,7 +13,7 @@ export interface CardsOnlyGame {
   away_abbr: string | null;
 }
 
-// A Cricsheet-fed report: a Cricsheet league, and batting rows with no dismissal text (see cricsheet-report.ts).
+// A Cricsheet-fed report: a Cricsheet league, batting rows with no dismissal text, and no ESPN-stamped card (see cricsheet-report.ts).
 const CRICSHEET_REPORT = `exists (
   select 1 from game_details d where d.league = g.league and d.game_espn_id = g.espn_id and ${CRICSHEET_REPORT_SQL})`;
 

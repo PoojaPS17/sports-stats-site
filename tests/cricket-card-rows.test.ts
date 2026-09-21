@@ -137,9 +137,10 @@ const summary = {
 
 const oldScorecard = [{ teamId: "1", teamName: "One", battingLabels: ["R"], battingRows: [{ athleteId: "10", name: "Player 10", stats: ["20"], dismissal: "b Player 20" }], bowlingLabels: [], bowlingRows: [] }];
 
-async function seedMatch(league: string, id: string, report: unknown) {
+// `stamped`: the card carries the extractor's version stamp, as every ESPN writer stores it. Cricsheet stores none.
+async function seedMatch(league: string, id: string, report: unknown, stamped = true) {
   await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed) values ($1, $2, now(), 'x', '1', '2', true)`, [league, id]);
-  await addRow(league, id, "10", { batting: { runs: 20, ballsFaced: 12, fours: 2, sixes: 1, notOut: false }, v: 2 });
+  await addRow(league, id, "10", { batting: { runs: 20, ballsFaced: 12, fours: 2, sixes: 1, notOut: false }, ...(stamped ? { v: 2 } : {}) });
   await db.pool.query(`update player_game_stats set team_espn_id = '9' where league = $1 and game_espn_id = $2`, [league, id]);
   await db.pool.query(`insert into game_details (league, game_espn_id, details) values ($1, $2, $3::jsonb)`, [league, id, JSON.stringify(report)]);
 }
@@ -185,7 +186,7 @@ test("a dry run reads and reports but writes nothing", async () => {
 test("a match whose stored report is Cricsheet's is never touched: not the cards, not the report", async () => {
   // Cricsheet's report has no dismissal text on its batting rows.
   const cricsheet = [{ teamId: "1", teamName: "One", battingLabels: ["R"], battingRows: [{ athleteId: "10", name: "Player 10", stats: ["20"] }], bowlingLabels: [], bowlingRows: [] }];
-  await seedMatch("odi", "r3", { scorecard: cricsheet });
+  await seedMatch("odi", "r3", { scorecard: cricsheet }, false);
   const before = await stored("odi", "r3");
   const kept = await refresh("odi", "r3");
   assert.match(kept.skipped ?? "", /Cricsheet/);
@@ -320,15 +321,30 @@ test("every league Cricsheet does not feed treats a report with no dismissal key
   }
 });
 
-test("an odi or ipl report with no dismissal key is still Cricsheet's and is skipped, whichever team entry has the rows", async () => {
+test("an odi or ipl report with no dismissal key and no stamped card is Cricsheet's and is skipped, whichever team entry has the rows", async () => {
   const laterEntry = [{ ...bareReport[0], battingRows: [] }, { ...bareReport[0], teamId: "2" }];
   for (const [league, id, scorecard] of [["odi", "r15", bareReport], ["ipl", "r16", bareReport], ["odi", "r17", laterEntry], ["bbl", "r18", laterEntry]] as const) {
-    await seedMatch(league, id, { scorecard });
+    await seedMatch(league, id, { scorecard }, false);
     const before = await stored(league, id);
     const result = await refresh(league, id);
     assert.match(result.skipped ?? "", /Cricsheet/, `${league} ${id}`);
     assert.deepEqual(await stored(league, id), before, `${league} ${id}`);
     assert.deepEqual((await report(league, id)).scorecard, scorecard, `${league} ${id}`);
+  }
+});
+
+// Production: the IPL/BBL reports ESPN stored before fe9fbff have no dismissal, but their cards are stamped.
+test("an odi, ipl or bbl report with no dismissal key but a stamped card is ESPN's: refreshed and rebuilt, not skipped", async () => {
+  for (const [league, id] of [["ipl", "r40"], ["bbl", "r41"], ["odi", "r42"], ["t20i", "r43"]] as const) {
+    await seedMatch(league, id, { scorecard: bareReport, venue: "Ground" });
+    const result = await refresh(league, id);
+    assert.equal(result.skipped, null, `${league} ${id}`);
+    assert.deepEqual(result.battingRows, { before: 1, after: 2 }, `${league} ${id}`);
+    const details = await report(league, id);
+    assert.deepEqual(details.scorecard[0].battingRows.map((r: { athleteId: string }) => r.athleteId), ["10", "11"], `${league} ${id}`);
+    assert.equal(details.scorecard[0].battingRows[0].dismissal, "not out", `${league} ${id}`);
+    assert.equal(details.venue, "Ground", `${league} ${id}`);
+    assert.equal(((await stored(league, id)).find((r) => r.player_espn_id === "10")?.stats as { v: number }).v, 3, `${league} ${id}`);
   }
 });
 

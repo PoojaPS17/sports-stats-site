@@ -13,11 +13,13 @@
 //   npx tsx --env-file=.env.local scripts/refresh-cricket-cards.ts <league> [--espn-cards-only] [--since-year YYYY] [--dry-run]
 //
 // A match whose stored report was built from Cricsheet (its batting rows carry no dismissal
-// text) is never touched. ODIs, T20Is, IPL and BBL mix both sources, and a Cricsheet match's
-// cards are computed ball by ball: ESPN's derived figures must never replace them, so those
-// matches are skipped and the count is printed. A match with no stored report is ESPN-only
-// (the Cricsheet importer always stores one): its cards are refreshed, and no report is
-// created for it. `--espn-cards-only` is therefore always on; the flag is still accepted,
+// text, and none of its cards carries the extractor's version stamp) is never touched. ODIs,
+// T20Is, IPL and BBL mix both sources, and a Cricsheet match's cards are computed ball by ball:
+// ESPN's derived figures must never replace them, so those matches are skipped and the count is
+// printed. An IPL or BBL report stored by ESPN before fe9fbff has no dismissal text either, but
+// its cards are stamped, so it is ESPN's: it is refreshed and its report rebuilt. A match with
+// no stored report is ESPN-only (the Cricsheet importer always stores one): its cards are
+// refreshed, and no report is created for it. `--espn-cards-only` is therefore always on; the flag is still accepted,
 // and does nothing, so command lines that carry it keep working.
 //
 // A match is also left entirely alone (counted, one line each) when the rebuilt report

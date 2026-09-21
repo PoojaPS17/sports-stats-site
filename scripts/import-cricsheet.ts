@@ -31,7 +31,7 @@
 // (same Cricinfo id) supplies the scorecard: player figures and the match report are
 // written, the game row is left as ESPN has it, and players keep their current club.
 // `--rewrite-cards` (cards-only leagues only) also redoes the games an earlier run filled
-// from Cricsheet (their stored report has no dismissal text), so they follow the current
+// from Cricsheet (no dismissal text on their report, no ESPN-stamped card), so they follow the current
 // rules: the 0* (0) batter, and a card for every player in the XI. Games filled from ESPN
 // are never selected.
 import { normalizeStage } from "../src/lib/stage";
