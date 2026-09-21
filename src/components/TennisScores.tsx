@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/LocalTime";
 import { setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
+import { displayCountry } from "@/lib/tennisCountry";
 import { formatTournamentRange, tournamentInPlay } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type TennisMatch, type TennisSide, type TennisTournament } from "@/lib/tennis";
 
@@ -8,15 +9,16 @@ import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type Tennis
 /* Small pieces                                                              */
 /* ------------------------------------------------------------------------ */
 
-// ESPN's country flag set, keyed by the three-letter code its feeds use.
+// ESPN's country flag set, keyed by the three-letter code its feeds use. The image is looked up by the stored code;
+// the label (alt and tooltip) is the code the tours print.
 export function Flag({ code, size = 16 }: { code: string | null | undefined; size?: number }) {
   if (!code) return <span style={{ width: size, height: Math.round(size * 0.7) }} className="inline-block shrink-0" />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={`https://a.espncdn.com/i/teamlogos/countries/500/${code.toLowerCase()}.png`}
-      alt={code}
-      title={code}
+      alt={displayCountry(code) ?? code}
+      title={displayCountry(code) ?? code}
       width={size}
       height={size}
       style={{ width: size, height: size }}

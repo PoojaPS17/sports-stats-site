@@ -10,6 +10,7 @@ import { TennisPlayerMatchesExportCard, TennisRivalsExportCard, TennisSeasonReco
 
 import { Flag, TennisMatchLine } from "@/components/TennisScores";
 import { TeamLogo } from "@/components/TeamLogo";
+import { displayCountry } from "@/lib/tennisCountry";
 import {
   isTour,
   getTennisPlayerBySlug,
@@ -85,7 +86,7 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
           </h1>
           <p className="text-sm font-medium text-[var(--text-muted)]">
             {TOUR_LABEL[tour]}
-            {player.country ? ` · ${player.country}` : ""}
+            {player.country ? ` · ${displayCountry(player.country)}` : ""}
             {ranking ? ` · Ranked No. ${ranking.rank}${ranking.points ? ` · ${ranking.points.toLocaleString()} pts` : ""}` : ""}
           </p>
           {career.wins + career.losses > 0 && (
