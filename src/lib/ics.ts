@@ -11,8 +11,7 @@ import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
 import { gameCalledOffLabel, isTimeTbd } from "./gameStatus";
 import { gameDayIso } from "./gameDay";
-import { overtimeFinal, specialStageLabel } from "./stage";
-import { cupNoteLabel } from "./gameNote";
+import { gameRoundLabel, overtimeFinal } from "./stage";
 import { scoreLineOrder } from "./cricketOrder";
 
 const SITE = SITE_URL;
@@ -157,11 +156,12 @@ export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: 
   // A fixture with no kickoff time yet (NFL week 18 is filed at a placeholder 05:00 UTC) is an all-day event on the
   // league's own calendar day: no clock time, and no end time computed from one.
   const tbd = isTimeTbd(g);
-  const start = tbd ? new Date(`${gameDayIso(g.date, league)}T00:00:00Z`) : new Date(g.date);
+  const start = tbd ? new Date(`${gameDayIso(g.date, league, g.local_date)}T00:00:00Z`) : new Date(g.date);
   const end = tbd ? undefined : new Date(start.getTime() + durationMinutes(league) * 60_000);
   const label = LEAGUE_LABEL[league];
   const parts = [label];
-  const stage = g.round ?? specialStageLabel(g) ?? cupNoteLabel(g);
+  // The pill's own stage word (`gameRoundLabel`: "2nd Quarter-Final", not ESPN's "2nd QF"; nothing for a truncated group tag).
+  const stage = gameRoundLabel(g);
   if (stage) parts.push(stage);
   // A postponed or cancelled game stays in the archive as its original event; the replay has its own uid. Mark it
   // cancelled so a subscriber's calendar does not keep a fixture that is not happening.
