@@ -48,7 +48,7 @@ export async function getTennisRankingsAsOf(tour: Tour): Promise<{ week: number 
 /* Matches                                                                   */
 /* ------------------------------------------------------------------------ */
 
-export type CompetitionType = "mens-singles" | "womens-singles" | "mens-doubles" | "womens-doubles" | "mixed-doubles";
+export type CompetitionType = "mens-singles" | "womens-singles" | "mens-doubles" | "womens-doubles" | "mixed-doubles" | "team-cup";
 
 export const COMPETITION_LABEL: Record<CompetitionType, string> = {
   "mens-singles": "Men's Singles",
@@ -56,10 +56,12 @@ export const COMPETITION_LABEL: Record<CompetitionType, string> = {
   "mens-doubles": "Men's Doubles",
   "womens-doubles": "Women's Doubles",
   "mixed-doubles": "Mixed Doubles",
+  // Davis Cup, United Cup...: ESPN files the singles and the doubles rubbers of a tie under this one type.
+  "team-cup": "Team Cup",
 };
 
 // Display order within a tournament: singles first, then the doubles draws.
-export const COMPETITION_ORDER: CompetitionType[] = ["mens-singles", "womens-singles", "mens-doubles", "womens-doubles", "mixed-doubles"];
+export const COMPETITION_ORDER: CompetitionType[] = ["mens-singles", "womens-singles", "mens-doubles", "womens-doubles", "mixed-doubles", "team-cup"];
 
 export interface TennisSet {
   games: number;
@@ -138,7 +140,7 @@ const MATCH_SELECT = `
 // doubles, then the later rounds first, then by start time.
 const MATCH_ORDER = `
   order by coalesce(t.major, false) desc, m.tournament_name,
-           array_position(array['mens-singles','womens-singles','mens-doubles','womens-doubles','mixed-doubles'], m.competition_type),
+           array_position(array['mens-singles','womens-singles','mens-doubles','womens-doubles','mixed-doubles','team-cup'], m.competition_type),
            m.round_number desc nulls last, m.date asc`;
 
 /** Every match ESPN files under one calendar day (US Eastern), all tours. */
@@ -207,7 +209,9 @@ const TOURNAMENT_SELECT = `
                         case when m.winner_espn_id = m.player1_espn_id then m.side1 else m.side2 end as w
                  from tennis_matches m
                  where m.tournament_espn_id = t.espn_id and m.completed and m.winner_espn_id is not null
-                   and m.side1 is not null and lower(m.round) = 'final') f
+                   and m.side1 is not null and lower(m.round) = 'final'
+                   -- a team event's Final tie is several rubbers, not one champion
+                   and m.competition_type is distinct from 'team-cup') f
          ), '[]'::jsonb) as champions
   from tennis_tournaments t`;
 
@@ -279,6 +283,16 @@ export async function getTennisPlayerMatches(tour: Tour, playerEspnId: string, l
   return rows;
 }
 
+// What counts as a singles match in a player's record, head-to-head and rivals (SQL, on alias `m`).
+//  - the singles draws, plus a row with no draw type (the early Slam backfill stored singles only);
+//  - a team-cup (Davis Cup, United Cup) singles rubber: ESPN files singles and doubles rubbers of a tie under the one
+//    type 'team-cup', so it is told by both sides being one player. Those count in the record, as the tours count them.
+const SINGLES_SQL = `(m.competition_type is null or m.competition_type like '%singles'
+       or (m.competition_type = 'team-cup' and m.side1 is not null and jsonb_array_length(m.side1 -> 'ids') = 1 and jsonb_array_length(m.side2 -> 'ids') = 1))`;
+// A walkover is not a match played: neither player's win nor loss (ESPN's detail is "Walkover"; a retirement, which
+// has a score and a result, is played and counts).
+const PLAYED_SQL = `coalesce(m.status_detail, '') not ilike 'walkover'`;
+
 export interface TennisSeasonRecord {
   season: number;
   wins: number;
@@ -286,17 +300,20 @@ export interface TennisSeasonRecord {
   titles: number;
 }
 
-/** Singles win–loss and titles by season, from matches on file. */
+/**
+ * Singles win–loss and titles by season, from matches on file: team-cup singles included, walkovers not, and a win in
+ * a team event's Final tie is a win but no title.
+ */
 export async function getTennisPlayerSeasonRecords(tour: Tour, playerEspnId: string): Promise<TennisSeasonRecord[]> {
   const { rows } = await pool.query(
     `select extract(year from m.date)::int as season,
-            count(*) filter (where m.winner_espn_id = $2)::int as wins,
-            count(*) filter (where m.winner_espn_id is not null and m.winner_espn_id <> $2)::int as losses,
-            count(*) filter (where m.winner_espn_id = $2 and lower(m.round) = 'final')::int as titles
+            count(*) filter (where ${PLAYED_SQL} and m.winner_espn_id = $2)::int as wins,
+            count(*) filter (where ${PLAYED_SQL} and m.winner_espn_id is not null and m.winner_espn_id <> $2)::int as losses,
+            count(*) filter (where m.winner_espn_id = $2 and lower(m.round) = 'final' and m.competition_type is distinct from 'team-cup')::int as titles
      from tennis_matches m
      where m.tour = $1 and m.completed and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
-       and (m.competition_type is null or m.competition_type like '%singles')
-     group by 1 order by 1 desc`,
+       and ${SINGLES_SQL}
+     group by 1 having count(*) filter (where ${PLAYED_SQL}) > 0 order by 1 desc`,
     [tour, playerEspnId]
   );
   return rows;
@@ -321,7 +338,7 @@ export async function getTennisPlayerRanking(tour: Tour, playerEspnId: string): 
 export async function getTennisHeadToHead(tour: Tour, playerAEspnId: string, playerBEspnId: string): Promise<TennisMatch[]> {
   const { rows } = await pool.query(
     `${MATCH_SELECT}
-     where m.tour = $1 and (m.competition_type is null or m.competition_type like '%singles')
+     where m.tour = $1 and ${SINGLES_SQL} and ${PLAYED_SQL}
        and ((m.player1_espn_id = $2 and m.player2_espn_id = $3) or (m.player1_espn_id = $3 and m.player2_espn_id = $2))
      order by m.date desc`,
     [tour, playerAEspnId, playerBEspnId]
@@ -337,7 +354,7 @@ export async function getTennisPlayerRivals(tour: Tour, playerEspnId: string, li
      join players p on p.league = m.tour and p.espn_id = case when m.player1_espn_id = $2 then m.player2_espn_id else m.player1_espn_id end
      -- a match with no winner (postponed or cancelled, which the scraper can store as completed) is not one played
      where m.tour = $1 and m.completed and m.winner_espn_id is not null and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
-       and (m.competition_type is null or m.competition_type like '%singles')
+       and ${SINGLES_SQL} and ${PLAYED_SQL}
      group by 1, 2, 3 order by matches desc, wins desc limit $3`,
     [tour, playerEspnId, limit]
   );
