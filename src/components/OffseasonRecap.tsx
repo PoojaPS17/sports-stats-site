@@ -4,13 +4,14 @@ import { leagueNameWithArticle, isSoccerLeague, isCricketLeague, type League } f
 import { formatGameDate } from "@/lib/gameDay";
 import { formatLeaderValue } from "@/lib/leaders";
 import { formatWinLossTie } from "@/lib/teamSummary";
+import { cricketRecord } from "@/lib/cricketStandings";
 import { GameCard } from "./GameCard";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
 
 function record(league: League, r: Recap["table"][number]): string {
   if (isSoccerLeague(league)) return `${r.wins}-${r.draws ?? 0}-${r.losses}`;
-  if (isCricketLeague(league)) return `${r.wins}-${r.losses}${r.no_result ? `-${r.no_result}` : ""}`;
+  if (isCricketLeague(league)) return cricketRecord(r);
   return formatWinLossTie(r.wins, r.losses, r.draws);
 }
 
@@ -18,7 +19,7 @@ function record(league: League, r: Recap["table"][number]): string {
 // played — how it ended, the final table and the leading players — with links on
 // to the full pages for each.
 export function OffseasonRecap({ league, recap }: { league: League; recap: Recap }) {
-  const ended = recap.endedOn ? formatGameDate(recap.endedOn, league, { month: "long", day: "numeric", year: "numeric" }) : null;
+  const ended = recap.endedOn ? formatGameDate(recap.endedOn, league, { month: "long", day: "numeric", year: "numeric" }, recap.endedOnLocal) : null;
   // World Cups are editions, not seasons.
   const noun = league === "cwc" || league === "t20wc" || league === "wcwc" || league === "wt20wc" ? "tournament" : "season";
   // A season with fixtures still to come is in progress: it says when the next matchday is, never that it ended.

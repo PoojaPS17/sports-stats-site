@@ -72,8 +72,12 @@ job_daily() {
   run fetch:tennis-rankings
   run fetch:tennis-daily -- --calendar --days 1 --ahead 1
   run import:cricket-espn
-  # Un-windowed safety nets for cricket: internationals the listing knows but the 21-day sweep
-  # missed, then scorecards of completed games with no player rows (leaders and match pages).
+  # Un-windowed safety nets for cricket, in the order the data needs: the competition sweep adds
+  # games the scores scrape never saw, then the reconcile adds internationals the listing knows but
+  # the 21-day sweep missed, then the top-up fills scorecards for completed games with no player
+  # rows (leaders and match pages). `run` records a failure and keeps going, so a bad sweep never
+  # skips the two after it.
+  run sweep:cricket-seasons
   run import:cricket-espn -- --reconcile
   run topup:cricket-player-stats
   run fetch:fixtures

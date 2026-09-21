@@ -33,6 +33,7 @@ import { pool } from "./lib/db";
 import { CARD_VERSION, extractCricketMatchStats } from "./lib/cricket-career";
 import { upsertTeam } from "./lib/teams";
 import { uniqueSlugFor } from "./lib/players";
+import { storeCricketDates } from "./lib/games";
 import { extractGameDetails } from "../src/lib/matchDetail";
 import { fetchCricketSummaryVia } from "../src/lib/cricketSummary";
 import { isScorecardOverdue, overdueWarning } from "./lib/cricket-player-rows";
@@ -308,6 +309,8 @@ export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
       venue,
     ]
   );
+  // `date` is a UTC instant; the local day(s) are in the summary's description and matchdays note.
+  await storeCricketDates(f.league, f.id, summary.header?.description, summary.notes, date);
 
   // Every player in either XI: created on the side they played for (or moved there —
   // the sweep runs oldest-first, so the last write leaves each on their latest team)

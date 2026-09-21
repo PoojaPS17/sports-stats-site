@@ -48,6 +48,10 @@ export interface GameRow {
   week?: number | null;
   /** Kickoff as first scheduled, before any postponement. */
   first_seen_date?: string | null;
+  /** Cricket only: the match's local first day, YYYY-MM-DD (`date` is a UTC instant that can be a day off). */
+  local_date?: string | null;
+  /** Cricket only: the last day of a match that ran past its first, YYYY-MM-DD. */
+  end_date?: string | null;
   home_team_espn_id: string;
   away_team_espn_id: string;
   home_name: string;
@@ -76,6 +80,7 @@ export const GAME_SELECT = `
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
     g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
+    g.local_date::text as local_date, g.end_date::text as end_date,
     g.home_team_espn_id, g.away_team_espn_id,
     ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
     at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
@@ -93,6 +98,7 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
        g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
+       g.local_date::text as local_date, g.end_date::text as end_date,
        g.home_team_espn_id, g.away_team_espn_id,
        g.odds_details, g.odds_spread, g.odds_over_under, g.odds_provider,
        g.broadcast_network, g.weather_display, g.weather_temperature,
@@ -134,13 +140,15 @@ export async function getSeasonPlayoffGames(league: League, season: number): Pro
 // earth, so they never exclude a game the exact test would have kept. They are written as UTC
 // instants (`at time zone 'UTC'`): a bare date plus an interval is a zoneless timestamp that
 // Postgres would otherwise read in the session's TimeZone setting, which nothing here pins.
+// A cricket match carries its own local day (games.local_date, see scripts/lib/cricket-dates.ts),
+// which wins over the zone rule; it is never more than a day from the instant, so the bounds hold.
 export async function getGamesByDate(league: League, dateISO: string): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
      where g.league = $1
        and g.date >= ($2::date - interval '1 day') at time zone 'UTC'
        and g.date < ($2::date + interval '2 days') at time zone 'UTC'
-       and (g.date at time zone $3::text)::date = $2::date
+       and coalesce(g.local_date, (g.date at time zone $3::text)::date) = $2::date
      order by g.date asc`,
     [league, dateISO, dayTimeZone(league)]
   );
@@ -211,6 +219,8 @@ export interface StandingRow {
   rank: number | null;
   /** ESPN's qualification / relegation note for the row (soccer only), e.g. "Champions League"; null when the feed had none. */
   zone: string | null;
+  /** Cricket: ESPN marks the teams through to the playoffs or the next stage; null when the feed does not say. */
+  qualified?: boolean | null;
   /** Set by sortStandings on every row of a table nobody has played in yet: it has no order, so no positions are shown. */
   unranked?: boolean;
 }
@@ -218,7 +228,8 @@ export interface StandingRow {
 const STANDING_SELECT = `
   select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
          s.conference, s.division, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
-         s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate, s.rank, s.zone
+         s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate, s.rank,
+         s.zone, s.qualified
   from standings s
   join teams t on t.league = s.league and t.espn_id = s.team_espn_id
 `;
@@ -418,11 +429,13 @@ export interface TickerGame {
   status_summary: string | null;
   status_state: string | null;
   date: string;
+  /** Cricket only: the match's local day, YYYY-MM-DD. */
+  local_date?: string | null;
 }
 
 export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
   const { rows } = await pool.query(
-    `select g.league, g.espn_id, g.date, g.completed, g.status_state, g.status_summary,
+    `select g.league, g.espn_id, g.date, g.local_date::text as local_date, g.completed, g.status_state, g.status_summary,
             g.home_score, g.home_score_display, g.home_winner,
             g.away_score, g.away_score_display, g.away_winner,
             ht.name as home_name, ht.slug as home_slug,
@@ -749,6 +762,7 @@ export async function getTopGames(window: TopGamesWindow, filter: TopGamesFilter
     `select g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
             g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
             g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
+            g.local_date::text as local_date, g.end_date::text as end_date,
             g.home_team_espn_id, g.away_team_espn_id,
             ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
             at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color,
@@ -1008,6 +1022,8 @@ export interface CenturyRow {
   sixes: number | null;
   not_out: boolean;
   date: string;
+  /** The match's local first day, YYYY-MM-DD, when stored (`date` is a UTC instant). */
+  local_date?: string | null;
   venue: string | null;
   round: string | null;
   status_summary: string | null;
@@ -1026,7 +1042,7 @@ export async function getCricketCenturies(league: League): Promise<CenturyRow[]>
             (inn->'batting'->>'fours')::int as fours,
             (inn->'batting'->>'sixes')::int as sixes,
             coalesce((inn->'batting'->>'notOut')::boolean, false) as not_out,
-            g.date, g.venue, g.round, g.status_summary
+            g.date, g.local_date::text as local_date, g.venue, g.round, g.status_summary
      from player_game_stats pgs
      ${CRICKET_INNINGS}
      join players p on p.league = $1 and p.espn_id = pgs.player_espn_id

@@ -6,7 +6,7 @@ import { dayTimeZone, dayZoneLabel, formatGameDate, formatGameTime } from "./gam
 import { gameCalledOffLabel, isGameCalledOff, isTimeTbd } from "./gameStatus";
 import { isCricketLeague, LEAGUE_LABEL } from "./leagues";
 import { teamDisplayName } from "./teamName";
-import { finishedPillLabel, overtimeFinal } from "./stage";
+import { finishedLabel, finishedPillLabel, normalizeStage, overtimeFinal } from "./stage";
 import { scoreLineHomeFirst } from "./gamePage";
 import type { League } from "./leagues";
 
@@ -22,8 +22,8 @@ export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.st
  * NFL and NBA), and the kickoff is read in that same zone so the two agree rather than showing a UTC
  * time under an Eastern date. The wording is unchanged: only the zone the two are read in moved.
  */
-export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRow, "date">): string {
-  const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" });
+export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRow, "date" | "local_date">): string {
+  const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" }, g.local_date);
   const off = gameCalledOffLabel(g);
   if (off) return `${when} · ${off}`;
   if (isUpcomingGame(g)) {
@@ -40,7 +40,7 @@ export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRo
 /** Screen-reader name of a game card. Football names the home side first ("Arsenal v Chelsea"), the US leagues the visitors ("Chelsea at Arsenal"). */
 export function gameAccessibleLabel(
   league: League,
-  game: StatusFields & StageFields & Pick<GameRow, "date" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
+  game: StatusFields & StageFields & Pick<GameRow, "date" | "local_date" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
 ): string {
   const off = gameCalledOffLabel(game);
   const homeFirst = scoreLineHomeFirst(league);
@@ -56,17 +56,18 @@ export function gameAccessibleLabel(
     const label = finishedPillLabel(league, game, "final");
     return `${line}, ${/final(\/\d*OT)?$/i.test(label) ? label : `${label}, final`}`;
   }
-  const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" });
+  // The day the match is filed under (cricket's local date where there is one), and football's home-first order.
+  const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" }, game.local_date);
   const label = homeFirst ? `${home} v ${away}, ${date}` : `${away} at ${home}, ${date}`;
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
 
 /** The status line of one tile on a scoreboard image: result, live detail, kickoff (in the league's day zone, labelled), or why a called-off game is off. */
-export function scoreboardTileStatus(league: League, g: StatusFields & StageFields & Pick<GameRow, "date">, withDate: boolean): string {
+export function scoreboardTileStatus(league: League, g: StatusFields & StageFields & Pick<GameRow, "date" | "local_date">, withDate: boolean): string {
   const off = gameCalledOffLabel(g);
   const live = g.status_state === "in" && !g.completed;
   if (withDate) {
-    const day = formatGameDate(g.date, league, { month: "short", day: "numeric", year: "numeric" });
+    const day = formatGameDate(g.date, league, { month: "short", day: "numeric", year: "numeric" }, g.local_date);
     return `${day} · ${off ?? (g.completed ? finishedPillLabel(league, g) : live ? (g.status_detail ?? "Live") : "Upcoming")}`;
   }
   if (off) return off;
@@ -124,10 +125,15 @@ export function scoresDayDescription(league: League, dayLabel: string, games: (S
 /**
  * The status word over a game's share image: the reason for a called-off game, "Final" (or "Final/OT") for a scored result,
  * "Result" for a finished match with no scores (abandoned, no result), null for a fixture or a game in play.
+ * A finished cricket match is never "Final" unless it is the final: it says its stage when it has one
+ * ("Qualifier 1", "Final") and "Result" otherwise, as the match header does. Pass `league` for that.
  */
-export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary">): string | null {
+export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary"> & { round?: string | null }, league?: League): string | null {
   const off = gameCalledOffLabel(g);
   if (off) return off;
   if (!g.completed) return null;
+  // Cricket says its stage ("Final" only for the final) or "Result"; the other sports keep "Final", and "Final/OT"
+  // where the stored status says the game went to overtime.
+  if (league && isCricketLeague(league)) return normalizeStage(g.round) ?? finishedLabel(league);
   return finishedNoScoreNote(g) ? "Result" : (overtimeFinal(g.status_detail) ?? "Final");
 }

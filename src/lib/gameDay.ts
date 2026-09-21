@@ -41,11 +41,23 @@ function dayFormat(timeZone: string): Intl.DateTimeFormat {
   return f;
 }
 
+// A cricket match's own local date (games.local_date, "YYYY-MM-DD"): the day Cricinfo files it under,
+// which a UTC instant cannot give (a 10.30 start in Melbourne is 23:30 UTC the day before). Only
+// cricket rows carry one; every other sport passes nothing and keeps the zone rule above.
+const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
+function localDay(localDate: string | null | undefined): string | null {
+  const day = localDate?.slice(0, 10);
+  return day && LOCAL_DATE.test(day) ? day : null;
+}
+
 /**
  * The game's day as YYYY-MM-DD — the date the site files it under, and the date segment of its
- * scores page. Correct across the DST changes, because the zone does the arithmetic.
+ * scores page. Correct across the DST changes, because the zone does the arithmetic. A cricket match
+ * passes its stored local date, which is the day as printed, whatever instant `date` holds.
  */
-export function gameDayIso(date: string | Date, league: string): string {
+export function gameDayIso(date: string | Date, league: string, localDate?: string | null): string {
+  const local = localDay(localDate);
+  if (local) return local;
   const parts = dayFormat(dayTimeZone(league)).formatToParts(new Date(date));
   const at = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
   return `${at("year")}-${at("month")}-${at("day")}`;
@@ -55,8 +67,31 @@ export function gameDayIso(date: string | Date, league: string): string {
  * A game's date as a label, in the league's day zone. Same format options as `toLocaleDateString`,
  * so a caller keeps the exact words and digits it had; only the zone is decided here.
  */
-export function formatGameDate(date: string | Date, league: string, opts: Intl.DateTimeFormatOptions): string {
+export function formatGameDate(date: string | Date, league: string, opts: Intl.DateTimeFormatOptions, localDate?: string | null): string {
+  const local = localDay(localDate);
+  // Noon UTC on the stored day, printed in UTC, is that day in every viewer's zone.
+  if (local) return new Date(`${local}T12:00:00Z`).toLocaleDateString("en-US", { ...opts, timeZone: "UTC" });
   return new Date(date).toLocaleDateString("en-US", { ...opts, timeZone: dayTimeZone(league) });
+}
+
+/**
+ * A cricket match's date as Cricinfo prints it: one day, or "Dec 26-30, 2025" for a match that ran
+ * over several. `localDate` and `endDate` are the stored days; a game with neither is its `date`'s day,
+ * as before, and a one-day match reads "Fri, Dec 26, 2025". A range gives only what changes: the day
+ * within a month ("Dec 26-30, 2025"), else month and day ("Feb 29 - Mar 3, 2024"), else the whole date
+ * on both sides across a year end ("Dec 30, 2021 - Jan 3, 2022").
+ */
+export function formatGameDateRange(date: string | Date, league: string, localDate: string | null | undefined, endDate: string | null | undefined): string {
+  const first = localDay(localDate);
+  const last = localDay(endDate);
+  const one: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric", year: "numeric" };
+  if (!first || !last || last <= first) return formatGameDate(date, league, one, localDate);
+  const [fy, fm] = first.split("-");
+  const [ly, lm, ld] = last.split("-");
+  const monthDay = (iso: string) => formatGameDate(date, league, { month: "short", day: "numeric" }, iso);
+  if (fy !== ly) return `${formatGameDate(date, league, { month: "short", day: "numeric", year: "numeric" }, first)} - ${formatGameDate(date, league, { month: "short", day: "numeric", year: "numeric" }, last)}`;
+  if (fm === lm) return `${monthDay(first)}-${Number(ld)}, ${fy}`;
+  return `${monthDay(first)} - ${monthDay(last)}, ${fy}`;
 }
 
 /**

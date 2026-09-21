@@ -141,7 +141,7 @@ test("packPlayers keeps every player in order and sends each team name once, in 
     player({ name: "Saki Kumagai", slug: "saki-kumagai", team_name: "Japan Women" }),
   ];
   const packed = packPlayers(ps);
-  assert.deepEqual(packed.teams, ["New York Jets", "Japan-W"]);
+  assert.deepEqual(packed.teams, ["New York Jets", "Japan Women"]);
   assert.deepEqual(packed.rows, [
     ["Aaron Rodgers", "aaron-rodgers", 0],
     ["Free Agent", "free-agent", -1],
@@ -165,7 +165,7 @@ test("the players list shows every player once, each with the right link and tea
     '<a href="/nfl/players/aaron-rodgers">Aaron Rodgers<span>New York Jets</span></a>',
     '<a href="/nfl/players/free-agent">Free Agent</a>',
     '<a href="/nfl/players/garrett-wilson">Garrett Wilson<span>New York Jets</span></a>',
-    '<a href="/nfl/players/saki-kumagai">Saki Kumagai<span>Japan-W</span></a>',
+    '<a href="/nfl/players/saki-kumagai">Saki Kumagai<span>Japan Women</span></a>',
   ]);
   assert.doesNotMatch(html, /<img/);
 });

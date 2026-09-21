@@ -203,3 +203,19 @@ test("scoresDayDescription: games still to come are not counted as played", () =
   assert.equal(scoresDayDescription("nba", DAY, [game(), game()]), "2 NBA games to be played on Sunday, September 20, 2026, with scores as they finish.");
   assert.equal(scoresDayDescription("nba", DAY, [finished(), game()]), "1 NBA game played on Sunday, September 20, 2026, with final scores and a link to each box score.");
 });
+
+test("shareImageStatus: a finished cricket match is its stage or Result, never Final unless it is the final; other leagues keep Final", () => {
+  const scored = { completed: true, status_state: "post", status_detail: "Final", home_score: 150, away_score: 120, status_summary: "India won by 30 runs", round: null } as never;
+  for (const league of ["test", "odi", "t20i", "ipl", "wbbl", "cwc"] as const) assert.equal(shareImageStatus(scored, league), "Result", league);
+  assert.equal(shareImageStatus({ ...(scored as object), round: "Final" } as never, "ipl"), "Final");
+  assert.equal(shareImageStatus({ ...(scored as object), round: "Qualifier 1" } as never, "ipl"), "Qualifier 1");
+  assert.equal(shareImageStatus({ ...(scored as object), round: "Semi Final" } as never, "cwc"), "Semi-Final");
+  assert.equal(shareImageStatus({ ...(scored as object), home_score: null, away_score: null } as never, "test"), "Result");
+  // called off and not played keep their words for cricket too
+  assert.equal(shareImageStatus({ ...(scored as object), completed: false, status_detail: "Postponed" } as never, "ipl"), "Postponed");
+  assert.equal(shareImageStatus({ ...(scored as object), completed: false, status_state: "pre", status_detail: "Scheduled" } as never, "ipl"), null);
+  // every other league is unchanged, with or without the league argument
+  assert.equal(shareImageStatus(scored, "nba"), "Final");
+  assert.equal(shareImageStatus(scored, "epl"), "Final");
+  assert.equal(shareImageStatus(scored), "Final");
+});

@@ -1,10 +1,10 @@
 import { ImageResponse } from "next/og";
 import { PixelBall } from "@/components/Logo";
-import { isLeague, LEAGUE_LABEL, getGameByEspnId } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetails } from "@/lib/queries";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
 import { finishedNoScoreNote, shareImageStatus } from "@/lib/gameDisplay";
 import { formatGameDate } from "@/lib/gameDay";
-import { scoreLineHomeFirst } from "@/lib/gamePage";
+import { scoreLineSides } from "@/lib/gamePage";
 
 export const alt = "Match page";
 export const size = { width: 1200, height: 630 };
@@ -43,12 +43,17 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const awayWon = played && (game.away_winner ?? game.away_score! > game.home_score!);
   // A finished match with no scores (abandoned, no result) says how it ended instead of a bare date and "vs".
   const note = off ? null : finishedNoScoreNote(game);
-  const status = shareImageStatus(game);
-  // Football lists the home side first; the NBA and NFL list the visitors first.
-  const away = { name: game.away_name, logo: game.away_logo, score: game.away_score_display ?? game.away_score, won: awayWon };
-  const home = { name: game.home_name, logo: game.home_logo, score: game.home_score_display ?? game.home_score, won: homeWon };
-  const [left, right] = scoreLineHomeFirst(game.league) ? [home, away] : [away, home];
-  const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const status = shareImageStatus(game, game.league);
+  // Cricinfo lists the side that batted first first: the stored scorecard says which, the score lines are the
+  // fallback. Football lists the home side first; the NBA and NFL list the visitors first.
+  const scorecard = isCricketLeague(game.league) && game.completed ? ((await getGameDetails(game.league, id))?.scorecard ?? null) : null;
+  const order = scoreLineSides(game.league, game, scorecard);
+  const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, game.local_date);
+
+  const sides = {
+    away: <Side name={game.away_name} logo={game.away_logo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />,
+    home: <Side name={game.home_name} logo={game.home_logo} score={played ? String(game.home_score_display ?? game.home_score) : null} muted={played && !homeWon} />,
+  };
 
   return new ImageResponse(
     (
@@ -70,9 +75,9 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           <span>{status ? `${status} · ${when}` : when}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Side name={left.name} logo={left.logo} score={played ? String(left.score) : null} muted={played && !left.won} />
+          {sides[order[0]]}
           <div style={{ display: "flex", justifyContent: "center", textAlign: "center", ...(note ? { width: 280, fontSize: 28, color: "#9aa7bd" } : { fontSize: 40, color: "#6b788f" }), fontWeight: 700 }}>{played ? "" : (note ?? "vs")}</div>
-          <Side name={right.name} logo={right.logo} score={played ? String(right.score) : null} muted={played && !right.won} />
+          {sides[order[1]]}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 26, color: "#6ea0ff", fontWeight: 700 }}>
           <PixelBall size={28} fill="#6ea0ff" live="#f87171" />

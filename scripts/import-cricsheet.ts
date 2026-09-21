@@ -295,8 +295,8 @@ async function writeMatch(
     `insert into games (
        league, espn_id, date, name, short_name, home_team_espn_id, away_team_espn_id,
        home_score, away_score, home_score_display, away_score_display, home_winner, away_winner,
-       season_year, status_state, status_detail, status_summary, round, period, clock, completed, venue, first_seen_date, updated_at
-     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'post','Final',$15,$16,$17,null,true,$18,$3, now())
+       season_year, status_state, status_detail, status_summary, round, period, clock, completed, venue, first_seen_date, updated_at, local_date
+     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'post','Final',$15,$16,$17,null,true,$18,$3, now(), $19::date)
      on conflict (league, espn_id) do update set
        date = excluded.date, name = excluded.name, short_name = excluded.short_name,
        home_team_espn_id = excluded.home_team_espn_id, away_team_espn_id = excluded.away_team_espn_id,
@@ -304,7 +304,8 @@ async function writeMatch(
        home_score_display = excluded.home_score_display, away_score_display = excluded.away_score_display,
        home_winner = excluded.home_winner, away_winner = excluded.away_winner, season_year = excluded.season_year,
        status_state = excluded.status_state, status_detail = excluded.status_detail, status_summary = excluded.status_summary,
-       round = excluded.round, period = excluded.period, completed = true, venue = excluded.venue, updated_at = now()`,
+       round = excluded.round, period = excluded.period, completed = true, venue = excluded.venue, updated_at = now(),
+       local_date = excluded.local_date`,
     [
       league,
       m.id,
@@ -326,6 +327,8 @@ async function writeMatch(
       stage,
       m.innings.length || null,
       m.venue,
+      // Cricsheet's date is already the local one, so it is the match's local date as it stands.
+      m.date,
     ]
   );
 

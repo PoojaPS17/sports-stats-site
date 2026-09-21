@@ -1,5 +1,5 @@
 import type { GameRow } from "./queries";
-import { isQualifyingRound } from "./leagues";
+import { isCricketLeague, isQualifyingRound } from "./leagues";
 
 export interface PlayoffResult {
   round: string;
@@ -9,11 +9,22 @@ export interface PlayoffResult {
   loserName: string;
   loserSlug: string;
   resultText: string;
+  /** A knockout match nobody won (abandoned, no result, or tied with nothing to decide it): shown as "A v B, <resultText>", never as "A beat B". */
+  noWinner?: boolean;
 }
 
 // "- Game 3" (a best-of series) and "- 2nd Leg" (a two-legged cup tie) both name one
 // meeting within the same round.
 const MEETING_SUFFIX = /\s*-\s*(game\s*\d+|(1st|2nd)\s+leg)\s*$/i;
+
+// A league match: "Match 12", or "12th Match, Group B" (a World Cup group game). Neither is a playoff round.
+const LEAGUE_MATCH = /^(?:Match \d+$|\d+(?:st|nd|rd|th) Match\b)/i;
+
+// A cricket game has a winner only when the feed (or its summary) says so: comparing the two
+// scores of an abandoned match would crown whoever had batted.
+function cricketDecided(g: GameRow): boolean {
+  return g.home_winner === true || g.away_winner === true || /\bwon\b/i.test(g.status_summary ?? "");
+}
 
 function normalizeRoundKey(round: string): string {
   return round.replace(MEETING_SUFFIX, "").trim().toLowerCase();
@@ -68,7 +79,7 @@ function resolveTwoLeggedTie(
 export function summarizePlayoffs(games: GameRow[]): PlayoffResult[] {
   const groups = new Map<string, GameRow[]>();
   for (const g of games) {
-    if (!g.round || /^Match \d+$/i.test(g.round) || isQualifyingRound(g.round)) continue;
+    if (!g.round || LEAGUE_MATCH.test(g.round) || isQualifyingRound(g.round)) continue;
     const pairKey = [g.home_team_espn_id, g.away_team_espn_id].sort().join("-");
     const key = `${normalizeRoundKey(g.round)}|${pairKey}`;
     if (!groups.has(key)) groups.set(key, []);
@@ -85,8 +96,9 @@ export function summarizePlayoffs(games: GameRow[]): PlayoffResult[] {
     for (const g of seriesGames) {
       teamMeta.set(g.home_team_espn_id, { name: g.home_name, slug: g.home_slug });
       teamMeta.set(g.away_team_espn_id, { name: g.away_name, slug: g.away_slug });
-      const homeWon = g.home_winner ?? (g.home_score ?? 0) > (g.away_score ?? 0);
-      const awayWon = g.away_winner ?? (g.away_score ?? 0) > (g.home_score ?? 0);
+      const undecided = isCricketLeague(g.league) && !cricketDecided(g);
+      const homeWon = !undecided && (g.home_winner ?? (g.home_score ?? 0) > (g.away_score ?? 0));
+      const awayWon = !undecided && (g.away_winner ?? (g.away_score ?? 0) > (g.home_score ?? 0));
       if (homeWon) wins.set(g.home_team_espn_id, (wins.get(g.home_team_espn_id) ?? 0) + 1);
       if (awayWon) wins.set(g.away_team_espn_id, (wins.get(g.away_team_espn_id) ?? 0) + 1);
     }
@@ -106,6 +118,14 @@ export function summarizePlayoffs(games: GameRow[]): PlayoffResult[] {
     }
     const winsA = wins.get(teamAId) ?? 0;
     const winsB = wins.get(teamBId) ?? 0;
+    if (winsA === 0 && winsB === 0 && isCricketLeague(last.league)) {
+      const a = teamMeta.get(teamAId)!;
+      const b = teamMeta.get(teamBId)!;
+      // A match the feed calls tied but names no winner for is a tie, not a no result.
+      const tied = seriesGames.every((g) => /\btied\b/i.test(g.status_summary ?? ""));
+      results.push({ round: displayRound(last.round ?? ""), date: last.date, winnerName: a.name, winnerSlug: a.slug, loserName: b.name, loserSlug: b.slug, resultText: tied ? last.status_summary ?? "Match tied" : "No result", noWinner: true });
+      continue;
+    }
     const winnerId = winsA >= winsB ? teamAId : teamBId;
     const loserId = winnerId === teamAId ? teamBId : teamAId;
     const winner = teamMeta.get(winnerId)!;

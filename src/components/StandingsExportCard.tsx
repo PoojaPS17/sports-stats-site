@@ -6,6 +6,7 @@ import { notStarted } from "@/lib/standingsOrder";
 import { zonesFor } from "@/lib/standingsZones";
 import type { League, StandingRow } from "@/lib/queries";
 import { hasTies } from "@/lib/leagues";
+import { cricketPlayed, hasCricketTies, qualifierLegend, showQualifiers } from "@/lib/cricketStandings";
 import { computedWinPct, isSoccer, type ComputedTableRow } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 
@@ -26,42 +27,51 @@ const tone = (n: number): "win" | "loss" | "muted" => (n > 0 ? "win" : n < 0 ? "
 // .superpowers/sdd/reference-parity/task-2-report.md, "Fix round 1".
 const SIDE_BY_SIDE_WIDTH = 980;
 const SIDE_BY_SIDE_SOCCER_WIDTH = 1040;
+// A cricket table (name, M W L NR Pts NRR) fits a 980px column, but one with a T column, which a World Cup
+// group has when a match was tied, measured 447px against 436px with "United States of America" in it,
+// so the name would be clipped; at 1040px it has 466px.
+const SIDE_BY_SIDE_CRICKET_TIES_WIDTH = 1040;
 
 /** Width the standings image needs: two side-by-side tables when the league splits into several. */
 export function standingsExportWidth(league: League, standings: StandingRow[]): number {
   const { mode, sections } = groupStandings(league, standings);
   if (sections.length <= 1) return 720;
+  if (mode === "cricket" && sections.some(([, rows]) => hasCricketTies(rows))) return SIDE_BY_SIDE_CRICKET_TIES_WIDTH;
   return mode === "soccer" ? SIDE_BY_SIDE_SOCCER_WIDTH : SIDE_BY_SIDE_WIDTH;
 }
 
 // The downloadable version of the standings tables: the same grouping, columns and
 // qualification / relegation colours as the live page, on the fixed light card.
-export function StandingsExportCard({ league, standings, title, subtitle, context }: { league: League; standings: StandingRow[]; title: string; subtitle?: string | null; context: string }) {
+export function StandingsExportCard({ league, standings, title, subtitle, context, seasonFinished = false }: { league: League; standings: StandingRow[]; title: string; subtitle?: string | null; context: string; seasonFinished?: boolean }) {
   const { mode, sections } = groupStandings(league, standings);
   const zones = mode === "soccer" ? zonesFor(league, sections) : null;
   const ties = mode === "default" && hasTies(league);
 
-  const headers = mode === "soccer" ? ["P", "W", "D", "L", "GF", "GA", "GD", "Pts"] : mode === "cricket" ? ["M", "W", "L", "NR", "Pts", "NRR"] : ties ? ["W", "L", "T", "Pct", "Streak"] : ["W", "L", "Pct", "Streak"];
+  const qualifiers = mode === "cricket" && showQualifiers(standings, seasonFinished);
+  // A cricket table gets a T column only when one of its own teams has tied a match.
+  const headersFor = (rows: StandingRow[]) =>
+    mode === "soccer" ? ["P", "W", "D", "L", "GF", "GA", "GD", "Pts"] : mode === "cricket" ? ["M", "W", "L", ...(hasCricketTies(rows) ? ["T"] : []), "NR", "Pts", "NRR"] : ties ? ["W", "L", "T", "Pct", "Streak"] : ["W", "L", "Pct", "Streak"];
 
-  const cellsFor = (r: StandingRow): ExportCell[] => {
+  const cellsFor = (r: StandingRow, cricketTies: boolean): ExportCell[] => {
     if (mode === "soccer") {
       const gd = r.goals_for != null && r.goals_against != null ? r.goals_for - r.goals_against : null;
       return [String(r.wins + (r.draws ?? 0) + r.losses), String(r.wins), String(r.draws ?? 0), String(r.losses), String(r.goals_for ?? "—"), String(r.goals_against ?? "—"), gd == null ? "—" : { text: signed(gd), tone: tone(gd) }, { text: String(r.points ?? "—"), tone: "strong", bold: true }];
     }
     if (mode === "cricket") {
-      return [String(r.wins + r.losses + (r.no_result ?? 0)), String(r.wins), String(r.losses), String(r.no_result ?? 0), { text: String(r.points ?? "—"), tone: "strong", bold: true }, r.net_run_rate != null ? Number(r.net_run_rate).toFixed(3) : "—"];
+      return [String(cricketPlayed(r)), String(r.wins), String(r.losses), ...(cricketTies ? [String(r.draws ?? 0)] : []), String(r.no_result ?? 0), { text: String(r.points ?? "—"), tone: "strong", bold: true }, r.net_run_rate != null ? Number(r.net_run_rate).toFixed(3) : "—"];
     }
     const kind = r.streak?.[0]?.toUpperCase();
     return [String(r.wins), String(r.losses), ...(ties ? [String(r.draws ?? 0)] : []), Number(r.win_percent).toFixed(3), r.streak ? { text: r.streak, tone: kind === "W" ? "win" : kind === "L" ? "loss" : "muted", bold: true } : "—"];
   };
 
   const tables = sections.map(([name, rows]) => {
+    const cricketTies = mode === "cricket" && hasCricketTies(rows);
     const list: ExportRow[] = rows.map((r, i) => {
       const zone = zones && !r.unranked ? zones.zoneAt(rows, i) : null;
-      return { key: r.team_espn_id, rank: r.unranked ? "–" : i + 1, lead: logo(r.name, r.logo_url, r.color), name: teamDisplayName(r.name), cells: cellsFor(r), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
+      return { key: r.team_espn_id, rank: r.unranked ? "–" : i + 1, lead: logo(r.name, r.logo_url, r.color), name: qualifiers && r.qualified === true ? <>{teamDisplayName(r.name)} <span style={{ fontSize: 10, fontWeight: 800, color: CARD.accent }}>Q</span></> : teamDisplayName(r.name), cells: cellsFor(r, cricketTies), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
     });
     // No row cap: the image is the whole table (a 32-team NFL season, a 36-team league phase).
-    const table = <ExportTable firstHeader="Team" headers={headers} rows={list} bare compact={mode === "soccer" && sections.length > 1} />;
+    const table = <ExportTable firstHeader="Team" headers={headersFor(rows)} rows={list} bare compact={mode === "soccer" && sections.length > 1} />;
     return sections.length === 1 && name === "All Teams" && !notStarted(rows) ? (
       <div key={name} style={{ border: `1px solid ${CARD.border}`, borderRadius: 12, overflow: "hidden" }}>{table}</div>
     ) : (
@@ -72,6 +82,11 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
   return (
     <ExportShell header={<ExportTitle league={league} title={title} subtitle={subtitle} />} context={context}>
       <div style={{ display: "grid", gridTemplateColumns: sections.length > 1 ? "1fr 1fr" : "1fr", gap: 14, alignItems: "start" }}>{tables}</div>
+      {qualifiers && (
+        <div style={{ marginTop: 12, fontSize: 12, color: CARD.textMuted }}>
+          <span style={{ fontWeight: 800, color: CARD.accent }}>Q</span> {qualifierLegend(league)}
+        </div>
+      )}
       {zones && zones.legend.length > 0 && (
         <div style={{ marginTop: 12, fontSize: 12, color: CARD.textMuted }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>

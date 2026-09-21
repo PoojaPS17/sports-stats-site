@@ -5,6 +5,8 @@
 import { gameCalledOffLabel, isGameCalledOff, isNeverPlayed } from "./gameStatus";
 import { isCricketLeague, isFirstClassCricket, isSoccerLeague, LEAGUE_LABEL, type League } from "./leagues";
 import { teamDisplayName } from "./teamName";
+import { scoreLineOrder } from "./cricketOrder";
+import type { CricketTeamScorecard } from "./matchDetail";
 
 interface Status {
   completed: boolean;
@@ -24,6 +26,23 @@ export function gameSides(league: League, game: { home_name: string; away_name: 
  * always had (away first), so this is narrower than `gameSides`, which also puts the home side first in cricket titles.
  */
 export const scoreLineHomeFirst = (league: League): boolean => isSoccerLeague(league);
+
+/**
+ * The order a two-team score line lists its sides in, for every sport at once. Cricket follows the match: the side
+ * that batted first is listed first, as Cricinfo does (`scoreLineOrder`, which reads the stored scorecard and falls
+ * back to the score lines). Football lists the home side first; the NBA and NFL list the visitors first.
+ *
+ * One rule in one place: the cards, the match headers, the export tiles and the share image all order their two
+ * lines through this, so a card and the page it links to can never disagree about which side goes on top.
+ */
+export function scoreLineSides(
+  league: League,
+  game: Parameters<typeof scoreLineOrder>[0],
+  scorecard?: CricketTeamScorecard[] | null,
+): ["away", "home"] | ["home", "away"] {
+  if (isCricketLeague(league)) return scoreLineOrder(game, scorecard);
+  return scoreLineHomeFirst(league) ? ["home", "away"] : ["away", "home"];
+}
 
 /** "Manchester City vs Sunderland": the two names as a score line orders them (see scoreLineHomeFirst), for share titles and follow labels. */
 export function matchupLabel(league: League, game: { home_name: string; away_name: string }): string {

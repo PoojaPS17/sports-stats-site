@@ -5,6 +5,7 @@ import { SOCCER_LEAGUES, isCupCompetition } from "@/lib/leagues";
 import type { PlayoffResult } from "@/lib/seasonSummary";
 import { tableComplete } from "@/lib/standingsOrder";
 import { relegationSummary } from "@/lib/standingsZones";
+import { normalizeStage } from "@/lib/stage";
 
 // IPL/NBA/NFL: a chronological list of every playoff-stage result found for the
 // season (Qualifier 1/Eliminator/Final for IPL, each series for NBA/NFL).
@@ -16,12 +17,12 @@ function PlayoffSummary({ league, results }: { league: League; results: PlayoffR
       <div className="card divide-y divide-[var(--border)]">
         {results.map((r, i) => (
           <div key={`${r.round}-${i}`} className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-3">
-            <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] sm:w-44 sm:shrink-0">{r.round}</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] sm:w-44 sm:shrink-0">{normalizeStage(r.round) ?? r.round}</span>
             <span className="text-sm">
               <Link href={`/${league}/teams/${r.winnerSlug}`} className="font-semibold hover:underline">
                 {r.winnerName}
               </Link>
-              {" beat "}
+              {r.noWinner ? " v " : " beat "}
               <Link href={`/${league}/teams/${r.loserSlug}`} className="hover:underline">
                 {r.loserName}
               </Link>

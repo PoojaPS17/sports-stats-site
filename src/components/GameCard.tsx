@@ -6,7 +6,7 @@ import { StatusPill } from "./StatusPill";
 import { Kickoff } from "./Kickoff";
 import { formatGameDate } from "@/lib/gameDay";
 import { gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
-import { scoreLineHomeFirst } from "@/lib/gamePage";
+import { scoreLineSides } from "@/lib/gamePage";
 
 function TeamRow({
   name,
@@ -68,10 +68,37 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   const live = game.status_state === "in";
   // A called-off game is not upcoming: it has no kickoff time to show.
   const upcoming = isUpcomingGame(game);
-  const away = { side: "away", name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color, score: game.away_score, scoreDisplay: game.away_score_display, won: awayWon };
-  const home = { side: "home", name: game.home_name, abbr: game.home_abbr, logo: game.home_logo, color: game.home_color, score: game.home_score, scoreDisplay: game.home_score_display, won: homeWon };
-  // Football lists the home side first, as BBC and ESPN.com do; the NBA and NFL list the visitors first.
-  const sides = scoreLineHomeFirst(league) ? [home, away] : [away, home];
+  // Cricinfo lists the side that batted first first (a list card has no scorecard, so the score lines decide);
+  // football lists the home side first, as BBC and ESPN.com do; the NBA and NFL list the visitors first.
+  const order = scoreLineSides(league, game);
+  const rows = {
+    away: (
+      <TeamRow
+        name={teamDisplayName(game.away_name)}
+        abbr={game.away_abbr}
+        logo={game.away_logo}
+        color={game.away_color}
+        score={game.away_score}
+        scoreDisplay={game.away_score_display}
+        completed={game.completed}
+        live={live}
+        won={awayWon}
+      />
+    ),
+    home: (
+      <TeamRow
+        name={teamDisplayName(game.home_name)}
+        abbr={game.home_abbr}
+        logo={game.home_logo}
+        color={game.home_color}
+        score={game.home_score}
+        scoreDisplay={game.home_score_display}
+        completed={game.completed}
+        live={live}
+        won={homeWon}
+      />
+    ),
+  };
 
   return (
     <Link
@@ -98,24 +125,12 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           <span className="text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_detail)}</span>
         ) : (
           <span className="text-xs text-[var(--text-faint)]">
-            {formatGameDate(game.date, league, { month: "short", day: "numeric" })}
+            {formatGameDate(game.date, league, { month: "short", day: "numeric" }, game.local_date)}
           </span>
         )}
       </div>
-      {sides.map((t) => (
-        <TeamRow
-          key={t.side}
-          name={teamDisplayName(t.name)}
-          abbr={t.abbr}
-          logo={t.logo}
-          color={t.color}
-          score={t.score}
-          scoreDisplay={t.scoreDisplay}
-          completed={game.completed}
-          live={live}
-          won={t.won}
-        />
-      ))}
+      {rows[order[0]]}
+      {rows[order[1]]}
       {game.completed && game.status_summary && (
         <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_summary)}</p>
       )}

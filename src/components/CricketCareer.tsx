@@ -3,6 +3,7 @@ import { SectionHeader } from "./SectionHeader";
 import { CricketSplitTabs } from "./CricketSplitTabs";
 import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL } from "@/lib/queries";
 import { cricketCareerNote } from "@/lib/cricketCareerNote";
+import { trunc2 } from "@/lib/cricketFormat";
 import type { League, CricketCareerStats, CricketSplitDimension, CricketSplitRow } from "@/lib/queries";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -14,6 +15,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+// Rates are cut at two decimals, not rounded: that is how Statsguru writes them (lib/cricketFormat.ts).
 const fmt = (n: number | null, digits = 2) => (n === null ? "-" : n.toFixed(digits));
 
 function SplitTable({ label, rows, league }: { label: string; rows: CricketSplitRow[]; league: League }) {
@@ -76,8 +78,8 @@ export function CricketCareer({
               <Stat label="Innings" value={String(career.inningsBatted)} />
               <Stat label="Runs" value={String(career.runs)} />
               <Stat label="Highest" value={career.highestScore === null ? "-" : String(career.highestScore)} />
-              <Stat label="Average" value={fmt(career.average)} />
-              <Stat label="Strike Rate" value={fmt(career.strikeRate, 1)} />
+              <Stat label="Average" value={trunc2(career.average)} />
+              <Stat label="Strike Rate" value={trunc2(career.strikeRate)} />
               <Stat label="100s" value={String(career.hundreds)} />
               <Stat label="50s" value={String(career.fifties)} />
             </div>
@@ -89,8 +91,8 @@ export function CricketCareer({
                 <Stat label="Innings" value={String(career.inningsBowled)} />
                 <Stat label="Overs" value={fmt(career.overs, 1)} />
                 <Stat label="Wickets" value={String(career.wickets)} />
-                <Stat label="Average" value={fmt(career.wickets > 0 ? career.runsConceded / career.wickets : null)} />
-                <Stat label="Economy" value={fmt(career.economy, 2)} />
+                <Stat label="Average" value={trunc2(career.wickets > 0 ? career.runsConceded / career.wickets : null)} />
+                <Stat label="Economy" value={trunc2(career.economy)} />
                 <Stat label="5w" value={String(career.fiveWicketHauls)} />
               </div>
             </div>

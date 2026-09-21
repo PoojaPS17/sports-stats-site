@@ -4,6 +4,7 @@ import { isCricketLeague, isCupCompetition, slugify, type League } from "./espn"
 import { resolveCricketWinner } from "../../src/lib/cricketResult";
 import { isNeverPlayed } from "../../src/lib/gameStatus";
 import { upsertTeam } from "./teams";
+import { parseCricketLocalDates, type CricketLocalDates } from "./cricket-dates";
 
 // The scoreboard endpoint reports a plain string/number score. The per-team schedule
 // endpoint instead reports `{ value, displayValue }`. Cricket's is a compound string
@@ -85,12 +86,7 @@ export function parseRound(league: League, ev: any): string | null {
   // Chennai, May 23 2023" for a playoff match, or "69th Match (D/N), Indian Premier
   // League at Mumbai, May 21 2023" for an ordinary league one — shorten the latter to
   // "Match 69" instead of discarding it, so every card shows something specific.
-  if (typeof ev.description === "string") {
-    const stage = ev.description.match(/^(.+?)\s*\([DN/]+\)/)?.[1]?.trim();
-    if (!stage) return null;
-    const numbered = stage.match(/^(\d+)(?:st|nd|rd|th)\s+Match$/i);
-    return numbered ? `Match ${numbered[1]}` : stage;
-  }
+  if (typeof ev.description === "string") return parseCricketRound(ev.description);
   // NBA/NFL: a `notes` entry like {"type":"event","headline":"AFC Wild Card Playoffs"}
   // or "NBA Finals - Game 6" exists on real postseason games, but the *same* notes
   // shape also appears on plenty of regular-season games with special billing (NBA
@@ -105,6 +101,58 @@ export function parseRound(league: League, ev: any): string | null {
   if (seasonType !== 3 || competitionType === "ALLSTAR") return null;
   const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
   return typeof headline === "string" ? normalizeStage(headline) : null;
+}
+
+// "Match 12" for a numbered league match; anything else as given.
+function matchNumber(stage: string): string {
+  const numbered = stage.match(/^(\d+)(?:st|nd|rd|th)\s+Match$/i);
+  return numbered ? `Match ${numbered[1]}` : stage;
+}
+
+/**
+ * The stage in a cricket event's `description`: "<stage>[ (D/N)], <series> at <venue>, <date>", where the
+ * stage may itself hold a comma ("22nd Match, Group B"). A match with a day/night marker keeps what
+ * precedes the marker, exactly as it always has. A daytime match has no marker ("Final, Women's Big
+ * Bash League at Hobart, Nov 30 2024", the CWC 2019 semi-finals, T20 World Cup 2010): its stage is
+ * what precedes the "<series> at <venue>" segment, or the first comma segment when the description
+ * has no such segment (unless that segment names the competition, "Women's Big Bash League, Dec 13
+ * 2025", which is not a stage). Named stages get the usual spelling (normalizeStage), so "2nd Semi-final"
+ * reads as "2nd Semi-Final". A description that is only "<series> at <venue>" has no stage.
+ */
+export function parseCricketRound(description: string): string | null {
+  const marked = description.match(/^(.+?)\s*\([DN/]+\)/)?.[1]?.trim();
+  if (marked) return matchNumber(marked);
+  const parts = description.split(",").map((p) => p.trim());
+  const seriesAt = parts.findIndex((p) => / at /.test(p));
+  if (seriesAt === 0 || (seriesAt === -1 && parts.length < 2)) return null;
+  const stage = parts.slice(0, seriesAt === -1 ? 1 : seriesAt).join(", ").replace(/\s*\([^)]*\)\s*$/, "").trim();
+  if (seriesAt === -1 && /\b(league|cup|trophy|series|tournament)\b/i.test(stage)) return null;
+  return stage ? normalizeStage(matchNumber(stage)) : null;
+}
+
+/**
+ * Fills `games.local_date` / `end_date` for one cricket match from the feed's own text (see
+ * cricket-dates.ts). The one writer for every ESPN-fed cricket row: `upsertEvent` (scores scrape,
+ * season backfill, the daily sweep) and the international importer call it after their insert. A date
+ * read from the text replaces what is stored, range included, so a corrected parse wins; a match whose
+ * text has no date only gets the UTC day of its start, and only if it has none yet, so a re-run of a
+ * poorer feed never erases a good value. Not for Cricsheet rows, which already carry a local date.
+ */
+export async function storeCricketDates(league: string, espnId: string, description: unknown, notes: unknown, startIso: string): Promise<CricketLocalDates["source"] | null> {
+  const parsed = parseCricketLocalDates(description, notes, startIso);
+  if (!parsed.localDate) return null;
+  // Only when something would change: the live scrape calls this on every poll for every cricket match, and an
+  // update that rewrites the same values still makes a new row version (and bloat) for nothing.
+  await pool.query(
+    `update games g set local_date = n.local_date, end_date = n.end_date
+     from (select case when $4 then $2::date else coalesce(g2.local_date, $2::date) end as local_date,
+                  case when $4 then $3::date else g2.end_date end as end_date
+           from games g2 where g2.league = $1 and g2.espn_id = $5) n
+     where g.league = $1 and g.espn_id = $5
+       and (g.local_date, g.end_date) is distinct from (n.local_date, n.end_date)`,
+    [league, parsed.localDate, parsed.endDate, parsed.source !== "utc", espnId]
+  );
+  return parsed.source;
 }
 
 // Cup competitions (Champions League): every event carries its stage — as
@@ -286,4 +334,6 @@ export async function upsertEvent(league: League, ev: any) {
       parseNote(ev),
     ]
   );
+  // The scoreboard's `description` ends with the match's local day(s); `date` alone is a UTC instant.
+  if (isCricketLeague(league)) await storeCricketDates(league, String(ev.id), ev.description, [...(ev.notes ?? []), ...(comp.notes ?? [])], ev.date);
 }

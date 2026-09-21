@@ -38,7 +38,7 @@ function groupByDay(league: League, games: Awaited<ReturnType<typeof getRecentAn
       weekday: "long",
       month: "long",
       day: "numeric",
-    });
+    }, g.local_date);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(g);
   }
@@ -111,10 +111,10 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
           <SectionHeader
             tools={
               <ImageActions
-                filename={`${league}-scores-${gameDayIso(dayGames[0].date, league)}`}
+                filename={`${league}-scores-${gameDayIso(dayGames[0].date, league, dayGames[0].local_date)}`}
                 shareTitle={`${LEAGUE_LABEL[league]} scores, ${day}`}
                 width={scoreboardExportWidth(league)}
-                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${gameDayIso(dayGames[0].date, league).slice(0, 4)}`} games={dayGames} />}
+                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${gameDayIso(dayGames[0].date, league, dayGames[0].local_date).slice(0, 4)}`} games={dayGames} />}
               />
             }
           >

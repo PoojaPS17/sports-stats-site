@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, getAllTeams, getStandings, formatSeasonLabel } from "@/lib/queries";
+import { notFound, redirect } from "next/navigation";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getAllTeams, getStandings, formatSeasonLabel } from "@/lib/queries";
 import { getTeamComparison } from "@/lib/compare";
 import { supportsScoreAnalytics, isSoccer } from "@/lib/analytics";
 import { formatWinLossTie } from "@/lib/teamSummary";
@@ -26,7 +26,8 @@ export async function generateMetadata({
   searchParams: Promise<{ a?: string; b?: string }>;
 }): Promise<Metadata> {
   const { league } = await params;
-  if (!isLeague(league)) return {};
+  // A cricket league has no team compare: the page sends the visitor to the players' compare.
+  if (!isLeague(league) || isCricketLeague(league)) return {};
   const { a, b } = await searchParams;
   const label = LEAGUE_LABEL[league];
   if (a && b) {
@@ -70,7 +71,11 @@ export default async function CompareTeamsPage({
   searchParams: Promise<{ a?: string; b?: string }>;
 }) {
   const { league } = await params;
-  if (!isLeague(league) || !supportsScoreAnalytics(league)) notFound();
+  if (!isLeague(league)) notFound();
+  // Cricket has no team compare (its tables and results are not scores to compare), but the sport's
+  // compare is linked from every cricket menu: land on the players' compare rather than a 404.
+  if (isCricketLeague(league)) redirect(`/${league}/compare/players`);
+  if (!supportsScoreAnalytics(league)) notFound();
   const { a = "", b = "" } = await searchParams;
   const label = LEAGUE_LABEL[league];
 

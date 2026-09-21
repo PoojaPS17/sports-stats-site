@@ -37,6 +37,8 @@ export interface OffseasonRecap {
   nextFixtureOn: string | null;
   /** Date of the season's last completed game. */
   endedOn: string | null;
+  /** Cricket only: the last match's local day, YYYY-MM-DD, when stored (`endedOn` is a UTC instant). */
+  endedOnLocal?: string | null;
   champion: { name: string; slug: string } | null;
   /** The closing games, most recent first: the final and the rounds before it, or the last matchday. */
   closingGames: GameRow[];
@@ -96,14 +98,18 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
   const playoffs = summarizePlayoffs(playoffGames);
   const closingGames = (playoffGames.length > 0 ? [...playoffGames].reverse() : lastResults).slice(0, 3);
 
-  // Playoff competitions crown the winner of the last knockout result; a league
-  // season's champion is the top of a finished table.
-  const decider = [...playoffs].reverse().find((r) => /final/i.test(r.round) && !/semi|quarter/i.test(r.round));
+  // Playoff competitions crown the winner of the last knockout result; a league season's champion is the top of a
+  // finished table. A knockout match nobody won (noWinner: tied, or abandoned with no result) crowns no one -- but
+  // it was still played, so it counts towards "the final has been played", which is what decides whether the season
+  // is over. Hence two readings of the same list: every playoff for `finalPlayed`, the decided ones for the champion.
+  const finalOf = (rs: PlayoffResult[]) => [...rs].reverse().find((r) => /final/i.test(r.round) && !/semi|quarter/i.test(r.round));
+  const decided = playoffs.filter((r) => !r.noWinner);
   const domesticTableComplete = isSoccerLeague(league) && !isCupCompetition(league) && tableComplete(standings);
-  const seasonOver = seasonIsOver({ cup: isCupCompetition(league), finalPlayed: decider !== undefined, domesticTableComplete, hasFutureFixture: nextFixture !== null });
+  const seasonOver = seasonIsOver({ cup: isCupCompetition(league), finalPlayed: finalOf(playoffs) !== undefined, domesticTableComplete, hasFutureFixture: nextFixture !== null });
   let champion: OffseasonRecap["champion"] = null;
+  // No champion while the season still has fixtures to play (Task 4): the hub says the next matchday instead.
   if (seasonOver) {
-    const closing = decider ?? playoffs[playoffs.length - 1];
+    const closing = finalOf(decided) ?? decided[decided.length - 1];
     if (closing) champion = { name: closing.winnerName, slug: closing.winnerSlug };
     else if (domesticTableComplete) champion = { name: standings[0].name, slug: standings[0].slug };
   }
@@ -119,6 +125,7 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
     seasonOver,
     nextFixtureOn: seasonOver ? null : nextFixture,
     endedOn: lastResults[0]?.date ?? null,
+    endedOnLocal: lastResults[0]?.local_date ?? null,
     champion,
     closingGames,
     playoffs,

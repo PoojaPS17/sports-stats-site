@@ -34,7 +34,7 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
       : `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`;
     return { href: `/${g.league}/games/${g.espn_id}`, label };
   }
-  const date = formatGameDate(g.date, g.league, { month: "short", day: "numeric" });
+  const date = formatGameDate(g.date, g.league, { month: "short", day: "numeric" }, g.local_date);
   return {
     href: `/${g.league}/games/${g.espn_id}`,
     label: isSoccerLeague(g.league)
