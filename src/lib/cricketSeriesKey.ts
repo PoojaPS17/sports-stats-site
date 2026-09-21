@@ -56,9 +56,9 @@ function labelFromLink(link: unknown): string | null {
   return Number(m[2]) === (year + 1) % 100 ? `${year}-${m[2]}` : null;
 }
 
-/** SQL: a series that is not a tournament, or has at least one stored match (`alias` is the cricket_series row). A tournament with no matches is an emptied row and is never listed. */
+/** SQL: the series has at least one stored match (`alias` is the cricket_series row). A series with none is an emptied row and is never listed: ESPN regroups fixtures (a tour's odd match moves to the tour's own id, a league turns tournament), which leaves the old row behind with its old match count. */
 export const seriesHasPlaySql = (alias: string) =>
-  `(not ${alias}.is_tournament or exists (select 1 from cricket_series_matches hp where hp.series_espn_id = ${alias}.espn_id))`;
+  `exists (select 1 from cricket_series_matches hp where hp.series_espn_id = ${alias}.espn_id)`;
 
 /** True for a league whose id repeats every season, so its matches are filed per edition. */
 export function isEditioned(lg: { id?: unknown; isTournament?: unknown }): boolean {

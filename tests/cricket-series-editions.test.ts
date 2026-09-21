@@ -342,19 +342,19 @@ test("an ingest recomputes every edition row of the leagues it touches, and dele
   await db.pool.query(`delete from cricket_series_matches where series_espn_id = '8044-2026'`);
   await run(["20241231"]);
   assert.deepEqual(await counts(), [["8044-2024-25", n0], ["8044-2025-26", n1]]);
-  // a bilateral series with nothing listed yet is not a tournament row and stays
+  // a bilateral series with nothing listed yet is not a tournament row and stays stored (the site does not list it while it has no match)
   await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count) values ('777', 'A tour', false, 'international', 0)`);
   await run(["20241231"]);
   assert.ok(await seriesRow("777"));
 });
 
-test("a tournament row with no stored match is never listed, searched or offered in the picker", async () => {
+test("a series row with no stored match is never listed, searched or offered in the picker", async () => {
   await run(["20251230"]);
   await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count, start_date, end_date, season) values ('8044', 'Big Bash League', true, 'domestic', 73, now() - interval '3 days', now() + interval '3 days', 2026)`);
   await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count, start_date, end_date, season) values ('555', 'A quiet tour', false, 'international', 0, now() - interval '3 days', now() + interval '3 days', 2026)`);
   const win = (await series.getCricketSeriesWindow(30, 30)).map((r) => r.espn_id);
   assert.ok(!win.includes("8044"), "window");
-  assert.ok(win.includes("555"), "a bilateral series with no match yet is still listed");
+  assert.ok(!win.includes("555"), "a bilateral series left with no match (ESPN regrouped its fixtures) is not listed either");
   assert.ok(!(await series.getCricketSeriesBySeason(2026)).some((r) => r.espn_id === "8044"), "archive");
   assert.ok(!(await series.searchCricketSeries("Big Bash")).some((r) => r.espn_id === "8044"), "picker");
   const hits = (await (await import("../src/lib/queries")).search("Big Bash")).filter((r) => r.type === "series").map((r) => r.slug);
