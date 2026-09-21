@@ -74,6 +74,12 @@ test("the venue prints its city once", () => {
   assert.equal(venueNamesCity("Eden Gardens, Kolkata", "Kolkata"), true);
   assert.equal(venueNamesCity("Eden Gardens", "Kolkata"), false);
   assert.equal(venueNamesCity("Kolkata", "Kolkata"), false);
+  // the city can be any part after the ground's name, not only the last (the review's Szodliget example)
+  assert.equal(venueNamesCity("GB Oval, Szodliget, Budapest", "Szodliget"), true);
+  assert.equal(venueNamesCity("GB Oval, Szodliget, Budapest", " szodliget "), true);
+  assert.doesNotMatch(facts("GB Oval, Szodliget, Budapest", "Szodliget"), /Szodliget, Szodliget|Budapest, Szodliget/);
+  assert.match(facts("GB Oval, Szodliget, Budapest", "Szodliget"), /GB Oval, Szodliget, Budapest\s*$/);
+  assert.equal(venueNamesCity("Szodliget Oval, Budapest", "Szodliget"), false, "part of a name is not the city");
 });
 
 /* ---- batting order ------------------------------------------------------ */

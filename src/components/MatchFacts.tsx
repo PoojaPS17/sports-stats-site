@@ -12,13 +12,15 @@ function periodLabels(league: League, n: number): string[] {
 }
 
 /**
- * True when the venue already ends in its city: "Wankhede Stadium, Mumbai" for Mumbai. A city that is only
- * part of the ground's name ("Melbourne Cricket Ground" for Melbourne) is not a repeat: Cricinfo prints both.
+ * True when one of the venue's comma-separated parts is the city: "Wankhede Stadium, Mumbai" for Mumbai,
+ * "GB Oval, Szodliget, Budapest" for Szodliget. A city that is only part of the ground's name, or a venue
+ * that is a single part ("Melbourne Cricket Ground" for Melbourne), is not a repeat: Cricinfo prints both.
  */
 export function venueNamesCity(venue: string, city: string): boolean {
   const fold = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-  const last = fold(venue.split(",").pop() ?? "");
-  return last.length > 0 && venue.includes(",") && last === fold(city);
+  const parts = venue.split(",").map(fold);
+  const wanted = fold(city);
+  return wanted.length > 0 && parts.length > 1 && parts.slice(1).includes(wanted);
 }
 
 // Venue, crowd and officials, plus the score by period when the feed carries it.
