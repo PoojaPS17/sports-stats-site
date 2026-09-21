@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dayTimeZone } from "@/lib/gameDay";
-import { isSoccerLeague } from "@/lib/leagues";
+import { isSoccerLeague, type League } from "@/lib/leagues";
 import { formatLocalTime, type LocalTimeFormat } from "@/lib/localTime";
 
 // Kickoff / tip-off date and time in the visitor's own time zone. The server can't
@@ -29,10 +29,10 @@ export function LocalTime({
   format?: LocalTimeFormat;
   className?: string;
   serverTimeZone?: string;
-  league?: string;
+  league?: League;
 }) {
   const [label, setLabel] = useState<string | null>(null);
-  const clock24 = league !== undefined && isSoccerLeague(league as never);
+  const clock24 = league !== undefined && isSoccerLeague(league);
   const firstPaintZone = serverTimeZone ?? (league !== undefined ? dayTimeZone(league) : undefined);
 
   useEffect(() => {
