@@ -30,6 +30,10 @@
 // For games already stored that have no player rows, the matching Cricsheet file
 // (same Cricinfo id) supplies the scorecard: player figures and the match report are
 // written, the game row is left as ESPN has it, and players keep their current club.
+// `--rewrite-cards` (cards-only leagues only) also redoes the games an earlier run filled
+// from Cricsheet (their stored report has no dismissal text), so they follow the current
+// rules: the 0* (0) batter, and a card for every player in the XI. Games filled from ESPN
+// are never selected.
 import { normalizeStage } from "../src/lib/stage";
 import { readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -37,6 +41,7 @@ import { pool } from "./lib/db";
 import { slugify } from "./lib/espn";
 import { uniqueSlugFor } from "./lib/players";
 import { buildCards, buildScorecard, oversText, parseMatch, type Innings, type ParsedMatch } from "./lib/cricsheet-parse";
+import { selectCardsOnlyGames } from "./lib/cricsheet-targets";
 
 type IntlLeague = "odi" | "t20i";
 type CardsLeague = "ipl" | "bbl";
@@ -59,7 +64,11 @@ function parseArgs() {
   const league = positional[0] as CsLeague | undefined;
   const dir = positional[1];
   if (!league || !(league in MATCH_TYPE) || !dir || !opt("people")) {
-    console.error("usage: import-cricsheet.ts <odi|t20i|ipl|bbl> <dir> --people <people.csv> [--names <cache.json>] [--missing] [--limit N]");
+    console.error("usage: import-cricsheet.ts <odi|t20i|ipl|bbl> <dir> --people <people.csv> [--names <cache.json>] [--missing] [--limit N] [--rewrite-cards (ipl|bbl only)]");
+    process.exit(1);
+  }
+  if (args.includes("--rewrite-cards") && !CARDS_ONLY[league]) {
+    console.error("import-cricsheet.ts: --rewrite-cards only applies to the cards-only leagues (ipl, bbl); odi and t20i are always rewritten in full");
     process.exit(1);
   }
   return {
@@ -68,6 +77,7 @@ function parseArgs() {
     people: opt("people")!,
     names: opt("names"),
     missingOnly: args.includes("--missing"),
+    rewriteCards: args.includes("--rewrite-cards"),
     limit: opt("limit") ? Number(opt("limit")) : Infinity,
   };
 }
@@ -418,7 +428,7 @@ async function writeMatch(
 /* ------------------------------------------------------------------------ */
 
 async function main() {
-  const { league, dir, people, names: namesPath, missingOnly, limit } = parseArgs();
+  const { league, dir, people, names: namesPath, missingOnly, rewriteCards, limit } = parseArgs();
   const register = loadRegister(people);
 
   const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
@@ -443,15 +453,7 @@ async function main() {
   // Daredevils" -> "Delhi Capitals", "Kings XI Punjab" -> "Punjab Kings").
   const gameTeams = new Map<string, Map<string, TeamInfo>>();
   if (CARDS_ONLY[league]) {
-    const { rows } = await pool.query(
-      `select g.espn_id, h.espn_id as home_id, h.name as home_name, h.abbreviation as home_abbr, a.espn_id as away_id, a.name as away_name, a.abbreviation as away_abbr
-       from games g
-       join teams h on h.league = g.league and h.espn_id = g.home_team_espn_id
-       join teams a on a.league = g.league and a.espn_id = g.away_team_espn_id
-       where g.league = $1 and g.completed
-         and not exists (select 1 from player_game_stats s where s.league = g.league and s.game_espn_id = g.espn_id)`,
-      [league]
-    );
+    const rows = await selectCardsOnlyGames(pool, league, rewriteCards);
     const targets = new Map(rows.map((r) => [r.espn_id as string, r]));
     const words = (n: string) => new Set(n.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2));
     const overlap = (a: string, b: string) => [...words(a)].filter((w) => words(b).has(w)).length;
@@ -470,7 +472,7 @@ async function main() {
       gameTeams.set(m.id, new Map([[homeName, info(g.home_id, g.home_name, g.home_abbr)], [awayName, info(g.away_id, g.away_name, g.away_abbr)]]));
       queue.push(m);
     }
-    console.log(`[import-cricsheet] ${league}: ${targets.size} stored games without scorecards, ${queue.length} found in the archive`);
+    console.log(`[import-cricsheet] ${league}: ${targets.size} stored games ${rewriteCards ? "without scorecards or with a Cricsheet one" : "without scorecards"}, ${queue.length} found in the archive`);
   } else if (missingOnly) {
     const { rows } = await pool.query(`select espn_id from games where league = $1 and espn_id = any($2)`, [league, parsed.map((m) => m.id)]);
     const have = new Set(rows.map((r) => r.espn_id as string));

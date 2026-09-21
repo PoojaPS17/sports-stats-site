@@ -31,6 +31,8 @@ export interface Innings {
   balls: number;
   allOut: boolean;
   target: { runs: number; overs: number } | null;
+  /** Every delivery in the innings, wides and no-balls included. */
+  deliveries: number;
   batters: BatterLine[];
   bowlers: BowlerLine[];
   catches: Map<string, number>;
@@ -52,6 +54,7 @@ export function parseInnings(raw: any, personId: (name: string) => string | null
   let runs = 0;
   let wickets = 0;
   let balls = 0;
+  let deliveries = 0;
 
   const batter = (name: string): BatterLine | null => {
     const id = personId(name);
@@ -76,6 +79,7 @@ export function parseInnings(raw: any, personId: (name: string) => string | null
       const noballs = d.extras?.noballs ?? 0;
       const legal = wides === 0 && noballs === 0;
       runs += d.runs?.total ?? 0;
+      deliveries++;
       if (legal) balls++;
 
       const bt = batter(d.batter);
@@ -133,6 +137,7 @@ export function parseInnings(raw: any, personId: (name: string) => string | null
     balls,
     allOut: wickets >= playersInXI - 1,
     target: raw.target ? { runs: raw.target.runs, overs: raw.target.overs } : null,
+    deliveries,
     // Everyone who came to the crease, including a not-out non-striker who never faced a ball:
     // Cricinfo lists him as 0* (0) and counts an innings.
     batters: [...batters.values()].sort((a, b) => a.order - b.order),
@@ -158,8 +163,6 @@ export interface ParsedMatch {
   ballsPerOver: number;
   /** Player Cricinfo id -> team name, for everyone in the XIs. */
   squads: Map<string, string>;
-  /** Named as the incoming player of a match replacement (concussion or impact substitute). Not every one played. */
-  substitutes: Set<string>;
   names: Map<string, string>;
 }
 
@@ -183,11 +186,6 @@ export function parseMatch(id: string, data: any, register: Map<string, string |
       const pid = personId(n);
       if (pid) squads.set(pid, team);
     }
-  }
-  const substitutes = new Set<string>();
-  for (const r of info.replacements?.match ?? []) {
-    const pid = personId(r.in);
-    if (pid) substitutes.add(pid);
   }
   const ballsPerOver: number = info.balls_per_over ?? 6;
   const xi = Math.max(...Object.values<string[]>(info.players ?? {}).map((l) => l.length), 11);
@@ -227,7 +225,6 @@ export function parseMatch(id: string, data: any, register: Map<string, string |
     maxOvers: typeof info.overs === "number" ? info.overs : null,
     ballsPerOver,
     squads,
-    substitutes,
     names,
   };
 }
@@ -244,11 +241,14 @@ export function economy(conceded: number, balls: number, ballsPerOver: number): 
 /* ------------------------------------------------------------------------ */
 
 // Per-player match figures in the shape backfill-cricket-player-stats stores. Everyone in
-// the XIs gets a card, empty if they did nothing: Cricinfo's Matches counts every
-// appearance. A named substitute with no figures is left out, as he may never have taken
-// the field; a substitute who batted, bowled or caught has a card from his figures.
+// info.players gets a card, empty if they did nothing: Cricinfo's Matches counts every
+// name in it, an impact or concussion substitute included (so info.replacements is not
+// consulted). Someone who is not in info.players has a card only from his figures.
 export function buildCards(m: ParsedMatch, teamOf: (id: string) => string | null, nameOf: (id: string) => string): Map<string, CricketPlayerMatchStats> {
   const cards = new Map<string, CricketPlayerMatchStats>();
+  // A match with no innings, or with no ball bowled, was abandoned before play: nobody
+  // appeared in it (the ESPN extractor drops these too, see cricket-career.ts).
+  if (m.innings.every((inn) => inn.deliveries === 0)) return cards;
   const card = (id: string) => {
     if (!cards.has(id)) cards.set(id, { athleteId: id, name: nameOf(id), teamId: teamOf(id) ?? "" });
     return cards.get(id)!;
@@ -258,7 +258,7 @@ export function buildCards(m: ParsedMatch, teamOf: (id: string) => string | null
     for (const bw of inn.bowlers) card(bw.id).bowling = { overs: Number(oversText(bw.balls, m.ballsPerOver)), conceded: bw.conceded, wickets: bw.wickets };
     for (const [id, n] of inn.catches) card(id).catches = (card(id).catches ?? 0) + n;
   }
-  for (const id of m.squads.keys()) if (!m.substitutes.has(id)) card(id);
+  for (const id of m.squads.keys()) card(id);
   return cards;
 }
 

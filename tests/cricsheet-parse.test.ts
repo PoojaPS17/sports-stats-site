@@ -126,7 +126,8 @@ test("a player who is not in either XI gets no card", () => {
   assert.equal(cards.size, 8);
 });
 
-test("a substitute who came on and did nothing gets no card, one who took a catch does", () => {
+test("a player named as a replacement who is also in info.players gets a card: Cricinfo counts him", () => {
+  // Statsguru's Mat counts every name in info.players, an impact or concussion substitute included (PD Salt, ODI 2022-11-22).
   const m = parse({
     players: { "Team A": ["P-a1", "P-a2", "P-a3", "P-a4", "P-s1"], "Team B": ["P-b1", "P-b2", "P-b3", "P-b4", "P-s2"] },
     replacements: {
@@ -139,9 +140,26 @@ test("a substitute who came on and did nothing gets no card, one who took a catc
   // s2 takes the catch that dismisses a1 in place of b3.
   m.innings[0].catches.set(cricinfo("s2"), 1);
   const cards = buildCards(m, teamOf(m), (id) => id);
-  assert.equal(cards.has(cricinfo("s1")), false, "s1 was named but never took part");
+  assert.ok(cards.has(cricinfo("s1")), "s1 is listed in info.players and is a match played");
+  assert.equal(cards.get(cricinfo("s1"))?.batting, undefined);
   assert.equal(cards.get(cricinfo("s2"))?.catches, 1);
-  assert.ok(cards.has(cricinfo("a4")), "the player he replaced was in the XI");
+  assert.ok(cards.has(cricinfo("a4")), "the player he replaced was in the XI too");
+  assert.equal(cards.size, 10);
+});
+
+test("a match with no innings, or with no ball bowled, gives no cards at all", () => {
+  // Abandoned before a ball: nobody played, so nobody has an appearance (the ESPN path drops these too).
+  const none = parseMatch("900002", { ...matchJson(), innings: [] }, register)!;
+  assert.equal(none.innings.length, 0);
+  assert.equal(buildCards(none, teamOf(none), (id) => id).size, 0);
+
+  const noBalls = parseMatch("900003", { ...matchJson(), innings: [{ team: "Team A", overs: [] }, { team: "Team B", overs: [{ over: 0, deliveries: [] }] }] }, register)!;
+  assert.equal(noBalls.innings.length, 2);
+  assert.equal(buildCards(noBalls, teamOf(noBalls), (id) => id).size, 0);
+
+  // One delivery is enough to make it a match.
+  const oneBall = parseMatch("900004", { ...matchJson(), innings: [{ team: "Team A", overs: [{ over: 0, deliveries: [ball("a1", "a2", "b1", 1)] }] }] }, register)!;
+  assert.equal(buildCards(oneBall, teamOf(oneBall), (id) => id).size, 8);
 });
 
 test("a catch, a stumping and a bowler's own catch each count once for the fielder", () => {
