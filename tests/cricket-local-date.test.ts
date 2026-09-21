@@ -195,3 +195,26 @@ test("a multi-day match reads as a range the way Cricinfo prints it", () => {
   // a game with no stored day is its UTC day, as before
   assert.equal(formatGameDateRange(d, "test", null, null), "Thu, Dec 25, 2025");
 });
+
+/* ---- the backfill's command line ------------------------------------------ */
+
+test("backfill:cricket-dates reads its arguments: every league given, the limit not taken for a league, a typo refused", async () => {
+  const { parseDateBackfillArgs } = await import("../scripts/lib/cricket-date-backfill");
+  const all = ["test", "wodi", "wt20i", "odi", "t20i"];
+  assert.deepEqual(parseDateBackfillArgs(["wodi"]), { ok: true, leagues: ["wodi"], limit: undefined });
+  assert.deepEqual(parseDateBackfillArgs(["wodi", "wt20i"]), { ok: true, leagues: ["wodi", "wt20i"], limit: undefined });
+  assert.deepEqual(parseDateBackfillArgs(["--limit", "20", "test"]), { ok: true, leagues: ["test"], limit: 20 });
+  assert.deepEqual(parseDateBackfillArgs(["test", "--limit", "20"]), { ok: true, leagues: ["test"], limit: 20 });
+  assert.deepEqual(parseDateBackfillArgs([]), { ok: true, leagues: all, limit: undefined });
+  assert.deepEqual(parseDateBackfillArgs(["--limit", "5"]), { ok: true, leagues: all, limit: 5 });
+  // a typo must reach the usage guard, first or last, with or without --limit
+  assert.equal(parseDateBackfillArgs(["tets"]).ok, false);
+  assert.equal(parseDateBackfillArgs(["tets", "wodi"]).ok, false);
+  assert.equal(parseDateBackfillArgs(["wodi", "tets"]).ok, false);
+  assert.equal(parseDateBackfillArgs(["--limit", "5", "tets"]).ok, false);
+  // a bad limit, a missing limit value, an unknown flag
+  assert.equal(parseDateBackfillArgs(["test", "--limit", "0"]).ok, false);
+  assert.equal(parseDateBackfillArgs(["test", "--limit", "x"]).ok, false);
+  assert.equal(parseDateBackfillArgs(["test", "--limit"]).ok, false);
+  assert.equal(parseDateBackfillArgs(["test", "--dry-run"]).ok, false);
+});

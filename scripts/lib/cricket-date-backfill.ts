@@ -80,3 +80,20 @@ export async function backfillCricketDates(
   }
   return out;
 }
+
+/**
+ * The command line of scripts/backfill-cricket-dates.ts: `[league ...] [--limit N]`. Pure, so it can be
+ * tested. `ok` is false for an unknown league, a missing or non-positive limit, or any other flag.
+ * With no league given, every league in DATE_BACKFILL_LEAGUES.
+ */
+export function parseDateBackfillArgs(args: string[]): { ok: boolean; leagues: string[]; limit: number | undefined } {
+  const limitAt = args.indexOf("--limit");
+  // The value after --limit is not a league; with no --limit nothing is skipped (index -1 would skip arg 0).
+  const skip = limitAt >= 0 ? limitAt + 1 : -1;
+  const limit = limitAt >= 0 ? Number(args[limitAt + 1]) : undefined;
+  const flags = args.filter((a, i) => a.startsWith("--") && i !== limitAt);
+  const named = args.filter((a, i) => !a.startsWith("--") && i !== skip);
+  const known = new Set<string>(DATE_BACKFILL_LEAGUES);
+  const valid = flags.length === 0 && named.every((l) => known.has(l)) && (limit === undefined || (Number.isInteger(limit) && limit > 0));
+  return { ok: valid, leagues: named.length > 0 ? named : [...DATE_BACKFILL_LEAGUES], limit };
+}
