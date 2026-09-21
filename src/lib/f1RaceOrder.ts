@@ -1,26 +1,22 @@
 // The order of a Grand Prix's classification and the Ret / DSQ / NC / DNS labels beside it.
 //
-// ESPN's own `order` is right for the front of the field, but not for the back: it puts drivers who retired on lap 1 above
-// ones who lasted 30 laps, leaves a disqualified driver among the finishers, shares one order between two drivers, and lists
-// no row at all for a driver who did not start. Two layers fix that, so that the order and the labels agree with f1.com:
-//   1. A rule over ESPN's own per-driver status and laps completed (stored by scripts/backfill-f1-events.ts): drivers who
-//      finished, in ESPN's order; then those who retired, by laps completed (most first), then ESPN's order; then drivers
-//      who did not start; then disqualified drivers. It is what ESPN's order should have been, and it never invents a
-//      result: a race with no stored status is left in ESPN's order, exactly as before.
+// ESPN's own `order` is right for the front of the field, and for every driver who was classified, but not for the back: it
+// puts drivers who retired on lap 1 above ones who lasted 30 laps, leaves a disqualified driver among the finishers, shares
+// one order between two drivers, and lists no row at all for a driver who did not start. Two layers fix that, so that the
+// order and the labels agree with f1.com:
+//   1. A rule over ESPN's own per-driver status and laps completed (stored by scripts/backfill-f1-events.ts). A disqualified
+//      driver is labelled DSQ and goes last; a driver who did not start is labelled DNS and goes before him. A driver ESPN calls
+//      retired is labelled Ret (or NC) ONLY when he completed clearly less than 90% of the winner's laps (the FIA's
+//      classification line, see f1DistanceZone): ESPN says "Retired" of drivers who stopped in the last laps and were still
+//      classified, and f1.com prints their number, so a retired driver at or over the line keeps ESPN's position and order.
+//      Drivers under the line come after the classified ones, by laps completed (most first). It never invents a result: with
+//      no stored status or laps a race is left in ESPN's order and numbers, exactly as before.
 //   2. A per-race table (below) for the races where the rule cannot be right, because ESPN's status or laps are wrong for
 //      a driver (2021 Brazil: two retirements are STATUS_CLASSIFIED), or two drivers are level, or f1.com keeps a
 //      disqualified driver at his on-track place (2019 Japan, 2024 Belgium). Each entry is copied from the f1.com results
 //      page for that race and is the whole truth for it: the order, and which drivers carry a label.
 
 export type F1ResultLabel = "Ret" | "DSQ" | "NC" | "DNS";
-
-/** ESPN's competitor status names (the value of a competitor's status ref) that read as a label; any other status (STATUS_CLASSIFIED, ...) shows the position. */
-const STATUS_LABELS: Record<string, F1ResultLabel> = {
-  STATUS_RETIRED: "Ret",
-  STATUS_DISQUALIFIED: "DSQ",
-  STATUS_NOT_CLASSIFIED: "NC",
-  STATUS_DID_NOT_START: "DNS",
-};
 
 /** Drivers ESPN lists in a Race only because they drove on Friday (startOrder 0, no order): they are not in the race. */
 export const F1_PRACTICE_ONLY_STATUS = "STATUS_FREE_PRACTICE";
@@ -522,29 +518,60 @@ export function f1LabelKey(labels: (F1ResultLabel | null)[]): string | null {
   return used.length ? used.map((label) => `${label} ${LABEL_MEANING[label]}`).join(" · ") : null;
 }
 
-export function f1StatusLabel(status: string | null | undefined): F1ResultLabel | null {
-  return (status && STATUS_LABELS[status]) || null;
+/**
+ * Where a driver's laps stand against the classification line: 90% of the winner's laps. ESPN's lapsCompleted for a driver who
+ * stopped runs at or above the FIA's figure, by a lap or two in some races (2021 Bahrain: Gasly 53, the FIA 52; 2021 Brazil:
+ * Stroll 49, the FIA 47) and by 3 to 5 in 2017 (Australia: Alonso 54, the FIA 50), and the winner's may be a lap out. So a driver
+ * is only `below` the line when he is a lap under it even if his laps and the winner's were each a lap out, and only
+ * `classified` when he is over it even if ESPN's figure for him is 5 laps too high. Anything closer is `unsure`, and `unknown`
+ * is a driver or winner with no laps stored. The FIA's rounding of the line is not applied consistently by f1.com/Jolpica either
+ * (2018 Monaco: 70 of 78 laps is not classified, 2016 Austria: 63 of 71 is), so a driver near the line is neither labelled
+ * nor given a number ESPN did not give: he shows what ESPN said, as before.
+ */
+export type F1DistanceZone = "below" | "classified" | "unsure" | "unknown";
+
+const ESPN_LAPS_MAY_BE_HIGH_BY = 5;
+
+export function f1DistanceZone(laps: number | null | undefined, winnerLaps: number | null | undefined): F1DistanceZone {
+  if (laps == null || winnerLaps == null || winnerLaps <= 0) return "unknown";
+  if (laps + 1 < 0.9 * (winnerLaps - 1)) return "below";
+  if (laps - ESPN_LAPS_MAY_BE_HIGH_BY >= 0.9 * (winnerLaps + 1)) return "classified";
+  return "unsure";
+}
+
+/**
+ * The label a stored status gives, outside the table. DSQ and DNS follow the status; Ret and NC need the driver to be clearly
+ * under the classification line (`zone`), so a driver ESPN calls retired who was classified reads his number.
+ */
+export function f1StatusLabel(status: string | null | undefined, zone: F1DistanceZone = "unknown"): F1ResultLabel | null {
+  if (status === "STATUS_DISQUALIFIED") return "DSQ";
+  if (status === F1_DID_NOT_START_STATUS) return "DNS";
+  if (zone !== "below") return null;
+  if (status === "STATUS_RETIRED") return "Ret";
+  if (status === "STATUS_NOT_CLASSIFIED") return "NC";
+  return null;
 }
 
 /** The label of one driver's result in one race (Ret, DSQ, NC, DNS), or null when he has a position (and for a race that has no stored status yet). */
-export function f1ResultLabel(eventId: string | null, driverId: string, status: string | null | undefined): F1ResultLabel | null {
+export function f1ResultLabel(eventId: string | null, driverId: string, status: string | null | undefined, zone: F1DistanceZone = "unknown"): F1ResultLabel | null {
   const override = eventId ? F1_RACE_OVERRIDES[eventId] : undefined;
   if (override && override.order.includes(driverId)) return override.labels[driverId] ?? null;
-  return f1StatusLabel(status);
+  return f1StatusLabel(status, zone);
 }
 
 /**
  * What one driver's result shows: his label, or his finishing position. In a race in the table above the position is his place
  * among the drivers without a label (f1.com does not count a disqualified driver), otherwise it is the position ESPN gave.
+ * (orderF1Classification, which sees the whole session, also numbers the drivers ESPN gave no position.)
  */
-export function f1ResultFor(eventId: string | null, driverId: string, position: number | null, status: string | null | undefined): { label: F1ResultLabel | null; position: number | null } {
+export function f1ResultFor(eventId: string | null, driverId: string, position: number | null, status: string | null | undefined, zone: F1DistanceZone = "unknown"): { label: F1ResultLabel | null; position: number | null } {
   const override = eventId ? F1_RACE_OVERRIDES[eventId] : undefined;
   const at = override ? override.order.indexOf(driverId) : -1;
   if (override && at >= 0) {
     if (override.labels[driverId]) return { label: override.labels[driverId], position: null };
     return { label: null, position: 1 + override.order.slice(0, at).filter((id) => !override.labels[id]).length };
   }
-  const label = f1StatusLabel(status);
+  const label = f1StatusLabel(status, zone);
   return { label, position: label ? null : position };
 }
 
@@ -553,6 +580,7 @@ export interface F1ClassifiedRow {
   position: number | null;
   status: string | null;
   laps: number | null;
+  winner: boolean;
 }
 
 // The rule's four groups: drivers with a position, retired ones, ones who did not start, disqualified ones.
@@ -567,13 +595,21 @@ function groupOf(label: F1ResultLabel | null): number {
  * The rows of one Race or Sprint in classification order, each with `result_label` and `position` set as it is shown.
  * `rows` come in with ESPN's position and stored status/laps and may be in any order. `eventId` is the race's, for the
  * table above; pass null for a sprint, which has no table.
+ *
+ * Outside the table: drivers without a label come first in ESPN's order. A driver ESPN gave no position (2016-17 retirements)
+ * who completed clearly over 90% of the winner's laps is classified: he follows the others by laps completed, then by driver
+ * id (an approximation of f1.com's order among equal laps, which is by time), and is numbered after them. Where a label has
+ * taken a driver out of the numbering, the numbers close up (f1.com does not count a disqualified driver).
  */
 export function orderF1Classification<T extends F1ClassifiedRow>(eventId: string | null, rows: T[]): (T & { result_label: F1ResultLabel | null })[] {
   const override = eventId ? F1_RACE_OVERRIDES[eventId] : undefined;
-  const decorated = rows.map((row, index) => {
-    const shown = f1ResultFor(eventId, row.driver_espn_id, row.position, row.status);
+  const winner = rows.find((r) => r.winner) ?? rows.find((r) => r.position === 1);
+  const winnerLaps = winner?.laps ?? null;
+  const decorated = rows.map((row) => {
+    const zone = f1DistanceZone(row.laps, winnerLaps);
+    const shown = f1ResultFor(eventId, row.driver_espn_id, row.position, row.status, zone);
     const listed = override ? override.order.indexOf(row.driver_espn_id) : -1;
-    return { row, index, shown, listed, group: groupOf(shown.label) };
+    return { row, zone, shown, listed, group: groupOf(shown.label) };
   });
   decorated.sort((a, b) => {
     // A driver in the race's table goes where f1.com has him; the few ESPN rows the table does not name follow, in the rule's order.
@@ -582,13 +618,29 @@ export function orderF1Classification<T extends F1ClassifiedRow>(eventId: string
       return a.listed >= 0 ? -1 : 1;
     }
     if (a.group !== b.group) return a.group - b.group;
-    if (a.group === 1) {
+    const aPosition = a.row.position ?? Infinity;
+    const bPosition = b.row.position ?? Infinity;
+    // retired drivers are ordered by laps first; the rest by ESPN's position, and by laps among those it gave none
+    if (a.group === 1 || (aPosition === Infinity && bPosition === Infinity)) {
       const laps = (b.row.laps ?? -1) - (a.row.laps ?? -1);
       if (laps !== 0) return laps;
     }
-    const position = (a.row.position ?? Infinity) - (b.row.position ?? Infinity);
-    if (position !== 0 && !Number.isNaN(position)) return position;
-    return a.index - b.index;
+    if (aPosition !== bPosition) return aPosition < bPosition ? -1 : 1;
+    return a.row.driver_espn_id < b.row.driver_espn_id ? -1 : a.row.driver_espn_id > b.row.driver_espn_id ? 1 : 0;
   });
-  return decorated.map(({ row, shown }) => ({ ...row, position: shown.position, result_label: shown.label }));
+
+  // Numbers for the drivers without a label. A driver keeps ESPN's position unless a label has taken a driver above him out of the
+  // numbering (f1.com does not count a disqualified driver), when the numbers close up; a classified driver ESPN gave no position
+  // is numbered after the last one.
+  const labelledAt = decorated.filter((d) => d.listed < 0 && d.shown.label !== null && d.row.position !== null).map((d) => d.row.position as number);
+  let last = 0;
+  return decorated.map((d) => {
+    let position = d.shown.position;
+    if (!override && d.shown.label === null) {
+      if (d.row.position !== null) position = d.row.position - labelledAt.filter((p) => p < (d.row.position as number)).length;
+      else if (d.zone === "classified") position = last + 1;
+      if (position !== null) last = Math.max(last, position);
+    }
+    return { ...d.row, position, result_label: d.shown.label };
+  });
 }

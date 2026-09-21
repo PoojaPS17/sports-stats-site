@@ -9,6 +9,7 @@ let db: TestDb;
 let f1: typeof import("../src/lib/f1");
 let weekend: typeof import("../scripts/lib/f1-weekend");
 const bahrain = JSON.parse(readFileSync("tests/fixtures/f1/espn-race-competitors-2016-bahrain.json", "utf8"));
+const us2019: { rows: { id: string; name: string; order: number; winner: boolean; status: string; laps: number | null }[] } = JSON.parse(readFileSync("tests/fixtures/f1/espn-race-status-laps.json", "utf8"))["23478"];
 const monaco2019: { rows: { id: string; name: string; order: number; startOrder: number; status: string; laps: number }[] } = JSON.parse(readFileSync("tests/fixtures/f1/espn-race-status-laps.json", "utf8"))["23465"];
 
 before(async () => {
@@ -76,12 +77,13 @@ test("ingest: a race driver's status and laps come from ESPN's status/statistics
   const rows = (await db.pool.query(`select driver_espn_id, position, status, laps from f1_session_results where session_espn_id = $1 order by driver_espn_id`, [bahrain.event.competition])).rows;
   const byDriver = Object.fromEntries(rows.map((r) => [r.driver_espn_id, r]));
   assert.equal(byDriver["4734"], undefined);
-  assert.deepEqual(byDriver["783"], { driver_espn_id: "783", position: 1, status: "STATUS_CLASSIFIED", laps: null }); // a finisher's laps are not asked for
+  assert.deepEqual(byDriver["783"], { driver_espn_id: "783", position: 1, status: "STATUS_CLASSIFIED", laps: 57 }); // the winner's laps are the race distance
+  assert.equal(byDriver["4623"].laps, null); // another finisher's laps are not asked for
   assert.deepEqual(byDriver["4686"], { driver_espn_id: "4686", position: null, status: "STATUS_RETIRED", laps: 29 }); // ESPN gave Sainz no order in 2016
   assert.deepEqual(byDriver["864"], { driver_espn_id: "864", position: null, status: "STATUS_RETIRED", laps: 0 });
   assert.ok(!requested.some((r) => r.includes("/competitors/4734/")), "no request for the Friday-only driver");
-  // 5 statuses + laps for the 3 retirements (Button, Vettel, Sainz)
-  assert.equal(requested.length, 5 + 3);
+  // 5 statuses + laps for the 3 retirements (Button, Vettel, Sainz) and the winner
+  assert.equal(requested.length, 5 + 3 + 1);
 });
 
 test("ingest: a second run does not ask again for a driver whose status is stored, and a failed request keeps what was stored", async () => {
@@ -177,4 +179,24 @@ test("read: before the backfill (no status stored) a race reads exactly as it di
   }
   const race = await f1.getF1EventResults("old-evt");
   assert.deepEqual(race.map((r) => [r.driver_espn_id, r.position, r.result_label]), [["o3", 1, null], ["o1", 2, null], ["o2", null, null]]);
+});
+
+test("read: a race outside the table (2019 US): drivers ESPN calls retired but who were classified keep their numbers on the race, driver and team pages; early retirees read Ret", async () => {
+  await db.pool.query(`insert into f1_events (espn_id, name, date, season_year) values ('23478', 'United States Grand Prix', '2019-11-01T09:00:00Z', 2019)`);
+  await db.pool.query(`insert into f1_sessions (espn_id, event_espn_id, session_type, date, completed) values ('us-race', '23478', 'Race', '2019-11-03T19:10:00Z', true)`);
+  for (const r of us2019.rows) {
+    await db.pool.query(`insert into players (league, espn_id, name, slug) values ('f1', $1, $2, $3) on conflict (league, espn_id) do update set name = excluded.name, slug = excluded.slug`, [r.id, r.name, r.name.toLowerCase().replace(/[^a-z]+/g, "-")]);
+    await db.pool.query(`insert into f1_session_results (session_espn_id, driver_espn_id, position, winner, constructor_name, status, laps) values ('us-race', $1, $2, $3, 'UsTeam', $4, $5)`, [r.id, r.order, r.winner, r.status, r.laps]);
+  }
+  const surname = (r: { driver_name: string }) => r.driver_name.split(" ").slice(-1)[0];
+  const race = (await f1.getF1EventResults("23478")).filter((r) => r.session_type === "Race");
+  assert.deepEqual(race.slice(-7).map((r) => [surname(r), r.result_label ?? r.position]), [["Giovinazzi", 14], ["Grosjean", 15], ["Gasly", 16], ["Russell", 17], ["Magnussen", 18], ["Kubica", "Ret"], ["Vettel", "Ret"]]);
+  const gasly = (await f1.getF1DriverResults("5501")).find((r) => r.event_espn_id === "23478")!;
+  assert.deepEqual([gasly.position, gasly.result_label], [16, null]);
+  const magnussen = (await f1.getF1DriverResults("4623")).find((r) => r.event_espn_id === "23478")!;
+  assert.deepEqual([magnussen.position, magnussen.result_label], [18, null]);
+  const vettel = (await f1.getF1DriverResults("864")).find((r) => r.event_espn_id === "23478")!;
+  assert.deepEqual([vettel.position, vettel.result_label], [null, "Ret"]);
+  const team = await f1.getF1ConstructorResults("UsTeam", 50);
+  assert.deepEqual([team.find((r) => r.driver_slug.startsWith("pierre"))!.position, team.find((r) => r.driver_slug.startsWith("robert"))!.result_label], [16, "Ret"]);
 });

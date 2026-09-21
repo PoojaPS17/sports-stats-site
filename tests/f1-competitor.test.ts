@@ -35,28 +35,41 @@ test("only a Race or a sprint has statuses; a driver with startOrder 0 and no or
   assert.ok(!isPracticeOnlyCompetitor({ id: "x", order: 20, startOrder: 0 })); // a driver with a finishing order is in the race
 });
 
-test("a finisher costs one request (status), a retirement two (status and laps), a Friday-only driver none", async () => {
+test("a finisher costs one request (status), the winner and a retirement two (status and laps), a Friday-only driver none", async () => {
   const f = fetcher();
-  assert.deepEqual(await f1CompetitorDetail(competitor("783"), f.fetchRef), { status: "STATUS_CLASSIFIED", laps: null });
+  assert.deepEqual(await f1CompetitorDetail(competitor("4623"), f.fetchRef), { status: "STATUS_CLASSIFIED", laps: null }); // Magnussen, 11th
   assert.equal(f.asked.length, 1);
+  // the winner's laps are the race distance the 90% classification line is measured from
+  assert.deepEqual(await f1CompetitorDetail(competitor("783"), f.fetchRef), { status: "STATUS_CLASSIFIED", laps: 57 });
+  assert.equal(f.asked.length, 3);
   assert.deepEqual(await f1CompetitorDetail(competitor("4686"), f.fetchRef), { status: "STATUS_RETIRED", laps: 29 });
-  assert.equal(f.asked.length, 3);
+  assert.equal(f.asked.length, 5);
   assert.deepEqual(await f1CompetitorDetail(competitor("4734"), f.fetchRef), { status: null, laps: null });
-  assert.equal(f.asked.length, 3);
+  assert.equal(f.asked.length, 5);
 });
 
-test("a stored final status is not asked for again; a status ESPN left mid-session is; a laps-less retirement is", async () => {
+test("a stored final status is not asked for again; a status ESPN left mid-session is; a laps-less retirement or winner is", async () => {
   const f = fetcher();
   assert.deepEqual(await f1CompetitorDetail(competitor("4686"), f.fetchRef, { status: "STATUS_RETIRED", laps: 29 }), { status: "STATUS_RETIRED", laps: 29 });
-  assert.deepEqual(await f1CompetitorDetail(competitor("783"), f.fetchRef, { status: "STATUS_CLASSIFIED", laps: null }), { status: "STATUS_CLASSIFIED", laps: null });
+  assert.deepEqual(await f1CompetitorDetail(competitor("4623"), f.fetchRef, { status: "STATUS_CLASSIFIED", laps: null }), { status: "STATUS_CLASSIFIED", laps: null });
+  assert.deepEqual(await f1CompetitorDetail(competitor("783"), f.fetchRef, { status: "STATUS_CLASSIFIED", laps: 57 }), { status: "STATUS_CLASSIFIED", laps: 57 });
   assert.equal(f.asked.length, 0);
   await f1CompetitorDetail(competitor("4686"), f.fetchRef, { status: "STATUS_IN_PIT", laps: 29 });
   await f1CompetitorDetail(competitor("4686"), f.fetchRef, { status: "STATUS_RETIRED", laps: null });
   assert.equal(f.asked.length, 4);
+  await f1CompetitorDetail(competitor("783"), f.fetchRef, { status: "STATUS_CLASSIFIED", laps: null }); // a winner stored before laps were read for him
+  assert.equal(f.asked.length, 6);
 });
 
-test("a failed request leaves the status unknown instead of failing the run", async () => {
+test("a failed request leaves the status unknown instead of failing the run, and is reported", async () => {
+  const failed: string[] = [];
   const failing = async () => { throw new Error("ESPN down"); };
-  assert.deepEqual(await f1CompetitorDetail(competitor("4686"), failing), { status: null, laps: null });
+  assert.deepEqual(await f1CompetitorDetail(competitor("4686"), failing, undefined, (ref) => failed.push(ref)), { status: null, laps: null });
+  assert.equal(failed.length, 1); // the status read failed, so laps are not tried
+  assert.ok(failed[0].includes("/competitors/4686/status"));
   assert.deepEqual(await f1CompetitorDetail(competitor("4686")), { status: null, laps: null }); // no fetcher: a bare feed
+  // status read but laps failed: the status is kept
+  const laps = async (ref: string) => { if (ref.includes("/statistics")) throw new Error("ESPN down"); return bahrain.status["4686"]; };
+  assert.deepEqual(await f1CompetitorDetail(competitor("4686"), laps, undefined, (ref) => failed.push(ref)), { status: "STATUS_RETIRED", laps: null });
+  assert.equal(failed.length, 2);
 });

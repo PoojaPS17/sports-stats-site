@@ -41,20 +41,39 @@ export function lapsOf(statistics: any): number | null {
   return typeof laps === "number" && Number.isFinite(laps) ? Math.round(laps) : null;
 }
 
+/** The winner of the session: his laps are the distance the 90% classification line is measured from (src/lib/f1RaceOrder.ts f1DistanceZone). */
+function isSessionWinner(c: any): boolean {
+  return c?.winner === true || c?.order === 1;
+}
+
 /**
  * The status and laps of one competitor. A scoreboard that carries them inline is used as it is; otherwise they are fetched
- * from the competitor's refs when `fetchRef` is given. `known` is what is already stored: a driver whose final status (and, for
- * a driver who did not finish, laps) is stored is not asked about again, so a run that was cut off can be run again cheaply.
+ * from the competitor's refs when `fetchRef` is given. Laps are read for a driver who did not finish, and for the winner (a
+ * finisher's own laps are not needed, but the winner's give the race distance). `known` is what is already stored: a driver whose
+ * final status and laps are stored is not asked about again, so a run that was cut off can be run again cheaply. A request that
+ * fails leaves that value unknown (the stored one is kept) and is reported to `onFailure`, so the caller can count them.
  */
-export async function f1CompetitorDetail(c: any, fetchRef?: FetchRef, known?: { status: string | null; laps: number | null }): Promise<F1CompetitorDetail> {
+export async function f1CompetitorDetail(
+  c: any,
+  fetchRef?: FetchRef,
+  known?: { status: string | null; laps: number | null },
+  onFailure: (ref: string, err: unknown) => void = (ref, err) => console.warn(`[f1] ESPN request failed (${ref}):`, err instanceof Error ? err.message : err)
+): Promise<F1CompetitorDetail> {
   if (isPracticeOnlyCompetitor(c)) return { status: null, laps: null }; // no request for a driver who is not in the race
-  if (known?.status && FINAL_STATUSES.has(known.status) && (known.status === "STATUS_CLASSIFIED" || known.laps !== null)) return { status: known.status, laps: known.laps };
+  const needsLaps = (status: string | null) => status !== "STATUS_CLASSIFIED" || isSessionWinner(c);
+  if (known?.status && FINAL_STATUSES.has(known.status) && (known.laps !== null || !needsLaps(known.status))) return { status: known.status, laps: known.laps };
+  const read = async (ref: string) => {
+    try {
+      return await fetchRef!(ref);
+    } catch (err) {
+      onFailure(ref, err);
+      return null;
+    }
+  };
   let status = statusNameOf(c?.status);
-  if (!status && c?.status?.["$ref"] && fetchRef) status = statusNameOf(await fetchRef(c.status["$ref"]).catch(() => null));
+  if (!status && c?.status?.["$ref"] && fetchRef) status = statusNameOf(await read(c.status["$ref"]));
   let laps = lapsOf(c?.statistics);
-  if (laps === null && status && status !== "STATUS_CLASSIFIED" && c?.statistics?.["$ref"] && fetchRef) {
-    laps = lapsOf(await fetchRef(c.statistics["$ref"]).catch(() => null));
-  }
+  if (laps === null && status && needsLaps(status) && c?.statistics?.["$ref"] && fetchRef) laps = lapsOf(await read(c.statistics["$ref"]));
   return { status, laps };
 }
 
