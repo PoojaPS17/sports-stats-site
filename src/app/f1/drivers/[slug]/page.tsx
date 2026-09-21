@@ -9,6 +9,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
+import { f1FormatDate } from "@/lib/f1Dates";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -74,7 +75,7 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
                 <div className="min-w-0">
                   <p className="truncate font-medium">{r.event_name}</p>
                   <p className="text-xs text-[var(--text-muted)]">
-                    {new Date(r.session_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {f1FormatDate(r.session_date, r.circuit_name, { month: "short", day: "numeric", year: "numeric" })}
                     {r.constructor_name && ` · ${r.constructor_name}`}
                   </p>
                 </div>

@@ -6,6 +6,7 @@ import { GAME_SELECT, LEAGUE_LABEL, type GameRow } from "./queries";
 import { isCricketLeague, type League } from "./leagues";
 import { getF1Calendar, getF1Seasons, type F1EventRow } from "./f1";
 import { f1EventStatus } from "./f1Status";
+import { f1WeekendDays } from "./f1Dates";
 import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
 import { gameCalledOffLabel } from "./gameStatus";
@@ -239,12 +240,11 @@ export async function buildLeagueFeed(league: League): Promise<Feed | null> {
 
 /** One Formula 1 race weekend as an all-day event; a Grand Prix ESPN cancelled is a cancelled event, not a confirmed weekend. */
 export function f1WeekendEvent(e: F1EventRow): IcsEvent {
-  const start = new Date(e.date);
-  // Race weekends run Friday to Sunday; the feed stores the race day, so the
-  // event spans the two days leading up to it.
-  const weekendStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() - 2));
-  const end = e.end_date ? new Date(e.end_date) : start;
-  const endExclusive = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1));
+  // The feed stores the first session's start as the event date and the Race's start as its end date. The event runs from the
+  // day of the first session to the day of the Race, both at the circuit (f1Dates.ts); an all-day event ends the day after.
+  const days = f1WeekendDays(e);
+  const weekendStart = new Date(`${days.start}T00:00:00Z`);
+  const endExclusive = new Date(new Date(`${days.end}T00:00:00Z`).getTime() + 86_400_000);
   const where = [e.circuit_name, e.circuit_city, e.circuit_country].filter(Boolean).join(", ");
   const off = f1EventStatus(e);
   const reason = off.kind === "called-off" ? off.label : null;

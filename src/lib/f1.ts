@@ -10,6 +10,8 @@ export interface F1EventRow {
   short_name: string | null;
   date: string;
   end_date: string | null;
+  /** The Race session's start (f1Dates.ts f1RaceInstant), null with no Race session on file. */
+  race_date: string | Date | null;
   season_year: number | null;
   circuit_name: string | null;
   circuit_city: string | null;
@@ -29,13 +31,13 @@ export interface F1EventRow {
 // alongside already-correct "Melbourne", "Sakhir") — initcap() fixes the display
 // without needing to touch what's actually stored.
 const EVENT_SELECT = `
-  select e.espn_id, e.name, e.short_name, e.date, e.end_date, e.season_year,
+  select e.espn_id, e.name, e.short_name, e.date, e.end_date, rs.date as race_date, e.season_year,
          e.circuit_name, initcap(e.circuit_city) as circuit_city, initcap(e.circuit_country) as circuit_country,
          wp.name as winner_name, wp.slug as winner_slug,
          rs.status_state as race_status_state, rs.status_detail as race_status_detail, rs.completed as race_completed
   from f1_events e
   left join lateral (
-    select s.status_state, s.status_detail, s.completed from f1_sessions s
+    select s.date, s.status_state, s.status_detail, s.completed from f1_sessions s
     where s.event_espn_id = e.espn_id and s.session_type = 'Race'
     order by s.date desc limit 1
   ) rs on true
@@ -204,12 +206,14 @@ export interface F1DriverResultRow {
   winner: boolean;
   /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
+  /** ESPN's circuit name, which f1Dates.ts reads the race's day at (f1FormatDate). */
+  circuit_name: string | null;
 }
 
 export async function getF1DriverResults(driverEspnId: string, limit = 20): Promise<F1DriverResultRow[]> {
   const { rows } = await pool.query(
     `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
-            r.position, r.winner, r.constructor_name, e.season_year
+            r.position, r.winner, r.constructor_name, e.season_year, e.circuit_name
      from f1_session_results r
      join f1_sessions s on s.espn_id = r.session_espn_id
      join f1_events e on e.espn_id = s.event_espn_id
@@ -271,7 +275,7 @@ export interface F1ConstructorResultRow extends F1DriverResultRow {
 export async function getF1ConstructorResults(constructorName: string, limit = 20): Promise<F1ConstructorResultRow[]> {
   const { rows } = await pool.query(
     `select e.espn_id as event_espn_id, e.name as event_name, s.session_type, s.date as session_date,
-            r.position, r.winner, r.constructor_name, e.season_year, p.name as driver_name, p.slug as driver_slug
+            r.position, r.winner, r.constructor_name, e.season_year, e.circuit_name, p.name as driver_name, p.slug as driver_slug
      from f1_session_results r
      join f1_sessions s on s.espn_id = r.session_espn_id
      join f1_events e on e.espn_id = s.event_espn_id

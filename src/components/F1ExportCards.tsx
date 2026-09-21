@@ -3,11 +3,13 @@ import { ExportShell, ExportTitle, ExportTable, ExportList, EXPORT_ROW_LIMIT } f
 import type { getF1Calendar, getF1ConstructorResults, getF1ConstructorStandings, getF1DriverResults, getF1DriverStandings, getF1EventResults } from "@/lib/f1";
 import { CARD } from "@/lib/exportTheme";
 import { f1EventStatus } from "@/lib/f1Status";
+import { f1FormatDate, f1RaceInstant } from "@/lib/f1Dates";
 
 type Awaited1<T extends (...a: never[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
 
 const EYEBROW = "Formula 1";
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+// A race's date is the day at the circuit (f1Dates.ts); the circuit is unknown for the session card, whose date is already the race day.
+const fmtDate = (iso: string | Date, circuit?: string | null) => f1FormatDate(iso, circuit, { month: "short", day: "numeric", year: "numeric" });
 
 export function F1DriverStandingsExportCard({ season, drivers }: { season: number; drivers: Awaited1<typeof getF1DriverStandings> }) {
   const title = `F1 drivers' standings ${season}`;
@@ -56,7 +58,7 @@ export function F1SessionExportCard({ event, sessionLabel, results }: { event: {
   const title = `${event.name}: ${sessionLabel}`;
   const sorted = [...results].sort((a, b) => (a.position ?? 99) - (b.position ?? 99));
   return (
-    <ExportShell header={<ExportTitle eyebrow={EYEBROW} title={title} subtitle={[fmtDate(event.date), event.circuit].filter(Boolean).join(" · ")} />} context={title}>
+    <ExportShell header={<ExportTitle eyebrow={EYEBROW} title={title} subtitle={[fmtDate(event.date, event.circuit), event.circuit].filter(Boolean).join(" · ")} />} context={title}>
       <ExportTable
         firstHeader="Driver"
         headers={["Team"]}
@@ -97,11 +99,11 @@ export function F1ResultsExportCard({ title, subtitle, rows }: { title: string; 
 }
 
 export function driverResultRows(results: Awaited1<typeof getF1DriverResults>): ResultRow[] {
-  return results.map((r) => ({ key: r.event_espn_id, title: r.event_name, sub: [fmtDate(r.session_date), r.constructor_name].filter(Boolean).join(" · "), position: r.position ?? null, winner: Boolean(r.winner) }));
+  return results.map((r) => ({ key: r.event_espn_id, title: r.event_name, sub: [fmtDate(r.session_date, r.circuit_name), r.constructor_name].filter(Boolean).join(" · "), position: r.position ?? null, winner: Boolean(r.winner) }));
 }
 
 export function constructorResultRows(results: Awaited1<typeof getF1ConstructorResults>): ResultRow[] {
-  return results.map((r) => ({ key: `${r.event_espn_id}-${r.driver_slug}`, title: r.event_name, sub: `${r.driver_name} · ${fmtDate(r.session_date)}`, position: r.position ?? null, winner: Boolean(r.winner) }));
+  return results.map((r) => ({ key: `${r.event_espn_id}-${r.driver_slug}`, title: r.event_name, sub: `${r.driver_name} · ${fmtDate(r.session_date, r.circuit_name)}`, position: r.position ?? null, winner: Boolean(r.winner) }));
 }
 
 export function F1CalendarExportCard({ season, calendar }: { season: number; calendar: Awaited1<typeof getF1Calendar> }) {
@@ -115,7 +117,7 @@ export function F1CalendarExportCard({ season, calendar }: { season: number; cal
             key: ev.espn_id,
             rank: "",
             title: ev.name,
-            sub: [new Date(ev.date).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), ev.circuit_name, ev.circuit_city && ev.circuit_country ? `${ev.circuit_city}, ${ev.circuit_country}` : null].filter(Boolean).join(" · "),
+            sub: [f1FormatDate(f1RaceInstant(ev), ev.circuit_name, { month: "short", day: "numeric" }), ev.circuit_name, ev.circuit_city && ev.circuit_country ? `${ev.circuit_city}, ${ev.circuit_country}` : null].filter(Boolean).join(" · "),
             value: <span style={{ fontSize: 14, color: ev.winner_name ? CARD.text : CARD.textFaint }}>{ev.winner_name ?? f1EventStatus(ev).label ?? "Upcoming"}</span>,
           }))}
         />

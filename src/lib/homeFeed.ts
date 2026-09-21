@@ -81,6 +81,8 @@ export async function getNextF1Event(withinDays = 7): Promise<F1EventRow | null>
     `select e.espn_id, e.name, e.short_name,
             to_char(e.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
             to_char(e.end_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as end_date,
+            (select to_char(s.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') from f1_sessions s
+             where s.event_espn_id = e.espn_id and s.session_type = 'Race' order by s.date desc limit 1) as race_date,
             e.season_year, e.circuit_name, initcap(e.circuit_city) as circuit_city, initcap(e.circuit_country) as circuit_country,
             null::text as winner_name, null::text as winner_slug, null::text as race_status_state, null::text as race_status_detail, null::boolean as race_completed
      from f1_events e
