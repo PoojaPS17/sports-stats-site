@@ -95,8 +95,11 @@ jobs:
       # Matches of the eight ESPN-fed cricket competitions the scores scrape never saw (a whole
       # past season, as with WBBL 2025): the previous and current season's scoreboard, missing
       # games only. Two requests per competition.
+      # The sweep exits 1 when a season could not be read completely; that must show as a failed step but
+      # must not turn the implicit success() of the steps after it false and skip them.
       - name: Fill missing cricket competition games
         if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run sweep:cricket-seasons

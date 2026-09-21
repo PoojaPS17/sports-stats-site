@@ -157,5 +157,6 @@ test("the daily jobs run the sweep: package script, VM job and the manual workfl
   assert.doesNotMatch(vm.slice(vm.indexOf("job_tick()"), vm.indexOf("job_daily()")), /sweep:cricket-seasons/);
   const yml = readFileSync(resolve(process.cwd(), ".github/workflows/scrape.yml"), "utf8");
   const step = yml.slice(yml.indexOf("- name: Fill missing cricket competition games"));
+  assert.match(step.slice(0, step.indexOf("\n\n")), /continue-on-error: true/, "a failed sweep must not skip the steps after it");
   assert.match(step.slice(0, step.indexOf("\n\n")), /if: github\.event\.schedule == '7 6 \* \* \*' \|\| github\.event_name == 'workflow_dispatch'[\s\S]*DATABASE_URL: \$\{\{ secrets\.DATABASE_URL \}\}[\s\S]*run: npm run sweep:cricket-seasons/);
 });
