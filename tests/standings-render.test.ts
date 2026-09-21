@@ -188,10 +188,18 @@ test("a Champions League group-stage image is wider than the default side-by-sid
 
 // The 2025-26 La Liga table as ESPN sent it (tests/fixtures/espn-laliga-2025-standings.json, trimmed from
 // https://site.api.espn.com/apis/v2/sports/soccer/esp.1/standings?season=2025), as the site would store it.
+/** The slice of an ESPN standings entry this fixture reader touches. */
+interface EspnStandingsEntry {
+  team: { displayName: string };
+  stats: { name: string; displayValue?: string }[];
+  note?: { description?: string } | null;
+}
+type EspnStandingsFixture = { children: { name: string; standings: { entries: EspnStandingsEntry[] } }[] };
+
 function laligaRows(withNotes: boolean, played?: number): StandingRow[] {
-  const data = JSON.parse(readFileSync(new URL("./fixtures/espn-laliga-2025-standings.json", import.meta.url), "utf8"));
-  const stat = (e: any, n: string) => Number(e.stats.find((s: any) => s.name === n)?.displayValue ?? 0);
-  return data.children[0].standings.entries.map((e: any) =>
+  const data = JSON.parse(readFileSync(new URL("./fixtures/espn-laliga-2025-standings.json", import.meta.url), "utf8")) as EspnStandingsFixture;
+  const stat = (e: EspnStandingsEntry, n: string) => Number(e.stats.find((s) => s.name === n)?.displayValue ?? 0);
+  return data.children[0].standings.entries.map((e) =>
     row(e.team.displayName, {
       conference: data.children[0].name, rank: stat(e, "rank"), points: stat(e, "points"), wins: played ? Math.floor(played / 2) : stat(e, "wins"), draws: played ? played - Math.floor(played / 2) : stat(e, "ties"),
       losses: played ? 0 : stat(e, "losses"), goals_for: stat(e, "pointsFor"), goals_against: stat(e, "pointsAgainst"), zone: withNotes ? e.note?.description ?? null : null,
