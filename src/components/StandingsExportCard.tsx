@@ -24,11 +24,16 @@ const tone = (n: number): "win" | "loss" | "muted" => (n > 0 ? "win" : n < 0 ? "
 // .superpowers/sdd/reference-parity/task-2-report.md, "Fix round 1".
 const SIDE_BY_SIDE_WIDTH = 980;
 const SIDE_BY_SIDE_SOCCER_WIDTH = 1040;
+// A cricket table (name, M W L NR Pts NRR) fits a 980px column, but one with a T column, which a World Cup
+// group has when a match was tied, measured 447px against 436px with "United States of America" in it,
+// so the name would be clipped; at 1040px it has 466px.
+const SIDE_BY_SIDE_CRICKET_TIES_WIDTH = 1040;
 
 /** Width the standings image needs: two side-by-side tables when the league splits into several. */
 export function standingsExportWidth(league: League, standings: StandingRow[]): number {
   const { mode, sections } = groupStandings(league, standings);
   if (sections.length <= 1) return 720;
+  if (mode === "cricket" && sections.some(([, rows]) => hasCricketTies(rows))) return SIDE_BY_SIDE_CRICKET_TIES_WIDTH;
   return mode === "soccer" ? SIDE_BY_SIDE_SOCCER_WIDTH : SIDE_BY_SIDE_WIDTH;
 }
 

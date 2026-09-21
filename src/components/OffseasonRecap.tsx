@@ -3,13 +3,14 @@ import type { OffseasonRecap as Recap } from "@/lib/offseason";
 import { leagueNameWithArticle, isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
 import { formatGameDate } from "@/lib/gameDay";
 import { formatWinLossTie } from "@/lib/teamSummary";
+import { cricketRecord } from "@/lib/cricketStandings";
 import { GameCard } from "./GameCard";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
 
 function record(league: League, r: Recap["table"][number]): string {
   if (isSoccerLeague(league)) return `${r.wins}-${r.draws ?? 0}-${r.losses}`;
-  if (isCricketLeague(league)) return `${r.wins}-${r.losses}${r.no_result ? `-${r.no_result}` : ""}`;
+  if (isCricketLeague(league)) return cricketRecord(r);
   return formatWinLossTie(r.wins, r.losses, r.draws);
 }
 

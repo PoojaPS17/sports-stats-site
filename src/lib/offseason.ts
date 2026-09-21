@@ -74,8 +74,8 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
   // Playoff competitions crown the winner of the last knockout result; a league
   // season's champion is the top of a finished table.
   let champion: OffseasonRecap["champion"] = null;
-  // A knockout match nobody won (noResult) crowns no one.
-  const decided = playoffs.filter((r) => !r.noResult);
+  // A knockout match nobody won (noWinner) crowns no one.
+  const decided = playoffs.filter((r) => !r.noWinner);
   const decider = [...decided].reverse().find((r) => /final/i.test(r.round) && !/semi|quarter/i.test(r.round)) ?? decided[decided.length - 1];
   if (decider) champion = { name: decider.winnerName, slug: decider.winnerSlug };
   else if (isSoccerLeague(league) && !isCupCompetition(league) && tableComplete(standings)) champion = { name: standings[0].name, slug: standings[0].slug };

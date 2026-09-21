@@ -9,8 +9,8 @@ export interface PlayoffResult {
   loserName: string;
   loserSlug: string;
   resultText: string;
-  /** A knockout match nobody won (abandoned, no result): shown as "A v B, No result", never as "A beat B". */
-  noResult?: boolean;
+  /** A knockout match nobody won (abandoned, no result, or tied with nothing to decide it): shown as "A v B, <resultText>", never as "A beat B". */
+  noWinner?: boolean;
 }
 
 // "- Game 3" (a best-of series) and "- 2nd Leg" (a two-legged cup tie) both name one
@@ -118,10 +118,12 @@ export function summarizePlayoffs(games: GameRow[]): PlayoffResult[] {
     }
     const winsA = wins.get(teamAId) ?? 0;
     const winsB = wins.get(teamBId) ?? 0;
-    if (winsA === 0 && winsB === 0 && seriesGames.length === 1 && isCricketLeague(last.league)) {
+    if (winsA === 0 && winsB === 0 && isCricketLeague(last.league)) {
       const a = teamMeta.get(teamAId)!;
       const b = teamMeta.get(teamBId)!;
-      results.push({ round: displayRound(last.round ?? ""), date: last.date, winnerName: a.name, winnerSlug: a.slug, loserName: b.name, loserSlug: b.slug, resultText: "No result", noResult: true });
+      // A match the feed calls tied but names no winner for is a tie, not a no result.
+      const tied = seriesGames.every((g) => /\btied\b/i.test(g.status_summary ?? ""));
+      results.push({ round: displayRound(last.round ?? ""), date: last.date, winnerName: a.name, winnerSlug: a.slug, loserName: b.name, loserSlug: b.slug, resultText: tied ? last.status_summary ?? "Match tied" : "No result", noWinner: true });
       continue;
     }
     const winnerId = winsA >= winsB ? teamAId : teamBId;

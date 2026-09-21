@@ -115,7 +115,8 @@ function matchNumber(stage: string): string {
  * precedes the marker, exactly as it always has. A daytime match has no marker ("Final, Women's Big
  * Bash League at Hobart, Nov 30 2024", the CWC 2019 semi-finals, T20 World Cup 2010): its stage is
  * what precedes the "<series> at <venue>" segment, or the first comma segment when the description
- * has no such segment. Named stages get the usual spelling (normalizeStage), so "2nd Semi-final"
+ * has no such segment (unless that segment names the competition, "Women's Big Bash League, Dec 13
+ * 2025", which is not a stage). Named stages get the usual spelling (normalizeStage), so "2nd Semi-final"
  * reads as "2nd Semi-Final". A description that is only "<series> at <venue>" has no stage.
  */
 export function parseCricketRound(description: string): string | null {
@@ -125,6 +126,7 @@ export function parseCricketRound(description: string): string | null {
   const seriesAt = parts.findIndex((p) => / at /.test(p));
   if (seriesAt === 0 || (seriesAt === -1 && parts.length < 2)) return null;
   const stage = parts.slice(0, seriesAt === -1 ? 1 : seriesAt).join(", ").replace(/\s*\([^)]*\)\s*$/, "").trim();
+  if (seriesAt === -1 && /\b(league|cup|trophy|series|tournament)\b/i.test(stage)) return null;
   return stage ? normalizeStage(matchNumber(stage)) : null;
 }
 

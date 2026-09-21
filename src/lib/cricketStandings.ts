@@ -29,3 +29,14 @@ export const seasonHasFinal = (games: { round: string | null }[]) => games.some(
 const WORLD_CUPS: League[] = ["cwc", "t20wc", "wcwc", "wt20wc"];
 /** The legend line printed under a table that carries Q markers. */
 export const qualifierLegend = (league: League) => (WORLD_CUPS.includes(league) ? "Qualified for the next stage" : "Qualified for the playoffs");
+
+/**
+ * A cricket season record for a one-line summary: "9-4" (wins-losses), then any ties and no results in
+ * words, so neither can be read as the other: "4-5, 1 tie, 1 NR". The table's W, L, T and NR columns
+ * agree with it.
+ */
+export function cricketRecord(r: CricketRecord): string {
+  const ties = r.draws ?? 0;
+  const noResults = r.no_result ?? 0;
+  return [`${r.wins}-${r.losses}`, ...(ties > 0 ? [`${ties} ${ties === 1 ? "tie" : "ties"}`] : []), ...(noResults > 0 ? [`${noResults} NR`] : [])].join(", ");
+}

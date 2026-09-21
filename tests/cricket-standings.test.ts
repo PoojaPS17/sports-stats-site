@@ -60,6 +60,7 @@ let standings: typeof import("../scripts/lib/standings");
 let queries: typeof import("../src/lib/queries");
 let StandingsTable: typeof import("../src/components/StandingsTable").StandingsTable;
 let StandingsExportCard: typeof import("../src/components/StandingsExportCard").StandingsExportCard;
+let standingsExportWidth: typeof import("../src/components/StandingsExportCard").standingsExportWidth;
 
 before(async () => {
   db = await startTestDb();
@@ -67,7 +68,7 @@ before(async () => {
   standings = await import("../scripts/lib/standings");
   queries = await import("../src/lib/queries");
   ({ StandingsTable } = await import("../src/components/StandingsTable"));
-  ({ StandingsExportCard } = await import("../src/components/StandingsExportCard"));
+  ({ StandingsExportCard, standingsExportWidth } = await import("../src/components/StandingsExportCard"));
 });
 after(async () => {
   await (await import("../src/lib/db")).pool.end();
@@ -281,4 +282,36 @@ test("football and NFL tables are unchanged by the cricket columns", () => {
   const nfl = html(createElement(StandingsTable, { league: "nfl" as League, standings: [row({ wins: 7, losses: 9, draws: 1, win_percent: "0.441", conference: "NFC", division: "NFC East", no_result: null })], seasonFinished: true }));
   assert.deepEqual(heads(nfl), ["Team", "W", "L", "T", "Pct", "Streak"]);
   assert.doesNotMatch(nfl, />Q</);
+});
+
+/* ---- the offseason recap's record, the image width ---- */
+
+test("the offseason recap's cricket record carries ties and no results in words, so it agrees with the table and stays unambiguous", async () => {
+  const { OffseasonRecap } = await import("../src/components/OffseasonRecap");
+  const { cricketRecord } = await import("../src/lib/cricketStandings");
+  assert.equal(cricketRecord({ wins: 4, losses: 5, draws: 1, no_result: 0 }), "4-5, 1 tie");
+  assert.equal(cricketRecord({ wins: 3, losses: 5, draws: 1, no_result: 1 }), "3-5, 1 tie, 1 NR");
+  assert.equal(cricketRecord({ wins: 3, losses: 5, draws: 0, no_result: 1 }), "3-5, 1 NR");
+  assert.equal(cricketRecord({ wins: 9, losses: 5, draws: null, no_result: null }), "9-5");
+  assert.equal(cricketRecord({ wins: 3, losses: 4, draws: 2, no_result: 2 }), "3-4, 2 ties, 2 NR");
+  const table = asRows(WBBL_2024);
+  const recap = { season: 2024, seasonLabel: "2024", tableSize: 8, table: sortStandings("wbbl", table), playoffs: [], champion: null, endedOn: null, endedOnLocal: null, leaders: [], closingGames: [] } as never;
+  const markup = renderToStaticMarkup(createElement(OffseasonRecap, { league: "wbbl", recap }));
+  assert.match(markup, /Perth Scorchers Women[\s\S]*?4-5, 1 tie</, "Perth: T=1 in the table, so 1 tie here");
+  assert.match(markup, /Sydney Sixers Women[\s\S]*?3-5, 1 tie, 1 NR</);
+  assert.match(markup, /Melbourne Renegades Women[\s\S]*?7-3</);
+  assert.doesNotMatch(markup, /3-5-1/);
+});
+
+test("a side-by-side cricket image is wider when a table has a T column (a World Cup group with a tie), and not otherwise", () => {
+  const groups = (tie: number) => sortStandings("t20wc", [
+    ...asRows(WBBL_2024.slice(0, 4), { conference: "Group A" }).map((r, i) => ({ ...r, draws: i === 0 ? tie : 0 })),
+    ...asRows(WBBL_2024.slice(4), { conference: "Group B" }).map((r) => ({ ...r, draws: 0 })),
+  ]);
+  // Measured in a browser (Chromium, the export card at 980px): with a T column and "United States of America" a
+  // group table's natural width was 447px against 436px available, so its name was clipped; at 1040px 466px.
+  assert.equal(standingsExportWidth("t20wc" as League, groups(1)), 1040);
+  assert.equal(standingsExportWidth("t20wc" as League, groups(0)), 980);
+  assert.equal(standingsExportWidth("wbbl" as League, sortStandings("wbbl", asRows(WBBL_2024))), 720, "one table stays the single-table width");
+  assert.equal(standingsExportWidth("t20wc" as League, groups(1)) >= standingsExportWidth("t20wc" as League, groups(0)), true);
 });

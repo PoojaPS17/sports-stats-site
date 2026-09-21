@@ -70,6 +70,13 @@ test("a description that is only '<series> at <venue>' has no stage, and one wit
   assert.equal(parseRound("ipl", {}), null);
 });
 
+test("a description with no 'at <venue>' segment whose first segment names the competition has no stage", () => {
+  for (const description of ["Women's Big Bash League, Dec 13 2025", "Indian Premier League, Mar 22 2026", "ICC Cricket World Cup, Jun 1 2019", "Tri-Nation Trophy, Jan 3 2020", "Super Smash Series, Jan 3 2020"]) assert.equal(parseCricketRound(description), null, description);
+  // ...while a stage in the same shape still reads as one.
+  assert.equal(parseCricketRound("Final, Dec 13 2025"), "Final");
+  assert.equal(parseCricketRound("2nd match, Dec 13 2025"), "Match 2");
+});
+
 /* ---- the Playoffs block ---- */
 
 let n = 0;
@@ -104,7 +111,7 @@ test("a knockout stage with a number in it is still a playoff round (3rd Place P
 test("an abandoned knockout match reads 'No result' and never names a winner", () => {
   const abandoned = game("Final", { home_winner: null, away_winner: null, home_score: 35, away_score: null, home_score_display: "35/1 (4 ov)", away_score_display: null, status_summary: "Match abandoned without a ball bowled" });
   const [r] = summarizePlayoffs([abandoned]);
-  assert.equal(r.noResult, true);
+  assert.equal(r.noWinner, true);
   assert.equal(r.resultText, "No result");
   const markup = renderToStaticMarkup(createElement(SeasonSummary, { league: "t20wc", playoffResults: [r], standings: [] }));
   assert.match(markup, /No result/);
@@ -112,10 +119,33 @@ test("an abandoned knockout match reads 'No result' and never names a winner", (
   assert.match(markup, /Home \d+<\/a> v <a[^>]*>Away \d+<\/a>/);
 });
 
+test("a tied knockout the feed names no winner for reads 'Match tied', never 'No result'; two abandoned games in one round never read 'won the series 0-0'", () => {
+  const tied = game("Final", { home_winner: null, away_winner: null, home_score: 150, away_score: 150, status_summary: "Match tied" });
+  const [t] = summarizePlayoffs([tied]);
+  assert.deepEqual([t.noWinner, t.resultText], [true, "Match tied"]);
+  const markup = renderToStaticMarkup(createElement(SeasonSummary, { league: "t20wc", playoffResults: [t], standings: [] }));
+  assert.match(markup, /Match tied/);
+  assert.doesNotMatch(markup, /No result|beat/);
+  const pair = { home_team_espn_id: "h", away_team_espn_id: "a", home_name: "Home", away_name: "Away", home_slug: "home", away_slug: "away", home_winner: null, away_winner: null, home_score: 35, away_score: null, status_summary: "Match abandoned without a ball bowled" };
+  const twice = summarizePlayoffs([game("Final", { ...pair }), game("Final", { ...pair })]);
+  assert.equal(twice.length, 1);
+  assert.deepEqual([twice[0].noWinner, twice[0].resultText], [true, "No result"]);
+  const played = renderToStaticMarkup(createElement(SeasonSummary, { league: "t20wc", playoffResults: twice, standings: [] }));
+  assert.doesNotMatch(played, /series|beat|0-0/);
+});
+
+test("the Playoffs block spells every round one way, whatever spelling the feed used", () => {
+  const results = summarizePlayoffs([game("1st Semi-final"), game("2nd Semi Final"), game("Final"), game("3rd place play-off")]);
+  const markup = renderToStaticMarkup(createElement(SeasonSummary, { league: "t20wc", playoffResults: results, standings: [] }));
+  const rounds = [...markup.matchAll(/uppercase[^>]*>([^<]+)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(rounds, ["1st Semi-Final", "2nd Semi-Final", "Final", "3rd Place Play-off"]);
+  assert.deepEqual(results.map((r) => r.round), ["1st Semi-final", "2nd Semi Final", "Final", "3rd place play-off"], "stored rounds are not rewritten");
+});
+
 test("a decided knockout match still reads 'X beat Y' with its summary, and the feed's winner is trusted over the scores", () => {
   const dls = game("2nd Semi-Final", { home_winner: false, away_winner: true, home_score: 150, away_score: 90, status_summary: "Away won by 5 runs (DLS method)" });
   const [r] = summarizePlayoffs([dls]);
-  assert.equal(r.noResult, undefined);
+  assert.equal(r.noWinner, undefined);
   assert.equal(r.winnerName, dls.away_name);
   assert.equal(r.resultText, "Away won by 5 runs (DLS method)");
   const markup = renderToStaticMarkup(createElement(SeasonSummary, { league: "t20wc", playoffResults: [r], standings: [] }));
@@ -124,7 +154,7 @@ test("a decided knockout match still reads 'X beat Y' with its summary, and the 
 
 test("a cricket row stored without winner flags but with a 'won' summary is still a decided match", () => {
   const [r] = summarizePlayoffs([game("Final", { home_winner: null, away_winner: null, status_summary: "Home won by 10 runs" })]);
-  assert.equal(r.noResult, undefined);
+  assert.equal(r.noWinner, undefined);
   assert.equal(r.winnerName, "Home " + n);
 });
 
@@ -133,5 +163,5 @@ test("non-cricket series (NBA) are summarized as before, including a level score
   const [r] = summarizePlayoffs([nba(1), nba(2), nba(3), nba(4)]);
   assert.equal(r.round, "East 1st Round");
   assert.equal(r.resultText, "won the series 4-0");
-  assert.equal(r.noResult, undefined);
+  assert.equal(r.noWinner, undefined);
 });
