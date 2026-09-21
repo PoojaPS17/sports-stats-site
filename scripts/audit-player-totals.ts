@@ -24,8 +24,8 @@
 // Exits 1 when any season is a MISMATCH (or a live read failed; with --gamelog, a game log that is a MISMATCH
 // or could not be read, or every game log checked being empty), 2 on bad arguments. Listed but not
 // failing: coverage gaps (ESPN has the season, the page lists no regular season for it: no box scores and no
-// stored games figure, or a stored row with stats and no regular-season rows, whose stats are then likely a postseason
-// game's in ESPN's regular-season row (NFL only) when the player has playoff rows that season; each such gap says which), "no ESPN row" (stored
+// stored games figure, or a stored row with stats and a playoffs row that season (NFL only), whose stats are then
+// likely a postseason game's in ESPN's regular-season row; each such gap says which), "no ESPN row" (stored
 // mode; live mode treats it as a MISMATCH inside the loader's window), "games not verified" (ESPN
 // gives no games played), NFL "games short (no stat line)" (the page shows the logged count, with a
 // `*`, because no ESPN games figure is stored for the season; site games below ESPN's, every figure
@@ -48,8 +48,10 @@
 // box scores) is on the page with that figure and a dash for every stat, and is compared like any other season (the
 // dash reads as 0): ESPN's own non-zero stat for it is a MISMATCH, not a coverage gap. That holds whether ESPN's stored
 // row has no stat but games or carries a stray stat our box scores never list; the one exception is a season in which
-// the player has a playoffs row and ESPN's row has stats, which the page does not list and which stays a coverage gap. In stored mode the NFL players read include those with a stored figure and no box-score row. NBA: the site side is built the same way (ESPN's stored games played for a
-// season with games that have no box score, else the games listed); see compareSeason for the bounds.
+// the player has a playoffs row and ESPN's row has stats, which the page does not list and which stays a coverage gap.
+// In stored mode the NFL players read include those with a stored figure and no box-score row.
+// NBA: the site side is built the same way (ESPN's stored games played for a season with games that have no box
+// score, else the games listed); see compareSeason for the bounds.
 //
 // `select` only. The database is imported after the arguments are validated, so a usage error never
 // opens a connection. The live read uses the loader's own row selection (season-row.ts, pure).
@@ -295,7 +297,7 @@ async function main() {
   console.log(`  compared:                   ${compared} player-seasons (site and ESPN both have the season)`);
   console.log(`  matched:                    ${matched}`);
   console.log(`  mismatched:                 ${mismatches.length}   (fails the run)`);
-  console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the page lists no regular season for it: no box scores and no stored games figure, or a stored row with stats and no regular-season rows; never a match)`);
+  console.log(`  coverage gaps:              ${gaps.length}   (ESPN has the season, the page lists no regular season for it: no box scores and no stored games figure, or, NFL, a stored row with stats and a playoffs row that season; never a match)`);
   console.log(`  no ESPN row:                ${noEspn.length}   (the site has regular-season games, ESPN has no row; ${args.live ? "outside the loader's window only, inside it is a mismatch" : "stored rows exist only for current-roster players"})`);
   console.log(`  games not verified:         ${unverified.length}   (every figure agrees but ESPN gives no games played${args.strict ? "; --strict: fails the run" : ""})`);
   console.log(`  games short (no stat line): ${short.length}   (NFL: the page shows the logged count because no ESPN games figure is stored for the season; every figure equal${args.strict ? "; --strict: fails the run" : ""})`);
