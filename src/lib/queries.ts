@@ -1,6 +1,7 @@
 import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
 import { CALLED_OFF } from "./gameStatus";
+import { dayTimeZone } from "./gameDay";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
 import type { GameDetails } from "./matchDetail";
@@ -115,10 +116,20 @@ export async function getSeasonPlayoffGames(league: League, season: number): Pro
   return rows;
 }
 
+// A day's games are the games of that league's calendar day (see lib/gameDay.ts): US Eastern for the
+// NFL and the NBA, UTC for everything else. The exact test converts the stored instant into that zone,
+// which no index can help with, so it is paired with a coarse bound on g.date itself that the
+// (league, date) index does serve. The bounds are a day either side, wide enough for any zone on
+// earth, so they never exclude a game the exact test would have kept.
 export async function getGamesByDate(league: League, dateISO: string): Promise<GameRow[]> {
   const { rows } = await pool.query(
-    `${GAME_SELECT} where g.league = $1 and g.date::date = $2::date order by g.date asc`,
-    [league, dateISO]
+    `${GAME_SELECT}
+     where g.league = $1
+       and g.date >= $2::date - interval '1 day'
+       and g.date < $2::date + interval '2 days'
+       and (g.date at time zone $3::text)::date = $2::date
+     order by g.date asc`,
+    [league, dateISO, dayTimeZone(league)]
   );
   return rows;
 }
