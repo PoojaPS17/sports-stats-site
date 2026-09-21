@@ -6,11 +6,13 @@ import { ALL_LEAGUES, LEAGUES, hasNewsFeed, hasStandings, isCricketLeague, type 
 import { TOURS } from "./tennisTours";
 import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
-import { supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
+import { hasWeeks, loadWeeks } from "./matchweekPage";
+import { countedMeetingSql, supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
 import { h2hPath } from "./h2h";
 import { supportsProjections } from "./simulator";
 import { playerSport } from "./playerProfile";
 import { noStatLineGameSql } from "./playerLog";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 
 type Entry = MetadataRoute.Sitemap[number];
 
@@ -78,7 +80,8 @@ async function core(): Promise<Entry[]> {
     }
     if (isCricketLeague(league)) out.push(entry(`/${league}/centuries`, "weekly", 0.6));
     if (supportsInjuryTracker(league)) out.push(entry(`/${league}/injuries`, "daily", 0.6));
-    if (supportsMatchweeks(league)) out.push(entry(weekIndexPath(league), "daily", 0.7));
+    // The hub answers 200 noindex when the league has no rounds yet (no games, or only preseason ones), so it is listed only when it has rounds to show.
+    if (supportsMatchweeks(league) && hasWeeks(await loadWeeks(league))) out.push(entry(weekIndexPath(league), "daily", 0.7));
     if (supportsProjections(league)) out.push(entry(`/${league}/projections`, "daily", 0.8));
     const { rows: seasons } = await pool.query(`select distinct season from standings where league = $1 order by season desc`, [league]);
     for (const { season } of seasons) out.push(entry(`/${league}/standings/${season}`, "yearly", 0.4));
@@ -125,7 +128,7 @@ async function playerSeasons(league: League): Promise<Entry[]> {
     `select distinct p.slug, g.season_year from player_game_stats s
      join games g on g.league = s.league and g.espn_id = s.game_espn_id
      join players p on p.league = s.league and p.espn_id = s.player_espn_id
-     where s.league = $1 and g.season_year is not null and g.completed and ${playedSql(league)}
+     where s.league = $1 and g.season_year is not null and g.completed and ${notPseudoAthleteSql()} and ${playedSql(league)}
      order by p.slug, g.season_year desc`,
     [league]
   );
@@ -170,7 +173,7 @@ async function tennisPlayers(): Promise<Entry[]> {
 async function players(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
     `select p.slug from players p
-     where p.league = $1
+     where p.league = $1 and ${notPseudoAthleteSql()}
        and (exists (select 1 from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
                     where s.league = p.league and s.player_espn_id = p.espn_id and g.completed and ${playedSql(league)})
             or exists (select 1 from player_season_stats s where s.league = p.league and s.player_espn_id = p.espn_id))
@@ -198,23 +201,36 @@ async function weeks(league: League): Promise<Entry[]> {
   for (const [i, season] of seasons.entries()) {
     const ws = buildMatchweeks(league, await getSeasonGames(league, season));
     const current = i === 0;
-    if (!current) out.push(entry(weekIndexPath(league, season), "yearly", 0.3));
+    // A past season's index answers 200 noindex without rounds, so it is listed only when it has rounds to show.
+    if (!current && ws.length > 0) out.push(entry(weekIndexPath(league, season), "yearly", 0.3));
     for (const w of ws) out.push(entry(weekPath(league, w.index, current ? null : season), current ? "daily" : "yearly", current ? 0.6 : 0.3));
   }
   return out;
 }
 
-// Head-to-head pages for every pairing of clubs in the current standings.
+// Head-to-head pages for the pairings of clubs in the current standings that have met. A page with no counted
+// meeting renders noindex (its `meetings` is 0), so it is listed only if countedMeetingSql (the twin of the
+// page's rule, in analytics.ts: a completed game with both scores, not an excluded stage, either home/away order,
+// the same league) finds one.
 async function h2h(league: League): Promise<Entry[]> {
-  const { rows } = await pool.query(
+  const { rows: current } = await pool.query(
     `select distinct t.slug from standings s join teams t on t.league = s.league and t.espn_id = s.team_espn_id
-     where s.league = $1 and s.season = (select max(season) from standings where league = $1) order by t.slug`,
+     where s.league = $1 and s.season = (select max(season) from standings where league = $1)`,
     [league]
   );
-  const slugs = rows.map((r) => r.slug as string);
-  const out: Entry[] = [];
-  for (let i = 0; i < slugs.length; i++) for (let j = i + 1; j < slugs.length; j++) out.push(entry(h2hPath(league, slugs[i], slugs[j]), "weekly", 0.4));
-  return out;
+  const inStandings = new Set(current.map((r) => r.slug as string));
+  const { rows: met } = await pool.query(
+    `select distinct ht.slug as home_slug, at.slug as away_slug
+     from games g
+     join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
+     join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
+     where g.league = $1 and ht.espn_id <> at.espn_id and ${countedMeetingSql("g")}`,
+    [league]
+  );
+  // h2hPath puts a pair in its one canonical (alphabetical) order, so both home/away orders collapse to one URL.
+  const paths = new Set<string>();
+  for (const { home_slug, away_slug } of met) if (inStandings.has(home_slug) && inStandings.has(away_slug)) paths.add(h2hPath(league, home_slug, away_slug));
+  return [...paths].sort().map((path) => entry(path, "weekly", 0.4));
 }
 
 export async function sitemapEntries(id: string): Promise<Entry[]> {

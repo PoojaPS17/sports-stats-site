@@ -2,8 +2,10 @@
 // a player page, most-faced rivals and top players on a team page. Each helper is
 // one indexed query against the latest season's stats, cheap enough to run on
 // every render.
+import { countedMeetingSql } from "./analytics";
 import { pool } from "./db";
 import { isSoccerLeague, type League } from "./leagues";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { ON_ROSTER_SQL } from "./queries";
 
 export interface RelatedLink {
@@ -69,7 +71,7 @@ export async function getTeammates(league: League, teamEspnId: string, excludeEs
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      ${SEASON_JOIN}
-     where p.league = $1 and p.team_espn_id = $2 and p.espn_id <> $3 and (${ON_ROSTER_SQL})
+     where p.league = $1 and p.team_espn_id = $2 and p.espn_id <> $3 and ${notPseudoAthleteSql()} and (${ON_ROSTER_SQL})
      order by ${metricSql(league)} desc, p.name
      limit $4`,
     [league, teamEspnId, excludeEspnId, limit]
@@ -114,7 +116,7 @@ export async function getPositionPeers(league: League, position: string | null |
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      ${SEASON_JOIN}
-     where p.league = $1 and p.position = any($2) and p.espn_id <> $3 and ${metricSql(league)} > 0
+     where p.league = $1 and p.position = any($2) and p.espn_id <> $3 and ${notPseudoAthleteSql()} and ${metricSql(league)} > 0
      order by ${metricSql(league)} desc, p.name
      limit $4`,
     [league, positions, excludeEspnId, limit]
@@ -133,7 +135,7 @@ export async function getTeamTopPlayers(league: League, teamEspnId: string, seas
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      join player_season_stats ps on ps.league = p.league and ps.player_espn_id = p.espn_id
        and ps.season = coalesce($3::int, (select max(season) from player_season_stats where league = p.league))
-     where p.league = $1 and ps.team_espn_id = $2 and ${metricSql(league)} > 0
+     where p.league = $1 and ps.team_espn_id = $2 and ${notPseudoAthleteSql()} and ${metricSql(league)} > 0
      order by ${metricSql(league)} desc, p.name
      limit $4`,
     [league, teamEspnId, season, limit]
@@ -149,13 +151,17 @@ export interface OpponentCount {
   games: number;
 }
 
-/** Opponents met most often on record, for head-to-head links. */
+/**
+ * Opponents met most often on record, for head-to-head links. `games` is the head-to-head page's own `meetings`
+ * (countedMeetingSql is the SQL twin of isCountedMeeting, so preseason and other excluded games are left out) and a
+ * pair with no counted meeting is not listed: its page says 0 meetings and is noindex, so it must not be offered.
+ */
 export async function getMostFacedOpponents(league: League, teamEspnId: string, limit = 8): Promise<OpponentCount[]> {
   const { rows } = await pool.query(
     `select t.espn_id, t.slug, t.name, t.logo_url, count(*)::int as games
      from games g
      join teams t on t.league = g.league and t.espn_id = case when g.home_team_espn_id = $2 then g.away_team_espn_id else g.home_team_espn_id end
-     where g.league = $1 and g.completed and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2)
+     where g.league = $1 and ${countedMeetingSql("g")} and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2)
      group by t.espn_id, t.slug, t.name, t.logo_url
      order by games desc, t.name
      limit $3`,

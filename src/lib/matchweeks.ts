@@ -11,6 +11,7 @@ import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
 import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 
 export interface Matchweek {
   /** 1-based position in the season; doubles as the URL segment. */
@@ -51,6 +52,16 @@ export function weekPath(league: League, index: number, season?: number | null):
 export function weekIndexPath(league: League, season?: number | null): string {
   const seg = weekSegment(league);
   return season ? `/${league}/${seg}/${season}` : `/${league}/${seg}`;
+}
+
+/**
+ * The address a season's index answers to when search engines are told which copy to keep. The latest
+ * season's index is the bare hub (/epl/matchweek), which is where the sub-nav, the season pills and the
+ * sitemap point; /epl/matchweek/<that year> shows the same list, so it names the hub. Older seasons
+ * have only their own address. `seasons` is newest first, as getSeasonsWithGames returns it.
+ */
+export function canonicalWeekIndexPath(league: League, season: number, seasons: number[]): string {
+  return weekIndexPath(league, season === seasons[0] ? null : season);
 }
 
 export async function getSeasonGames(league: League, season: number): Promise<GameRow[]> {
@@ -485,7 +496,7 @@ export async function getWeekPerformers(league: League, week: Matchweek, limit =
      from player_game_stats pgs
      join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
      left join teams t on t.league = pgs.league and t.espn_id = pgs.team_espn_id
-     where pgs.league = $1 and pgs.game_espn_id = any($2)`,
+     where pgs.league = $1 and pgs.game_espn_id = any($2) and ${notPseudoAthleteSql()}`,
     [league, ids]
   );
   if (rows.length === 0) return [];

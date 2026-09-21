@@ -1,5 +1,6 @@
 // iCalendar (.ics) feeds built from the games archive, so fans can subscribe to a
 // team's or a league's fixtures in Apple Calendar, Google Calendar or Outlook.
+import { NextResponse } from "next/server";
 import { pool } from "./db";
 import { GAME_SELECT, LEAGUE_LABEL, type GameRow } from "./queries";
 import { isCricketLeague, type League } from "./leagues";
@@ -179,6 +180,18 @@ const GAME_WITH_VENUE_SELECT = `${GAME_SELECT.replace("from games g", ", ht.venu
 export interface Feed {
   filename: string;
   ics: string;
+}
+
+/** The response for a feed. Feeds are for subscribing, not for search results, hence noindex. */
+export function feedResponse(feed: Feed, download: boolean): NextResponse {
+  return new NextResponse(feed.ics, {
+    headers: {
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${feed.filename}"`,
+      "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+      "X-Robots-Tag": "noindex",
+    },
+  });
 }
 
 /** A team's full current-season schedule, results included. */

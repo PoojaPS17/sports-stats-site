@@ -7,12 +7,16 @@ import { AdSlot } from "@/components/AdSlot";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
+import { isValidIsoDate } from "@/lib/isoDate";
 import { scoresDayDescription } from "@/lib/gameDisplay";
 import type { Metadata } from "next";
 
 export const revalidate = 15;
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Dynamic on purpose: no generateStaticParams here, so the day's scores is read fresh each time.
+// It renders on every request and answers no-store: a cached render would be up to 5 minutes old
+// (expireTime in next.config.ts), which is too old for a day's live scores. The window above still
+// sets the default for the cached fetches inside this render.
 
 function dayLabel(date: string): string {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -20,7 +24,9 @@ function dayLabel(date: string): string {
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; date: string }> }): Promise<Metadata> {
   const { league, date } = await params;
-  if (!isLeague(league) || !DATE_RE.test(date)) return pageMeta("Scores", "Scores by date.", undefined, { noindex: true });
+  // An impossible date (month 13, Feb 30) is a 404 like an unknown league, never an error.
+  if (!isValidIsoDate(date)) notFound();
+  if (!isLeague(league)) return pageMeta("Scores", "Scores by date.", undefined, { noindex: true });
   const games = await getGamesByDate(league, date);
   const label = dayLabel(date);
   return pageMeta(
@@ -38,7 +44,7 @@ export default async function ScoresByDatePage({
   params: Promise<{ league: string; date: string }>;
 }) {
   const { league, date } = await params;
-  if (!isLeague(league) || !DATE_RE.test(date)) notFound();
+  if (!isLeague(league) || !isValidIsoDate(date)) notFound();
 
   const games = await getGamesByDate(league, date);
   const label = dayLabel(date);

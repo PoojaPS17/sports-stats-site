@@ -243,7 +243,8 @@ table {
 /* ---------------------------------------------------------------------------
    Surfaces
 --------------------------------------------------------------------------- */
-.card {
+.card,
+.player-grid > a {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
@@ -251,14 +252,39 @@ table {
 }
 
 a.card,
-.card-link {
+.card-link,
+.player-grid > a {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 a.card:hover,
-.card-link:hover {
+.card-link:hover,
+.player-grid > a:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-pop);
+}
+
+/* The players index lists every player of a league (thousands of links), so a row carries no
+   class attributes of its own: it is a card link, the player's name, and the team on a second line. */
+.player-grid > a {
+  display: block;
+  overflow: hidden;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-grid > a > span {
+  display: block;
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
 }
 
 .table-head {

@@ -4,6 +4,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
+import { absoluteUrl } from "@/lib/site";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -27,10 +28,18 @@ import { classifyCricketMatch, cricketMatchDescription } from "@/lib/cricketMatc
 // with a 10-second cache, refreshed in the browser while the match is in play.
 export const revalidate = 10;
 
+// Dynamic on purpose: no generateStaticParams here, so the state of the match is read fresh each time.
+// It renders on every request and answers no-store: a cached render is up to 5 minutes old
+// (expireTime in next.config.ts), and a render made in the pre state ships no LiveRefresh timer,
+// so it would not catch up on its own. The window above still sets the default for the cached
+// fetches inside this render.
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const m = await getCricketSeriesMatch(id);
-  if (!m) return {};
+  // A match ESPN lists that is not stored yet still renders from ESPN's live summary (the page), so it
+  // keeps the address as its canonical; the title and description stay the site's.
+  if (!m) return { alternates: { canonical: absoluteUrl(`/cricket/matches/${id}`) } };
   // Name, stage and series when they fit a search result's title; otherwise the month
   // stands in for the series, which the description still names.
   const stage = m.description ? `, ${m.description}` : "";
@@ -76,7 +85,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const sideRow = ({ name, score, winner, logo }: (typeof sides)[number]) => {
     return (
       <div className="flex items-center gap-3">
-        <TeamLogo name={name} logoUrl={logo} size={40} />
+        <TeamLogo name={name} logoUrl={logo} size={40} priority />
         <span className={`min-w-0 flex-1 truncate text-lg ${state === "post" && !winner ? "text-[var(--text-muted)]" : "font-bold"}`}>{name}</span>
         <span className={`shrink-0 text-lg tabular-nums ${state === "post" && !winner ? "text-[var(--text-muted)]" : "font-bold"}`}>{score}</span>
       </div>

@@ -5,7 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel, type GameRow } from "@/lib/queries";
 import { getHeadToHead, isSoccer } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
-import { h2hPath } from "@/lib/h2h";
+import { h2hDescription, h2hPath } from "@/lib/h2h";
 import { AdSlot } from "@/components/AdSlot";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GameCard } from "@/components/GameCard";
@@ -17,7 +17,16 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { getMostFacedOpponents } from "@/lib/related";
 
-export const revalidate = 600;
+// The meeting count and the record include this season's games, so this is live data.
+export const revalidate = 300;
+
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
 
 function parsePair(pair: string): [string, string] | null {
   const idx = pair.indexOf("-vs-");
@@ -40,8 +49,11 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // Champions League), which would otherwise give two pages the same bare title.
   return pageMeta(
     `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_LABEL[league]})`,
-    `${h2h.teamA.name} vs ${h2h.teamB.name} all-time ${LEAGUE_LABEL[league]} record (${record} in ${h2h.meetings} meetings), recent results and biggest wins.`,
-    h2hPath(league, slugs[0], slugs[1])
+    h2hDescription(h2h.teamA.name, h2h.teamB.name, LEAGUE_LABEL[league], h2h.meetings, record),
+    h2hPath(league, slugs[0], slugs[1]),
+    // No counted meeting: the page still renders for visitors, but has nothing to index. The h2h sitemap
+    // lists a pair only if it has one (countedMeetingSql), so the two rules stay in step.
+    { noindex: h2h.meetings === 0 }
   );
 }
 
@@ -115,7 +127,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         <section className="card overflow-hidden">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-6 sm:px-8">
             <Link href={`/${league}/teams/${teamA.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-              <TeamLogo name={teamDisplayName(teamA.name)} logoUrl={teamA.logo_url} color={teamA.color} size={64} />
+              <TeamLogo name={teamDisplayName(teamA.name)} logoUrl={teamA.logo_url} color={teamA.color} size={64} priority />
               <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamA.name)}</span>
             </Link>
             <div className="flex flex-col items-center">
@@ -128,7 +140,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
               {soccer && <span className="mt-1 text-xs text-[var(--text-muted)]">{h2h.draws} draws</span>}
             </div>
             <Link href={`/${league}/teams/${teamB.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
-              <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} />
+              <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} priority />
               <span className="text-base font-bold sm:text-lg">{teamDisplayName(teamB.name)}</span>
             </Link>
           </div>

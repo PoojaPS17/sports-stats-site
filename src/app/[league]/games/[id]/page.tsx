@@ -47,6 +47,12 @@ import type { League } from "@/lib/queries";
 // 10 seconds while live, and finished games are served from stored details anyway.
 export const revalidate = 10;
 
+// Dynamic on purpose: no generateStaticParams here, so the state of the match is read fresh each time.
+// It renders on every request and answers no-store: a cached render is up to 5 minutes old
+// (expireTime in next.config.ts), and a render made in the pre state ships no LiveRefresh timer,
+// so it would not catch up on its own. The window above still sets the default for the cached
+// fetches inside this render.
+
 function sportOf(league: League): MatchSport {
   return isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "american";
 }

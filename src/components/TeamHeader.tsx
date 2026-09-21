@@ -26,7 +26,7 @@ export function TeamHeader({
     <div className="card flex flex-col gap-4 overflow-hidden px-5 py-5 sm:flex-row sm:items-start sm:justify-between" style={{ borderLeft: `4px solid ${color ?? "var(--accent)"}` }}>
       <div className="flex min-w-0 items-center gap-4">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-muted)]">
-          <TeamLogo name={name} logoUrl={logoUrl} color={color} size={48} />
+          <TeamLogo name={name} logoUrl={logoUrl} color={color} size={48} priority />
         </div>
         <div className="min-w-0">
           <Link href={`/${league}`} className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--accent)]">

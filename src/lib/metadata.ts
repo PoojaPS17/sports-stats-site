@@ -23,6 +23,15 @@ export function clampDescription(text: string): string {
   return `${t.slice(0, word).replace(/[,;:(\s]+$/, "")}…`;
 }
 
+// Next shallow-merges metadata, so a page that returns no `robots` (or a different one) drops
+// the root layout's, along with its max-image-preview / max-snippet hints. Indexable pages
+// therefore repeat the whole directive here; keep it in step with the root layout's.
+const INDEXABLE_ROBOTS: NonNullable<Metadata["robots"]> = {
+  index: true,
+  follow: true,
+  googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+};
+
 export function pageMeta(title: string, rawDescription: string, path?: string, options: { noindex?: boolean; ownImage?: boolean } = {}): Metadata {
   const description = clampDescription(rawDescription);
   const canonical = path ? absoluteUrl(path) : undefined;
@@ -30,7 +39,7 @@ export function pageMeta(title: string, rawDescription: string, path?: string, o
     title,
     description,
     alternates: canonical ? { canonical } : undefined,
-    robots: options.noindex ? { index: false, follow: true } : undefined,
+    robots: options.noindex ? { index: false, follow: true } : INDEXABLE_ROBOTS,
     openGraph: { title, description, siteName: SITE_NAME, type: "website", url: canonical, ...(options.ownImage ? {} : { images: [SHARE_IMAGE] }) },
     twitter: { card: "summary_large_image", title, description, ...(options.ownImage ? {} : { images: [SHARE_IMAGE.url] }) },
   };

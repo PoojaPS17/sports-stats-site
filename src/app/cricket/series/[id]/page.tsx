@@ -18,6 +18,12 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 
 export const revalidate = 15;
 
+// Dynamic on purpose: no generateStaticParams here, so which matches are in play is read fresh each time.
+// It renders on every request and answers no-store: a cached render is up to 5 minutes old
+// (expireTime in next.config.ts), and a render made in the pre state ships no LiveRefresh timer,
+// so it would not catch up on its own. The window above still sets the default for the cached
+// fetches inside this render.
+
 // A season archive is a calendar year. ESPN's older series ids are four digits too
 // (8048 IPL, 8050 Ranji Trophy, 8679 PSL), and must reach the series page.
 const SEASON_RE = /^(19|20)\d{2}$/;

@@ -25,7 +25,7 @@ export function organizationSchema() {
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: absoluteUrl("/icon.png"),
+    logo: absoluteUrl("/logo-512.png"),
     email: CONTACT_EMAIL,
     contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: CONTACT_EMAIL, url: absoluteUrl("/contact") },
   };

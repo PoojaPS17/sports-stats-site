@@ -12,7 +12,8 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { ImageActions } from "@/components/ImageActions";
 import { RecordsExportCard, recordsExportWidth, type RecordBoard } from "@/components/RecordsExportCards";
 
-export const revalidate = 3600;
+// A record can fall in any game, so the boards move with the season.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;

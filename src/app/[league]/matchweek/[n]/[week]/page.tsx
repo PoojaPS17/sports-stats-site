@@ -6,8 +6,17 @@ import { isSeasonSegment, loadWeeks } from "@/lib/matchweekPage";
 import { pageMeta } from "@/lib/metadata";
 import { WeekHub } from "@/components/WeekHub";
 
-// A completed season's rounds never change.
-export const revalidate = 86400;
+// A completed season's rounds never change, but the same route serves the season in progress,
+// where results and the table after the round move. Held to the five-minute cap (next.config.ts).
+export const revalidate = 300;
+
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string; n: string; week: string }> }): Promise<Metadata> {
   const { league, n, week: w } = await params;
@@ -19,7 +28,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   return pageMeta(
     `${label} ${week.label} ${formatSeasonLabel(league, ctx.season)} Results`,
     `${label} ${week.label} of the ${formatSeasonLabel(league, ctx.season)} season (${weekDateRange(week)}): every result, the table after the round, and the top performers.`,
-    weekPath(league, week.index, ctx.season)
+    // The current season's rounds are also served without the year (/epl/matchweek/5), the form the
+    // sitemap lists and the hub links to; the long form names it as canonical.
+    weekPath(league, week.index, ctx.isCurrentSeason ? null : ctx.season)
   );
 }
 

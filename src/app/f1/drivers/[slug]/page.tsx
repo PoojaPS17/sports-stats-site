@@ -13,6 +13,14 @@ import type { Metadata } from "next";
 
 export const revalidate = 300;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const driver = await getF1DriverBySlug(slug);
@@ -38,7 +46,7 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
     <div className="flex flex-col gap-6">
       <JsonLd data={breadcrumbSchema([{ label: "Formula 1", href: "/f1" }, { label: "Standings", href: "/f1/standings" }, { label: driver.name }])} />
       <div className="flex items-center gap-3">
-        <TeamLogo name={driver.name} logoUrl={driver.headshot_url} size={56} />
+        <TeamLogo name={driver.name} logoUrl={driver.headshot_url} size={56} priority />
         <div>
           <h1 className="page-title">{driver.name}</h1>
           <p className="text-sm text-[var(--text-muted)]">F1{currentTeam && ` · ${currentTeam}`}</p>

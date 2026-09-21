@@ -5,6 +5,7 @@ import { pool } from "./db";
 import { isCricketLeague, type League } from "./leagues";
 import { countRegularGames } from "./compareGames";
 import { playerSport } from "./playerProfile";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 import {
   getComputedTable,
   getCurrentSeason,
@@ -244,7 +245,7 @@ async function getPlayerProfile(league: League, slug: string): Promise<PlayerPro
             t.name as team_name, t.slug as team_slug, t.color as team_color, t.logo_url as team_logo
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-     where p.league = $1 and p.slug = $2`,
+     where p.league = $1 and p.slug = $2 and ${notPseudoAthleteSql()}`,
     [league, slug]
   );
   return rows[0] ?? null;
@@ -365,6 +366,6 @@ export async function getPlayerComparison(league: League, slugA: string, slugB: 
 
 /** Name lookup so a half-filled picker (?a=slug with no b) still shows the chosen player. */
 export async function getPlayerLabel(league: League, slug: string): Promise<{ slug: string; name: string } | null> {
-  const { rows } = await pool.query(`select slug, name from players where league = $1 and slug = $2`, [league, slug]);
+  const { rows } = await pool.query(`select p.slug, p.name from players p where p.league = $1 and p.slug = $2 and ${notPseudoAthleteSql()}`, [league, slug]);
   return rows[0] ?? null;
 }

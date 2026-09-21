@@ -10,7 +10,10 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { ImageActions } from "@/components/ImageActions";
 import { InjuriesExportCard } from "@/components/InjuriesExportCard";
 
-export const revalidate = 900;
+// Every render for a tracked league awaits searchParams after the notFound() check below, so it is
+// per request. Only the 404 path (a league with no injury tracker, which returns before searchParams
+// is read) is cached, and this window is held to the cap for it (next.config.ts).
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;

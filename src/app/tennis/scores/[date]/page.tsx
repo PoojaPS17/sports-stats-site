@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
+import { isValidIsoDate } from "@/lib/isoDate";
 import { PageHeader } from "@/components/PageHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { TennisDayStrip, TennisDayView, formatDayLabel } from "@/components/TennisScores";
@@ -13,17 +14,21 @@ import { TennisScoresExportCard } from "@/components/TennisExportCards";
 
 export const revalidate = 15;
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Dynamic on purpose: no generateStaticParams here, so the day's scores is read fresh each time.
+// It renders on every request and answers no-store: a cached render is up to 5 minutes old
+// (expireTime in next.config.ts), and a render made in the pre state ships no LiveRefresh timer,
+// so it would not catch up on its own. The window above still sets the default for the cached
+// fetches inside this render.
 
 export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
   const { date } = await params;
-  if (!DATE_RE.test(date)) return {};
+  if (!isValidIsoDate(date)) notFound();
   return pageMeta(`Tennis Scores, ${formatDayLabel(date)}`, `Every ATP and WTA match played on ${formatDayLabel(date)}: set-by-set scores, rounds and courts, tournament by tournament.`, `/tennis/scores/${date}`);
 }
 
 export default async function TennisDayPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
-  if (!DATE_RE.test(date) || Number.isNaN(new Date(`${date}T12:00:00Z`).getTime())) notFound();
+  if (!isValidIsoDate(date)) notFound();
 
   const [stored, days] = await Promise.all([getTennisDay(date), getTennisDaysAround(date)]);
   const { matches, live } = await overlayLiveTennis(date, stored);

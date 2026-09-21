@@ -12,7 +12,8 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { ImageActions } from "@/components/ImageActions";
 import { FixtureRunsExportCard, PowerRankingsExportCard } from "@/components/PowerRankingsExportCards";
 
-export const revalidate = 900;
+// Recomputed from results, so it moves with every round.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;

@@ -1,6 +1,7 @@
 // The pure half of scripts/audit-player-totals.ts: how a season on the site is compared with the
 // same season on ESPN. Nothing here opens a database connection or calls ESPN, so the tests can
 // import it freely (the loader in season-stats.ts, which the CLI uses, opens the pool on import).
+import { notPseudoAthleteSql } from "../../src/lib/pseudoAthlete";
 import { espnSeasonTotals, storedRowHasStats } from "../../src/lib/espnSeason";
 import { cell, type PlayerProfile, type PlayerSport } from "../../src/lib/playerProfile";
 import { seasonGamesPlayed, type SeasonStatRow } from "./season-row";
@@ -366,6 +367,7 @@ export function auditPlayersSql(includeStoredGames: boolean): string {
            ${includeStoredGames ? "union select player_espn_id from player_season_stats where league = $1 and games_played > 0" : ""}
          ) ids
          left join players p on p.league = $1 and p.espn_id = ids.id
+         where ${notPseudoAthleteSql("ids.id")}
          group by ids.id
          order by ids.id
          limit $2::int`;

@@ -9,6 +9,11 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const revalidate = 300;
 
+// Dynamic on purpose: no generateStaticParams here, so the score on the share image is read fresh each time.
+// It renders on every request and answers no-store: a cached render is up to 5 minutes old
+// (expireTime in next.config.ts), which would show a stale score on the share image. The window
+// above still sets the default for the cached fetches inside this render.
+
 function Side({ name, logo, score, muted }: { name: string; logo: string | null; score: string | null; muted: boolean }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, width: 380 }}>

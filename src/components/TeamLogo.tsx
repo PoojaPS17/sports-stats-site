@@ -26,11 +26,14 @@ export function TeamLogo({
   logoUrl,
   color,
   size = 32,
+  priority = false,
 }: {
   name: string;
   logoUrl: string | null;
   color?: string | null;
   size?: number;
+  /** A logo in the page header, above the fold: loaded straight away. Every other crest waits until it is near the screen. */
+  priority?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
@@ -45,6 +48,8 @@ export function TeamLogo({
         ref={ref}
         src={logoUrl}
         alt={name}
+        loading={priority ? undefined : "lazy"}
+        decoding={priority ? undefined : "async"}
         width={size}
         height={size}
         style={{ width: size, height: size }}

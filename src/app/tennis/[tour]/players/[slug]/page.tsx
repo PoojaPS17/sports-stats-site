@@ -23,6 +23,14 @@ import {
 
 export const revalidate = 300;
 
+// An empty list, so nothing is built up front: each address is rendered on the first request and
+// then served from the cache above until it goes stale. Without this export the page would be
+// rendered again on every request and the revalidate above would never apply. Addresses that do
+// not exist still render on demand and 404 (dynamicParams is left at its default).
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ tour: string; slug: string }> }): Promise<Metadata> {
   const { tour, slug } = await params;
   if (!isTour(tour)) return {};
@@ -68,7 +76,7 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
     <div className="flex flex-col gap-6">
       <div className="card flex items-center gap-4 overflow-hidden px-6 py-6">
         <div className="shrink-0 overflow-hidden rounded-full border-2 border-[var(--surface)] bg-[var(--surface-muted)]">
-          <TeamLogo name={player.name} logoUrl={player.headshot_url} size={72} />
+          <TeamLogo name={player.name} logoUrl={player.headshot_url} size={72} priority />
         </div>
         <div className="min-w-0">
           <h1 className="page-title flex items-center gap-2">

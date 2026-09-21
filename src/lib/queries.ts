@@ -6,6 +6,7 @@ import type { League } from "./leagues";
 import type { GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
+import { notPseudoAthleteSql } from "./pseudoAthlete";
 import type { EspnSeasonTotals } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 
@@ -280,7 +281,7 @@ export async function findTeamSlugByLegacy(league: League, slug: string): Promis
 }
 
 export async function findPlayerSlugByLegacy(league: string, slug: string): Promise<string | null> {
-  const { rows } = await pool.query(`select slug from players where league = $1 and legacy_slug = $2`, [league, slug]);
+  const { rows } = await pool.query(`select slug from players p where p.league = $1 and p.legacy_slug = $2 and ${notPseudoAthleteSql()}`, [league, slug]);
   return rows[0]?.slug ?? null;
 }
 
@@ -347,7 +348,7 @@ export async function getPlayerBySlug(league: League, slug: string): Promise<Pla
             coalesce(p.team_espn_id is not null and (${ON_ROSTER_SQL}), false) as on_roster
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-     where p.league = $1 and p.slug = $2`,
+     where p.league = $1 and p.slug = $2 and ${notPseudoAthleteSql()}`,
     [league, slug]
   );
   return rows[0] ?? null;
@@ -358,7 +359,7 @@ export async function getPlayerBySlug(league: League, slug: string): Promise<Pla
 // historical opponents in a decade-old game were never on a "current roster").
 export async function getPlayerSlugsByEspnIds(league: League, espnIds: string[]): Promise<Map<string, string>> {
   if (espnIds.length === 0) return new Map();
-  const { rows } = await pool.query(`select espn_id, slug from players where league = $1 and espn_id = any($2)`, [league, espnIds]);
+  const { rows } = await pool.query(`select p.espn_id, p.slug from players p where p.league = $1 and p.espn_id = any($2) and ${notPseudoAthleteSql()}`, [league, espnIds]);
   return new Map(rows.map((r) => [r.espn_id as string, r.slug as string]));
 }
 
@@ -368,7 +369,7 @@ export async function getAllPlayers(league: League): Promise<PlayerRow[]> {
             t.name as team_name, t.slug as team_slug, t.color as team_color
      from players p
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-     where p.league = $1
+     where p.league = $1 and ${notPseudoAthleteSql()}
      order by p.name`,
     [league]
   );
@@ -520,7 +521,7 @@ export async function getLeaders(league: League, column: string, limit = 10, sea
      from player_season_stats pss
      join players p on p.league = pss.league and p.espn_id = pss.player_espn_id
      left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
-     where pss.league = $1 and pss.${column} is not null
+     where pss.league = $1 and pss.${column} is not null and ${notPseudoAthleteSql()}
        and pss.season = coalesce($3, (select max(season) from player_season_stats where league = $1))
        ${qualifier}
      order by pss.${column} desc
@@ -610,7 +611,7 @@ export const ON_ROSTER_SQL = `(select max(roster_seen_at) from players r where r
 export async function getTeamRoster(league: League, teamEspnId: string): Promise<RosterPlayer[]> {
   const { rows } = await pool.query(
     `select p.espn_id, p.name, p.slug, p.position, p.jersey, p.height, p.weight, p.age, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.is_captain, p.is_wicketkeeper
-     from players p where p.league = $1 and p.team_espn_id = $2 and (${ON_ROSTER_SQL})
+     from players p where p.league = $1 and p.team_espn_id = $2 and ${notPseudoAthleteSql()} and (${ON_ROSTER_SQL})
      order by p.is_captain desc nulls last, p.position, p.name`,
     [league, teamEspnId]
   );
@@ -1065,7 +1066,7 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
      union all
      select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image
      from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-     where p.name ilike $1
+     where p.name ilike $1 and ${notPseudoAthleteSql()}
      union all
      -- Every cricket series and tournament in the database, current or past (Ranji Trophy, PSL, a bilateral tour).
      select 'series' as type, 'cricket' as league, s.name, s.espn_id as slug,

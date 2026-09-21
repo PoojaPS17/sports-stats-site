@@ -321,7 +321,8 @@ export async function WeekHub({
   );
 }
 
-export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: { league: League; season: number; weeks: Matchweek[]; seasons: number[]; isCurrentSeason: boolean }) {
+/** The round-by-round index. With no rounds (weeks empty) it shows a short note in place of the list; `season` is null only when the league has no games at all. */
+export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: { league: League; season: number | null; weeks: Matchweek[]; seasons: number[]; isCurrentSeason: boolean }) {
   const noun = weekNoun(league);
   const now = isCurrentSeason ? currentWeekIndex(weeks) : -1;
   const seasonArg = isCurrentSeason ? null : season;
@@ -329,7 +330,7 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: `${noun}s` }]} />
-      <PageHeader title={`${LEAGUE_LABEL[league]} ${noun}s`} subtitle={`${formatSeasonLabel(league, season)} season, round by round`}>
+      <PageHeader title={`${LEAGUE_LABEL[league]} ${noun}s`} subtitle={season === null ? undefined : `${formatSeasonLabel(league, season)} season, round by round`}>
         {seasons.length > 1 && (
           <div className="flex flex-wrap gap-1">
             {seasons.slice(0, 6).map((s) => (
@@ -345,13 +346,13 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
           Official {noun.toLowerCase()} numbers are not published for this season, so rounds are listed by the dates they were played.
         </p>
       )}
-      {league === "nba" && (
+      {league === "nba" && weeks.length > 0 && (
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
           The NBA does not number its weeks. Weeks here are seven-day periods counted from opening night.
         </p>
       )}
       {weeks.length === 0 ? (
-        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No fixtures on record for this season yet.</p>
+        <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Rounds appear here once the regular season starts.</p>
       ) : (
         <div className="card overflow-hidden">
           <ol className="divide-y divide-[var(--border)]">

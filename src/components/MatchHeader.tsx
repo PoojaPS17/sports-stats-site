@@ -28,7 +28,7 @@ function TeamLine({
   return (
     <div className="flex items-center justify-between gap-3">
       <Link href={href} className="flex min-w-0 items-center gap-3 hover:text-[var(--accent)]">
-        <TeamLogo name={name} logoUrl={logo} color={color} size={40} />
+        <TeamLogo name={name} logoUrl={logo} color={color} size={40} priority />
         <span className={`truncate text-lg ${completed && won ? "font-extrabold" : "font-semibold"}`}>{name}</span>
       </Link>
       {completed && (score !== null || scoreDisplay) && (

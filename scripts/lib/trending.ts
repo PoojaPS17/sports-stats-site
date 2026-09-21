@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { notPseudoAthleteSql } from "../../src/lib/pseudoAthlete";
 
 export interface EntityMatch {
   league: string;
@@ -55,7 +56,9 @@ export async function loadEntityIndex(pool: Pool): Promise<EntityIndex> {
     if (owners.size > 1) teamNicknames.delete(nickname);
   }
 
-  const players = await pool.query<{ league: string; slug: string; name: string }>("select league, slug, name from players");
+  const players = await pool.query<{ league: string; slug: string; name: string }>(
+    `select p.league, p.slug, p.name from players p where ${notPseudoAthleteSql()}`
+  );
   for (const p of players.rows) {
     const key = normalize(p.name);
     // First match wins on a name collision across leagues — an extra profile link

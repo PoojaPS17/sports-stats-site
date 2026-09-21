@@ -9,7 +9,8 @@ import { Flag } from "@/components/TennisScores";
 import { ImageActions } from "@/components/ImageActions";
 import { TennisRankingsExportCard } from "@/components/TennisExportCards";
 
-export const revalidate = 3600;
+// The published ranking changes every Monday, and the tour's points move under it.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ tour: string }> }): Promise<Metadata> {
   const { tour } = await params;

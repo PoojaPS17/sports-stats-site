@@ -3,7 +3,8 @@ import { pageMeta } from "@/lib/metadata";
 import { TournamentCalendar } from "@/components/TennisCalendar";
 import { getTennisTournamentSeasons, getTennisTournaments } from "@/lib/tennis";
 
-export const revalidate = 600;
+// Champions land as draws finish, and the "In play" badge is computed from today's date.
+export const revalidate = 300;
 
 export const metadata: Metadata = pageMeta("Tennis Calendar", "The ATP and WTA season calendar: every tournament with dates, venue and champions, month by month.", "/tennis/tournaments");
 

@@ -479,3 +479,20 @@ test("database: the audit reads the players with a stored games figure and no ro
   assert.deepEqual(await ids(auditPlayersSql(true), "nfl"), ["hurt", "kinnard", "lineman", "p1", "yardsonly"]);
   assert.deepEqual(await ids(auditPlayersSql(true), "nba"), []);
 });
+
+test("database: the audit's player list never includes an ESPN pseudo-athlete (a negative id), whether it has box rows or a stored games figure", async () => {
+  await db.pool.query(
+    `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('nfl', 'pseudo-audit-game', '-8801', '1', '{}'::jsonb)`
+  );
+  await db.pool.query(
+    `insert into player_season_stats (league, season, player_espn_id, team_espn_id, games_played) values ('nfl', 2024, '-8802', '1', 5)`
+  );
+  try {
+    const ids = async (sql: string) => (await db.pool.query<{ id: string }>(sql, ["nfl", null])).rows.map((r) => r.id);
+    assert.deepEqual(await ids(auditPlayersSql(false)), ["kinnard", "p1"]);
+    assert.deepEqual(await ids(auditPlayersSql(true)), ["hurt", "kinnard", "lineman", "p1", "yardsonly"]);
+  } finally {
+    await db.pool.query(`delete from player_game_stats where game_espn_id = 'pseudo-audit-game'`);
+    await db.pool.query(`delete from player_season_stats where player_espn_id = '-8802'`);
+  }
+});

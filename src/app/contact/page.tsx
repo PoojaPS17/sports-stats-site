@@ -2,8 +2,6 @@ import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
 import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { LegalPage } from "@/components/LegalPage";
-import { JsonLd } from "@/components/JsonLd";
-import { breadcrumbSchema } from "@/lib/structuredData";
 
 export const metadata = pageMeta("Contact", `How to reach ${SITE_NAME}: report a wrong score or stat, send a rights-holder request, or ask about privacy, advertising and partnerships.`, "/contact");
 
@@ -14,7 +12,6 @@ function mailto(subject: string) {
 export default function ContactPage() {
   return (
     <LegalPage title="Contact" subtitle={`One address for everything about ${SITE_NAME}.`}>
-      <JsonLd data={breadcrumbSchema([{ label: "Contact" }])} />
       <p>
         Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. {SITE_NAME} is a small independent site, and every message is
         read by a person. The notes below say what to include so we can act on it the first time.

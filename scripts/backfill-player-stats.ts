@@ -8,6 +8,7 @@
 import { pool } from "./lib/db";
 import { type League } from "./lib/espn";
 import { upsertPlayerSeasonStats } from "./lib/season-stats";
+import { notPseudoAthleteSql } from "../src/lib/pseudoAthlete";
 
 // Cricket has no per-player match data yet (ESPN's roster/boxscore endpoints 404 for
 // this competition), so there's no athlete season-stats endpoint to backfill from.
@@ -19,7 +20,7 @@ function sleep(ms: number) {
 }
 
 async function backfillLeague(league: League) {
-  const { rows: players } = await pool.query(`select espn_id, team_espn_id from players where league = $1`, [league]);
+  const { rows: players } = await pool.query(`select p.espn_id, p.team_espn_id from players p where p.league = $1 and ${notPseudoAthleteSql()}`, [league]);
 
   let totalSeasons = 0;
   let playersWithStats = 0;
