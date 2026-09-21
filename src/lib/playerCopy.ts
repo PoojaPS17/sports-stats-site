@@ -33,9 +33,11 @@ export const NBA_NO_BOX_SCORE_SEASON_NOTE = `${noBoxScoreLead("this season")} Th
 /** The main page's season table description, where the long note above the strip is not repeated. */
 export const NBA_NO_BOX_SCORE_TABLE_NOTE = "† marks seasons with games that have no box score; see the note above.";
 
-/** The same note for a Playoffs or Play-In table, where GP is always counted from the rosters (ESPN's stored figure is regular season only). */
+/** The same note for a Playoffs or Play-In table. ESPN's stored season row is regular season only, but ESPN has a postseason row
+ * of its own (the playoffs, not the play-in); a season with games that have no box score shows it where it is stored, and
+ * shows dashes where it is not, rather than an average over the games that do have a box score. */
 export const NBA_NO_BOX_SCORE_STAGE_NOTE =
-  "ESPN's box scores have no stat line for some of this player's games. Those games are counted from the game rosters toward GP but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons.";
+  "ESPN's box scores have no stat line for some of this player's games. Where ESPN's own postseason row is stored for a season, that season shows ESPN's figures; otherwise its games are counted from the game rosters toward GP and its averages are dashes, not an average over the games that have a box score. The game log and best games count only games with a box score, and W-L is left blank for those seasons.";
 
 /** A section description, with the no-box-score note after it when `n` of its games have none. `regular` is the main
  * page's strip note, `season` the season page's, `table` the pointer under the strip, `other` the playoffs and play-in. */

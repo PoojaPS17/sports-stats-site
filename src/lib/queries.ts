@@ -9,7 +9,7 @@ import type { GameStage } from "./gameStage";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { sortStandings } from "./standingsOrder";
-import type { EspnSeasonTotals } from "./espnSeason";
+import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 
 export type { League } from "./leagues";
@@ -669,7 +669,7 @@ export async function getPlayerReportedGames(league: League, playerEspnId: strin
 
 // ESPN's whole-season line per season for an NBA player (empty for every other league), from the stored
 // season row: what a season's figures show where the game rows are short of ESPN's games.
-export async function getPlayerEspnSeasons(league: League, playerEspnId: string): Promise<Map<number, EspnSeasonTotals>> {
+export async function getPlayerEspnSeasons(league: League, playerEspnId: string): Promise<EspnSeasons> {
   return fetchEspnSeasons(pool, league, playerEspnId);
 }
 

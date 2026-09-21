@@ -20,6 +20,20 @@ export interface EspnSeasonTotals {
   fta: number; // totals "made-attempted"
 }
 
+/** ESPN's regular-season line per season (the map itself, as before), that also carries ESPN's postseason line per
+ * season (`postseason`, read from the `postseason_` keys the loader stores). A `Map` for every reader that only wants
+ * the regular season; `buildStagedProfile` reads `postseason` for the playoffs table. Same shape as `ReportedGames`. */
+export class EspnSeasons extends Map<number, EspnSeasonTotals> {
+  readonly postseason: ReadonlyMap<number, EspnSeasonTotals>;
+  constructor(regular: Iterable<readonly [number, EspnSeasonTotals]> = [], postseason: Iterable<readonly [number, EspnSeasonTotals]> = []) {
+    super(regular);
+    this.postseason = new Map(postseason);
+  }
+}
+
+/** The key prefix the loader stores ESPN's postseason categories under (`postseason_averages`, `postseason_totals`). */
+export const POSTSEASON_PREFIX = "postseason_";
+
 /** The value under `label` in one stored category, or null when the label is absent or the value blank. */
 function valueOf(cat: unknown, label: string): string | null {
   if (typeof cat !== "object" || cat === null) return null;
@@ -46,13 +60,16 @@ function pairAt(cat: unknown, label: string): [number, number] | null {
   return m ? [Number(m[1].replace(/,/g, "")), Number(m[2].replace(/,/g, ""))] : null;
 }
 
-/** ESPN's season line, or null unless GP is a positive number and every one of PTS, REB, AST, STL, BLK,
+/** ESPN's season line (with `prefix` "postseason_", its postseason line: the same categories under the prefixed keys),
+ * or null unless GP is a positive number and every one of PTS, REB, AST, STL, BLK,
  * TO, FG, 3PT and FT is readable in the totals, and the row is consistent with itself: points are
  * 2 x FGM + 3PM + FTM, no made count is above its attempts, and the averages' PTS (when present) is the
  * totals' PTS over GP to within 0.06. */
-export function espnSeasonTotals(categories: unknown): EspnSeasonTotals | null {
+export function espnSeasonTotals(categories: unknown, prefix = ""): EspnSeasonTotals | null {
   if (typeof categories !== "object" || categories === null) return null;
-  const { averages, totals } = categories as { averages?: unknown; totals?: unknown };
+  const stored = categories as Record<string, unknown>;
+  const averages = stored[`${prefix}averages`];
+  const totals = stored[`${prefix}totals`];
   const games = numberAt(averages, "GP");
   if (games === null || games <= 0) return null;
   const pts = numberAt(totals, "PTS");

@@ -57,10 +57,10 @@ test("unlistedGamesNote agrees with the count", () => {
   assert.equal(unlistedGamesNote(2), "2 games without a box score are not listed.");
 });
 
-test("the playoffs and play-in note counts the games from the rosters and does not mention ESPN's own figure", () => {
+test("the playoffs and play-in note says ESPN's postseason row is used where stored, else dashes, and never mentions the regular-season figure", () => {
   assert.equal(
     NBA_NO_BOX_SCORE_STAGE_NOTE,
-    "ESPN's box scores have no stat line for some of this player's games. Those games are counted from the game rosters toward GP but not toward the per-game averages, the game log or the best games, and W-L is left blank for those seasons."
+    "ESPN's box scores have no stat line for some of this player's games. Where ESPN's own postseason row is stored for a season, that season shows ESPN's figures; otherwise its games are counted from the game rosters toward GP and its averages are dashes, not an average over the games that have a box score. The game log and best games count only games with a box score, and W-L is left blank for those seasons."
   );
   assert.equal(NBA_NO_BOX_SCORE_STAGE_NOTE.includes("ESPN's own figure"), false);
 });

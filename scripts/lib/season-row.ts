@@ -1,5 +1,6 @@
 // Which of ESPN's per-season rows the season-stats loader stores. Pure: no database import, so the
 // tests and the audit can use it without a connection (season-stats.ts opens the pool on import).
+import { POSTSEASON_PREFIX } from "../../src/lib/espnSeason";
 import { HISTORY_START, type League } from "./espn";
 
 /** One row of a category in ESPN's athlete /stats payload. */
@@ -53,6 +54,20 @@ export function seasonRow(category: SeasonCategory, seasonYear: number, leagueSl
   const row = (leagueSlug ? undefined : rows.find(isTotalsRow)) ?? rows[0];
   if (!row) return null;
   return { labels: category.labels ?? [], values: row.stats ?? [] };
+}
+
+/** The categories of ESPN's postseason payload (`/stats?seasontype=3`) that the site reads, stored beside the regular-season
+ * ones in the same `categories` JSON under prefixed keys: `postseason_averages` and `postseason_totals`. A category with
+ * no row for the season adds nothing (a season the player had no playoff games in has no postseason keys). */
+const POSTSEASON_CATEGORIES = new Set(["averages", "totals"]);
+export function postseasonRows(categories: (SeasonCategory & { name?: string })[], seasonYear: number): Record<string, { labels: string[]; values: string[] }> {
+  const out: Record<string, { labels: string[]; values: string[] }> = {};
+  for (const category of categories) {
+    if (!category.name || !POSTSEASON_CATEGORIES.has(category.name)) continue;
+    const row = seasonRow(category, seasonYear);
+    if (row) out[`${POSTSEASON_PREFIX}${category.name}`] = row;
+  }
+  return out;
 }
 
 /**

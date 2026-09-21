@@ -1,7 +1,7 @@
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
 
-import { seasonGamesPlayed, seasonRow, seasonWindowStart } from "./season-row";
+import { postseasonRows, seasonGamesPlayed, seasonRow, seasonWindowStart } from "./season-row";
 
 // Which of a category's rows a season stores (ESPN's Totals row for a traded player, and the
 // league filter for soccer), and an NFL season's games played (ESPN's own GP, summed over a traded
@@ -32,7 +32,8 @@ async function upsertOneSeason(
   teamEspnId: string | null,
   seasonYear: number,
   categories: any[],
-  leagueSlug: string | undefined
+  leagueSlug: string | undefined,
+  postseasonCategories: any[] = []
 ): Promise<boolean> {
   const out: Record<string, { labels: string[]; values: string[] }> = {};
   let ptsAvg: number | null = null;
@@ -71,6 +72,10 @@ async function upsertOneSeason(
   }
 
   if (!found) return false;
+
+  // NBA: ESPN's postseason line for the season (when the player had one) is stored in the same JSON under its own keys,
+  // so every regular-season key above stays exactly as it was and no schema change is needed.
+  Object.assign(out, postseasonRows(postseasonCategories, seasonYear));
 
   // NBA's games played came from its `averages` category above; soccer stays null. NFL's is ESPN's
   // own GP (the site's box-score rows list only players with a stat line, so counting them undercounts).
@@ -114,6 +119,9 @@ export async function upsertPlayerSeasonStats(
 ): Promise<number> {
   const data = await fetchAthleteSeasonStats(league, playerEspnId);
   const categories: any[] = data.categories ?? [];
+  // NBA: one more request for the postseason line (seasontype=3). A failure here fails the player's whole update rather
+  // than storing the row without its postseason keys, which would overwrite ones a previous run stored.
+  const postseasonCategories: any[] = league === "nba" ? ((await fetchAthleteSeasonStats(league, playerEspnId, 3)).categories ?? []) : [];
   // An explicit `yearsBack` is a relative window; the default is the league's pinned start (seasonWindowStart).
   const currentYear = new Date().getUTCFullYear();
   const minYear = yearsBack === undefined ? seasonWindowStart(league, currentYear) : currentYear - yearsBack;
@@ -132,7 +140,7 @@ export async function upsertPlayerSeasonStats(
 
   let count = 0;
   for (const year of years) {
-    if (await upsertOneSeason(league, playerEspnId, teamEspnId, year, categories, leagueSlug)) count++;
+    if (await upsertOneSeason(league, playerEspnId, teamEspnId, year, categories, leagueSlug, postseasonCategories)) count++;
   }
   return count;
 }

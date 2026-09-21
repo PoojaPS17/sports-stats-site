@@ -197,9 +197,14 @@ export function fetchInjuries(league: League) {
 // The response it returns is also sport-wide (a player's career across every league
 // and competition they've featured in, not just one of them) — callers must filter
 // rows by `leagueSlug` themselves.
-export function fetchAthleteSeasonStats(league: League, athleteEspnId: string) {
+//
+// `seasontype` picks ESPN's season type: omitted is the regular season (the default), 3 is the postseason (the
+// same categories, one row per season the player had playoff games in). ESPN silently ignores 5 (play-in): the
+// play-in has no line here.
+export function fetchAthleteSeasonStats(league: League, athleteEspnId: string, seasontype?: number) {
   const sportPath = isSoccerLeague(league) ? "soccer" : SPORT_PATH[league];
-  return getJson<any>(`${COMMON_BASE}/${sportPath}/athletes/${athleteEspnId}/stats`);
+  const query = seasontype === undefined ? "" : `?seasontype=${seasontype}`;
+  return getJson<any>(`${COMMON_BASE}/${sportPath}/athletes/${athleteEspnId}/stats${query}`);
 }
 
 // The athlete season-stats endpoint can lag behind the actual live season (it may not

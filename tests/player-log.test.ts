@@ -39,6 +39,9 @@ before(async () => {
   await withCategories("nba", 2026, "e1", ESPN_ROW);
   await withCategories("nba", 2025, "e1", { averages: ESPN_ROW.averages });
   await withCategories("nba", 2024, "e1", { ...ESPN_ROW, averages: { ...ESPN_ROW.averages, values: ["0", ...ESPN_ROW.averages.values.slice(1)] } });
+  // A season with ESPN's postseason line beside the regular-season one (the loader's postseason_ keys), and one with only a postseason line.
+  await withCategories("nba", 2026, "e2", { ...ESPN_ROW, postseason_averages: { labels: ESPN_ROW.averages.labels, values: ["6", "6", "39.8", ...ESPN_ROW.averages.values.slice(3, 17), "22.7"] }, postseason_totals: ESPN_ROW.totals });
+  await withCategories("nba", 2025, "e2", { postseason_averages: ESPN_ROW.averages, postseason_totals: ESPN_ROW.totals });
   await withCategories("nfl", 2026, "e1", ESPN_ROW);
   await withCategories("epl", 2026, "e1", ESPN_ROW);
   await seedGames();
@@ -120,6 +123,19 @@ test("fetchEspnSeasons returns the NBA seasons whose stored row ESPN's line can 
   assert.equal((await fetchEspnSeasons(db.pool, "nba", "nobody")).size, 0);
 });
 
+test("fetchEspnSeasons also returns ESPN's postseason line per season, read from the postseason_ keys", async () => {
+  const map = await fetchEspnSeasons(db.pool, "nba", "e2");
+  // The regular-season map is unchanged: only 2026 has regular-season keys.
+  assert.deepEqual([...map.keys()], [2026]);
+  assert.equal(map.get(2026)?.games, 26);
+  // The postseason map has its own seasons: 2026's postseason averages say 22.7 a game where the totals' 311 over 6 games is 51.8, so
+  // that row is rejected as inconsistent; 2025 (a row with only postseason keys) reads.
+  assert.deepEqual([...map.postseason.keys()], [2025]);
+  assert.equal(map.postseason.get(2025)?.games, 26);
+  // A player with only regular-season keys has no postseason line.
+  assert.equal((await fetchEspnSeasons(db.pool, "nba", "e1")).postseason.size, 0);
+});
+
 test("fetchEspnSeasons returns an empty map for a league that is not the NBA without querying", async () => {
   const stub = {
     query: () => {
@@ -128,6 +144,7 @@ test("fetchEspnSeasons returns an empty map for a league that is not the NBA wit
   } as unknown as Parameters<typeof fetchEspnSeasons>[0];
   assert.equal((await fetchEspnSeasons(stub, "nfl", "e1")).size, 0);
   assert.equal((await fetchEspnSeasons(stub, "epl", "e1")).size, 0);
+  assert.equal((await fetchEspnSeasons(stub, "epl", "e1")).postseason.size, 0);
   // Stored NFL and soccer rows with the same shape are never read.
   assert.equal((await fetchEspnSeasons(db.pool, "nfl", "e1")).size, 0);
 });
