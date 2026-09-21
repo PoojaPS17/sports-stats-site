@@ -1,7 +1,9 @@
 // Bumped when the extraction below changes what it stores, so refresh-cricket-cards.ts
 // can find the rows written by an older version. 2: catches no longer double-counted,
 // per-innings figures for Tests, unrecorded balls and boundaries stored as null.
-export const CARD_VERSION = 2;
+// 3: a player in the XI who did nothing is stored too (a card with no figures), so
+// Matches counts every appearance.
+export const CARD_VERSION = 3;
 
 export interface CricketBatting {
   runs: number;
@@ -53,6 +55,8 @@ function addOvers(a: number, b: number, ballsPerOver: number): number {
 export function extractCricketMatchStats(summary: any): { venue: string | null; players: CricketPlayerMatchStats[] } {
   const venue = summary?.gameInfo?.venue?.fullName ?? null;
   const players: CricketPlayerMatchStats[] = [];
+  // In the XI (or came on) but no batting, bowling or catch: still a match played.
+  const appearances: CricketPlayerMatchStats[] = [];
 
   const statsOf = (period: any): any[] => period?.statistics?.categories?.[0]?.stats ?? [];
   const read = (stats: any[], statName: string): number => {
@@ -139,9 +143,14 @@ export function extractCricketMatchStats(summary: any): { venue: string | null; 
 
       if (batting || bowling || catches > 0) {
         players.push({ athleteId, name, teamId, batting, bowling, catches: catches || undefined, innings: firstClass && innings.length > 0 ? innings : undefined });
+      } else if (p.starter === true || p.subbedIn === true) {
+        appearances.push({ athleteId, name, teamId });
       }
     }
   }
+
+  // A match with no figures at all was abandoned before a ball was bowled: nobody played in it.
+  if (players.length > 0) players.push(...appearances);
 
   return { venue, players };
 }
