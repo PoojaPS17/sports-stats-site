@@ -16,6 +16,8 @@ import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 import { CalendarButton } from "@/components/CalendarButton";
 import { getOffseasonRecap } from "@/lib/offseason";
 import { OffseasonRecap } from "@/components/OffseasonRecap";
+import { formatGameDate, gameDayIso } from "@/lib/gameDay";
+import type { League } from "@/lib/queries";
 
 export const revalidate = 15;
 
@@ -29,10 +31,10 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   return pageMeta(`${label} Scores & ${words.heading}`, `Latest ${label} results and upcoming ${words.upcoming} with ${words.start}, ${isCricketLeague(league) ? "scorecards" : "box scores"} and match stats.`, `/${league}`);
 }
 
-function groupByDay(games: Awaited<ReturnType<typeof getRecentAndUpcoming>>) {
+function groupByDay(league: League, games: Awaited<ReturnType<typeof getRecentAndUpcoming>>) {
   const groups = new Map<string, typeof games>();
   for (const g of games) {
-    const key = new Date(g.date).toLocaleDateString("en-US", {
+    const key = formatGameDate(g.date, league, {
       weekday: "long",
       month: "long",
       day: "numeric",
@@ -51,7 +53,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
   const [games, teams, latest] = await Promise.all([getRecentAndUpcoming(league, 2, 7), getCurrentSeasonTeams(league), international ? getLatestResults(league, 12) : []]);
   // The international archive has no fixtures, so the rolling window would often be
   // empty; those pages open on the newest completed matches instead.
-  const groups = groupByDay(international && games.length === 0 ? latest : games);
+  const groups = groupByDay(league, international && games.length === 0 ? latest : games);
   // This page is a rolling recent-and-upcoming window, not a live-only view — for a
   // seasonal competition (NBA preseason, IPL/BBL between tournaments) that window can
   // be genuinely empty for months at a time. Rather than a bare "nothing here" that
@@ -109,10 +111,10 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
           <SectionHeader
             tools={
               <ImageActions
-                filename={`${league}-scores-${new Date(dayGames[0].date).toISOString().slice(0, 10)}`}
+                filename={`${league}-scores-${gameDayIso(dayGames[0].date, league)}`}
                 shareTitle={`${LEAGUE_LABEL[league]} scores, ${day}`}
                 width={scoreboardExportWidth(league)}
-                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${new Date(dayGames[0].date).getFullYear()}`} games={dayGames} />}
+                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${gameDayIso(dayGames[0].date, league).slice(0, 4)}`} games={dayGames} />}
               />
             }
           >

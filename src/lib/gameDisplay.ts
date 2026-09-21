@@ -2,6 +2,7 @@
 // completed with a called-off status; it must never read as a fixture still to come, so every "upcoming" test and
 // kickoff time goes through here.
 import type { GameRow } from "./queries";
+import { formatGameDate, formatGameTime } from "./gameDay";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
 import { isCricketLeague, LEAGUE_LABEL } from "./leagues";
 import { teamDisplayName } from "./teamName";
@@ -13,18 +14,23 @@ type StatusFields = Pick<GameRow, "completed" | "status_state" | "status_detail"
 /** A game still to be played: not finished, not in play, and not called off. */
 export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.status_state !== "in" && !isGameCalledOff(g);
 
-/** The date line of a schedule row: date and kickoff for an upcoming game, date and reason for a called-off one, date alone otherwise. */
-export function scheduleRowHeading(g: StatusFields & Pick<GameRow, "date">): string {
-  const d = new Date(g.date);
-  const when = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+/**
+ * The date line of a schedule row: date and kickoff for an upcoming game, date and reason for a
+ * called-off one, date alone otherwise. The date is the league's own calendar day (Eastern for the
+ * NFL and NBA), and the kickoff is read in that same zone so the two agree rather than showing a UTC
+ * time under an Eastern date. The wording is unchanged: only the zone the two are read in moved.
+ */
+export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRow, "date">): string {
+  const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" });
   const off = gameCalledOffLabel(g);
   if (off) return `${when} · ${off}`;
-  if (isUpcomingGame(g)) return `${when} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+  if (isUpcomingGame(g)) return `${when} · ${formatGameTime(g.date, league, { hour: "numeric", minute: "2-digit" })}`;
   return when;
 }
 
 /** Screen-reader name of a game card. */
 export function gameAccessibleLabel(
+  league: League,
   game: StatusFields & Pick<GameRow, "date" | "round" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
 ): string {
   const off = gameCalledOffLabel(game);
@@ -33,7 +39,7 @@ export function gameAccessibleLabel(
       game.home_score_display ?? game.home_score ?? ""
     }, ${game.round ?? "final"}`;
   }
-  const date = new Date(game.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" });
   const label = `${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}, ${date}`;
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
@@ -43,7 +49,7 @@ export function scoreboardTileStatus(league: League, g: StatusFields & Pick<Game
   const off = gameCalledOffLabel(g);
   const live = g.status_state === "in" && !g.completed;
   if (withDate) {
-    const day = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    const day = formatGameDate(g.date, league, { month: "short", day: "numeric", year: "numeric" });
     return `${day} · ${off ?? (g.completed ? (normalizeStage(g.round) ?? finishedLabel(league)) : live ? (g.status_detail ?? "Live") : "Upcoming")}`;
   }
   if (off) return off;

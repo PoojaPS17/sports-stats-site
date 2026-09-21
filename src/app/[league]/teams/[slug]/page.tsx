@@ -31,6 +31,7 @@ import { h2hPath } from "@/lib/h2h";
 import { supportsScoreAnalytics } from "@/lib/analytics";
 import { CalendarButton } from "@/components/CalendarButton";
 import { LocalTime } from "@/components/LocalTime";
+import { dayTimeZone } from "@/lib/gameDay";
 import { JsonLd } from "@/components/JsonLd";
 import { teamSchema } from "@/lib/structuredData";
 
@@ -136,7 +137,7 @@ export default async function TeamPage({
                   size={22}
                 />
                 <span className="truncate">{nextIsHome ? teamDisplayName(next.away_name) : teamDisplayName(next.home_name)}</span>
-                <LocalTime iso={next.date} format="datetime" className="shrink-0 text-xs font-medium text-[var(--text-muted)]" />
+                <LocalTime iso={next.date} format="datetime" className="shrink-0 text-xs font-medium text-[var(--text-muted)]" serverTimeZone={dayTimeZone(league)} />
               </span>
             </Link>
           )}

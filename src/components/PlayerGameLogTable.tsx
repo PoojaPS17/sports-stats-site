@@ -27,7 +27,7 @@ function LogTable({ league, profile, rows, split }: { league: League; profile: P
         <tbody>
           {rows.map((row) => (
             <tr key={row.game_espn_id} className={`table-row ${row.stage === "excluded" ? "opacity-60" : ""}`} title={row.stage === "excluded" ? "Not counted in season totals" : undefined}>
-              <td className="whitespace-nowrap py-2 pl-4 text-xs text-[var(--text-muted)]">{fmtDate(row.date)}</td>
+              <td className="whitespace-nowrap py-2 pl-4 text-xs text-[var(--text-muted)]">{fmtDate(row.date, league)}</td>
               <td className="py-2 pl-2">
                 <OpponentCell league={league} row={row} />
               </td>

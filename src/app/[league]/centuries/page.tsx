@@ -8,6 +8,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { TeamLogo } from "@/components/TeamLogo";
 import { ImageActions } from "@/components/ImageActions";
 import { CenturiesExportCard } from "@/components/CenturiesExportCard";
+import { formatGameDate } from "@/lib/gameDay";
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
@@ -109,7 +110,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                     </td>
                     <td className="px-2 py-2 text-[var(--text-muted)]">{c.venue ?? "-"}</td>
                     <td className="py-2 pr-4 text-right tabular-nums text-[var(--text-muted)]">
-                      {new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {formatGameDate(c.date, league, { month: "short", day: "numeric", year: "numeric" })}
                     </td>
                   </tr>
                 ))}

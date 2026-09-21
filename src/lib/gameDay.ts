@@ -61,11 +61,3 @@ export function formatGameDate(date: string | Date, league: string, opts: Intl.D
 export function formatGameTime(date: string | Date, league: string, opts: Intl.DateTimeFormatOptions): string {
   return new Date(date).toLocaleTimeString("en-US", { ...opts, timeZone: dayTimeZone(league) });
 }
-
-/**
- * The short name of the zone a server-rendered time is in ("ET"/"UTC"), for labels that show a time
- * of day with no other clue which zone it is.
- */
-export function dayTimeZoneLabel(league: string): string {
-  return dayTimeZone(league) === "UTC" ? "UTC" : "ET";
-}

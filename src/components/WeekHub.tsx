@@ -16,6 +16,7 @@ import {
   weekPath,
   type Matchweek,
 } from "@/lib/matchweeks";
+import { formatGameDate, gameDayIso } from "@/lib/gameDay";
 import { AdSlot } from "./AdSlot";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { GameCard } from "./GameCard";
@@ -26,10 +27,10 @@ import { ImageActions } from "./ImageActions";
 import { ScoreboardExportCard, scoreboardExportWidth } from "./ScoreboardExportCard";
 import { WeekPerformersExportCard, WeekTableExportCard } from "./WeekExportCards";
 
-function groupByDay(games: Matchweek["games"]) {
+function groupByDay(league: League, games: Matchweek["games"]) {
   const groups = new Map<string, typeof games>();
   for (const g of games) {
-    const key = new Date(g.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    const key = formatGameDate(g.date, league, { weekday: "long", month: "long", day: "numeric" });
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(g);
   }
@@ -37,12 +38,12 @@ function groupByDay(games: Matchweek["games"]) {
 }
 
 // A postponed or cancelled game is resolved (its replay is another game), so it must not keep a finished week open.
-function stripCaption(w: Matchweek): string {
+function stripCaption(league: League, w: Matchweek): string {
   const p = weekProgress(w);
   if (p.state === "off") return "off";
   if (p.state === "done") return "done";
   if (p.state === "partial") return `${p.played}/${p.toPlay}`;
-  return new Date(w.start).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return formatGameDate(w.start, league, { month: "short", day: "numeric" });
 }
 
 function progressText(w: Matchweek, isNow: boolean): string {
@@ -70,7 +71,7 @@ function WeekStrip({ league, weeks, active, season, isCurrentSeason }: { league:
               <Link
                 href={weekPath(league, w.index, isCurrentSeason ? null : season)}
                 aria-current={isActive ? "page" : undefined}
-                title={`${w.label} · ${weekDateRange(w)}`}
+                title={`${w.label} · ${weekDateRange(league, w)}`}
                 className={`flex min-w-[3.25rem] flex-col items-center rounded-lg border px-2 py-1.5 text-xs font-semibold transition ${
                   isActive
                     ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
@@ -80,7 +81,7 @@ function WeekStrip({ league, weeks, active, season, isCurrentSeason }: { league:
                 }`}
               >
                 <span>{w.playoff || !w.numbered ? w.shortLabel : w.index}</span>
-                <span className="text-[10px] font-medium text-[var(--text-faint)]">{stripCaption(w)}</span>
+                <span className="text-[10px] font-medium text-[var(--text-faint)]">{stripCaption(league, w)}</span>
               </Link>
             </li>
           );
@@ -118,7 +119,7 @@ export async function WeekHub({
   const next = weeks.find((w) => w.index === week.index + 1) ?? null;
   const seasonArg = isCurrentSeason ? null : season;
   const scoreWord = soccer ? "goals" : "points";
-  const days = groupByDay(week.games);
+  const days = groupByDay(league, week.games);
 
   return (
     <div className="flex flex-col gap-8">
@@ -130,7 +131,7 @@ export async function WeekHub({
         ]}
       />
 
-      <PageHeader title={`${LEAGUE_LABEL[league]} ${week.label}`} subtitle={`${formatSeasonLabel(league, season)} season · ${weekDateRange(week)} · ${week.games.length} games`}>
+      <PageHeader title={`${LEAGUE_LABEL[league]} ${week.label}`} subtitle={`${formatSeasonLabel(league, season)} season · ${weekDateRange(league, week)} · ${week.games.length} games`}>
         <div className="flex items-center gap-1">
           <Link
             href={prev ? weekPath(league, prev.index, seasonArg) : "#"}
@@ -192,10 +193,10 @@ export async function WeekHub({
               <SectionHeader
                 tools={
                   <ImageActions
-                    filename={`${league}-${week.shortLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${new Date(games[0].date).toISOString().slice(0, 10)}`}
+                    filename={`${league}-${week.shortLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${gameDayIso(games[0].date, league)}`}
                     shareTitle={`${LEAGUE_LABEL[league]} ${week.label}, ${day}`}
                     width={scoreboardExportWidth(league)}
-                    card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} ${week.label}`} subtitle={`${day}, ${new Date(games[0].date).getFullYear()} · ${formatSeasonLabel(league, season)} season`} games={games} />}
+                    card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} ${week.label}`} subtitle={`${day}, ${gameDayIso(games[0].date, league).slice(0, 4)} · ${formatSeasonLabel(league, season)} season`} games={games} />}
                   />
                 }
               >
@@ -360,7 +361,7 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
               <li key={w.index}>
                 <Link href={weekPath(league, w.index, seasonArg)} className={`flex items-center gap-4 px-4 py-3 text-sm transition hover:bg-[var(--surface-hover)] ${w.index === now ? "bg-[var(--accent-soft)]/40" : ""}`}>
                   <span className="w-28 shrink-0 font-semibold sm:w-40">{w.label}</span>
-                  <span className="w-28 shrink-0 text-[var(--text-muted)]">{weekDateRange(w)}</span>
+                  <span className="w-28 shrink-0 text-[var(--text-muted)]">{weekDateRange(league, w)}</span>
                   <span className="hidden flex-1 text-xs text-[var(--text-faint)] sm:block">{w.games.length} games</span>
                   <span className={`ml-auto shrink-0 text-xs font-semibold ${progressTone(w)}`}>{progressText(w, w.index === now)}</span>
                 </Link>

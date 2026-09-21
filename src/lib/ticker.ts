@@ -3,6 +3,7 @@
 // database makes every page on the site re-render whenever a score changes, and that
 // is what burned through the host's page-regeneration allowance.
 import { getTickerGames, getLastUpdated, LEAGUE_LABEL, isCricketLeague } from "./queries";
+import { formatGameDate } from "./gameDay";
 import { teamDisplayName } from "./teamName";
 
 export interface TickerItem {
@@ -33,7 +34,7 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
       : `${league} · ${winner} beat ${loser} ${winScore}-${loseScore}`;
     return { href: `/${g.league}/games/${g.espn_id}`, label };
   }
-  const date = new Date(g.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const date = formatGameDate(g.date, g.league, { month: "short", day: "numeric" });
   return {
     href: `/${g.league}/games/${g.espn_id}`,
     label: `${league} · ${teamDisplayName(g.away_name)} at ${teamDisplayName(g.home_name)}, ${date}`,

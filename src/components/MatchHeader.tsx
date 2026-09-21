@@ -5,6 +5,7 @@ import { StatusPill } from "./StatusPill";
 import { FollowButton } from "./FollowButton";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { finishedLabel } from "@/lib/stage";
+import { dayTimeZone, formatGameDate } from "@/lib/gameDay";
 
 function TeamLine({
   href,
@@ -49,10 +50,10 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
   return (
     <div className="card overflow-hidden px-6 py-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={finishedLabel(league)} />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={finishedLabel(league)} serverTimeZone={dayTimeZone(league)} />
         <div className="flex items-center gap-3">
           <span className="text-xs text-[var(--text-muted)]">
-            {new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+            {formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
           </span>
           <FollowButton item={{ kind: "game", league, refId: game.espn_id, label: matchLabel, sublabel: LEAGUE_LABEL[league], href: path }} />
         </div>

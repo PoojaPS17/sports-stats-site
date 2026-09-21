@@ -4,10 +4,11 @@ import { ExportShell, ExportTitle, ExportGroup, ExportList, EXPORT_ROW_LIMIT, ty
 import type { League } from "@/lib/queries";
 import type { RecordGame, StreakRecord } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
+import { formatGameDate } from "@/lib/gameDay";
 
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const fmtDate = (iso: string, league: League) => formatGameDate(iso, league, { month: "short", day: "numeric", year: "numeric" });
 
-function gameRows(games: RecordGame[], unit: string): ExportListRow[] {
+function gameRows(league: League, games: RecordGame[], unit: string): ExportListRow[] {
   return games.map((g) => {
     const homeWon = g.home_score > g.away_score;
     const side = (won: boolean) => ({ fontWeight: won ? 700 : 500, color: won ? CARD.text : CARD.textMuted });
@@ -24,19 +25,19 @@ function gameRows(games: RecordGame[], unit: string): ExportListRow[] {
           <span style={side(homeWon)}>{g.home.name}</span>
         </span>
       ),
-      sub: fmtDate(g.date),
+      sub: fmtDate(g.date, league),
       value: g.value,
       unit,
     };
   });
 }
 
-function streakRows(streaks: StreakRecord[]): ExportListRow[] {
+function streakRows(league: League, streaks: StreakRecord[]): ExportListRow[] {
   return streaks.map((s) => ({
     key: `${s.team.espn_id}-${s.start}`,
     lead: <TeamLogo name={teamDisplayName(s.team.name)} logoUrl={s.team.logo_url} color={s.team.color} size={24} />,
     title: teamDisplayName(s.team.name),
-    sub: `${fmtDate(s.start)} to ${fmtDate(s.end)}`,
+    sub: `${fmtDate(s.start, league)} to ${fmtDate(s.end, league)}`,
     value: s.length,
     unit: "games",
   }));
@@ -53,7 +54,7 @@ export function RecordsExportCard({ league, title, subtitle, boards }: { league:
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 14, alignItems: "start" }}>
         {boards.map((b) => (
           <ExportGroup key={b.title} title={b.title}>
-            <ExportList rows={b.kind === "games" ? gameRows(b.games ?? [], (b.unit ?? "").replace(/ margin$/, "")) : streakRows(b.streaks ?? [])} limit={EXPORT_ROW_LIMIT} />
+            <ExportList rows={b.kind === "games" ? gameRows(league, b.games ?? [], (b.unit ?? "").replace(/ margin$/, "")) : streakRows(league, b.streaks ?? [])} limit={EXPORT_ROW_LIMIT} />
           </ExportGroup>
         ))}
       </div>

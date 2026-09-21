@@ -3,6 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, isCricketLeague, isFirstClassCricket, LEAGUE_LABEL, getGameByEspnId, getGameDetails, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
+import { formatGameDate } from "@/lib/gameDay";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
 import { JsonLd } from "@/components/JsonLd";
@@ -78,7 +79,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const game = await getGameByEspnId(league, id);
   if (!game) return {};
-  const date = new Date(game.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const date = formatGameDate(game.date, league, { month: "short", day: "numeric", year: "numeric" });
   // The NFL and NBA name the visitors first ("Chiefs at Bills"); football and cricket
   // name the home side first.
   const { first, second, awayFirst } = gameSides(league, game);
@@ -96,7 +97,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // A Test's two-innings score line ("254 & 258 (95.2 ov, target 271)") is too long
   // for a title; the month names the match and the description carries the result.
   if (isFirstClassCricket(league)) {
-    const month = new Date(game.date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const month = formatGameDate(game.date, league, { month: "long", year: "numeric" });
     return pageMeta(`${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`, description, `/${league}/games/${id}`, { ownImage: true });
   }
   return pageMeta(`${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`, description, `/${league}/games/${id}`, { ownImage: true });
@@ -173,7 +174,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
       {/* The scoreboard card below is the visual heading; this names the page for screen readers and crawlers. */}
       <h1 className="sr-only">
         {matchName}, {LEAGUE_LABEL[league]},{" "}
-        {new Date(game.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+        {formatGameDate(game.date, league, { month: "long", day: "numeric", year: "numeric" })}
       </h1>
       <MatchHeader league={league} game={game} />
       {details && <MatchFacts league={league} game={game} details={show.playFacts ? details : { ...details, officials: [], attendance: null, linescores: null }} />}

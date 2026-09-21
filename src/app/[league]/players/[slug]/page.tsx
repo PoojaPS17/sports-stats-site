@@ -23,6 +23,7 @@ import {
   type PlayerRow,
 } from "@/lib/queries";
 import { pageMeta } from "@/lib/metadata";
+import { formatGameDate } from "@/lib/gameDay";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -194,7 +195,7 @@ export default async function PlayerPage({
   // Where the game log would be: the games with no box score, or (a player with no game rows at all) that there is none.
   const logNote = staged.log.length === 0 ? (unlisted ?? (storedOnly ? NFL_NO_GAME_LOG_NOTE : null)) : null;
   const bands = goals ? goalBands(goals.clocks) : [];
-  const since = profile.firstDate ? new Date(profile.firstDate).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null;
+  const since = profile.firstDate ? formatGameDate(profile.firstDate, league, { month: "short", year: "numeric" }) : null;
 
   // The link mesh: squad-mates, the league's best at this position, and the
   // head-to-head pages behind the opponents this player has faced most.

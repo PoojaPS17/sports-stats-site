@@ -2,6 +2,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportTitle, ExportTable, EXPORT_ROW_LIMIT } from "./ExportShell";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
+import { formatGameDate } from "@/lib/gameDay";
 
 type Century = Awaited<ReturnType<typeof import("@/lib/queries").getCricketCenturies>>[number];
 
@@ -28,7 +29,7 @@ export function CenturiesExportCard({ league, centuries, title, subtitle }: { le
             String(c.sixes ?? "-"),
             c.balls_faced ? ((c.runs / c.balls_faced) * 100).toFixed(1) : "-",
             `vs ${teamDisplayName(c.opponent_name)}`,
-            new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            formatGameDate(c.date, league, { month: "short", day: "numeric", year: "numeric" }),
           ],
         }))}
       />

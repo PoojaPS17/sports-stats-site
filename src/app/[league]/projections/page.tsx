@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
 import { LocalTime } from "@/components/LocalTime";
+import { dayTimeZone, formatGameDate } from "@/lib/gameDay";
 import { ImageActions } from "@/components/ImageActions";
 import { ProjectionTableExportCard, UpcomingProbabilityExportCard } from "@/components/ProjectionsExportCards";
 
@@ -81,7 +82,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
             {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => (
               <Link key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
                 <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                  <LocalTime iso={game.date} format="datetime" />
+                  <LocalTime iso={game.date} format="datetime" serverTimeZone={dayTimeZone(league)} />
                 </div>
                 <div className="flex items-center justify-between gap-2 text-sm font-semibold">
                   <span className="flex min-w-0 items-center gap-2">
@@ -193,7 +194,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
           of the season is then played out {proj.simulations.toLocaleString()} times at random with those probabilities, and each
           outcome is the share of simulations in which it happened. Ties on {soccer ? "points are broken by goal difference, then" : "record are broken"} at random.
           Injuries, transfers and schedule congestion are not modelled, so treat the numbers as a well-informed estimate, not a
-          forecast. Ratings as of {proj.ratingsAsOf ? new Date(proj.ratingsAsOf).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "the latest result"}.
+          forecast. Ratings as of {proj.ratingsAsOf ? formatGameDate(proj.ratingsAsOf, league, { month: "long", day: "numeric", year: "numeric" }) : "the latest result"}.
         </p>
       </section>
     </div>

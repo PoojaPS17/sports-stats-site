@@ -9,6 +9,7 @@ export function StatusPill({
   completed,
   round: rawRound,
   completedLabel,
+  serverTimeZone,
 }: {
   statusState: string | null;
   statusDetail: string | null;
@@ -17,6 +18,8 @@ export function StatusPill({
   round?: string | null;
   /** What a finished game with no stage is labelled; "Final" by default, "Result" for cricket. */
   completedLabel?: string;
+  /** The zone of the fixture date in the server render, before hydration swaps in the visitor's own; see LocalTime. */
+  serverTimeZone?: string;
 }) {
   const round = normalizeStage(rawRound);
   if (statusState === "in") {
@@ -49,7 +52,7 @@ export function StatusPill({
   return (
     <span className="pill pill-upcoming">
       {round ? `${round} · ` : ""}
-      <LocalTime iso={date} format="date" />
+      <LocalTime iso={date} format="date" serverTimeZone={serverTimeZone} />
     </span>
   );
 }

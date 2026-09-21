@@ -32,7 +32,7 @@ export function PlayerBestGames({ league, profile }: { league: League; profile: 
             </span>
             <span className="mt-1 block font-medium tabular-nums">{statLine(profile, row) || "No figures recorded"}</span>
             <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
-              {fmtDate(row.date)}
+              {fmtDate(row.date, league)}
               {row.season_year ? ` · ${formatSeasonLabel(league, row.season_year)}` : ""}
               {row.round ? ` · ${normalizeStage(row.round)}` : row.week ? ` · Week ${row.week}` : ""}
             </span>

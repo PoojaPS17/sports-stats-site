@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, LEAGUE_LABEL, formatSeasonLabel, type League } from "@/lib/queries";
+import { formatGameDate } from "@/lib/gameDay";
 import { getLeagueRecords, isSoccer, supportsScoreAnalytics, type RecordGame, type StreakRecord } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
@@ -22,11 +23,12 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   return pageMeta(`${label} Records`, `${label} record book: highest-scoring games, biggest wins, longest winning and unbeaten streaks across every season on SportsDB.`, `/${league}/records`);
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+// A record falls in a game, so its date is that game's own calendar day.
+function fmtDate(iso: string, league: League) {
+  return formatGameDate(iso, league, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function GameList({ league, games, unit }: { league: string; games: RecordGame[]; unit: string }) {
+function GameList({ league, games, unit }: { league: League; games: RecordGame[]; unit: string }) {
   if (games.length === 0) return <p className="px-4 py-4 text-sm text-[var(--text-muted)]">No data yet.</p>;
   return (
     <ol>
@@ -46,7 +48,7 @@ function GameList({ league, games, unit }: { league: string; games: RecordGame[]
                   <TeamLogo name={g.home.name} logoUrl={g.home.logo_url} color={g.home.color} size={18} />
                   <span className={`truncate ${homeWon ? "font-semibold" : "text-[var(--text-muted)]"}`}>{g.home.name}</span>
                 </span>
-                <span className="text-xs text-[var(--text-faint)]">{fmtDate(g.date)}</span>
+                <span className="text-xs text-[var(--text-faint)]">{fmtDate(g.date, league)}</span>
               </span>
               <span className="shrink-0 text-base font-bold tabular-nums">
                 {g.value} <span className="text-[11px] font-semibold uppercase text-[var(--text-faint)]">{unit}</span>
@@ -59,7 +61,7 @@ function GameList({ league, games, unit }: { league: string; games: RecordGame[]
   );
 }
 
-function StreakList({ league, streaks }: { league: string; streaks: StreakRecord[] }) {
+function StreakList({ league, streaks }: { league: League; streaks: StreakRecord[] }) {
   if (streaks.length === 0) return <p className="px-4 py-4 text-sm text-[var(--text-muted)]">No data yet.</p>;
   return (
     <ol>
@@ -71,7 +73,7 @@ function StreakList({ league, streaks }: { league: string; streaks: StreakRecord
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-semibold">{teamDisplayName(s.team.name)}</span>
               <span className="text-xs text-[var(--text-faint)]">
-                {fmtDate(s.start)} to {fmtDate(s.end)}
+                {fmtDate(s.start, league)} to {fmtDate(s.end, league)}
               </span>
             </span>
             <span className="shrink-0 text-base font-bold tabular-nums">

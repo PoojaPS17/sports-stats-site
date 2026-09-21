@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import type { League } from "@/lib/queries";
+import { formatGameDate } from "@/lib/gameDay";
 import { gamesHeader, headlineCareerStats, noBoxScoreGames, type PlayerLogRow, type PlayerProfile, type Record3 } from "@/lib/playerProfile";
 import { noBoxScoreGamesTitle } from "@/lib/playerCopy";
 
-export function fmtDate(date: string): string {
-  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+/** A game's date in a log, best-games card, milestone or form chart — the league's own calendar day. */
+export function fmtDate(date: string, league: League): string {
+  return formatGameDate(date, league, { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** A season's or career's W-L; a dash where the record was dropped because the log does not cover every game. */
@@ -61,7 +63,7 @@ export function OpponentCell({ league, row, withDate = false }: { league: League
     <Link href={`/${league}/games/${row.game_espn_id}`} prefetch={false} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
       <span className="w-5 text-[11px] font-semibold uppercase text-[var(--text-faint)]">{row.is_home ? "vs" : "at"}</span>
       <span className="truncate font-medium">{teamDisplayName(row.opponent_name)}</span>
-      {withDate && <span className="text-xs text-[var(--text-muted)]">{fmtDate(row.date)}</span>}
+      {withDate && <span className="text-xs text-[var(--text-muted)]">{fmtDate(row.date, league)}</span>}
     </Link>
   );
 }

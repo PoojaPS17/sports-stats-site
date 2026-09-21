@@ -6,6 +6,7 @@
 //   - NFL: the official week number stored from the feed, then the playoff rounds
 //   - NBA: seven-day periods from opening night, then the playoff rounds
 import { pool } from "./db";
+import { formatGameDate, gameDayIso } from "./gameDay";
 import { isRegularSeasonGame } from "./gameStage";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
@@ -76,13 +77,16 @@ export async function getSeasonsWithGames(league: League): Promise<number[]> {
 
 const DAY = 86_400_000;
 
-function fmtRange(start: string, end: string): string {
-  const s = new Date(start);
-  const e = new Date(end);
+// A round's dates, read as the league's own calendar days (see lib/gameDay.ts) so a round that opens
+// with a Thursday-night NFL game is not dated from the Friday its kickoff falls on in UTC.
+function fmtRange(league: League, start: string, end: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  if (s.toDateString() === e.toDateString()) return s.toLocaleDateString("en-US", opts);
-  if (s.getUTCMonth() === e.getUTCMonth()) return `${s.toLocaleDateString("en-US", opts)}–${e.getUTCDate()}`;
-  return `${s.toLocaleDateString("en-US", opts)} – ${e.toLocaleDateString("en-US", opts)}`;
+  const sDay = gameDayIso(start, league);
+  const eDay = gameDayIso(end, league);
+  const left = formatGameDate(start, league, opts);
+  if (sDay === eDay) return left;
+  if (sDay.slice(0, 7) === eDay.slice(0, 7)) return `${left}–${Number(eDay.slice(8, 10))}`;
+  return `${left} – ${formatGameDate(end, league, opts)}`;
 }
 
 // Normalise the feed's per-conference, per-game playoff labels into one round:
@@ -273,7 +277,7 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
       ...keys.map((k) => {
         const games = rounds.get(k)!.sort(byDate);
         if (exact) return { label: `${noun} ${k}`, shortLabel: `${short} ${k}`, games, playoff: false, numbered: true };
-        const range = fmtRange(games[0].date, games[games.length - 1].date);
+        const range = fmtRange(league, games[0].date, games[games.length - 1].date);
         return { label: `Games of ${range}`, shortLabel: range.split(/[–-]/)[0].trim(), games, playoff: false, numbered: false };
       }),
       ...playoffGroups(knockouts),
@@ -299,15 +303,18 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
       groups.push({ label: `Week ${w}`, shortLabel: `Wk ${w}`, games: byWeek.get(w)!, playoff: false });
     }
   } else if (regular.length) {
-    const first = new Date(regular[0].date);
-    // Anchor on the Wednesday before the opener (UTC) so Thursday-to-Tuesday NFL
-    // weeks, or Monday-to-Sunday NBA weeks, never straddle a boundary.
-    const anchor = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), first.getUTCDate()));
+    // Buckets are whole calendar days of the league's own day zone (Eastern for the NFL and NBA), not
+    // raw instants: an NBA game tipping at 02:00 UTC is that Tuesday evening's game, and bucketing it
+    // by its UTC instant used to push it over a week boundary into the Wednesday after.
+    const dayStart = (date: string) => Date.parse(`${gameDayIso(date, league)}T00:00:00Z`);
+    // Anchor on the Wednesday before the opener so Thursday-to-Tuesday NFL weeks, or
+    // Monday-to-Sunday NBA weeks, never straddle a boundary.
+    const anchor = new Date(dayStart(regular[0].date));
     const offsetToWed = (anchor.getUTCDay() - 3 + 7) % 7;
     anchor.setTime(anchor.getTime() - offsetToWed * DAY);
     const buckets = new Map<number, GameRow[]>();
     for (const g of regular) {
-      const w = Math.floor((new Date(g.date).getTime() - anchor.getTime()) / (7 * DAY)) + 1;
+      const w = Math.floor((dayStart(g.date) - anchor.getTime()) / (7 * DAY)) + 1;
       if (!buckets.has(w)) buckets.set(w, []);
       buckets.get(w)!.push(g);
     }
@@ -333,8 +340,8 @@ export function currentWeekIndex(weeks: Matchweek[], now = Date.now()): number {
   return upcoming ? upcoming.index : weeks[weeks.length - 1].index;
 }
 
-export function weekDateRange(w: Matchweek): string {
-  return fmtRange(w.start, w.end);
+export function weekDateRange(league: League, w: Matchweek): string {
+  return fmtRange(league, w.start, w.end);
 }
 
 /* ------------------------------------------------------------------------ */

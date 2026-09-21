@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { OffseasonRecap as Recap } from "@/lib/offseason";
 import { leagueNameWithArticle, isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
+import { formatGameDate } from "@/lib/gameDay";
 import { GameCard } from "./GameCard";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
@@ -15,7 +16,7 @@ function record(league: League, r: Recap["table"][number]): string {
 // played — how it ended, the final table and the leading players — with links on
 // to the full pages for each.
 export function OffseasonRecap({ league, recap }: { league: League; recap: Recap }) {
-  const ended = recap.endedOn ? new Date(recap.endedOn).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null;
+  const ended = recap.endedOn ? formatGameDate(recap.endedOn, league, { month: "long", day: "numeric", year: "numeric" }) : null;
   // World Cups are editions, not seasons.
   const noun = league === "cwc" || league === "t20wc" || league === "wcwc" || league === "wt20wc" ? "tournament" : "season";
   const closingTitle = recap.playoffs.length > 0 ? `How the ${recap.seasonLabel} ${noun} ended` : `Final results of ${recap.seasonLabel}`;

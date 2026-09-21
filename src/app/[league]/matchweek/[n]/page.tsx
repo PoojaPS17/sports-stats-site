@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!ctx || !week) return {};
   return pageMeta(
     `${label} ${week.label} Fixtures & Results`,
-    `${label} ${week.label} (${weekDateRange(week)}): every result and fixture, the table after the round, and the top performers.`,
+    `${label} ${week.label} (${weekDateRange(league, week)}): every result and fixture, the table after the round, and the top performers.`,
     weekPath(league, week.index)
   );
 }

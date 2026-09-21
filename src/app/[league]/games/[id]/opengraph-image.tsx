@@ -3,6 +3,7 @@ import { PixelBall } from "@/components/Logo";
 import { isLeague, LEAGUE_LABEL, getGameByEspnId } from "@/lib/queries";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
 import { finishedNoScoreNote, shareImageStatus } from "@/lib/gameDisplay";
+import { formatGameDate } from "@/lib/gameDay";
 
 export const alt = "Match page";
 export const size = { width: 1200, height: 630 };
@@ -42,7 +43,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   // A finished match with no scores (abandoned, no result) says how it ended instead of a bare date and "vs".
   const note = off ? null : finishedNoScoreNote(game);
   const status = shareImageStatus(game);
-  const when = new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
   return new ImageResponse(
     (

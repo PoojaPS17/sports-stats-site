@@ -7,6 +7,7 @@ import { LEAGUE_LABEL } from "@/lib/leagues";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { LocalTime } from "./LocalTime";
+import { dayTimeZone } from "@/lib/gameDay";
 
 // The one game worth leading the homepage with: live if anything is on, else the
 // next big kickoff, else the biggest recent result.
@@ -53,7 +54,7 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
           {label} · {LEAGUE_LABEL[league]}
         </span>
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={finishedLabel(league)} />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={finishedLabel(league)} serverTimeZone={dayTimeZone(league)} />
       </div>
       <div className="flex flex-col gap-2.5">
         <Team name={teamDisplayName(game.away_name)} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
@@ -61,7 +62,7 @@ export function SpotlightCard({ game }: { game: GameRow }) {
       </div>
       <p className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-2.5 text-xs font-medium text-[var(--text-muted)]">
         <span>
-          {game.completed ? (game.status_summary ?? "Full time") : live ? (game.status_detail ?? "In progress") : <LocalTime iso={game.date} format="datetime" />}
+          {game.completed ? (game.status_summary ?? "Full time") : live ? (game.status_detail ?? "In progress") : <LocalTime iso={game.date} format="datetime" serverTimeZone={dayTimeZone(league)} />}
         </span>
         <span className="font-semibold text-[var(--accent)]">Match centre →</span>
       </p>

@@ -5,6 +5,7 @@ import { formatSeasonLabel, type League } from "@/lib/queries";
 import { isSoccer } from "@/lib/analytics";
 import type { SeasonProjection } from "@/lib/simulator";
 import { CARD } from "@/lib/exportTheme";
+import { formatGameDate } from "@/lib/gameDay";
 
 export function pct(p: number): string {
   if (p >= 0.995) return ">99%";
@@ -65,7 +66,7 @@ export function UpcomingProbabilityExportCard({ league, proj, title }: { league:
         {shown.map(({ game, homeWin, draw, awayWin }) => (
           <div key={game.espn_id} style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: CARD.textFaint }}>
-              {new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })}
+              {formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric" })}
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6, fontSize: 14, fontWeight: 700, color: CARD.text }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>

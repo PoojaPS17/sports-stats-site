@@ -5,6 +5,7 @@ import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { LocalTime } from "./LocalTime";
 import { finishedLabel } from "@/lib/stage";
+import { dayTimeZone, formatGameDate } from "@/lib/gameDay";
 import { gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
 
 function TeamRow({
@@ -71,7 +72,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   return (
     <Link
       href={`/${league}/games/${game.espn_id}`}
-      aria-label={gameAccessibleLabel(game)}
+      aria-label={gameAccessibleLabel(league, game)}
       className={`card block px-4 py-3 ${live ? "border-[var(--live)]/40" : ""}`}
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -82,14 +83,15 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           completed={game.completed}
           round={game.round}
           completedLabel={finishedLabel(league)}
+          serverTimeZone={dayTimeZone(league)}
         />
         {upcoming ? (
-          <LocalTime iso={game.date} format="time" className="text-xs font-medium text-[var(--text-muted)]" />
+          <LocalTime iso={game.date} format="time" className="text-xs font-medium text-[var(--text-muted)]" serverTimeZone={dayTimeZone(league)} />
         ) : live && game.status_detail ? (
           <span className="text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_detail)}</span>
         ) : (
           <span className="text-xs text-[var(--text-faint)]">
-            {new Date(game.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {formatGameDate(game.date, league, { month: "short", day: "numeric" })}
           </span>
         )}
       </div>

@@ -2,6 +2,7 @@ import { ExportTeamLine } from "./ExportTeamLine";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
+import { formatGameDate } from "@/lib/gameDay";
 
 // The top of every match-section image: league, date and the scoreline, so a stats
 // table pasted into a group chat still says who played and how it ended.
@@ -9,7 +10,7 @@ export function MatchScoreHeader({ league, game }: { league: League; game: GameR
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
   const showScore = game.completed || game.status_state === "in";
-  const when = new Date(game.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
   // A postponed or cancelled game says so instead of showing a bare date that reads as a fixture.
   const off = gameCalledOffLabel(game);
   return (
