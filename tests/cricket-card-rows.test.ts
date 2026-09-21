@@ -66,10 +66,17 @@ test("a Test's empty row is one match, not an innings", async () => {
 });
 
 test("the comparison counts an empty row as a game and labels the fielding line catches and stumpings", async () => {
-  for (const id of ["p1", "p2"]) await db.pool.query(`insert into players (league, espn_id, name, slug) values ('odi', $1, $1, $1)`, [id]);
+  // Its own players and rows: nothing here depends on what an earlier test stored.
+  for (const id of ["c1", "c2"]) await db.pool.query(`insert into players (league, espn_id, name, slug) values ('odi', $1, $1, $1)`, [id]);
+  await addRow("odi", "cm1", "c1", batted);
+  await addRow("odi", "cm2", "c1", bowled);
+  await addRow("odi", "cm3", "c1", { v: 3 });
+  await addRow("odi", "cm4", "c1", {});
+  await addRow("odi", "cm1", "c2", {});
+  await addRow("odi", "cm2", "c2", { v: 3 });
   const compare = await import("../src/lib/compare");
-  const cmp = await compare.getPlayerComparison("odi", "p1", "p2");
-  // p1: two games with figures and two empty rows; p2: two empty rows.
+  const cmp = await compare.getPlayerComparison("odi", "c1", "c2");
+  // c1: two games with figures and two empty rows; c2: two empty rows.
   assert.equal(cmp?.a.gamesLogged, 4);
   assert.equal(cmp?.b.gamesLogged, 2);
   const [career] = cmp!.groups;
@@ -139,11 +146,15 @@ async function seedMatch(league: string, id: string, report: unknown) {
 const stored = async (league: string, id: string) => (await db.pool.query(`select player_espn_id, team_espn_id, stats from player_game_stats where league = $1 and game_espn_id = $2 order by 1`, [league, id])).rows;
 const report = async (league: string, id: string) => (await db.pool.query(`select details from game_details where league = $1 and game_espn_id = $2`, [league, id])).rows[0].details;
 
+const refresh = (league: string, id: string, sum: unknown = summary, dryRun = false) => refreshMatchCards(db.pool, league, id, sum, { dryRun });
+
 test("the refresh inserts the missing rows, updates the existing one, and keeps the side it was filed under", async () => {
   await seedMatch("ipl", "r1", { scorecard: oldScorecard, venue: "Ground", leaders: [{ athlete: "x" }] });
-  const result = await refreshMatchCards(db.pool, "ipl", "r1", summary, { rewriteScorecard: true, dryRun: false });
+  const result = await refresh("ipl", "r1");
+  assert.equal(result.skipped, null);
   assert.equal(result.inserted, 3);
   assert.equal(result.updated, 1);
+  assert.equal(result.orphans, 3, "none of the inserted players has a players row yet");
 
   const rows = await stored("ipl", "r1");
   assert.deepEqual(rows.map((r) => r.player_espn_id), ["10", "11", "12", "20"]);
@@ -165,28 +176,100 @@ test("the refresh rebuilds the stored scorecard and leaves every other key of th
 
 test("a dry run reads and reports but writes nothing", async () => {
   await seedMatch("ipl", "r2", { scorecard: oldScorecard, venue: "Ground" });
-  const result = await refreshMatchCards(db.pool, "ipl", "r2", summary, { rewriteScorecard: true, dryRun: true });
-  assert.deepEqual(result, { inserted: 3, updated: 1, battingRows: { before: 1, after: 2 } });
+  const result = await refresh("ipl", "r2", summary, true);
+  assert.deepEqual(result, { skipped: null, inserted: 3, updated: 1, duplicates: 0, orphans: 3, battingRows: { before: 1, after: 2 } });
   assert.equal((await stored("ipl", "r2")).length, 1);
   assert.deepEqual((await report("ipl", "r2")).scorecard, oldScorecard);
 });
 
-test("a report that is not ESPN's is left alone, and so is a match with no stored report", async () => {
-  await seedMatch("odi", "r3", { scorecard: oldScorecard });
-  const kept = await refreshMatchCards(db.pool, "odi", "r3", summary, { rewriteScorecard: false, dryRun: false });
-  assert.equal(kept.battingRows, null);
-  assert.deepEqual((await report("odi", "r3")).scorecard, oldScorecard);
+test("a match whose stored report is not ESPN's is never touched: not the cards, not the report", async () => {
+  // Cricsheet's report has no dismissal text on its batting rows.
+  const cricsheet = [{ teamId: "1", teamName: "One", battingLabels: ["R"], battingRows: [{ athleteId: "10", name: "Player 10", stats: ["20"] }], bowlingLabels: [], bowlingRows: [] }];
+  await seedMatch("odi", "r3", { scorecard: cricsheet });
+  const before = await stored("odi", "r3");
+  const kept = await refresh("odi", "r3");
+  assert.match(kept.skipped ?? "", /not ESPN/);
+  assert.deepEqual([kept.inserted, kept.updated, kept.battingRows], [0, 0, null]);
+  assert.deepEqual((await report("odi", "r3")).scorecard, cricsheet);
+  assert.deepEqual(await stored("odi", "r3"), before, "the Cricsheet card is not overwritten by ESPN's figures");
+  assert.equal((await refresh("odi", "r3", summary, true)).skipped !== null, true, "also in a dry run");
 
+  // No stored report at all: not ESPN's either.
   await seedMatch("odi", "r4", {});
   await db.pool.query(`delete from game_details where league = 'odi' and game_espn_id = 'r4'`);
-  const none = await refreshMatchCards(db.pool, "odi", "r4", summary, { rewriteScorecard: true, dryRun: false });
-  assert.equal(none.battingRows, null);
+  assert.notEqual((await refresh("odi", "r4")).skipped, null);
+  assert.equal((await stored("odi", "r4")).length, 1);
   assert.equal((await db.pool.query(`select 1 from game_details where league = 'odi' and game_espn_id = 'r4'`)).rowCount, 0);
-  assert.equal((await stored("odi", "r4")).length, 4, "the cards are still written");
 });
 
 test("a summary with no figures is refused and leaves the rows as they were", async () => {
   await seedMatch("bbl", "r5", { scorecard: oldScorecard });
-  await assert.rejects(refreshMatchCards(db.pool, "bbl", "r5", { rosters: [{ team: { id: "1" }, roster: [player("10", true)] }] }, { rewriteScorecard: true, dryRun: false }), /no player figures/);
+  await assert.rejects(refresh("bbl", "r5", { header: summary.header, rosters: [{ team: { id: "1" }, roster: [player("10", true)] }] }), /no player figures/);
   assert.equal((await stored("bbl", "r5"))[0].stats.v, 2);
+});
+
+test("a summary with no competitors is refused, and so is a Test without its match class", async () => {
+  await seedMatch("ipl", "r6", { scorecard: oldScorecard });
+  await assert.rejects(refresh("ipl", "r6", { ...summary, header: { competitions: [{}] } }), /no competitors/);
+  await assert.rejects(refresh("ipl", "r6", { rosters: summary.rosters }), /no competitors/);
+  assert.equal((await stored("ipl", "r6"))[0].stats.v, 2);
+
+  // The summary above carries competitors but no class: fine for a limited-overs league, not for a Test.
+  await seedMatch("test", "r7", { scorecard: oldScorecard });
+  await assert.rejects(refresh("test", "r7"), /no match class/);
+  assert.equal((await stored("test", "r7"))[0].stats.v, 2);
+  assert.deepEqual((await report("test", "r7")).scorecard, oldScorecard);
+
+  const withClass = { ...summary, header: { competitions: [{ ...summary.header.competitions[0], class: { generalClassCard: "Test" } }] } };
+  const done = await refresh("test", "r7", withClass);
+  assert.equal(done.skipped, null);
+  assert.equal((await stored("test", "r7")).length, 4);
+});
+
+test("a rebuilt report that would lose batting rows is not written, and the cards are left alone too", async () => {
+  const three = [{ teamId: "1", teamName: "One", battingLabels: ["R"], battingRows: ["10", "11", "13"].map((id) => ({ athleteId: id, name: id, stats: ["1"], dismissal: "not out" })), bowlingLabels: [], bowlingRows: [] }];
+  await seedMatch("ipl", "r8", { scorecard: three });
+  const result = await refresh("ipl", "r8");
+  assert.match(result.skipped ?? "", /fewer batting rows \(2, was 3\)/);
+  assert.deepEqual((await report("ipl", "r8")).scorecard, three);
+  assert.equal((await stored("ipl", "r8")).length, 1);
+  assert.equal((await stored("ipl", "r8"))[0].stats.v, 2);
+});
+
+test("a rebuilt report with no innings totals is not written when the stored one had them", async () => {
+  const totals = [{ ...oldScorecard[0], innings: [{ period: 1, runs: 150, wickets: 6, overs: 20, description: "" }] }];
+  await seedMatch("ipl", "r9", { scorecard: totals });
+  // `summary` has competitors, but no linescores on them, so the parse has batting rows and no totals.
+  const result = await refresh("ipl", "r9");
+  assert.match(result.skipped ?? "", /no innings totals/);
+  assert.deepEqual((await report("ipl", "r9")).scorecard, totals);
+  assert.equal((await stored("ipl", "r9")).length, 1);
+
+  // With the totals present the same match refreshes.
+  const withTotals = {
+    ...summary,
+    header: { competitions: [{ competitors: [{ team: { id: "1" }, linescores: [{ period: 1, isBatting: true, runs: 20, wickets: 0, overs: 2 }] }, { team: { id: "2" }, linescores: [] }] }] },
+  };
+  const ok = await refresh("ipl", "r9", withTotals);
+  assert.equal(ok.skipped, null);
+  assert.equal((await report("ipl", "r9")).scorecard[0].innings.length, 1);
+});
+
+test("a player already stored under another id (same name, same side) is not inserted a second time", async () => {
+  await seedMatch("ipl", "r10", { scorecard: oldScorecard });
+  // Cricsheet filed player 12 as cs-abc when the register had no Cricinfo id for him; the row is on side 1.
+  await db.pool.query(`insert into players (league, espn_id, name, slug) values ('ipl', 'cs-abc', 'Player 12', 'player-12')`);
+  await addRow("ipl", "r10", "cs-abc", {});
+  const dry = await refresh("ipl", "r10", summary, true);
+  assert.deepEqual([dry.inserted, dry.updated, dry.duplicates], [2, 1, 1]);
+  const result = await refresh("ipl", "r10");
+  assert.deepEqual([result.inserted, result.updated, result.duplicates], [2, 1, 1]);
+  assert.deepEqual((await stored("ipl", "r10")).map((r) => r.player_espn_id), ["10", "11", "20", "cs-abc"]);
+});
+
+test("an inserted row counts as an orphan only when its player has no players row", async () => {
+  await seedMatch("ipl", "r11", { scorecard: oldScorecard });
+  for (const id of ["11", "12"]) await db.pool.query(`insert into players (league, espn_id, name, slug) values ('ipl', $1, $1, $1)`, [id]);
+  const result = await refresh("ipl", "r11");
+  assert.deepEqual([result.inserted, result.orphans], [3, 1]);
 });
