@@ -30,6 +30,7 @@
     "rebuild:season-stats": "tsx scripts/rebuild-season-stats.ts",
     "fetch:team-info": "tsx scripts/fetch-team-info.ts",
     "backfill:cricket-player-stats": "tsx scripts/backfill-cricket-player-stats.ts",
+    "topup:cricket-player-stats": "tsx scripts/topup-cricket-player-stats.ts",
     "import:cricsheet": "tsx scripts/import-cricsheet.ts",
     "import:cricket-espn": "tsx scripts/import-cricket-espn.ts",
     "fetch:tennis-rankings": "tsx scripts/fetch-tennis-rankings.ts",

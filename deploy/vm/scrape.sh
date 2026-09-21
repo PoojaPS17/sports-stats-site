@@ -72,6 +72,10 @@ job_daily() {
   run fetch:tennis-rankings
   run fetch:tennis-daily -- --calendar --days 1 --ahead 1
   run import:cricket-espn
+  # Un-windowed safety nets for cricket: internationals the listing knows but the 21-day sweep
+  # missed, then scorecards of completed games with no player rows (leaders and match pages).
+  run import:cricket-espn -- --reconcile
+  run topup:cricket-player-stats
   run fetch:fixtures
   run seed:f1-teams
 }

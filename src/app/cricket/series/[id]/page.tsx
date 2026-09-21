@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
 import { PageHeader } from "@/components/PageHeader";
@@ -11,7 +11,7 @@ import { ImageActions } from "@/components/ImageActions";
 import { SeriesMatchesExportCard } from "@/components/SeriesMatchesExportCard";
 import { SeriesCard, SeriesMatchList, formatSeriesDates } from "@/components/CricketSeries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
-import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesMatches, getCricketSeriesSeasons, SERIES_KIND_LABEL } from "@/lib/cricketSeries";
+import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesEditions, getCricketSeriesMatches, getCricketSeriesSeasons, getLatestCricketEdition, SERIES_KIND_LABEL } from "@/lib/cricketSeries";
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { classifyCricketMatch } from "@/lib/cricketMatchStatus";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -78,8 +78,13 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
     );
   }
 
+  // A tournament is one series per edition. ESPN's bare league id (older links, follows, search results) goes to the newest edition.
+  const latest = await getLatestCricketEdition(id);
+  if (latest) redirect(`/cricket/series/${latest}`);
+
   const s = await getCricketSeries(id);
   if (!s) notFound();
+  const editions = await getCricketSeriesEditions(id);
   const matches = await overlayLiveCricket(await getCricketSeriesMatches(id), id);
   // A match ESPN closed without playing is neither a fixture nor a result: it gets its own list, with no start time.
   const kinds = new Map(matches.map((m) => [m.espn_id, classifyCricketMatch(m)]));
@@ -105,6 +110,16 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
       </PageHeader>
 
       <AdSlot label="Cricket series detail top" />
+
+      {editions.length > 1 && (
+        <nav aria-label="Other editions" className="flex gap-1.5 overflow-x-auto pb-1">
+          {editions.map((e) => (
+            <Link key={e.espn_id} href={`/cricket/series/${e.espn_id}`} className={`nav-pill shrink-0 ${e.espn_id === s.espn_id ? "nav-pill-active" : ""}`} aria-current={e.espn_id === s.espn_id ? "page" : undefined}>
+              {e.label}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {s.teams.length > 0 && (
         <section className="card px-4 py-3">

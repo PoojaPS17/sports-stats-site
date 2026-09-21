@@ -86,6 +86,17 @@ test("daily: updates code, migrates first, runs a full unscoped fetch, then the 
     assert.ok(steps.some((x) => x.includes(s)), `daily should run ${s}`);
   }
   assert.ok(steps.includes("npm run --silent fetch:cricket-series -- --days 10 --ahead 90"));
+  // The cricket safety nets run after the windowed importer, so a match it imports is not fetched twice.
+  const at = (step: string) => steps.indexOf(step);
+  assert.ok(at("npm run --silent import:cricket-espn") >= 0);
+  assert.ok(at("npm run --silent import:cricket-espn -- --reconcile") > at("npm run --silent import:cricket-espn"));
+  assert.ok(at("npm run --silent topup:cricket-player-stats") > at("npm run --silent import:cricket-espn -- --reconcile"));
+});
+
+test("a failing cricket top-up (exit 1 when any game failed) fails the daily job but not the steps after it", () => {
+  const { status, calls } = run("daily", { STUB_FAIL: "topup:cricket-player-stats" });
+  assert.equal(status, 1);
+  assert.ok(calls.map((c) => c.split(" | ")[0]).some((x) => x.includes("seed:f1-teams")));
 });
 
 test("hourly: injuries, F1 scores and standings, then the stale check last", () => {

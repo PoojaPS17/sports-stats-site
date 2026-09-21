@@ -1,0 +1,798 @@
+{
+ "20240515": {
+  "sports": [
+   {
+    "leagues": [
+     {
+      "id": "8048",
+      "name": "Indian Premier League",
+      "shortName": "IPL",
+      "abbreviation": "IPL",
+      "slug": "8048",
+      "isTournament": true,
+      "events": [
+       {
+        "id": "1426303",
+        "date": "2024-05-15T14:00:00Z",
+        "name": "Rajasthan Royals v Punjab Kings",
+        "shortName": "RR v PBKS",
+        "description": "65th Match (N), Indian Premier League at Guwahati, May 15 2024",
+        "class": {
+         "internationalClassId": "0",
+         "generalClassId": "6",
+         "generalClassCard": "Twenty20",
+         "name": "Twenty20 matches",
+         "eventType": "T20"
+        },
+        "season": 2024,
+        "seasonStartDate": "2024-03-22T00:00:00Z",
+        "seasonEndDate": "2024-05-26T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "PBKS won by 5 wickets (with 7 balls remaining)",
+         "summary": "PBKS won by 5 wkts (7b rem)",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2024",
+          "text": "2024",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8048/scorecard/1426303/rajasthan-royals-vs-punjab-kings-65th-match-indian-premier-league-2024",
+        "competitors": [
+         {
+          "id": "335977",
+          "displayName": "Rajasthan Royals",
+          "name": "RR",
+          "abbreviation": "RR",
+          "homeAway": "home",
+          "score": "144/9",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/335977.png"
+         },
+         {
+          "id": "335973",
+          "displayName": "Punjab Kings",
+          "name": "PBKS",
+          "abbreviation": "PBKS",
+          "homeAway": "away",
+          "score": "145/5 (18.5/20 ov, target 145)",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/335973.png"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "20241231": {
+  "sports": [
+   {
+    "leagues": [
+     {
+      "id": "8044",
+      "name": "Big Bash League",
+      "shortName": "BBL",
+      "abbreviation": "BBL",
+      "slug": "8044",
+      "isTournament": true,
+      "events": [
+       {
+        "id": "1443073",
+        "date": "2024-12-31T08:15:00Z",
+        "name": "Adelaide Strikers v Perth Scorchers",
+        "shortName": "AS v PS",
+        "description": "17th Match (N), Big Bash League at Adelaide, Dec 31 2024",
+        "class": {
+         "internationalClassId": "0",
+         "generalClassId": "6",
+         "generalClassCard": "Twenty20",
+         "name": "Twenty20 matches",
+         "eventType": "T20"
+        },
+        "season": 2024,
+        "seasonStartDate": "2024-12-15T00:00:00Z",
+        "seasonEndDate": "2025-01-27T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "Scorchers won by 7 wickets (with 33 balls remaining)",
+         "summary": "Scorchers won by 7 wkts (33b rem)",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2024/25",
+          "text": "2024/25",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8044/scorecard/1443073/adelaide-strikers-vs-perth-scorchers-17th-match-big-bash-league-2024-25",
+        "competitors": [
+         {
+          "id": "509667",
+          "displayName": "Adelaide Strikers",
+          "name": "AS",
+          "abbreviation": "AS",
+          "homeAway": "home",
+          "score": "142/8",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509667.png"
+         },
+         {
+          "id": "509670",
+          "displayName": "Perth Scorchers",
+          "name": "PS",
+          "abbreviation": "PS",
+          "homeAway": "away",
+          "score": "146/3 (14.3/20 ov, target 143)",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509670.png"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "20250101": {
+  "sports": [
+   {
+    "leagues": [
+     {
+      "id": "8044",
+      "name": "Big Bash League",
+      "shortName": "BBL",
+      "abbreviation": "BBL",
+      "slug": "8044",
+      "isTournament": true,
+      "events": [
+       {
+        "id": "1443074",
+        "date": "2025-01-01T05:00:00Z",
+        "name": "Hobart Hurricanes v Sydney Sixers",
+        "shortName": "HH v SS",
+        "description": "18th Match (D/N), Big Bash League at Hobart, Jan 1 2025",
+        "class": {
+         "internationalClassId": "0",
+         "generalClassId": "6",
+         "generalClassCard": "Twenty20",
+         "name": "Twenty20 matches",
+         "eventType": "T20"
+        },
+        "season": 2024,
+        "seasonStartDate": "2024-12-15T00:00:00Z",
+        "seasonEndDate": "2025-01-27T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "Hurricanes won by 50 runs",
+         "summary": "Hurricanes won by 50 runs",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2024/25",
+          "text": "2024/25",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8044/scorecard/1443074/hobart-hurricanes-vs-sydney-sixers-18th-match-big-bash-league-2024-25",
+        "competitors": [
+         {
+          "id": "509669",
+          "displayName": "Hobart Hurricanes",
+          "name": "HH",
+          "abbreviation": "HH",
+          "homeAway": "home",
+          "score": "161/6",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509669.png"
+         },
+         {
+          "id": "509673",
+          "displayName": "Sydney Sixers",
+          "name": "SS",
+          "abbreviation": "SS",
+          "homeAway": "away",
+          "score": "111 (19.3/20 ov, target 162)",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509673.png"
+         }
+        ]
+       },
+       {
+        "id": "1443075",
+        "date": "2025-01-01T08:15:00Z",
+        "name": "Brisbane Heat v Melbourne Stars",
+        "shortName": "BH v MS",
+        "description": "19th Match (N), Big Bash League at Brisbane, Jan 1 2025",
+        "class": {
+         "internationalClassId": "0",
+         "generalClassId": "6",
+         "generalClassCard": "Twenty20",
+         "name": "Twenty20 matches",
+         "eventType": "T20"
+        },
+        "season": 2024,
+        "seasonStartDate": "2024-12-15T00:00:00Z",
+        "seasonEndDate": "2025-01-27T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "Stars won by 5 wickets (with 11 balls remaining)",
+         "summary": "Stars won by 5 wkts (11b rem)",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2024/25",
+          "text": "2024/25",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8044/scorecard/1443075/brisbane-heat-vs-melbourne-stars-19th-match-big-bash-league-2024-25",
+        "competitors": [
+         {
+          "id": "509668",
+          "displayName": "Brisbane Heat",
+          "name": "BH",
+          "abbreviation": "BH",
+          "homeAway": "home",
+          "score": "149/7",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509668.png"
+         },
+         {
+          "id": "509672",
+          "displayName": "Melbourne Stars",
+          "name": "MS",
+          "abbreviation": "MS",
+          "homeAway": "away",
+          "score": "153/5 (18.1/20 ov, target 150)",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509672.png"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "20251201": {
+  "sports": [
+   {
+    "leagues": [
+     {
+      "id": "21284",
+      "name": "Women's Big Bash League",
+      "shortName": "WBBL",
+      "abbreviation": "WBBL",
+      "slug": "21284",
+      "isTournament": true,
+      "events": [
+       {
+        "id": "1494557",
+        "date": "2025-12-01T08:10:00Z",
+        "name": "Hobart Hurricanes Women v Melbourne Stars Women",
+        "shortName": "HH-W v MS-W",
+        "description": "32nd Match, Women's Big Bash League at Hobart, Dec 1 2025",
+        "class": {
+         "internationalClassId": "0",
+         "generalClassId": "17",
+         "generalClassCard": "Women's T20",
+         "name": "",
+         "eventType": ""
+        },
+        "season": 2025,
+        "seasonStartDate": "2025-11-09T00:00:00Z",
+        "seasonEndDate": "2025-12-25T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "Hurricanes won by 81 runs (DLS method)",
+         "summary": "Hurricanes won by 81 runs (DLS)",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2025/26",
+          "text": "2025/26",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/21284/scorecard/1494557/hobart-hurricanes-women-vs-melbourne-stars-women-32nd-match-womens-big-bash-league-2025-26",
+        "competitors": [
+         {
+          "id": "896433",
+          "displayName": "Hobart Hurricanes Women",
+          "name": "HH-W",
+          "abbreviation": "HH-W",
+          "homeAway": "home",
+          "score": "176/4 (17/17 ov)",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/896433.png"
+         },
+         {
+          "id": "896399",
+          "displayName": "Melbourne Stars Women",
+          "name": "MS-W",
+          "abbreviation": "MS-W",
+          "homeAway": "away",
+          "score": "98 (15.5/17 ov, target 180)",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/896399.png"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "20251230": {
+  "sports": [
+   {
+    "leagues": [
+     {
+      "id": "8044",
+      "name": "Big Bash League",
+      "shortName": "BBL",
+      "abbreviation": "BBL",
+      "slug": "8044",
+      "isTournament": true,
+      "events": [
+       {
+        "id": "1493253",
+        "date": "2025-12-30T08:15:00Z",
+        "name": "Sydney Thunder v Perth Scorchers",
+        "shortName": "ST v PS",
+        "description": "16th Match (N), Big Bash League at Sydney, Dec 30 2025",
+        "class": {
+         "internationalClassId": "0",
+         "generalClassId": "6",
+         "generalClassCard": "Twenty20",
+         "name": "Twenty20 matches",
+         "eventType": "T20"
+        },
+        "season": 2025,
+        "seasonStartDate": "2025-12-14T00:00:00Z",
+        "seasonEndDate": "2026-01-26T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "Scorchers won by 71 runs",
+         "summary": "Scorchers won by 71 runs",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2025/26",
+          "text": "2025/26",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8044/scorecard/1493253/sydney-thunder-vs-perth-scorchers-16th-match-big-bash-league-2025-26",
+        "competitors": [
+         {
+          "id": "509674",
+          "displayName": "Sydney Thunder",
+          "name": "ST",
+          "abbreviation": "ST",
+          "homeAway": "home",
+          "score": "131 (17.3/20 ov, target 203)",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509674.png"
+         },
+         {
+          "id": "509670",
+          "displayName": "Perth Scorchers",
+          "name": "PS",
+          "abbreviation": "PS",
+          "homeAway": "away",
+          "score": "202/8",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509670.png"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "id": "24046",
+      "name": "Sri Lanka Women tour of India [Dec 2025] 2025/26",
+      "shortName": "Sri Lanka Women in India 2025/26",
+      "abbreviation": "Sri Lanka Women in India 2025-26",
+      "slug": "24046",
+      "isTournament": false,
+      "events": [
+       {
+        "id": "1513739",
+        "date": "2025-12-30T13:30:00Z",
+        "name": "India Women v Sri Lanka Women",
+        "shortName": "IND-W v SL-W",
+        "description": "5th T20I (N), Sri Lanka Women tour of India [Dec 2025] at Thiruvananthapuram, Dec 30 2025",
+        "class": {
+         "internationalClassId": "10",
+         "generalClassId": "17",
+         "generalClassCard": "Women T20",
+         "name": "Women's Twenty20 Internationals",
+         "eventType": "T20"
+        },
+        "season": 2025,
+        "seasonStartDate": "2025-12-21T00:00:00Z",
+        "seasonEndDate": "2025-12-30T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "IND Women won by 15 runs",
+         "summary": "IND Women won by 15 runs",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2025/26",
+          "text": "2025/26",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/24046/scorecard/1513739/india-women-vs-sri-lanka-women-5th-t20i-24046",
+        "competitors": [
+         {
+          "id": "1812",
+          "displayName": "India Women",
+          "name": "IND-W",
+          "abbreviation": "IND-W",
+          "homeAway": "home",
+          "score": "175/7",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/1812.png"
+         },
+         {
+          "id": "3621",
+          "displayName": "Sri Lanka Women",
+          "name": "SL-W",
+          "abbreviation": "SL-W",
+          "homeAway": "away",
+          "score": "160/7 (20 ov, target 176)",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/3621.png"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "20260105": {
+  "sports": [
+   {
+    "leagues": [
+     {
+      "id": "8044",
+      "name": "Big Bash League",
+      "shortName": "BBL",
+      "abbreviation": "BBL",
+      "slug": "8044",
+      "isTournament": true,
+      "events": [
+       {
+        "id": "1493261",
+        "date": "2026-01-05T08:15:00Z",
+        "name": "Sydney Sixers v Brisbane Heat",
+        "shortName": "SS v BH",
+        "description": "24th Match (N), Big Bash League at Coffs Harbour, Jan 5 2026",
+        "class": {
+         "internationalClassId": "0",
+         "generalClassId": "6",
+         "generalClassCard": "Twenty20",
+         "name": "Twenty20 matches",
+         "eventType": "T20"
+        },
+        "season": 2025,
+        "seasonStartDate": "2025-12-14T00:00:00Z",
+        "seasonEndDate": "2026-01-26T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "Sixers won by 3 wickets (with 8 balls remaining)",
+         "summary": "Sixers won by 3 wkts (8b rem)",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2025/26",
+          "text": "2025/26",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8044/scorecard/1493261/sydney-sixers-vs-brisbane-heat-24th-match-big-bash-league-2025-26",
+        "competitors": [
+         {
+          "id": "509673",
+          "displayName": "Sydney Sixers",
+          "name": "SS",
+          "abbreviation": "SS",
+          "homeAway": "home",
+          "score": "118/7 (18.4/20 ov, target 115)",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509673.png"
+         },
+         {
+          "id": "509668",
+          "displayName": "Brisbane Heat",
+          "name": "BH",
+          "abbreviation": "BH",
+          "homeAway": "away",
+          "score": "114/9",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/509668.png"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "20260215": {
+  "sports": [
+   {
+    "leagues": [
+     {
+      "id": "8604",
+      "name": "ICC Men's T20 World Cup",
+      "shortName": "Men's T20 World Cup",
+      "abbreviation": "Men's T20 World Cup",
+      "slug": "8604",
+      "isTournament": true,
+      "events": [
+       {
+        "id": "1512743",
+        "date": "2026-02-15T05:30:00Z",
+        "name": "Nepal v West Indies",
+        "shortName": "NEP v WI",
+        "description": "25th Match, Group C, ICC Men's T20 World Cup at Mumbai, Feb 15 2026",
+        "class": {
+         "internationalClassId": "3",
+         "generalClassId": "6",
+         "generalClassCard": "T20I",
+         "name": "Twenty20 Internationals",
+         "eventType": "T20"
+        },
+        "season": 2026,
+        "seasonStartDate": "2026-02-07T00:00:00Z",
+        "seasonEndDate": "2026-03-08T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "West Indies won by 9 wickets (with 28 balls remaining)",
+         "summary": "West Indies won by 9 wkts (28b rem)",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2025/26",
+          "text": "2025/26",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8604/scorecard/1512743/nepal-vs-west-indies-25th-match-group-c-icc-mens-t20-world-cup-2025-26",
+        "competitors": [
+         {
+          "id": "33",
+          "displayName": "Nepal",
+          "name": "NEP",
+          "abbreviation": "NEP",
+          "homeAway": "home",
+          "score": "133/8",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/33.png"
+         },
+         {
+          "id": "4",
+          "displayName": "West Indies",
+          "name": "WI",
+          "abbreviation": "WI",
+          "homeAway": "away",
+          "score": "134/1 (15.2/20 ov, target 134)",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/4.png"
+         }
+        ]
+       },
+       {
+        "id": "1512744",
+        "date": "2026-02-15T09:30:00Z",
+        "name": "Namibia v United States of America",
+        "shortName": "NAM v USA",
+        "description": "26th Match, Group A (D/N), ICC Men's T20 World Cup at Chennai, Feb 15 2026",
+        "class": {
+         "internationalClassId": "3",
+         "generalClassId": "6",
+         "generalClassCard": "T20I",
+         "name": "Twenty20 Internationals",
+         "eventType": "T20"
+        },
+        "season": 2026,
+        "seasonStartDate": "2026-02-07T00:00:00Z",
+        "seasonEndDate": "2026-03-08T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "U.S.A. won by 31 runs",
+         "summary": "U.S.A. won by 31 runs",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2025/26",
+          "text": "2025/26",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8604/scorecard/1512744/namibia-vs-united-states-of-america-26th-match-group-a-icc-mens-t20-world-cup-2025-26",
+        "competitors": [
+         {
+          "id": "28",
+          "displayName": "Namibia",
+          "name": "NAM",
+          "abbreviation": "NAM",
+          "homeAway": "home",
+          "score": "168/6 (20 ov, target 200)",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/28.png"
+         },
+         {
+          "id": "11",
+          "displayName": "United States of America",
+          "name": "USA",
+          "abbreviation": "USA",
+          "homeAway": "away",
+          "score": "199/4",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/11.png"
+         }
+        ]
+       },
+       {
+        "id": "1512745",
+        "date": "2026-02-15T13:30:00Z",
+        "name": "India v Pakistan",
+        "shortName": "IND v PAK",
+        "description": "27th Match, Group A (N), ICC Men's T20 World Cup at Colombo, Feb 15 2026",
+        "class": {
+         "internationalClassId": "3",
+         "generalClassId": "6",
+         "generalClassCard": "T20I",
+         "name": "Twenty20 Internationals",
+         "eventType": "T20"
+        },
+        "season": 2026,
+        "seasonStartDate": "2026-02-07T00:00:00Z",
+        "seasonEndDate": "2026-03-08T23:59:00Z",
+        "status": "post",
+        "summary": "Result",
+        "fullStatus": {
+         "longSummary": "India won by 61 runs",
+         "summary": "India won by 61 runs",
+         "type": {
+          "id": "1",
+          "description": "Result",
+          "detail": "Final",
+          "shortDetail": "Final",
+          "state": "post"
+         }
+        },
+        "notes": [
+         {
+          "href": "https://www.cricinfo.com/ci/engine/series/index.html?season=2025/26",
+          "text": "2025/26",
+          "type": "season"
+         }
+        ],
+        "link": "https://www.espn.in/cricket/series/8604/scorecard/1512745/india-vs-pakistan-27th-match-group-a-icc-mens-t20-world-cup-2025-26",
+        "competitors": [
+         {
+          "id": "6",
+          "displayName": "India",
+          "name": "IND",
+          "abbreviation": "IND",
+          "homeAway": "home",
+          "score": "175/7",
+          "winner": true,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/6.png"
+         },
+         {
+          "id": "7",
+          "displayName": "Pakistan",
+          "name": "PAK",
+          "abbreviation": "PAK",
+          "homeAway": "away",
+          "score": "114 (18/20 ov, target 176)",
+          "winner": false,
+          "logo": "https://a.espncdn.com/i/teamlogos/cricket/500/7.png"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- parsing loosely-typed raw ESPN
    JSON, same justification the scraper scripts use for the same API responses */
 import type { League } from "./queries";
+import { cricketSummaryPaths, fetchCricketSummaryVia } from "./cricketSummary";
 
 // Competitions fed by ESPN; the international formats (Cricsheet) have no live source.
 const SPORT_PATH: Partial<Record<League, string>> = {
@@ -28,12 +29,34 @@ const SPORT_PATH: Partial<Record<League, string>> = {
 export async function fetchMatchSummary(league: League, espnId: string): Promise<any | null> {
   const path = SPORT_PATH[league];
   if (!path) return null;
+  const url = (p: string) => `https://site.api.espn.com/apis/site/v2/sports/${p}/summary?event=${espnId}`;
+  // Short enough that a match in play tracks ESPN's feed (the page re-renders in the
+  // browser every 10 seconds while live); finished games read stored details.
+  const cache = { next: { revalidate: 10 } };
+  if (path.startsWith("cricket/")) {
+    // ESPN answers a slice of cricket summaries with a 502 whose body still parses
+    // ({"code":2502,"detail":"http error: bad gateway"}), and serves some past matches
+    // half-rendered under their own competition id. Reject those, retry, and read the
+    // match through the IPL id if the league's own path will not give it (the same
+    // read the scrapers make; see lib/cricketSummary.ts).
+    try {
+      return await fetchCricketSummaryVia(
+        async (p) => {
+          const res = await fetch(url(p), { ...cache, signal: AbortSignal.timeout(4000) });
+          // A complete body can arrive under a 502 status; whether it is a summary is decided by its shape.
+          return JSON.parse(await res.text());
+        },
+        espnId,
+        cricketSummaryPaths(path),
+        // A render must not wait out every retry on both paths when ESPN is down: about eight seconds in all, then the page shows what it has.
+        { backoffMs: 250, deadlineMs: 8000 }
+      );
+    } catch {
+      return null; // already logged with the game id and the reason
+    }
+  }
   try {
-    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${espnId}`, {
-      // Short enough that a match in play tracks ESPN's feed (the page re-renders in
-      // the browser every 10 seconds while live); finished games read stored details.
-      next: { revalidate: 10 },
-    });
+    const res = await fetch(url(path), cache);
     if (!res.ok) return null;
     return await res.json();
   } catch {
