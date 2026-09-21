@@ -102,6 +102,7 @@ export function ExportTable({
   moreNoun,
   bare = false,
   firstMinWidth,
+  compact = false,
 }: {
   headers: string[];
   rows: ExportRow[];
@@ -112,9 +113,11 @@ export function ExportTable({
   bare?: boolean;
   /** Keeps the name column from being squeezed by wide number columns when rows carry a note. */
   firstMinWidth?: number;
+  /** Tighter number columns and a name that may wrap onto a second line, for a table that has to fit a narrow column of a side-by-side card without clipping. */
+  compact?: boolean;
 }) {
   const { shown, hidden } = limit ? capRows(rows, limit) : { shown: rows, hidden: 0 };
-  const cell = { padding: "6px 8px", textAlign: "right" as const, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" as const };
+  const cell = { padding: compact ? "6px 5px" : "6px 8px", textAlign: "right" as const, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" as const };
   const ranked = shown.some((r) => r.rank !== undefined);
   return (
     <div style={bare ? undefined : { border: `1px solid ${CARD.border}`, borderRadius: 12, overflow: "hidden" }}>
@@ -137,7 +140,7 @@ export function ExportTable({
                   {ranked && <span style={{ minWidth: 20, textAlign: "right", fontSize: 12, fontWeight: 600, color: CARD.textMuted }}>{r.rank ?? ""}</span>}
                   {r.lead}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ whiteSpace: "nowrap" }}>{r.name}</div>
+                    <div style={{ whiteSpace: compact ? "normal" : "nowrap" }}>{r.name}</div>
                     {r.note && <div style={{ fontSize: 11, fontWeight: 400, color: CARD.textMuted }}>{r.note}</div>}
                   </div>
                 </div>

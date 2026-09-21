@@ -16,9 +16,19 @@ function logo(name: string, url: string | null, color: string | null) {
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 const tone = (n: number): "win" | "loss" | "muted" => (n > 0 ? "win" : n < 0 ? "loss" : "muted");
 
+// Two tables side by side each get about (width - 112) / 2 pixels. A soccer group table has a name
+// and eight number columns (P W D L GF GA GD Pts), which with a long club name ("Borussia
+// Mönchengladbach") is wider than a column of a 980px image, so those are wider and their tables
+// compact (tight number columns, a name that wraps rather than clips). Measured in a browser: see
+// .superpowers/sdd/reference-parity/task-2-report.md, "Fix round 1".
+const SIDE_BY_SIDE_WIDTH = 980;
+const SIDE_BY_SIDE_SOCCER_WIDTH = 1040;
+
 /** Width the standings image needs: two side-by-side tables when the league splits into several. */
 export function standingsExportWidth(league: League, standings: StandingRow[]): number {
-  return groupStandings(league, standings).sections.length > 1 ? 980 : 720;
+  const { mode, sections } = groupStandings(league, standings);
+  if (sections.length <= 1) return 720;
+  return mode === "soccer" ? SIDE_BY_SIDE_SOCCER_WIDTH : SIDE_BY_SIDE_WIDTH;
 }
 
 // The downloadable version of the standings tables: the same grouping, columns and
@@ -50,7 +60,7 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
       return { key: r.team_espn_id, rank: r.unranked ? "–" : i + 1, lead: logo(r.name, r.logo_url, r.color), name: teamDisplayName(r.name), cells: cellsFor(r), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
     });
     // No row cap: the image is the whole table (a 32-team NFL season, a 36-team league phase).
-    const table = <ExportTable firstHeader="Team" headers={headers} rows={list} bare />;
+    const table = <ExportTable firstHeader="Team" headers={headers} rows={list} bare compact={mode === "soccer" && sections.length > 1} />;
     return sections.length === 1 && name === "All Teams" && !notStarted(rows) ? (
       <div key={name} style={{ border: `1px solid ${CARD.border}`, borderRadius: 12, overflow: "hidden" }}>{table}</div>
     ) : (

@@ -244,7 +244,17 @@ alter table standings add column if not exists rank int;
 -- Eights row), which is the conflict target scripts/lib/standings.ts upserts on. The table was
 -- created with a (league, season, team_espn_id) primary key; drop it and key on the conference too.
 alter table standings drop constraint if exists standings_pkey;
-create unique index if not exists standings_stage_key on standings (league, season, team_espn_id, (coalesce(conference, '')));
+-- Skipped when an equivalent unique index already exists under another name (one added by hand).
+do $$
+begin
+  if not exists (
+    select 1 from pg_indexes
+    where schemaname = current_schema() and tablename = 'standings'
+      and indexdef ~* 'unique index .*\(league, season, team_espn_id, coalesce\(conference'
+  ) then
+    create unique index standings_stage_key on standings (league, season, team_espn_id, (coalesce(conference, '')));
+  end if;
+end $$;
 
 -- One row per real page view of a match-detail page, recorded client-side (see
 -- src/app/api/track-view) so it reflects actual visits rather than server-render

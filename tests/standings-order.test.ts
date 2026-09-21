@@ -193,3 +193,39 @@ test("leagueWideRank leaves ties shared and, for other leagues, uses table order
   const soccer = leagueWideRank("laliga", laLigaBottom());
   assert.deepEqual([soccer.get("levante"), soccer.get("osasuna"), soccer.get("mallorca")], [1, 2, 3]);
 });
+
+// A finished table must never be mistaken for a new season just because ESPN sent no W/L/D.
+test("a table with games played but null draws is ranked, not sorted by name", () => {
+  const rows = [
+    row("Aaa", { wins: 5, losses: 20, draws: null, points: 15, goals_for: 20, goals_against: 50, rank: 2 }),
+    row("Zzz", { wins: 20, losses: 5, draws: null, points: 60, goals_for: 60, goals_against: 20, rank: 1 }),
+  ];
+  const sorted = sortStandings("epl", rows);
+  assert.deepEqual(names(sorted), ["Zzz", "Aaa"]);
+  assert.ok(sorted.every((r) => !r.unranked));
+});
+
+test("a table with points but no W/L/D is ordered on its points, not marked as not started", () => {
+  const bare = { wins: 0, losses: 0, draws: null, no_result: null };
+  const rows = [row("Aaa", { ...bare, points: 30, rank: null }), row("Zzz", { ...bare, points: 70 }), row("Mmm", { ...bare, points: 50 })];
+  const sorted = sortStandings("laliga", rows);
+  assert.deepEqual(names(sorted), ["Zzz", "Mmm", "Aaa"]);
+  assert.ok(sorted.every((r) => !r.unranked));
+});
+
+test("goals, a run rate or a win percentage alone also show a table has been played", () => {
+  const goals = sortStandings("seriea", [row("Aaa", { goals_for: 1, goals_against: 3 }), row("Zzz", { goals_for: 9, goals_against: 0 })]);
+  assert.deepEqual(names(goals), ["Zzz", "Aaa"]);
+  const nrr = sortStandings("ipl", [row("Aaa", { net_run_rate: "-0.5" }), row("Zzz", { net_run_rate: "1.2" })]);
+  assert.deepEqual(names(nrr), ["Zzz", "Aaa"]);
+  const pct = sortStandings("nba", [row("Aaa", { win_percent: "0.400" }), row("Zzz", { win_percent: "0.700" })]);
+  assert.deepEqual(names(pct), ["Zzz", "Aaa"]);
+  for (const t of [goals, nrr, pct]) assert.ok(t.every((r) => !r.unranked));
+});
+
+test("zero and missing figures everywhere are still a table nobody has played in", () => {
+  const rows = [row("Zzz", { points: 0, goals_for: 0, goals_against: 0, net_run_rate: "0.000", win_percent: "0", draws: null }), row("Aaa", { points: null, draws: 0 })];
+  const sorted = sortStandings("epl", rows);
+  assert.deepEqual(names(sorted), ["Aaa", "Zzz"]);
+  assert.ok(sorted.every((r) => r.unranked));
+});

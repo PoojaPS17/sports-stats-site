@@ -10,6 +10,7 @@ import type { ComputedTableRow, ResultRow, TeamRef } from "../src/lib/analytics"
 let db: TestDb;
 let StandingsTable: typeof import("../src/components/StandingsTable").StandingsTable;
 let StandingsExportCard: typeof import("../src/components/StandingsExportCard").StandingsExportCard;
+let standingsExportWidth: typeof import("../src/components/StandingsExportCard").standingsExportWidth;
 let ComputedStandingsTable: typeof import("../src/components/ComputedStandingsTable").ComputedStandingsTable;
 let TeamHistoryExportCard: typeof import("../src/components/TeamHistoryExportCard").TeamHistoryExportCard;
 let sortStandings: typeof import("../src/lib/standingsOrder").sortStandings;
@@ -19,7 +20,7 @@ let teamSummary: typeof import("../src/lib/teamSummary");
 before(async () => {
   db = await startTestDb();
   ({ StandingsTable } = await import("../src/components/StandingsTable"));
-  ({ StandingsExportCard } = await import("../src/components/StandingsExportCard"));
+  ({ StandingsExportCard, standingsExportWidth } = await import("../src/components/StandingsExportCard"));
   ({ ComputedStandingsTable } = await import("../src/components/ComputedStandingsTable"));
   ({ TeamHistoryExportCard } = await import("../src/components/TeamHistoryExportCard"));
   ({ sortStandings } = await import("../src/lib/standingsOrder"));
@@ -157,4 +158,25 @@ test("formatWinLossTie writes W-L, and W-L-T once there is a tie", () => {
   assert.equal(teamSummary.formatWinLossTie(7, 9, 1), "7-9-1");
   assert.equal(teamSummary.formatWinLossTie(7, 10, 0), "7-10");
   assert.equal(teamSummary.formatWinLossTie(7, 10, null), "7-10");
+});
+
+// Two tables side by side each get (width - 112) / 2 px, and ExportGroup clips what does not fit. A soccer group
+// table (name + P W D L GF GA GD Pts) measured 508px against 436px in a 980px image with "Borussia Mönchengladbach"
+// in it. Checked in a browser after the fix: 457px natural width against 466px available at 1040px (see the report);
+// node has no layout engine, so these pin the numbers that fix relies on.
+test("a Champions League group-stage image is wider than the default side-by-side card and its tables are compact", () => {
+  const groups = sortStandings("ucl", [
+    row("Borussia Mönchengladbach", { season: 2019, conference: "Group A", wins: 4, draws: 1, losses: 1, points: 13, goals_for: 14, goals_against: 5, rank: 1 }),
+    row("Paris Saint-Germain", { season: 2019, conference: "Group B", wins: 4, draws: 1, losses: 1, points: 13, goals_for: 14, goals_against: 5, rank: 1 }),
+  ]);
+  const width = standingsExportWidth("ucl" as League, groups);
+  assert.ok(width >= 1040, `width ${width}`);
+  const markup = html(createElement(StandingsExportCard, { league: "ucl" as League, standings: groups, title: "t", subtitle: null, context: "c" }));
+  assert.match(markup, /padding:6px 5px/);
+  assert.ok(!/padding:6px 8px/.test(markup), "no roomy cells in a side-by-side soccer table");
+  assert.ok(markup.includes('<div style="white-space:normal">Borussia Mönchengladbach</div>'), "the club name may wrap instead of being clipped");
+  // other cards keep their sizes and padding
+  assert.equal(standingsExportWidth("epl" as League, sortStandings("epl", [row("A", { points: 3, wins: 1, conference: "g" })])), 720);
+  const nfl = sortStandings("nfl", [row("A", { conference: "AFC", division: "AFC East", wins: 1, win_percent: "1" }), row("B", { conference: "NFC", division: "NFC East", wins: 1, win_percent: "1" })]);
+  assert.equal(standingsExportWidth("nfl" as League, nfl), 980);
 });
