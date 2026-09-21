@@ -151,7 +151,7 @@ test("running the same days again changes nothing", async () => {
   assert.equal((await db.pool.query(`select count(*)::int as n from cricket_series_matches`)).rows[0].n, 3 + 2 + 1);
 });
 
-test("a re-run refiles the matches of an old merged series and the owner cleanup then removes only the emptied row", async () => {
+test("a re-run refiles the matches of an old merged series and the same run deletes the emptied row; a league it did not reach keeps its row", async () => {
   // Before the change: one row per league id, holding every edition's matches.
   await db.pool.query(
     `insert into cricket_series (espn_id, name, is_tournament, kind, match_count, start_date, end_date) values
@@ -161,7 +161,7 @@ test("a re-run refiles the matches of an old merged series and the owner cleanup
   for (const e of [...events("20241231", "8044"), ...events("20250101", "8044"), ...events("20251230", "8044"), ...events("20260105", "8044")]) {
     await db.pool.query(`insert into cricket_series_matches (espn_id, series_espn_id, date, name) values ($1, '8044', $2, $3)`, [e.id, e.date, e.name]);
   }
-  // One match no re-run window reaches: its legacy row must survive the cleanup.
+  // One match no re-run window reaches: its legacy row must survive.
   await db.pool.query(`insert into cricket_series_matches (espn_id, series_espn_id, date, name) values ('7', '8050', '2024-12-31', 'x v y')`);
 
   const check = (await db.pool.query(ingest.LEGACY_MERGED_SERIES_CHECK_SQL)).rows;
@@ -169,10 +169,11 @@ test("a re-run refiles the matches of an old merged series and the owner cleanup
 
   await run(["20241231", "20250101", "20251230", "20260105"]);
   const checkAfter = (await db.pool.query(ingest.LEGACY_MERGED_SERIES_CHECK_SQL)).rows;
-  assert.deepEqual(checkAfter.map((r) => [r.espn_id, r.matches]).sort(), [["8044", 0], ["8050", 1]]);
+  // The run emptied and deleted the old 8044 row itself; 8050 (not a league the run touched, and still holding a match) stays.
+  assert.deepEqual(checkAfter.map((r) => [r.espn_id, r.matches]), [["8050", 1]]);
 
-  const deleted = await db.pool.query(ingest.LEGACY_MERGED_SERIES_DELETE_SQL);
-  assert.deepEqual(deleted.rows.map((r) => r.espn_id), ["8044"]);
+  // The owner's tidy-up is now only a safety net: it finds nothing to delete and never touches a row that holds a match.
+  assert.deepEqual((await db.pool.query(ingest.LEGACY_MERGED_SERIES_DELETE_SQL)).rows, []);
   const left = (await db.pool.query(`select espn_id from cricket_series order by espn_id`)).rows.map((r) => r.espn_id);
   // The bilateral tour (24046, on the 2025-12-30 listing) is not a merged row and is not touched.
   assert.deepEqual(left, ["24046", "8044-2024-25", "8044-2025-26", "8050"]);
@@ -271,6 +272,107 @@ test("before the re-run an old merged league-id series still renders", async () 
   assert.deepEqual(await visit("8044"), { status: "renders" });
 });
 
+/* ------------- the window between deploy and the owner's re-run, and after it ------------- */
+
+async function seedLegacy(days: string[]) {
+  await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count, start_date, end_date) values ('8044', 'Big Bash League', true, 'domestic', 99, '2020-01-01', '2030-01-01')`);
+  for (const day of days)
+    for (const e of events(day, "8044")) await db.pool.query(`insert into cricket_series_matches (espn_id, series_espn_id, date, name) values ($1, '8044', $2, $3)`, [e.id, e.date, e.name]);
+}
+
+test("while the old merged row still holds matches its address renders, even once an edition row exists; emptied, it redirects", async () => {
+  globalThis.fetch = (async () => new Response("{}", { status: 500 })) as typeof fetch;
+  await seedLegacy(["20241231", "20250101", "20251230", "20260105"]);
+  await run(["20260105"]); // the nightly job reaches only the recent day: one match leaves the old row for an edition row
+  assert.equal((await db.pool.query(`select count(*)::int as n from cricket_series where espn_id = '8044-2025-26'`)).rows[0].n, 1);
+  assert.ok((await db.pool.query(`select count(*)::int as n from cricket_series_matches where series_espn_id = '8044'`)).rows[0].n > 0);
+  assert.equal(await series.getLatestCricketEdition("8044"), null);
+  assert.deepEqual(await visit("8044"), { status: "renders" });
+  // once nothing is filed under it, the bare id goes to the newest edition
+  await db.pool.query(`delete from cricket_series_matches where series_espn_id = '8044'`);
+  assert.equal(await series.getLatestCricketEdition("8044"), "8044-2025-26");
+  assert.deepEqual(await visit("8044"), { status: "redirect", to: "/cricket/series/8044-2025-26" });
+});
+
+test("moving matches out of the old merged row recomputes it, and the ingest that empties it deletes it: no owner cleanup needed", async () => {
+  globalThis.fetch = (async () => new Response("{}", { status: 500 })) as typeof fetch;
+  await seedLegacy(["20241231", "20250101", "20251230", "20260105"]);
+  const total = (await db.pool.query(`select count(*)::int as n from cricket_series_matches`)).rows[0].n;
+
+  await run(["20260105"]);
+  const legacy = await seriesRow("8044");
+  const edition = await seriesRow("8044-2025-26");
+  assert.equal(edition.match_count, 1);
+  // what remains under the old row, counted and dated from its own matches (not the seeded 99 / 2020-2030)
+  assert.equal(legacy.match_count, total - 1);
+  const newest = (await db.pool.query(`select max(date) as d from cricket_series_matches where series_espn_id = '8044'`)).rows[0].d;
+  assert.equal(utc(legacy.end_date), utc(newest));
+  assert.ok(legacy.end_date < edition.start_date, "the old row no longer reaches into the edition it gave up");
+
+  await run(["20251230", "20241231", "20250101"]);
+  assert.equal(await seriesRow("8044"), undefined, "emptied legacy row is gone");
+  const listed = new Set<string>();
+  for (const y of [2024, 2025, 2026]) for (const r of await series.getCricketSeriesBySeason(y)) listed.add(r.espn_id);
+  assert.deepEqual([...listed].filter((id) => id.startsWith("8044")).sort(), ["8044-2024-25", "8044-2025-26"]);
+  assert.deepEqual(await visit("8044"), { status: "redirect", to: "/cricket/series/8044-2025-26" });
+  // the optional cleanup has nothing left to do
+  assert.deepEqual((await db.pool.query(ingest.LEGACY_MERGED_SERIES_DELETE_SQL)).rows, []);
+});
+
+test("an ingest recomputes every edition row of the leagues it touches, and deletes one that has been emptied", async () => {
+  await run(["20251230", "20260105"]); // both days under 8044-2025-26
+  const n0 = events("20241231", "8044").length;
+  const n1 = events("20251230", "8044").length;
+  const n2 = events("20260105", "8044").length;
+  // a later listing files the 2026-01-05 matches under another edition label (a note appeared or changed): both rows are now stale
+  await db.pool.query(`update cricket_series_matches set series_espn_id = '8044-2026' where espn_id = any($1::text[])`, [events("20260105", "8044").map((e) => String(e.id))]);
+  await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count) values ('8044-2026', 'Big Bash League 2026', true, 'domestic', 0)`);
+  await run(["20241231"]); // touches league 8044, but neither of those two rows
+  const counts = async () => (await db.pool.query(`select espn_id, match_count from cricket_series where espn_id like '8044-%' order by espn_id`)).rows.map((r) => [r.espn_id, r.match_count]);
+  assert.deepEqual(await counts(), [["8044-2024-25", n0], ["8044-2025-26", n1], ["8044-2026", n2]]);
+  // a row emptied for good goes with the next ingest of its league
+  await db.pool.query(`delete from cricket_series_matches where series_espn_id = '8044-2026'`);
+  await run(["20241231"]);
+  assert.deepEqual(await counts(), [["8044-2024-25", n0], ["8044-2025-26", n1]]);
+  // a bilateral series with nothing listed yet is not a tournament row and stays
+  await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count) values ('777', 'A tour', false, 'international', 0)`);
+  await run(["20241231"]);
+  assert.ok(await seriesRow("777"));
+});
+
+test("a tournament row with no stored match is never listed, searched or offered in the picker", async () => {
+  await run(["20251230"]);
+  await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count, start_date, end_date, season) values ('8044', 'Big Bash League', true, 'domestic', 73, now() - interval '3 days', now() + interval '3 days', 2026)`);
+  await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count, start_date, end_date, season) values ('555', 'A quiet tour', false, 'international', 0, now() - interval '3 days', now() + interval '3 days', 2026)`);
+  const win = (await series.getCricketSeriesWindow(30, 30)).map((r) => r.espn_id);
+  assert.ok(!win.includes("8044"), "window");
+  assert.ok(win.includes("555"), "a bilateral series with no match yet is still listed");
+  assert.ok(!(await series.getCricketSeriesBySeason(2026)).some((r) => r.espn_id === "8044"), "archive");
+  assert.ok(!(await series.searchCricketSeries("Big Bash")).some((r) => r.espn_id === "8044"), "picker");
+  const hits = (await (await import("../src/lib/queries")).search("Big Bash")).filter((r) => r.type === "series").map((r) => r.slug);
+  assert.ok(!hits.includes("8044") && hits.includes("8044-2025-26"), "site search");
+});
+
+test("an event without the season note is filed under the same edition as its noted neighbours (link slug), not a look-alike", async () => {
+  const noteless = structuredClone(DAYS["20251230"]);
+  const bbl = noteless.sports[0].leagues.find((l: any) => String(l.id) === "8044");
+  for (const e of bbl.events) e.notes = [];
+  const meta: import("../scripts/lib/cricket-series-ingest").SeriesMap = new Map();
+  await ingest.storeMatches(ingest.ingestDay(noteless, meta));
+  await ingest.storeMatches(ingest.ingestDay(DAYS["20260105"], meta)); // has the note
+  await ingest.storeSeries(meta);
+  assert.deepEqual([...meta.keys()].filter((k) => k.startsWith("8044")), ["8044-2025-26"]);
+  const rows = (await db.pool.query(`select espn_id, match_count from cricket_series where espn_id like '8044-%'`)).rows;
+  assert.deepEqual(rows.map((r) => [r.espn_id, r.match_count]), [["8044-2025-26", 1 + events("20251230", "8044").length]]);
+  // the other links the fixture holds agree with their notes
+  for (const [day, id, expected] of [["20241231", "8044", "8044-2024-25"], ["20240515", "8048", "8048-2024"], ["20251201", "21284", "21284-2025-26"], ["20260215", "8604", "8604-2025-26"]] as const) {
+    const lg = league(day, id);
+    assert.equal(key.seriesEdition(lg, { ...lg.events[0], notes: [] }).id, expected, `${id} on ${day}`);
+  }
+  // with neither note nor an edition in the link there is nothing to read: the numeric season, then the date's year
+  assert.equal(key.seriesEdition({ id: "8044", isTournament: true }, { season: 2025, link: "https://www.espn.in/cricket/series/8044/scorecard/1/a-vs-b-3rd-match-8044", date: "2026-01-05T08:00:00Z" }).id, "8044-2025");
+});
+
 test("a series lists its other editions newest first", async () => {
   await run(["20241231", "20250101", "20251230", "20260105"]);
   const editions = await series.getCricketSeriesEditions("8044-2024-25");
@@ -278,7 +380,7 @@ test("a series lists its other editions newest first", async () => {
   assert.deepEqual(await series.getCricketSeriesEditions("24046"), []);
 });
 
-test("the sitemap lists each edition once, no old league-id row that redirects, and every address resolves", async () => {
+test("the sitemap lists each edition once, no emptied league-id row that redirects, and every address resolves", async () => {
   globalThis.fetch = (async () => new Response("{}", { status: 500 })) as typeof fetch;
   await run(["20241231", "20250101", "20251230", "20260105", "20251201"]);
   // The old merged rows still in the table until the owner cleanup runs.
@@ -290,7 +392,8 @@ test("the sitemap lists each edition once, no old league-id row that redirects, 
   const urls = (await sitemap.sitemapEntries("core")).map((e) => e.url).filter((u) => u.includes("/cricket/series/"));
   assert.equal(new Set(urls).size, urls.length, "no duplicates");
   const ids = urls.map((u) => u.split("/cricket/series/")[1]);
-  assert.deepEqual([...ids].sort(), ["21284-2025-26", "24046", "8044-2024-25", "8044-2025-26", "8050"]);
+  // The old merged 8044 row still holds a match, so its address renders (it redirects only once emptied) and is listed.
+  assert.deepEqual([...ids].sort(), ["21284-2025-26", "24046", "8044", "8044-2024-25", "8044-2025-26", "8050"]);
   for (const id of ids) assert.equal((await visit(id)).status, "renders", `${id} answers 200`);
 });
 

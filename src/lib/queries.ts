@@ -8,6 +8,7 @@ import type { GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
+import { seriesHasPlaySql } from "./cricketSeriesKey";
 import { sortStandings } from "./standingsOrder";
 import type { EspnSeasonTotals } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
@@ -1089,7 +1090,7 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
                                     to_char(s.start_date, 'YYYY')), '') as subtitle,
             null as image
      from cricket_series s
-     where s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1
+     where (s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1) and ${seriesHasPlaySql("s")}
      limit $2`,
     [like, limit]
   );

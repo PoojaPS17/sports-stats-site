@@ -51,8 +51,6 @@ async function core(): Promise<Entry[]> {
   const { rows: cricketSeries } = await pool.query(
     `select s.espn_id, s.end_date, (s.end_date >= now() - interval '30 days') as recent from cricket_series s
      where exists (select 1 from cricket_series_matches m where m.series_espn_id = s.espn_id)
-       -- an old league-id row that still has editions redirects to the newest one: the editions are listed, not it
-       and not exists (select 1 from cricket_series e where e.espn_id like s.espn_id || '-%')
      order by s.start_date desc`
   );
   for (const { espn_id, end_date, recent } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, recent ? "daily" : "yearly", recent ? 0.5 : 0.3, end_date));

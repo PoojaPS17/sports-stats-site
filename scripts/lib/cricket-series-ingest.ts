@@ -3,7 +3,7 @@
 // cricket_series_matches, kept apart from the script's fetch loop so a test can feed them saved listing days.
 import { pool } from "./db";
 import { resolveTeamLogo } from "../../src/lib/teamLogos";
-import { isEditioned, seriesEdition, seriesTitle } from "../../src/lib/cricketSeriesKey";
+import { baseSeriesId, isEditioned, seriesEdition, seriesTitle } from "../../src/lib/cricketSeriesKey";
 
 // ESPN series ids of the competitions SportsDB keeps scorecards for, and the
 // international class ids that route a match to the bilateral archives.
@@ -196,7 +196,11 @@ export async function storeSeries(seriesMeta: SeriesMap): Promise<void> {
       [id, meta.name, meta.short, meta.abbr, meta.slug, meta.isTournament, kindOf(meta.events, meta.name)]
     );
   }
-  const ids = [...seriesMeta.keys()];
+  // Every tournament row of a league this run touched is recomputed, not just the ones it listed: a match that moved to
+  // an edition leaves the old merged row (or another edition) holding fewer matches than its stored dates and count say.
+  const bases = [...new Set([...seriesMeta.keys()].map(baseSeriesId))];
+  const { rows: siblings } = await pool.query(`select espn_id from cricket_series where is_tournament and split_part(espn_id, '-', 1) = any($1::text[])`, [bases]);
+  const ids = [...new Set([...seriesMeta.keys(), ...siblings.map((r) => r.espn_id as string)])];
   await pool.query(
     `update cricket_series s set
        start_date = a.start_date, end_date = a.end_date, match_count = a.n, completed_count = a.done, formats = a.formats,
@@ -213,15 +217,25 @@ export async function storeSeries(seriesMeta: SeriesMap): Promise<void> {
      ) a where a.series_espn_id = s.espn_id`,
     [ids]
   );
+  // A tournament row with no match left is an emptied one (the old merged row once its matches are refiled, or an edition a
+  // match left when its label changed). It is deleted; it has no children. Bilateral series are not touched.
+  await pool.query(
+    `delete from cricket_series s
+     where s.is_tournament and split_part(s.espn_id, '-', 1) = any($1::text[])
+       and not exists (select 1 from cricket_series_matches m where m.series_espn_id = s.espn_id)`,
+    [bases]
+  );
 }
 
 /* ------------------------------------------------------------------------ */
 /* Cleanup of the rows written before tournaments were keyed per edition      */
 /* ------------------------------------------------------------------------ */
 
-// Before editions, one row per tournament league id held every season's matches. A re-run of the script over the
-// matches' dates refiles them under their edition and leaves the old row empty. The check is read-only; the delete
-// removes only such rows once nothing is filed under them (a row a re-run did not reach keeps its matches and stays).
+// Before editions, one row per tournament league id held every season's matches. Re-running the script over the
+// matches' dates refiles them under their edition, and storeSeries recomputes that old row from what is left and deletes
+// it once it is empty, so no owner cleanup is needed for correctness. The check below is read-only (it shows which old rows
+// still hold matches, i.e. days a re-run has not reached); the delete is an optional final tidy for a row storeSeries
+// did not get to (a league no run touched) and removes only such rows once nothing is filed under them.
 export const LEGACY_MERGED_SERIES_CHECK_SQL = `
   select s.espn_id, s.name, s.start_date, s.end_date, s.match_count,
          (select count(*) from cricket_series_matches m where m.series_espn_id = s.espn_id)::int as matches
