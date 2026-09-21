@@ -4,6 +4,7 @@
 import { pool } from "./db";
 import { hasTies, isCricketLeague, type League } from "./leagues";
 import { countRegularGames } from "./compareGames";
+import { trunc2 } from "./cricketFormat";
 import { playerSport } from "./playerProfile";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import {
@@ -49,8 +50,9 @@ function num(v: number | null | undefined, digits = 0): string {
   return digits ? v.toFixed(digits) : String(Math.round(v));
 }
 
-function metric(label: string, a: number | null, b: number | null, opts: { digits?: number; lowerIsBetter?: boolean; noBar?: boolean; suffix?: string } = {}): Metric {
-  const fmt = (v: number | null) => (v == null ? "—" : `${num(v, opts.digits)}${opts.suffix ?? ""}`);
+function metric(label: string, a: number | null, b: number | null, opts: { digits?: number; lowerIsBetter?: boolean; noBar?: boolean; suffix?: string; truncate?: boolean } = {}): Metric {
+  // `truncate`: a cricket rate, cut at its last decimal the way Statsguru writes it rather than rounded.
+  const fmt = (v: number | null) => (v == null ? "—" : `${opts.truncate ? trunc2(v, opts.digits, "—") : num(v, opts.digits)}${opts.suffix ?? ""}`);
   return { label, a, b, aText: fmt(a), bText: fmt(b), lowerIsBetter: opts.lowerIsBetter, noBar: opts.noBar };
 }
 
@@ -295,7 +297,7 @@ async function countGameLog(league: League, playerEspnId: string): Promise<numbe
   return countRegularGames(rows, playerSport(league));
 }
 
-function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | null): MetricGroup[] {
+export function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | null): MetricGroup[] {
   const g = (k: keyof CricketCareerStats) => [a?.[k] ?? null, b?.[k] ?? null] as [number | null, number | null];
   return [
     {
@@ -308,8 +310,8 @@ function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | nul
       metrics: [
         metric("Innings", ...g("inningsBatted"), { noBar: true }),
         metric("Runs", ...g("runs")),
-        metric("Average", ...g("average"), { digits: 2 }),
-        metric("Strike rate", ...g("strikeRate"), { digits: 1 }),
+        metric("Average", ...g("average"), { digits: 2, truncate: true }),
+        metric("Strike rate", ...g("strikeRate"), { digits: 2, truncate: true }),
         metric("Highest score", ...g("highestScore")),
         metric("Hundreds", ...g("hundreds")),
         metric("Fifties", ...g("fifties")),
@@ -323,7 +325,7 @@ function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | nul
         metric("Wickets", ...g("wickets")),
         metric("Overs", ...g("overs"), { digits: 1, noBar: true }),
         metric("Runs conceded", ...g("runsConceded"), { lowerIsBetter: true }),
-        metric("Economy", ...g("economy"), { digits: 2, lowerIsBetter: true }),
+        metric("Economy", ...g("economy"), { digits: 2, lowerIsBetter: true, truncate: true }),
       ],
     },
   ];

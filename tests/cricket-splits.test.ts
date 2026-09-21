@@ -90,14 +90,15 @@ function careerTiles(html: string): [string, string][] {
 
 // Every figure the career block shows, for the fixture above. Averages and rates are derived in the
 // component, so these pin the arithmetic as well as the plumbing: batting average 430/(11-2),
-// bowling average 70/3, economy 70 runs over 8.2 overs.
+// bowling average 70/3, economy 70 runs over 8.2 overs. Rates are cut at two decimals, not rounded, and the
+// strike rate has two (Statsguru's convention; see lib/cricketFormat.ts).
 const CAREER = [
   ["Matches", "12"],
   ["Innings", "11"],
   ["Runs", "430"],
   ["Highest", "104"],
   ["Average", "47.77"],
-  ["Strike Rate", "143.3"],
+  ["Strike Rate", "143.30"],
   ["100s", "1"],
   ["50s", "3"],
   ["Innings", "4"],
