@@ -9,6 +9,7 @@ import { TennisRankingsExportCard, TennisScoresExportCard } from "@/components/T
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { Flag, TennisDayStrip, TennisDayView, TournamentCard, formatDayLabel } from "@/components/TennisScores";
+import { tennisToday } from "@/lib/tennisDates";
 import { isTour, getTennisDay, getTennisDaysAround, getLatestTennisDay, getTennisRankings, getTennisTournamentsAround, TOUR_LABEL } from "@/lib/tennis";
 import { overlayLiveTennis } from "@/lib/tennisLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -25,7 +26,7 @@ export default async function TennisTourPage({ params }: { params: Promise<{ tou
   const { tour } = await params;
   if (!isTour(tour)) notFound();
 
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const today = tennisToday();
   const [todayMatches, latest] = await Promise.all([getTennisDay(today, tour), getLatestTennisDay()]);
   const day = todayMatches.length > 0 ? today : (latest ?? today);
   const stored = day === today ? todayMatches : await getTennisDay(day, tour);

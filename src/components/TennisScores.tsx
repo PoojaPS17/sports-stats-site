@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/LocalTime";
 import { tennisMatchStatus } from "@/lib/tennisDisplay";
+import { formatTournamentRange, tournamentInPlay } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type TennisMatch, type TennisSide, type TennisTournament } from "@/lib/tennis";
 
 /* ------------------------------------------------------------------------ */
@@ -29,18 +30,6 @@ export function formatDayLabel(day: string, style: "short" | "long" = "long"): s
   return style === "long"
     ? d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
     : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
-}
-
-export function formatDateRange(start: string | null, end: string | null): string | null {
-  if (!start) return null;
-  const s = new Date(start);
-  const e = end ? new Date(end) : null;
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
-  if (!e) return s.toLocaleDateString("en-US", { ...opts, year: "numeric" });
-  const sameMonth = s.getUTCMonth() === e.getUTCMonth() && s.getUTCFullYear() === e.getUTCFullYear();
-  const left = s.toLocaleDateString("en-US", opts);
-  const right = sameMonth ? e.getUTCDate() : e.toLocaleDateString("en-US", opts);
-  return `${left} – ${right}, ${e.getUTCFullYear()}`;
 }
 
 function shiftDay(day: string, delta: number): string {
@@ -258,8 +247,8 @@ export function TennisDayStrip({ day, daysWithPlay, basePath = "/tennis/scores" 
 /* ------------------------------------------------------------------------ */
 
 export function TournamentCard({ t, today }: { t: TennisTournament; today?: string }) {
-  const range = formatDateRange(t.start_date, t.end_date);
-  const inPlay = today && t.start_date && t.end_date && t.start_date.slice(0, 10) <= today && t.end_date.slice(0, 10) >= today;
+  const range = formatTournamentRange(t.start_date, t.end_date);
+  const inPlay = today ? tournamentInPlay(t, today) : false;
   const tourLabel = t.tour === "both" ? "ATP · WTA" : t.tour.toUpperCase();
   return (
     <Link href={`/tennis/tournaments/${t.espn_id}`} className="card card-link flex flex-col gap-1 px-4 py-3">

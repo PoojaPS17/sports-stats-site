@@ -1,5 +1,6 @@
 import { pool } from "./db";
 import type { Tour } from "./tennisTours";
+import { easternDateSql, TENNIS_ZONE } from "./tennisDates";
 
 export type { Tour } from "./tennisTours";
 export { TOURS, TOUR_LABEL, isTour } from "./tennisTours";
@@ -164,6 +165,7 @@ export interface TennisTournament {
   name: string;
   location: string | null;
   major: boolean;
+  /** The US Eastern calendar dates ESPN files the event under, 'YYYY-MM-DD' (see tennisDates.ts). */
   start_date: string | null;
   end_date: string | null;
   match_count: number;
@@ -174,8 +176,8 @@ export interface TennisTournament {
 
 const TOURNAMENT_SELECT = `
   select t.espn_id, t.tour, t.tournament_id, t.season, t.name, t.location, t.major,
-         to_char(t.start_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as start_date,
-         to_char(t.end_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as end_date,
+         ${easternDateSql("t.start_date")} as start_date,
+         ${easternDateSql("t.end_date")} as end_date,
          (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id)::int as match_count,
          (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id and m.completed)::int as completed_count,
          coalesce((
@@ -224,7 +226,9 @@ export async function getTennisTournamentMatches(espnId: string): Promise<Tennis
 export async function getTennisTournamentsAround(day: string): Promise<TennisTournament[]> {
   const { rows } = await pool.query(
     `${TOURNAMENT_SELECT}
-     where (t.start_date is not null and t.start_date::date <= $1::date + 7 and coalesce(t.end_date::date, t.start_date::date + 14) >= $1::date)
+     where (t.start_date is not null
+            and (t.start_date at time zone '${TENNIS_ZONE}')::date <= $1::date + 7
+            and coalesce((t.end_date at time zone '${TENNIS_ZONE}')::date, (t.start_date at time zone '${TENNIS_ZONE}')::date + 14) >= $1::date)
         or exists (select 1 from tennis_matches m where m.tournament_espn_id = t.espn_id and m.day between $1::date - 1 and $1::date + 7)
      order by t.major desc, t.start_date nulls last, t.name`,
     [day]

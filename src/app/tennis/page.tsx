@@ -10,6 +10,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { Flag, TennisDayStrip, TennisDayView, TournamentCard, formatDayLabel } from "@/components/TennisScores";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { overlayLiveTennis } from "@/lib/tennisLive";
+import { tennisToday } from "@/lib/tennisDates";
 import { getLatestTennisDay, getTennisDay, getTennisDaysAround, getTennisRankings, getTennisTournamentsAround, TOURS, TOUR_LABEL } from "@/lib/tennis";
 
 export const revalidate = 15;
@@ -20,13 +21,8 @@ export const metadata: Metadata = pageMeta(
   "/tennis"
 );
 
-// Today in US Eastern, the calendar ESPN files matches under.
-function easternToday(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-}
-
 export default async function TennisHubPage() {
-  const today = easternToday();
+  const today = tennisToday();
   const [todayMatches, latest] = await Promise.all([getTennisDay(today), getLatestTennisDay()]);
   // A quiet Monday between tournaments falls back to the last day with play.
   const day = todayMatches.length > 0 ? today : (latest ?? today);

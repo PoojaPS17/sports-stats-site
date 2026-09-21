@@ -9,7 +9,8 @@ import { ImageActions } from "@/components/ImageActions";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TennisChampionsExportCard, TennisDrawExportCard } from "@/components/TennisTournamentExportCards";
 import { TournamentCalendar } from "@/components/TennisCalendar";
-import { TennisDrawSection, formatDateRange, groupMatches } from "@/components/TennisScores";
+import { TennisDrawSection, groupMatches } from "@/components/TennisScores";
+import { formatTournamentRange, tennisToday } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, getTennisTournament, getTennisTournamentEditions, getTennisTournamentMatches, getTennisTournamentSeasons, getTennisTournaments } from "@/lib/tennis";
 
 export const revalidate = 300;
@@ -51,7 +52,7 @@ export default async function TennisTournamentPage({ params }: { params: Promise
   if (!t) notFound();
   const [matches, editions] = await Promise.all([getTennisTournamentMatches(id), getTennisTournamentEditions(t.tournament_id)]);
   const draws = groupMatches(matches)[0]?.draws ?? [];
-  const range = formatDateRange(t.start_date, t.end_date);
+  const range = formatTournamentRange(t.start_date, t.end_date);
   const tourLabel = t.tour === "both" ? "ATP · WTA" : t.tour.toUpperCase();
   const info = { name: t.name, season: t.season, tourLabel, major: t.major, location: t.location, range };
 
@@ -113,7 +114,7 @@ export default async function TennisTournamentPage({ params }: { params: Promise
 
       {draws.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
-          {t.start_date && t.start_date.slice(0, 10) > new Date().toISOString().slice(0, 10) ? "The draw is published once play begins." : "No matches on file for this edition."}
+          {t.start_date && t.start_date > tennisToday() ? "The draw is published once play begins." : "No matches on file for this edition."}
         </p>
       ) : (
         <section>

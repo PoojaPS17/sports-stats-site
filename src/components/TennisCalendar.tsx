@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { TournamentCard } from "@/components/TennisScores";
 import type { TennisTournament } from "@/lib/tennis";
+import { tennisToday } from "@/lib/tennisDates";
 
 function groupByMonth(tournaments: TennisTournament[]): { month: string; items: TennisTournament[] }[] {
   const out: { month: string; items: TennisTournament[] }[] = [];
@@ -28,7 +29,7 @@ function SeasonPills({ seasons, active }: { seasons: number[]; active: number })
 }
 
 export function TournamentCalendar({ season, seasons, tournaments }: { season: number; seasons: number[]; tournaments: TennisTournament[] }) {
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const today = tennisToday();
   const months = groupByMonth(tournaments);
   return (
     <div className="flex flex-col gap-6">
