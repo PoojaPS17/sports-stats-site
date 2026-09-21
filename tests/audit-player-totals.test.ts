@@ -547,16 +547,23 @@ test("NFL: a season ESPN counts games for that has no box-score row and a stat-f
   assert.deepEqual(games.differences, [{ field: "games", site: 7, espn: 9 }]);
 });
 
-test("NFL: a season ESPN has that the page does not list is still a coverage gap: no stored figure, or a stored row with stats", () => {
+test("NFL: a season ESPN has that the page does not list is still a coverage gap: no stored figure, or a stored row with stats and a playoffs row that season", () => {
   const rows = [row("a", "2024-09-08", "regular", 2024, { rushing: { CAR: "5", YDS: "20", TD: "0" } })];
   const espn: SeasonFigures = { games: 7, figures: { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 6, recTd: 0 } };
   // No stored figure for 2025.
   const noFigure = siteSeasons("nfl", buildStagedProfile("nfl", rows, new ReportedGames([[2024, 3]], [2024])).regular);
   assert.equal(compareSeason(siteSeasonOrEmpty(noFigure, 2025), espn, { league: "nfl" }).verdict, "no box scores");
-  // A stored figure whose ESPN row has stats (not in statFree): the page lists no 2025.
-  const withStats = siteSeasons("nfl", buildStagedProfile("nfl", rows, new ReportedGames([[2024, 3], [2025, 7]], [])).regular);
+  // A stored figure whose ESPN row has stats (not in statFree) and a playoffs row that season: the page lists no 2025.
+  const playoffs = row("p", "2026-01-11", "playoffs", 2025, { rushing: { CAR: "1", YDS: "6", TD: "0" } });
+  const withStats = siteSeasons("nfl", buildStagedProfile("nfl", [...rows, playoffs], new ReportedGames([[2024, 3], [2025, 7]], [])).regular);
   assert.equal(withStats.has(2025), false);
   assert.equal(compareSeason(siteSeasonOrEmpty(withStats, 2025), espn, { league: "nfl" }).verdict, "no box scores");
+  // The same without a playoffs row: the season is listed (ESPN's games and a dash, which reads as 0), so ESPN's stat is a MISMATCH.
+  const listed = siteSeasons("nfl", buildStagedProfile("nfl", rows, new ReportedGames([[2024, 3], [2025, 7]], [])).regular);
+  assert.deepEqual(listed.get(2025), { games: 7, gamesSource: "espn", figures: { passYds: 0, passTd: 0, rushYds: 0, rushTd: 0, recYds: 0, recTd: 0 } });
+  const mismatch = compareSeason(siteSeasonOrEmpty(listed, 2025), espn, { league: "nfl" });
+  assert.equal(mismatch.verdict, "MISMATCH");
+  assert.deepEqual(mismatch.differences, [{ field: "recYds", site: 0, espn: 6 }]);
 });
 
 test("classifyGap says whether an NFL gap season's ESPN stats are likely a postseason game's in its regular-season row", () => {

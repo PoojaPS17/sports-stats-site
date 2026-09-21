@@ -89,9 +89,9 @@ export interface CompareOptions {
  *   MISMATCH            games or a figure differ (differences carry both values)
  *   no box scores       ESPN has the season, the site has no regular-season game: a coverage gap. For the NFL that
  *                       is a season the page does not list: a stored games figure with no box-score row is listed (ESPN's
- *                       games, a dash for every stat) only when ESPN's stored row has no stat but games, and is then
- *                       compared like any other season (the dash reads as 0); a stored row with stats and no
- *                       regular-season rows stays a gap (see `classifyGap`)
+ *                       games, a dash for every stat) and is then compared like any other season (the dash reads as
+ *                       0), unless ESPN's stored row has stats and the player has a playoffs row that season: that
+ *                       stays a gap (see `classifyGap`)
  *   no ESPN row         the site has regular-season games, ESPN has nothing (a MISMATCH under requireEspnRow)
  *   games not verified  every figure agrees but ESPN's games played is absent, so games are unchecked
  *   games short (no stat line)  NFL: site games below ESPN's GP, every figure equal, and the page shows
@@ -344,7 +344,9 @@ export const POSTSEASON_GAP_MARK = "likely ESPN's postseason stats in its regula
  * table, and listing them as a regular season would repeat ESPN's inconsistency. It is a presence heuristic: the figures
  * are not checked against the playoff rows' totals. Null when the row has no stats (the gap is only the missing games
  * figure), and always null outside the NFL: the quirk is an NFL one, and an NBA season with no regular-season rows is a
- * real coverage gap (not backfilled), never explained by this. */
+ * real coverage gap (not backfilled), never explained by this. Without a playoffs row the season is now listed from
+ * ESPN's games and a dash, so it is no longer a gap in a run's listing (the "no rows that season" wording is kept for a
+ * caller that still asks). */
 export function classifyGap(league: AuditLeague, categories: StoredCategories | undefined, playoffRows: number): string | null {
   if (league !== "nfl" || !categories || !storedRowHasStats(categories)) return null;
   return playoffRows > 0

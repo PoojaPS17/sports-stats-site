@@ -1,8 +1,11 @@
 // An NFL regular season ESPN counts games for (player_season_stats.games_played) but that has no box-score row for the
 // player (ESPN's box scores omit a player with no stat line) is a season on the player page: ESPN's games and a dash for
-// every stat, when ESPN's stored row for the season has no stat but games. A stored row with stats is not listed (ESPN's
-// regular-season row can hold a postseason game's stats). NBA, soccer and the playoffs are untouched, and every other
-// player's page text is what it was.
+// every stat. That holds when ESPN's stored row for the season has no stat but games, and also when the row carries a
+// stray stat our box scores never list (a fair catch, an assist, a fumble, a 2-point conversion). The one exception is a
+// season in which the player has a playoffs row and ESPN's row has stats: ESPN's regular-season row can then be that
+// postseason game (our database holds the same game as a `playoffs` row), so listing it would repeat it. Rows of any other
+// stage (regular, other, preseason) do not block it. NBA, soccer and the playoffs are untouched, and every other player's
+// page text is what it was.
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -123,12 +126,69 @@ test("a stored figure of 0, or none, adds no season", () => {
   assert.equal(buildProfile("nfl", ROWS).games, 3);
 });
 
-test("a stored season whose ESPN row has stats is not added, whatever its games", () => {
-  // The same map as STORED, but 2020 is not stat-free; a plain Map has no stat-free seasons at all.
+test("buildProfile adds only what its statFree set names: a season not in it is not added, and a plain Map has no such set", () => {
+  // The same map as STORED, but 2020 is not in statFree; a plain Map has no stat-free seasons at all. Which seasons with
+  // a stat in ESPN's row may be listed is decided one level up, in buildStagedProfile (tests below).
   for (const map of [new ReportedGames([[2019, 16], [2020, 5], [2021, 17]], []), new Map([[2019, 16], [2020, 5], [2021, 17]])]) {
     const p = buildProfile("nfl", ROWS, ROWS, map);
     assert.deepEqual(games(p), [[2021, 17], [2019, 16]]);
   }
+});
+
+test("staged NFL: a stored season whose ESPN row has stats is listed like a stat-free one when the player has no playoffs row that season; a plain Map still adds nothing", () => {
+  // STORED's 2020 is stat-free; here 2020 carries a stat (not in statFree) and the rows have no playoffs row anywhere.
+  const withStat = new ReportedGames([[2019, 16], [2020, 5], [2021, 17]], []);
+  const s = buildStagedProfile("nfl", ROWS, withStat).regular;
+  assert.deepEqual(games(s), [[2021, 17], [2020, 5], [2019, 16]]);
+  const added = s.seasons[1];
+  assert.equal(added.gamesSource, "espn");
+  assert.equal(added.recorded, 0);
+  assert.equal(added.unrecorded, 0);
+  assert.equal(added.record, null);
+  assert.deepEqual(added.teams, []);
+  for (const spec of s.profile.specs) assert.equal(added.line[spec.key], null, spec.key);
+  assert.equal(s.games, 38);
+  // Exactly what the same player has when 2020 is marked stat-free.
+  const statFreeVersion = buildStagedProfile("nfl", ROWS, STORED).regular;
+  assert.deepEqual(s.seasons, statFreeVersion.seasons);
+  assert.equal(s.games, statFreeVersion.games);
+  assert.equal(s.record, statFreeVersion.record);
+  // The seasons that have rows are untouched, and the input map is not changed.
+  assert.deepEqual(s.seasons.filter((x) => x.season !== 2020), buildProfile("nfl", ROWS, ROWS, new ReportedGames([[2019, 16], [2021, 17]], [])).seasons);
+  assert.equal(withStat.statFree.size, 0);
+  // A plain Map has no stat-free information: nothing is added, as before.
+  assert.deepEqual(games(buildStagedProfile("nfl", ROWS, new Map([[2019, 16], [2020, 5], [2021, 17]])).regular), [[2021, 17], [2019, 16]]);
+  assert.deepEqual(games(buildStagedProfile("nfl", ROWS, undefined).regular), [[2021, 1], [2019, 2]]);
+});
+
+test("staged NFL: only a playoffs row in the same season blocks a stat-carrying stored season; a preseason row, another stage or a playoffs row in another season does not", () => {
+  const stored = (...seasons: [number, number][]) => new ReportedGames(seasons, []);
+  const listed = (rows: PlayerLogRow[], map: ReportedGames) => games(buildStagedProfile("nfl", rows, map).regular);
+  // Preseason only that season ("excluded"): the season is listed, and the preseason game is in no total.
+  const preseason = { ...nflGame("pre", "2020-08-20", 2020, "excluded"), season_type: 1 };
+  assert.deepEqual(listed([preseason], stored([2020, 5])), [[2020, 5]]);
+  assert.equal(buildStagedProfile("nfl", [preseason], stored([2020, 5])).regular.games, 5);
+  assert.equal(buildStagedProfile("nfl", [preseason], stored([2020, 5])).regular.seasons[0].recorded, 0);
+  // A regular-season game elsewhere and a playoffs row in a DIFFERENT season: the stored 2020 is listed.
+  assert.deepEqual(listed([nflGame("po", "2022-01-15", 2021, "playoffs")], stored([2020, 5])), [[2020, 5]]);
+  assert.deepEqual(listed([...ROWS, nflGame("po", "2022-01-15", 2021, "playoffs")], stored([2019, 16], [2020, 5], [2021, 17])), [[2021, 17], [2020, 5], [2019, 16]]);
+  // A playoffs row in the SAME season blocks it (the season has no regular row, so nothing else lists it), ...
+  assert.deepEqual(listed([nflGame("po", "2021-01-16", 2020, "playoffs")], stored([2020, 5])), []);
+  // ... and a preseason row beside it does not lift the block.
+  assert.deepEqual(listed([preseason, nflGame("po", "2021-01-16", 2020, "playoffs")], stored([2020, 5])), []);
+  // Another season's figure in the same map is decided on its own: 2019 has no playoffs row and is listed, 2020 is blocked.
+  assert.deepEqual(listed([nflGame("po", "2021-01-16", 2020, "playoffs")], stored([2019, 16], [2020, 5])), [[2019, 16]]);
+  // A stored figure of 0 is never listed.
+  assert.deepEqual(listed([], stored([2020, 0])), []);
+});
+
+test("staged NFL: a stat-free season is listed even with a playoffs row that season, and a season with rows is still just its rows", () => {
+  const po = nflGame("po", "2021-01-16", 2020, "playoffs");
+  assert.deepEqual(games(buildStagedProfile("nfl", [po], new ReportedGames([[2020, 5]], [2020])).regular), [[2020, 5]]);
+  // A regular row in the season: the figure is ESPN's games as before, whatever the map says about stats or playoffs.
+  const rows = [nflGame("a", "2020-09-13", 2020), po];
+  assert.deepEqual(games(buildStagedProfile("nfl", rows, new ReportedGames([[2020, 5]], [])).regular), [[2020, 5]]);
+  assert.equal(buildStagedProfile("nfl", rows, new ReportedGames([[2020, 5]], [])).regular.seasons[0].recorded, 1);
 });
 
 test("a stored season older or newer than every row is still a season, and the order is newest first", () => {
@@ -170,13 +230,32 @@ test("no rows anywhere, two stat-free stored seasons: both are listed, newest fi
   assert.equal(storedGamesOnly(s.regular), true);
 });
 
-test("no rows anywhere, and the stored season carries stats (a Kinnard-like season): nothing is listed and the page stays as it was", () => {
+test("no rows anywhere, and the stored season carries a stat (a fair catch, a fumble, a 2-point conversion): the season is listed with ESPN's games and a dash for every stat", () => {
   const s = rowless(new ReportedGames([[2025, 1]], []));
-  assert.deepEqual(s.regular.seasons, []);
-  assert.equal(s.regular.games, 0);
-  assert.equal(storedGamesOnly(s.regular), false);
-  assert.equal(hasGames(s), false);
-  // Nor with a playoffs row present: the playoffs table has that game, the regular season none.
+  assert.deepEqual(games(s.regular), [[2025, 1]]);
+  const season = s.regular.seasons[0];
+  assert.equal(season.games, 1);
+  assert.equal(season.gamesSource, "espn");
+  assert.equal(season.recorded, 0);
+  assert.equal(season.unrecorded, 0);
+  assert.equal(season.record, null);
+  assert.deepEqual(season.teams, []);
+  assert.equal(season.lineSource, "box");
+  // Every stat is a dash (null), never a 0; the profile has no columns of its own without rows.
+  assert.deepEqual(s.regular.profile.specs, []);
+  assert.deepEqual(season.line, buildStagedProfile("nfl", [], new ReportedGames([[2025, 1]], [2025])).regular.seasons[0].line);
+  assert.equal(s.regular.games, 1);
+  assert.equal(s.regular.recorded, 0);
+  assert.equal(s.regular.record, null);
+  assert.equal(storedGamesOnly(s.regular), true);
+  assert.equal(hasGames(s), true);
+  assert.equal(s.playoffs, null);
+  assert.equal(s.counted.games, 0);
+  assert.equal(s.log.length, 0);
+});
+
+test("a Kinnard- or Doyle-like season (ESPN's regular-season row is really a postseason game, and it has stats) is not listed as a regular season, while the playoffs table holds the game", () => {
+  // The playoffs row is in the same season as the stored figure: the regular season stays empty, as it was.
   const withPlayoff = buildStagedProfile("nfl", [nflGame("po", "2026-01-11", 2025, "playoffs")], new ReportedGames([[2025, 1]], []));
   assert.deepEqual(withPlayoff.regular.seasons, []);
   assert.equal(withPlayoff.regular.games, 0);
@@ -265,6 +344,29 @@ test("the season page reads one season: it is handed that season's stored figure
   assert.equal(forSeason(2020).games, 5);
 });
 
+test("the season page path: only that season's rows and reportedForSeason(...) give the same answer as the player page's whole log", () => {
+  const withStat = new ReportedGames([[2019, 16], [2020, 5], [2021, 17]], []);
+  const po2020 = nflGame("po20", "2021-01-16", 2020, "playoffs");
+  // The player page: every row. The season page: that season's rows only, and that season's figure alone.
+  const page = (rows: PlayerLogRow[], map: ReportedGames, season: number) => ({
+    player: buildStagedProfile("nfl", rows, map).regular.seasons.filter((x) => x.season === season).map((x) => [x.season, x.games, x.gamesSource, x.recorded]),
+    season: buildStagedProfile("nfl", rows.filter((r) => r.season_year === season), reportedForSeason(map, season)).regular.seasons.map((x) => [x.season, x.games, x.gamesSource, x.recorded]),
+  });
+  // A stat-carrying stored season with no rows is listed on both.
+  const listed = page(ROWS, withStat, 2020);
+  assert.deepEqual(listed.player, [[2020, 5, "espn", 0]]);
+  assert.deepEqual(listed.season, listed.player);
+  // With that season's playoffs row it is on neither (the playoffs row is in the season page's rows too) ...
+  const blocked = page([...ROWS, po2020], withStat, 2020);
+  assert.deepEqual(blocked.player, []);
+  assert.deepEqual(blocked.season, []);
+  // ... but a playoffs row in another season does not block it, and a stat-free season is listed either way.
+  const other = page([...ROWS, nflGame("po21", "2022-01-15", 2021, "playoffs")], withStat, 2020);
+  assert.deepEqual(other.season, [[2020, 5, "espn", 0]]);
+  assert.deepEqual(other.season, other.player);
+  assert.deepEqual(page([...ROWS, po2020], STORED, 2020).season, [[2020, 5, "espn", 0]]);
+});
+
 test("the season page hands both of its profile builds the one season's figure, not the whole stored map", () => {
   const source = readFileSync("src/app/[league]/players/[slug]/[season]/page.tsx", "utf8");
   const calls = source.match(/buildStagedProfile\(sport,[^\n]*\)/g) ?? [];
@@ -311,8 +413,9 @@ const EXISTING: { name: string; league: League; staged: StagedProfile }[] = [
   { name: "NFL with rows and a stored figure", league: "nfl", staged: buildStagedProfile("nfl", ROWS, new ReportedGames([[2019, 16], [2021, 17]], [])) },
   { name: "NFL with rows and no map", league: "nfl", staged: buildStagedProfile("nfl", ROWS) },
   { name: "NFL with rows, a playoffs row and a stored figure", league: "nfl", staged: buildStagedProfile("nfl", [...ROWS, nflGame("po", "2022-01-15", 2021, "playoffs")], new ReportedGames([[2019, 16]], [])) },
+  // Not listed as a regular season: the stored season has stats and the playoffs row is in it (Kinnard/Doyle).
   { name: "NFL with only playoff rows, stored season with stats", league: "nfl", staged: buildStagedProfile("nfl", [nflGame("po", "2026-01-11", 2025, "playoffs")], new ReportedGames([[2025, 1]], [])) },
-  { name: "NFL with no rows, stored season with stats", league: "nfl", staged: buildStagedProfile("nfl", [], new ReportedGames([[2025, 1]], [])) },
+  { name: "NFL with a plain Map of stored figures and no rows", league: "nfl", staged: buildStagedProfile("nfl", [], new Map([[2025, 1]])) },
   { name: "NFL with nothing", league: "nfl", staged: buildStagedProfile("nfl", []) },
   { name: "NBA", league: "nba", staged: buildStagedProfile("nba", [withStats(nflGame("n1", "2025-01-10", 2025), nbaBox(20)), withStats(nflGame("n2", "2025-01-17", 2025), nbaBox(10))]) },
   { name: "NBA with a stored figure and a game with no box score", league: "nba", staged: buildStagedProfile("nba", [withStats(nflGame("n1", "2025-01-10", 2025), nbaBox(20)), { ...withStats(nflGame("n2", "2025-01-17", 2025), nbaBlank), no_box_score: true }], new ReportedGames([[2025, 5]], [2025])) },
@@ -347,8 +450,13 @@ test("a player with no rows and stored games gets sentences that claim only the 
   for (const text of [profileSummary("nfl", "X", one), profileSummary("nfl", "X", two), seasonDescription("nfl", "X", "2025", one)]) {
     assert.doesNotMatch(text, /No games on record|for \.| for \s|summed from|\b0 games|full game log|Game-by-game|splits|milestones|best games/i);
   }
-  // Truly no stored games: what it said before.
-  assert.equal(profileSummary("nfl", "X", rowless(new ReportedGames([[2025, 1]], [])).regular), "X NFL stats, season by season, with a game-by-game log.");
+  // A stored season with a stat and no rows is listed now, so its sentence claims only the games too.
+  assert.equal(profileSummary("nfl", "Andrew Thomas", rowless(new ReportedGames([[2025, 1]], [])).regular), "Andrew Thomas NFL stats: 1 game played in 2025, as counted by ESPN.");
+  // Truly no stored games (none, a figure of 0, or a stat-carrying season with a playoffs row): what it said before.
+  assert.equal(profileSummary("nfl", "X", rowless(new ReportedGames([], [])).regular), "X NFL stats, season by season, with a game-by-game log.");
+  assert.equal(profileSummary("nfl", "X", rowless(new ReportedGames([[2025, 0]], [])).regular), "X NFL stats, season by season, with a game-by-game log.");
+  const kinnard = buildStagedProfile("nfl", [nflGame("po", "2026-01-11", 2025, "playoffs")], new ReportedGames([[2025, 1]], []));
+  assert.equal(profileSummary("nfl", "X", kinnard.regular), legacyProfileSummary("nfl", "X", kinnard.regular));
   // The section note says the site has no stat line for these games.
   assert.equal(nflRegularSeasonNote(true, true), NFL_STORED_GAMES_NOTE);
   assert.match(NFL_STORED_GAMES_NOTE, /no box-score stat line/);
@@ -431,7 +539,7 @@ test("database: a player with stat-free stored seasons and no rows has them as s
   assert.deepEqual(await getPlayerSeasons("nfl", "lineman"), [2021, 2019]);
 });
 
-test("database: a player whose stored row has stats and no regular-season rows (a Kinnard-like season) gets no season, and the gap says why", async () => {
+test("database: a player whose stored row has stats and only a playoffs row that season (a Kinnard-like season) gets no regular season, and the gap says why", async () => {
   const [log, reported] = await Promise.all([fetchPlayerLog(db.pool, "nfl", "kinnard"), fetchReportedGames(db.pool, "nfl", "kinnard")]);
   assert.equal(reported.get(2025), 1);
   assert.equal(reported.statFree.has(2025), false);
@@ -451,15 +559,20 @@ test("database: a player whose stored row has stats and no regular-season rows (
   assert.equal(classifyGap("nfl", undefined, 0), null);
 });
 
-test("database: a stored row with tackles or yard totals only, and no rows, is not listed", async () => {
+test("database: a stored row with tackles or yard totals only, and no rows, is not stat-free but is listed all the same (no playoffs row)", async () => {
   const hurt = await fetchReportedGames(db.pool, "nfl", "hurt");
   assert.equal(hurt.get(2024), 7);
   assert.equal(hurt.statFree.has(2024), false);
-  assert.deepEqual(buildStagedProfile("nfl", [], hurt).regular.seasons, []);
+  assert.deepEqual(games(buildStagedProfile("nfl", [], hurt).regular), [[2024, 7]]);
   // A row with no categories but a yard column is not stat-free either.
   const yards = await fetchReportedGames(db.pool, "nfl", "yardsonly");
   assert.equal(yards.get(2023), 4);
   assert.equal(yards.statFree.has(2023), false);
+  assert.deepEqual(games(buildStagedProfile("nfl", [], yards).regular), [[2023, 4]]);
+  // The same stored rows are not listed when the player has a playoffs row in that season (the Kinnard case, from the database).
+  const withPlayoff = (season: number) => [nflGame("po", `${season + 1}-01-11`, season, "playoffs")];
+  assert.deepEqual(buildStagedProfile("nfl", withPlayoff(2024), hurt).regular.seasons, []);
+  assert.deepEqual(buildStagedProfile("nfl", withPlayoff(2023), yards).regular.seasons, []);
 });
 
 test("database: an audited listed season compares like any other: ESPN's zeros match, a stat is a mismatch", async () => {

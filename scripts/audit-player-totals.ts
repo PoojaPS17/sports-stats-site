@@ -44,10 +44,11 @@
 // ESPN side is the loader's figure, not the first-stint category GP: player_season_stats.games_played
 // (stored mode) or seasonGamesPlayed on the payload (live mode), the categories' GP only as a fallback.
 // A page showing a stored ESPN figure that is below ESPN's is a MISMATCH (stale or wrong), as is any
-// page figure above ESPN's. A season with a stored figure, no box-score row and a stored ESPN row with no stat but
-// games (a player with no stat line in ESPN's box scores) is on the page with that figure and a dash for every
-// stat, and is compared like any other season (the dash reads as 0): ESPN's own non-zero stat for it is a MISMATCH,
-// not a coverage gap. In stored mode the NFL players read include those with a stored figure and no box-score row. NBA: the site side is built the same way (ESPN's stored games played for a
+// page figure above ESPN's. A season with a stored figure and no box-score row (a player with no stat line in ESPN's
+// box scores) is on the page with that figure and a dash for every stat, and is compared like any other season (the
+// dash reads as 0): ESPN's own non-zero stat for it is a MISMATCH, not a coverage gap. That holds whether ESPN's stored
+// row has no stat but games or carries a stray stat our box scores never list; the one exception is a season in which
+// the player has a playoffs row and ESPN's row has stats, which the page does not list and which stays a coverage gap. In stored mode the NFL players read include those with a stored figure and no box-score row. NBA: the site side is built the same way (ESPN's stored games played for a
 // season with games that have no box score, else the games listed); see compareSeason for the bounds.
 //
 // `select` only. The database is imported after the arguments are validated, so a usage error never

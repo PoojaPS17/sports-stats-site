@@ -49,7 +49,10 @@ export async function fetchPlayerLog(db: Pick<Pool, "query">, league: League, pl
  * loader stores in player_season_stats. NFL box scores list only players with a stat line, and some NBA games
  * have no box score at all, so the log undercounts games played. Other leagues get an empty map without a query.
  * For the NFL the result also says which seasons' stored ESPN row has no stat but games (`statFree`: no non-zero value
- * in any category outside GP and GS, and no yard total): only those may be listed with no box-score row. */
+ * in any category outside GP and GS, and no yard total). Those are always listed with no box-score row. A season whose
+ * row has a stat is listed with no box-score row too, unless the player has a playoffs row that season (ESPN's
+ * regular-season row can be that postseason game): that rule is applied in `buildStagedProfile`, which sees the rows,
+ * not here. */
 export async function fetchReportedGames(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<ReportedGames> {
   if (league !== "nfl" && league !== "nba") return new ReportedGames();
   const { rows } = await db.query<{ season: number; games_played: number; categories: unknown; passing_yards: number | null; rushing_yards: number | null; receiving_yards: number | null }>(
