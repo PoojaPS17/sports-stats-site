@@ -240,6 +240,11 @@ alter table standings add column if not exists division text;
 -- tie-breaks that points, goal difference and goals scored cannot. Soccer and cricket tables
 -- order by it; null when the feed sent none (older rows until `npm run backfill:standings`).
 alter table standings add column if not exists rank int;
+-- ESPN's qualification / relegation note for the row (`note.description`, e.g. "Champions League",
+-- "Conference League qualifying", "Relegation"). Soccer only; null when the feed has none. A finished
+-- season's table is banded from it (the allocation differs from year to year); a season in progress
+-- is not, because ESPN's note then still describes last year's places. Filled by `npm run backfill:standings`.
+alter table standings add column if not exists zone text;
 -- One row per stage table a team appears in (a T20 World Cup side has a group row and a Super
 -- Eights row), which is the conflict target scripts/lib/standings.ts upserts on. The table was
 -- created with a (league, season, team_espn_id) primary key; drop it and key on the conference too.

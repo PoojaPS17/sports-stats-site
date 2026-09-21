@@ -31,15 +31,16 @@ interface Seed {
   gf?: number | null;
   ga?: number | null;
   rank?: number | null;
+  zone?: string | null;
 }
 const idOf = (name: string) => `id-${name.toLowerCase().replace(/\W+/g, "-")}`;
 async function seed(league: string, season: number, rows: Seed[]) {
   for (const r of rows) {
     await db.pool.query(`insert into teams (league, espn_id, name, slug) values ($1, $2, $3, $2) on conflict do nothing`, [league, idOf(r.name), r.name]);
     await db.pool.query(
-      `insert into standings (league, season, team_espn_id, conference, division, wins, losses, draws, win_percent, playoff_seed, points, goals_for, goals_against, rank)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-      [league, season, idOf(r.name), r.conference ?? null, r.division ?? null, r.wins ?? 0, r.losses ?? 0, r.draws ?? null, r.win_percent ?? 0, r.seed ?? null, r.points ?? null, r.gf ?? null, r.ga ?? null, r.rank ?? null]
+      `insert into standings (league, season, team_espn_id, conference, division, wins, losses, draws, win_percent, playoff_seed, points, goals_for, goals_against, rank, zone)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+      [league, season, idOf(r.name), r.conference ?? null, r.division ?? null, r.wins ?? 0, r.losses ?? 0, r.draws ?? null, r.win_percent ?? 0, r.seed ?? null, r.points ?? null, r.gf ?? null, r.ga ?? null, r.rank ?? null, r.zone ?? null]
     );
   }
 }
@@ -61,6 +62,12 @@ test("getStandings and getStandingsBySeason return a soccer table in ESPN's rank
   assert.deepEqual(names(await queries.getStandingsBySeason("laliga", 2025)), expected);
   const [first] = await queries.getStandings("laliga");
   assert.equal(first.rank, 1);
+});
+
+test("getStandings and getStandingsBySeason carry ESPN's stored qualification note as zone", async () => {
+  await seed("laliga", 2025, LALIGA.map((r) => ({ ...r, zone: r.name === "Leader" ? "Champions League" : null })));
+  assert.deepEqual((await queries.getStandings("laliga")).map((r) => [r.name, r.zone]), [["Leader", "Champions League"], ["Levante", null], ["Osasuna", null], ["Mallorca", null]]);
+  assert.equal((await queries.getStandingsBySeason("laliga", 2025))[0].zone, "Champions League");
 });
 
 test("a soccer table with no stored rank keeps the old order (points, GD, GF, wins)", async () => {

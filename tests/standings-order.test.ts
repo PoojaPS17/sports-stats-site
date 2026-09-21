@@ -28,6 +28,7 @@ function row(name: string, over: Partial<StandingRow> = {}): StandingRow {
     no_result: null,
     net_run_rate: null,
     rank: null,
+    zone: null,
     ...over,
   };
 }

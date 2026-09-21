@@ -1,0 +1,284 @@
+{
+ "_source": "https://site.api.espn.com/apis/v2/sports/soccer/<slug>/standings?season=<year>, slugs eng.1 esp.1 ger.1 ita.1, seasons 2015-2026; entry.note.description, distinct strings and the seasons they appear in",
+ "leagues": {
+  "eng.1": {
+   "Champions League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Champions League qualifying": [
+    "2015",
+    "2016"
+   ],
+   "Conference League Playoff Round": [
+    "2025"
+   ],
+   "Conference League qualifying": [
+    "2024"
+   ],
+   "Europa Conference League": [
+    "2022"
+   ],
+   "Europa Conference League qualifying": [
+    "2020",
+    "2021",
+    "2023"
+   ],
+   "Europa League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Europa League qualifying": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019"
+   ],
+   "Relegation": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "esp.1": {
+   "Champions League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Champions League qualifying": [
+    "2015",
+    "2016"
+   ],
+   "Conference League qualifying": [
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Europa Conference League qualifying": [
+    "2021",
+    "2022",
+    "2023"
+   ],
+   "Europa League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Europa League qualifying": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019"
+   ],
+   "Relegation": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "ger.1": {
+   "Champions League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Champions League qualifying": [
+    "2015",
+    "2016"
+   ],
+   "Conference League qualifying": [
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Europa Conference League qualifying": [
+    "2020",
+    "2021",
+    "2022",
+    "2023"
+   ],
+   "Europa League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Europa League playoffs": [
+    "2016"
+   ],
+   "Europa League qualifying": [
+    "2015",
+    "2017",
+    "2018",
+    "2019"
+   ],
+   "Relegation": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Relegation playoff": [
+    "2020",
+    "2025",
+    "2026"
+   ],
+   "Relegation via playoffs": [
+    "2018"
+   ]
+  },
+  "ita.1": {
+   "Champions League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Champions League qualifying": [
+    "2015",
+    "2016"
+   ],
+   "Conference League qualifying": [
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Europa Conference League qualifying": [
+    "2020",
+    "2021",
+    "2022",
+    "2023"
+   ],
+   "Europa League": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Europa League qualifying": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019"
+   ],
+   "Relegated": [
+    "2015",
+    "2016",
+    "2017",
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ],
+   "Relegated via playoff": [
+    "2022"
+   ]
+  }
+ }
+}

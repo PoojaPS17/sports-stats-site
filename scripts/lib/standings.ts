@@ -1,5 +1,6 @@
 import { pool } from "./db";
 import type { League } from "./espn";
+import { isSoccerLeague } from "../../src/lib/leagues";
 
 function statValue(stats: any[], ...names: string[]): string | undefined {
   for (const name of names) {
@@ -22,6 +23,12 @@ function tidyConference(name: string | null): string | null {
 export function espnRank(value: string | undefined): number | null {
   const n = Math.round(Number(value));
   return value !== undefined && Number.isFinite(n) && n >= 1 ? n : null;
+}
+
+// ESPN's qualification note for a soccer row ("Champions League", "Relegation", ...), trimmed; null
+// when the row has none. What the site makes of the wording is src/lib/standingsZones.ts.
+export function espnZone(description: unknown): string | null {
+  return typeof description === "string" && description.trim() ? description.trim() : null;
 }
 
 function collectEntries(node: any, conference: string | null, out: any[]) {
@@ -56,12 +63,13 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
     const noResult = statValue(stats, "noresult");
     const netRunRate = statValue(stats, "netrr");
     const rank = espnRank(statValue(stats, "rank"));
+    const zone = isSoccerLeague(league) ? espnZone(entry.note?.description) : null;
     await pool.query(
       `insert into standings (
          league, season, team_espn_id, conference, wins, losses,
          win_percent, streak, playoff_seed, games_behind,
-         draws, points, goals_for, goals_against, no_result, net_run_rate, division, rank, updated_at
-       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18, now())
+         draws, points, goals_for, goals_against, no_result, net_run_rate, division, rank, zone, updated_at
+       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19, now())
        on conflict (league, season, team_espn_id, coalesce(conference, '')) do update set
          division = coalesce(excluded.division, standings.division),
          wins = excluded.wins, losses = excluded.losses,
@@ -70,7 +78,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          draws = excluded.draws, points = excluded.points,
          goals_for = excluded.goals_for, goals_against = excluded.goals_against,
          no_result = excluded.no_result, net_run_rate = excluded.net_run_rate,
-         rank = excluded.rank,
+         rank = excluded.rank, zone = excluded.zone,
          updated_at = now()`,
       [
         league,
@@ -96,6 +104,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
         netRunRate !== undefined ? Number(netRunRate) : null,
         division,
         rank,
+        zone,
       ]
     );
   }

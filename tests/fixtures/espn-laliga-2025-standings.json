@@ -1,0 +1,859 @@
+{
+ "season": {
+  "year": 2025,
+  "displayName": "2025-26 Spanish LALIGA"
+ },
+ "children": [
+  {
+   "name": "2025-26 LALIGA",
+   "standings": {
+    "entries": [
+     {
+      "team": {
+       "id": "83",
+       "displayName": "Barcelona"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "6"
+       },
+       {
+        "name": "points",
+        "displayValue": "94"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "36"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "95"
+       },
+       {
+        "name": "ties",
+        "displayValue": "1"
+       },
+       {
+        "name": "wins",
+        "displayValue": "31"
+       },
+       {
+        "name": "rank",
+        "displayValue": "1"
+       }
+      ],
+      "note": {
+       "description": "Champions League",
+       "rank": 1
+      }
+     },
+     {
+      "team": {
+       "id": "86",
+       "displayName": "Real Madrid"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "6"
+       },
+       {
+        "name": "points",
+        "displayValue": "86"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "35"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "77"
+       },
+       {
+        "name": "ties",
+        "displayValue": "5"
+       },
+       {
+        "name": "wins",
+        "displayValue": "27"
+       },
+       {
+        "name": "rank",
+        "displayValue": "2"
+       }
+      ],
+      "note": {
+       "description": "Champions League",
+       "rank": 2
+      }
+     },
+     {
+      "team": {
+       "id": "102",
+       "displayName": "Villarreal"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "10"
+       },
+       {
+        "name": "points",
+        "displayValue": "72"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "46"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "72"
+       },
+       {
+        "name": "ties",
+        "displayValue": "6"
+       },
+       {
+        "name": "wins",
+        "displayValue": "22"
+       },
+       {
+        "name": "rank",
+        "displayValue": "3"
+       }
+      ],
+      "note": {
+       "description": "Champions League",
+       "rank": 3
+      }
+     },
+     {
+      "team": {
+       "id": "1068",
+       "displayName": "Atlético Madrid"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "11"
+       },
+       {
+        "name": "points",
+        "displayValue": "69"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "44"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "62"
+       },
+       {
+        "name": "ties",
+        "displayValue": "6"
+       },
+       {
+        "name": "wins",
+        "displayValue": "21"
+       },
+       {
+        "name": "rank",
+        "displayValue": "4"
+       }
+      ],
+      "note": {
+       "description": "Champions League",
+       "rank": 4
+      }
+     },
+     {
+      "team": {
+       "id": "244",
+       "displayName": "Real Betis"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "8"
+       },
+       {
+        "name": "points",
+        "displayValue": "60"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "48"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "59"
+       },
+       {
+        "name": "ties",
+        "displayValue": "15"
+       },
+       {
+        "name": "wins",
+        "displayValue": "15"
+       },
+       {
+        "name": "rank",
+        "displayValue": "5"
+       }
+      ],
+      "note": {
+       "description": "Champions League",
+       "rank": 5
+      }
+     },
+     {
+      "team": {
+       "id": "85",
+       "displayName": "Celta Vigo"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "12"
+       },
+       {
+        "name": "points",
+        "displayValue": "54"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "48"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "53"
+       },
+       {
+        "name": "ties",
+        "displayValue": "12"
+       },
+       {
+        "name": "wins",
+        "displayValue": "14"
+       },
+       {
+        "name": "rank",
+        "displayValue": "6"
+       }
+      ],
+      "note": {
+       "description": "Europa League",
+       "rank": 6
+      }
+     },
+     {
+      "team": {
+       "id": "2922",
+       "displayName": "Getafe"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "17"
+       },
+       {
+        "name": "points",
+        "displayValue": "51"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "38"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "32"
+       },
+       {
+        "name": "ties",
+        "displayValue": "6"
+       },
+       {
+        "name": "wins",
+        "displayValue": "15"
+       },
+       {
+        "name": "rank",
+        "displayValue": "7"
+       }
+      ],
+      "note": {
+       "description": "Conference League qualifying",
+       "rank": 7
+      }
+     },
+     {
+      "team": {
+       "id": "101",
+       "displayName": "Rayo Vallecano"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "12"
+       },
+       {
+        "name": "points",
+        "displayValue": "50"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "44"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "41"
+       },
+       {
+        "name": "ties",
+        "displayValue": "14"
+       },
+       {
+        "name": "wins",
+        "displayValue": "12"
+       },
+       {
+        "name": "rank",
+        "displayValue": "8"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "94",
+       "displayName": "Valencia"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "15"
+       },
+       {
+        "name": "points",
+        "displayValue": "49"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "55"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "46"
+       },
+       {
+        "name": "ties",
+        "displayValue": "10"
+       },
+       {
+        "name": "wins",
+        "displayValue": "13"
+       },
+       {
+        "name": "rank",
+        "displayValue": "9"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "89",
+       "displayName": "Real Sociedad"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "14"
+       },
+       {
+        "name": "points",
+        "displayValue": "46"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "61"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "59"
+       },
+       {
+        "name": "ties",
+        "displayValue": "13"
+       },
+       {
+        "name": "wins",
+        "displayValue": "11"
+       },
+       {
+        "name": "rank",
+        "displayValue": "10"
+       }
+      ],
+      "note": {
+       "description": "Europa League",
+       "rank": 10
+      }
+     },
+     {
+      "team": {
+       "id": "88",
+       "displayName": "Espanyol"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "16"
+       },
+       {
+        "name": "points",
+        "displayValue": "46"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "55"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "43"
+       },
+       {
+        "name": "ties",
+        "displayValue": "10"
+       },
+       {
+        "name": "wins",
+        "displayValue": "12"
+       },
+       {
+        "name": "rank",
+        "displayValue": "11"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "93",
+       "displayName": "Athletic Club"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "19"
+       },
+       {
+        "name": "points",
+        "displayValue": "45"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "58"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "43"
+       },
+       {
+        "name": "ties",
+        "displayValue": "6"
+       },
+       {
+        "name": "wins",
+        "displayValue": "13"
+       },
+       {
+        "name": "rank",
+        "displayValue": "12"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "243",
+       "displayName": "Sevilla"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "19"
+       },
+       {
+        "name": "points",
+        "displayValue": "43"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "60"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "46"
+       },
+       {
+        "name": "ties",
+        "displayValue": "7"
+       },
+       {
+        "name": "wins",
+        "displayValue": "12"
+       },
+       {
+        "name": "rank",
+        "displayValue": "13"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "96",
+       "displayName": "Alavés"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "17"
+       },
+       {
+        "name": "points",
+        "displayValue": "43"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "56"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "44"
+       },
+       {
+        "name": "ties",
+        "displayValue": "10"
+       },
+       {
+        "name": "wins",
+        "displayValue": "11"
+       },
+       {
+        "name": "rank",
+        "displayValue": "14"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "3751",
+       "displayName": "Elche"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "15"
+       },
+       {
+        "name": "points",
+        "displayValue": "43"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "57"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "49"
+       },
+       {
+        "name": "ties",
+        "displayValue": "13"
+       },
+       {
+        "name": "wins",
+        "displayValue": "10"
+       },
+       {
+        "name": "rank",
+        "displayValue": "15"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "1538",
+       "displayName": "Levante"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "18"
+       },
+       {
+        "name": "points",
+        "displayValue": "42"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "61"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "47"
+       },
+       {
+        "name": "ties",
+        "displayValue": "9"
+       },
+       {
+        "name": "wins",
+        "displayValue": "11"
+       },
+       {
+        "name": "rank",
+        "displayValue": "16"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "97",
+       "displayName": "Osasuna"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "18"
+       },
+       {
+        "name": "points",
+        "displayValue": "42"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "50"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "44"
+       },
+       {
+        "name": "ties",
+        "displayValue": "9"
+       },
+       {
+        "name": "wins",
+        "displayValue": "11"
+       },
+       {
+        "name": "rank",
+        "displayValue": "17"
+       }
+      ]
+     },
+     {
+      "team": {
+       "id": "84",
+       "displayName": "Mallorca"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "18"
+       },
+       {
+        "name": "points",
+        "displayValue": "42"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "57"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "47"
+       },
+       {
+        "name": "ties",
+        "displayValue": "9"
+       },
+       {
+        "name": "wins",
+        "displayValue": "11"
+       },
+       {
+        "name": "rank",
+        "displayValue": "18"
+       }
+      ],
+      "note": {
+       "description": "Relegation",
+       "rank": 18
+      }
+     },
+     {
+      "team": {
+       "id": "9812",
+       "displayName": "Girona"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "15"
+       },
+       {
+        "name": "points",
+        "displayValue": "41"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "55"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "39"
+       },
+       {
+        "name": "ties",
+        "displayValue": "14"
+       },
+       {
+        "name": "wins",
+        "displayValue": "9"
+       },
+       {
+        "name": "rank",
+        "displayValue": "19"
+       }
+      ],
+      "note": {
+       "description": "Relegation",
+       "rank": 19
+      }
+     },
+     {
+      "team": {
+       "id": "92",
+       "displayName": "Real Oviedo"
+      },
+      "stats": [
+       {
+        "name": "gamesPlayed",
+        "displayValue": "38"
+       },
+       {
+        "name": "losses",
+        "displayValue": "21"
+       },
+       {
+        "name": "points",
+        "displayValue": "29"
+       },
+       {
+        "name": "pointsAgainst",
+        "displayValue": "60"
+       },
+       {
+        "name": "pointsFor",
+        "displayValue": "26"
+       },
+       {
+        "name": "ties",
+        "displayValue": "11"
+       },
+       {
+        "name": "wins",
+        "displayValue": "6"
+       },
+       {
+        "name": "rank",
+        "displayValue": "20"
+       }
+      ],
+      "note": {
+       "description": "Relegation",
+       "rank": 20
+      }
+     }
+    ]
+   }
+  }
+ ]
+}
