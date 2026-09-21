@@ -20,8 +20,8 @@ export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.st
  * NFL and NBA), and the kickoff is read in that same zone so the two agree rather than showing a UTC
  * time under an Eastern date. The wording is unchanged: only the zone the two are read in moved.
  */
-export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRow, "date">): string {
-  const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" });
+export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRow, "date" | "local_date">): string {
+  const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" }, g.local_date);
   const off = gameCalledOffLabel(g);
   if (off) return `${when} · ${off}`;
   if (isUpcomingGame(g)) {
@@ -36,7 +36,7 @@ export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRo
 /** Screen-reader name of a game card. */
 export function gameAccessibleLabel(
   league: League,
-  game: StatusFields & Pick<GameRow, "date" | "round" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
+  game: StatusFields & Pick<GameRow, "date" | "local_date" | "round" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
 ): string {
   const off = gameCalledOffLabel(game);
   if (game.completed && !off) {
@@ -44,17 +44,17 @@ export function gameAccessibleLabel(
       game.home_score_display ?? game.home_score ?? ""
     }, ${game.round ?? "final"}`;
   }
-  const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" });
+  const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" }, game.local_date);
   const label = `${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}, ${date}`;
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
 
 /** The status line of one tile on a scoreboard image: result, live detail, kickoff (in the league's day zone, labelled), or why a called-off game is off. */
-export function scoreboardTileStatus(league: League, g: StatusFields & Pick<GameRow, "date" | "round">, withDate: boolean): string {
+export function scoreboardTileStatus(league: League, g: StatusFields & Pick<GameRow, "date" | "local_date" | "round">, withDate: boolean): string {
   const off = gameCalledOffLabel(g);
   const live = g.status_state === "in" && !g.completed;
   if (withDate) {
-    const day = formatGameDate(g.date, league, { month: "short", day: "numeric", year: "numeric" });
+    const day = formatGameDate(g.date, league, { month: "short", day: "numeric", year: "numeric" }, g.local_date);
     return `${day} · ${off ?? (g.completed ? (normalizeStage(g.round) ?? finishedLabel(league)) : live ? (g.status_detail ?? "Live") : "Upcoming")}`;
   }
   if (off) return off;

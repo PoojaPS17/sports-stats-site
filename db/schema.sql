@@ -147,6 +147,15 @@ alter table games add column if not exists stage text generated always as (
   end
 ) stored;
 
+-- The local calendar day(s) of a cricket match. `date` is a UTC instant, which for a Test starting
+-- 10.30 in Melbourne (23:30 UTC the day before) or a morning game in the Big Bash lands on the wrong
+-- day; Cricinfo prints the local day, and a Test as a range. `local_date` is the first day and
+-- `end_date` the last day of a match that ran past it, both parsed at ingest from the event
+-- description / "matchdays" note (scripts/lib/cricket-dates.ts). Null for every other sport and for
+-- rows not yet backfilled, where the site keeps using the day of `date`.
+alter table games add column if not exists local_date date;
+alter table games add column if not exists end_date date;
+
 create index if not exists games_league_date_idx on games (league, date);
 create index if not exists games_league_season_idx on games (league, season_year);
 

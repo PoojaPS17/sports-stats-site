@@ -29,7 +29,7 @@ export function CenturiesExportCard({ league, centuries, title, subtitle }: { le
             String(c.sixes ?? "-"),
             c.balls_faced ? ((c.runs / c.balls_faced) * 100).toFixed(1) : "-",
             `vs ${teamDisplayName(c.opponent_name)}`,
-            formatGameDate(c.date, league, { month: "short", day: "numeric", year: "numeric" }),
+            formatGameDate(c.date, league, { month: "short", day: "numeric", year: "numeric" }, c.local_date),
           ],
         }))}
       />

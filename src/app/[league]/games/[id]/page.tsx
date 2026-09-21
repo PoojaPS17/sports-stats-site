@@ -79,7 +79,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const game = await getGameByEspnId(league, id);
   if (!game) return {};
-  const date = formatGameDate(game.date, league, { month: "short", day: "numeric", year: "numeric" });
+  const date = formatGameDate(game.date, league, { month: "short", day: "numeric", year: "numeric" }, game.local_date);
   // The NFL and NBA name the visitors first ("Chiefs at Bills"); football and cricket
   // name the home side first.
   const { first, second, awayFirst } = gameSides(league, game);
@@ -97,7 +97,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // A Test's two-innings score line ("254 & 258 (95.2 ov, target 271)") is too long
   // for a title; the month names the match and the description carries the result.
   if (isFirstClassCricket(league)) {
-    const month = formatGameDate(game.date, league, { month: "long", year: "numeric" });
+    const month = formatGameDate(game.date, league, { month: "long", year: "numeric" }, game.local_date);
     return pageMeta(`${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`, description, `/${league}/games/${id}`, { ownImage: true });
   }
   return pageMeta(`${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`, description, `/${league}/games/${id}`, { ownImage: true });
@@ -174,9 +174,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
       {/* The scoreboard card below is the visual heading; this names the page for screen readers and crawlers. */}
       <h1 className="sr-only">
         {matchName}, {LEAGUE_LABEL[league]},{" "}
-        {formatGameDate(game.date, league, { month: "long", day: "numeric", year: "numeric" })}
+        {formatGameDate(game.date, league, { month: "long", day: "numeric", year: "numeric" }, game.local_date)}
       </h1>
-      <MatchHeader league={league} game={game} />
+      <MatchHeader league={league} game={game} scorecard={cricketScorecard} />
       {details && <MatchFacts league={league} game={game} details={show.playFacts ? details : { ...details, officials: [], attendance: null, linescores: null }} />}
 
       <AdSlot label="Match detail top" />
@@ -273,7 +273,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
                 filename={`${id}-scorecard-${league}`}
                 width={860}
                 shareTitle={`${matchName} scorecard`}
-                card={<CricketScorecardExportCard header={<MatchScoreHeader league={league} game={game} />} context={`${matchName} · Scorecard`} scorecard={cricketScorecard} />}
+                card={<CricketScorecardExportCard header={<MatchScoreHeader league={league} game={game} scorecard={cricketScorecard} />} context={`${matchName} · Scorecard`} scorecard={cricketScorecard} />}
               />
             }
           >

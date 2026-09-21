@@ -4,6 +4,7 @@ import { isCricketLeague, isCupCompetition, slugify, type League } from "./espn"
 import { resolveCricketWinner } from "../../src/lib/cricketResult";
 import { isNeverPlayed } from "../../src/lib/gameStatus";
 import { upsertTeam } from "./teams";
+import { parseCricketLocalDates, type CricketLocalDates } from "./cricket-dates";
 
 // The scoreboard endpoint reports a plain string/number score. The per-team schedule
 // endpoint instead reports `{ value, displayValue }`. Cricket's is a compound string
@@ -125,6 +126,27 @@ export function parseCricketRound(description: string): string | null {
   if (seriesAt === 0 || (seriesAt === -1 && parts.length < 2)) return null;
   const stage = parts.slice(0, seriesAt === -1 ? 1 : seriesAt).join(", ").replace(/\s*\([^)]*\)\s*$/, "").trim();
   return stage ? normalizeStage(matchNumber(stage)) : null;
+}
+
+/**
+ * Fills `games.local_date` / `end_date` for one cricket match from the feed's own text (see
+ * cricket-dates.ts). The one writer for every ESPN-fed cricket row: `upsertEvent` (scores scrape,
+ * season backfill, the daily sweep) and the international importer call it after their insert. A date
+ * read from the text replaces what is stored, range included, so a corrected parse wins; a match whose
+ * text has no date only gets the UTC day of its start, and only if it has none yet, so a re-run of a
+ * poorer feed never erases a good value. Not for Cricsheet rows, which already carry a local date.
+ */
+export async function storeCricketDates(league: string, espnId: string, description: unknown, notes: unknown, startIso: string): Promise<CricketLocalDates["source"] | null> {
+  const parsed = parseCricketLocalDates(description, notes, startIso);
+  if (!parsed.localDate) return null;
+  await pool.query(
+    `update games set
+       local_date = case when $4 then $2::date else coalesce(local_date, $2::date) end,
+       end_date = case when $4 then $3::date else end_date end
+     where league = $1 and espn_id = $5`,
+    [league, parsed.localDate, parsed.endDate, parsed.source !== "utc", espnId]
+  );
+  return parsed.source;
 }
 
 // Cup competitions (Champions League): every event carries its stage — as
@@ -287,4 +309,6 @@ export async function upsertEvent(league: League, ev: any) {
       stageFields.competitionType,
     ]
   );
+  // The scoreboard's `description` ends with the match's local day(s); `date` alone is a UTC instant.
+  if (isCricketLeague(league)) await storeCricketDates(league, String(ev.id), ev.description, [...(ev.notes ?? []), ...(comp.notes ?? [])], ev.date);
 }

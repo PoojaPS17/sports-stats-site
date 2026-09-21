@@ -38,7 +38,7 @@ function groupByDay(league: League, games: Awaited<ReturnType<typeof getRecentAn
       weekday: "long",
       month: "long",
       day: "numeric",
-    });
+    }, g.local_date);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(g);
   }

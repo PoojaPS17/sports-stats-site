@@ -7,6 +7,7 @@ import { LocalTime } from "./LocalTime";
 import { finishedLabel } from "@/lib/stage";
 import { dayTimeZone, formatGameDate } from "@/lib/gameDay";
 import { gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
+import { scoreLineOrder } from "@/lib/cricketOrder";
 
 function TeamRow({
   name,
@@ -69,6 +70,37 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   // A called-off game is not upcoming: it has no kickoff time to show.
   const upcoming = isUpcomingGame(game);
 
+  // Cricinfo lists the side that batted first first; every other sport keeps away-then-home.
+  const order = scoreLineOrder(game);
+  const rows = {
+    away: (
+      <TeamRow
+        name={teamDisplayName(game.away_name)}
+        abbr={game.away_abbr}
+        logo={game.away_logo}
+        color={game.away_color}
+        score={game.away_score}
+        scoreDisplay={game.away_score_display}
+        completed={game.completed}
+        live={live}
+        won={awayWon}
+      />
+    ),
+    home: (
+      <TeamRow
+        name={teamDisplayName(game.home_name)}
+        abbr={game.home_abbr}
+        logo={game.home_logo}
+        color={game.home_color}
+        score={game.home_score}
+        scoreDisplay={game.home_score_display}
+        completed={game.completed}
+        live={live}
+        won={homeWon}
+      />
+    ),
+  };
+
   return (
     <Link
       href={`/${league}/games/${game.espn_id}`}
@@ -91,32 +123,12 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           <span className="text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_detail)}</span>
         ) : (
           <span className="text-xs text-[var(--text-faint)]">
-            {formatGameDate(game.date, league, { month: "short", day: "numeric" })}
+            {formatGameDate(game.date, league, { month: "short", day: "numeric" }, game.local_date)}
           </span>
         )}
       </div>
-      <TeamRow
-        name={teamDisplayName(game.away_name)}
-        abbr={game.away_abbr}
-        logo={game.away_logo}
-        color={game.away_color}
-        score={game.away_score}
-        scoreDisplay={game.away_score_display}
-        completed={game.completed}
-        live={live}
-        won={awayWon}
-      />
-      <TeamRow
-        name={teamDisplayName(game.home_name)}
-        abbr={game.home_abbr}
-        logo={game.home_logo}
-        color={game.home_color}
-        score={game.home_score}
-        scoreDisplay={game.home_score_display}
-        completed={game.completed}
-        live={live}
-        won={homeWon}
-      />
+      {rows[order[0]]}
+      {rows[order[1]]}
       {game.completed && game.status_summary && (
         <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_summary)}</p>
       )}

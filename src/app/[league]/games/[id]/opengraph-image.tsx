@@ -43,7 +43,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   // A finished match with no scores (abandoned, no result) says how it ended instead of a bare date and "vs".
   const note = off ? null : finishedNoScoreNote(game);
   const status = shareImageStatus(game);
-  const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, game.local_date);
 
   return new ImageResponse(
     (

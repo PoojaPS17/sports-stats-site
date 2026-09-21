@@ -11,10 +11,21 @@ function periodLabels(league: League, n: number): string[] {
   });
 }
 
+/**
+ * True when the venue already ends in its city: "Wankhede Stadium, Mumbai" for Mumbai. A city that is only
+ * part of the ground's name ("Melbourne Cricket Ground" for Melbourne) is not a repeat: Cricinfo prints both.
+ */
+export function venueNamesCity(venue: string, city: string): boolean {
+  const fold = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const last = fold(venue.split(",").pop() ?? "");
+  return last.length > 0 && venue.includes(",") && last === fold(city);
+}
+
 // Venue, crowd and officials, plus the score by period when the feed carries it.
 export function MatchFacts({ league, game, details }: { league: League; game: GameRow; details: GameDetails }) {
   const facts: string[] = [];
-  if (details.venue) facts.push(details.city ? `${details.venue}, ${details.city}` : details.venue);
+  // ESPN's venue often already ends in its city ("Wankhede Stadium, Mumbai"), which the city then repeats.
+  if (details.venue) facts.push(details.city && !venueNamesCity(details.venue, details.city) ? `${details.venue}, ${details.city}` : details.venue);
   if (details.attendance) facts.push(`Attendance ${details.attendance.toLocaleString("en-US")}`);
   const referees = details.officials.filter((o) => /referee|umpire/i.test(o.role) && !/assistant|video|fourth|replay/i.test(o.role));
   if (referees.length > 0) facts.push(`${referees.length > 1 ? "Officials" : referees[0].role || "Referee"}: ${referees.map((o) => o.name).join(", ")}`);

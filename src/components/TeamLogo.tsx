@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// "Delhi Capitals Women" (shown as "Delhi Capitals-W") reads as DC, not CW: the
+// "Delhi Capitals Women" (or an abbreviation-style "Delhi Capitals-W") reads as DC, not CW: the
 // women's-team suffix carries no identity.
 function initials(name: string) {
   return name
