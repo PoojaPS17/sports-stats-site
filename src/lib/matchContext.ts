@@ -78,7 +78,9 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
     : null;
   const after = thisGame ? [...before, thisGame] : null;
 
-  const eloBefore = computeElo(league, before, teams).ratings;
+  // Ratings going into this game's season, off-season regression included, so that eloAfter - eloBefore is the
+  // game's own effect even when it opens the season (eloAfter's run regresses at that boundary itself).
+  const eloBefore = computeElo(league, before, teams, game.season_year).ratings;
   const eloAfter = after ? computeElo(league, after, teams).ratings : null;
   const hasHistory = (id: string) => before.some((g) => g.home_team_espn_id === id || g.away_team_espn_id === id);
   const h = game.home_team_espn_id;

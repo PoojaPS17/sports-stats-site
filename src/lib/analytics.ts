@@ -224,7 +224,17 @@ export function homeWinProbability(league: League, homeRating: number, awayRatin
   return expectedScore(homeRating + p.homeAdvantage, awayRating);
 }
 
-export function computeElo(league: League, results: ResultRow[], teams: Map<string, TeamRef>): { rows: EloRow[]; ratings: Map<string, number> } {
+/**
+ * Elo ratings from a run of results, oldest first. A rating is pulled toward the mean by the league's
+ * seasonCarry whenever a result opens a new season.
+ *
+ * `asOfSeason` gives "the ratings as they stand going into that season": if the results end in an earlier
+ * season, that same off-season regression is applied once more after the last result. The game page uses it for
+ * the rating before a season's first game, so its change is the game's own effect. Only the returned ratings
+ * (and each row's `rating`) carry it; `played`, `peak` and `trend` still describe the games played. Omit it, or
+ * pass null, for the ratings after the last result.
+ */
+export function computeElo(league: League, results: ResultRow[], teams: Map<string, TeamRef>, asOfSeason?: number | null): { rows: EloRow[]; ratings: Map<string, number> } {
   const p = ELO_PARAMS[league] ?? ELO_PARAMS.default;
   const ratings = new Map<string, number>();
   const history = new Map<string, number[]>();
@@ -233,12 +243,13 @@ export function computeElo(league: League, results: ResultRow[], teams: Map<stri
   let currentSeason: number | null = null;
 
   const get = (id: string) => ratings.get(id) ?? ELO_BASE;
+  // Off-season: regress everyone toward the mean.
+  const regress = () => {
+    for (const [id, r] of ratings) ratings.set(id, ELO_BASE + (r - ELO_BASE) * p.seasonCarry);
+  };
 
   for (const g of results) {
-    if (g.season_year !== null && currentSeason !== null && g.season_year !== currentSeason) {
-      // New season: regress everyone toward the mean.
-      for (const [id, r] of ratings) ratings.set(id, ELO_BASE + (r - ELO_BASE) * p.seasonCarry);
-    }
+    if (g.season_year !== null && currentSeason !== null && g.season_year !== currentSeason) regress();
     if (g.season_year !== null) currentSeason = g.season_year;
 
     const h = get(g.home_team_espn_id);
@@ -261,13 +272,19 @@ export function computeElo(league: League, results: ResultRow[], teams: Map<stri
     }
   }
 
+  // The ratings going into `asOfSeason`, when the results stop short of it. History, peak and trend below
+  // are read from the games played, so they keep their pre-regression values.
+  const afterLastGame = new Map(ratings);
+  if (asOfSeason != null && results.length > 0 && currentSeason !== null && currentSeason !== asOfSeason) regress();
+
   const rows: EloRow[] = [];
   for (const [id, r] of ratings) {
     const t = teams.get(id);
     if (!t) continue;
     const hist = history.get(id) ?? [];
     const before = hist.length > 5 ? hist[hist.length - 6] : ELO_BASE;
-    rows.push({ team: t, rating: r, trend: r - before, played: played.get(id) ?? 0, peak: peak.get(id) ?? r });
+    const last = afterLastGame.get(id) ?? r;
+    rows.push({ team: t, rating: r, trend: last - before, played: played.get(id) ?? 0, peak: peak.get(id) ?? last });
   }
   rows.sort((a, b) => b.rating - a.rating);
   return { rows, ratings };
