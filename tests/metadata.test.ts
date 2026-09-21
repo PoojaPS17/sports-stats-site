@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { pageMeta } from "../src/lib/metadata";
+import { fitTitle, pageMeta, TITLE_BUDGET } from "../src/lib/metadata";
+import { ALL_LEAGUES, LEAGUE_LABEL, LEAGUE_SHORT } from "../src/lib/leagues";
 import { absoluteUrl } from "../src/lib/site";
 
 // The root layout sets the robots hint (max-image-preview, max-snippet). Next shallow-merges
@@ -64,4 +65,32 @@ test("the players index of every league is canonical to itself", async () => {
     const m = await generateMetadata({ params: Promise.resolve({ league }) });
     assert.deepEqual(m.alternates, { canonical: absoluteUrl(`/${league}/players`) }, league);
   }
+});
+
+// A title search results would cut (about 70 characters with " | SportsDB") takes the first shorter form that fits.
+test("fitTitle picks the longest candidate that fits and falls back to the last", () => {
+  assert.equal(TITLE_BUDGET, 70 - " | SportsDB".length);
+  assert.equal(fitTitle("Short title", "Shorter"), "Short title");
+  const long = "x".repeat(TITLE_BUDGET + 1);
+  assert.equal(fitTitle(long, "fits"), "fits");
+  assert.equal(fitTitle("a".repeat(TITLE_BUDGET), "b"), "a".repeat(TITLE_BUDGET));
+  assert.equal(fitTitle(long, long + "y"), long + "y", "none fits: the last stands");
+});
+
+test("the short league names keep the long ones' meaning and stay short", () => {
+  for (const league of ALL_LEAGUES) {
+    assert.ok(LEAGUE_SHORT[league].length > 0 && LEAGUE_SHORT[league].length <= LEAGUE_LABEL[league].length, league);
+  }
+  assert.equal(LEAGUE_SHORT.wpl, "WPL");
+  assert.equal(LEAGUE_SHORT.ucl, "UCL");
+});
+
+test("real long titles now fit", () => {
+  const short = LEAGUE_SHORT.wpl;
+  const name = "Royal Challengers Bengaluru Women";
+  const team = fitTitle(`${name} ${LEAGUE_LABEL.wpl} Results, Fixtures & Squad`, `${name} ${short} Results, Fixtures & Squad`, `${name} ${short} Results & Squad`, `${name} ${short} Results`);
+  assert.equal(team, "Royal Challengers Bengaluru Women WPL Results & Squad");
+  const h2h = fitTitle("Borussia Dortmund vs Paris Saint-Germain Head-to-Head (Champions League)", `Borussia Dortmund vs Paris Saint-Germain Head-to-Head (${LEAGUE_SHORT.ucl})`, "Borussia Dortmund vs Paris Saint-Germain Head-to-Head");
+  assert.equal(h2h, "Borussia Dortmund vs Paris Saint-Germain Head-to-Head (UCL)");
+  assert.ok(team.length <= TITLE_BUDGET && h2h.length <= TITLE_BUDGET);
 });

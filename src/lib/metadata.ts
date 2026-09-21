@@ -32,6 +32,14 @@ const INDEXABLE_ROBOTS: NonNullable<Metadata["robots"]> = {
   googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
 };
 
+// Search results show about 70 characters of a title, and the root layout's template adds " | SportsDB".
+// A page whose full title would be cut passes shorter forms, longest first; the first that fits is used
+// (the last, when none does).
+export const TITLE_BUDGET = 70 - " | ".length - SITE_NAME.length;
+export function fitTitle(...candidates: string[]): string {
+  return candidates.find((c) => c.length <= TITLE_BUDGET) ?? candidates[candidates.length - 1];
+}
+
 export function pageMeta(title: string, rawDescription: string, path?: string, options: { noindex?: boolean; ownImage?: boolean } = {}): Metadata {
   const description = clampDescription(rawDescription);
   const canonical = path ? absoluteUrl(path) : undefined;

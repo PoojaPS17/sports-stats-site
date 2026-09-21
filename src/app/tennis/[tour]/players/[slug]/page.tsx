@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema, tennisPlayerSchema } from "@/lib/structuredData";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -75,6 +77,8 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
 
   return (
     <div className="flex flex-col gap-6">
+      <JsonLd data={tennisPlayerSchema(tour, player)} />
+      <JsonLd data={breadcrumbSchema([{ label: "Tennis", href: "/tennis" }, { label: TOUR_LABEL[tour], href: `/tennis/${tour}` }, { label: player.name }])} />
       <div className="card flex items-center gap-4 overflow-hidden px-6 py-6">
         <div className="shrink-0 overflow-hidden rounded-full border-2 border-[var(--surface)] bg-[var(--surface-muted)]">
           <TeamLogo name={player.name} logoUrl={player.headshot_url} size={72} priority />

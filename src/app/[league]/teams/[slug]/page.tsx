@@ -13,7 +13,8 @@ import {
   getTeamRoster,
   getTeamInjuries,
   formatSeasonLabel, hasStandings, isFirstClassCricket } from "@/lib/queries";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { LEAGUE_SHORT } from "@/lib/leagues";
 import { teamNotFound } from "@/lib/legacySlug";
 import { formatWinLossTie, summarizeTeamSeason } from "@/lib/teamSummary";
 import { AdSlot } from "@/components/AdSlot";
@@ -55,7 +56,12 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // in (India in Tests, ODIs and T20Is; a club in its league and the Champions League).
   const cricket = isCricketLeague(league);
   return pageMeta(
-    `${team.name} ${label} ${cricket ? "Results, Fixtures & Squad" : "Schedule, Results & Roster"}`,
+    (() => {
+      const short = LEAGUE_SHORT[league];
+      return cricket
+        ? fitTitle(`${team.name} ${label} Results, Fixtures & Squad`, `${team.name} ${short} Results, Fixtures & Squad`, `${team.name} ${short} Results & Squad`, `${team.name} ${short} Results`)
+        : fitTitle(`${team.name} ${label} Schedule, Results & Roster`, `${team.name} ${short} Schedule, Results & Roster`, `${team.name} ${short} Schedule & Roster`, `${team.name} ${short} Schedule`);
+    })(),
     cricket ? `${team.name} ${label} results and fixtures, the current squad, and every result year by year.` : `${team.name} ${label} fixtures, results, current roster, injuries and season-by-season history.`, `/${league}/teams/${slug}`, { ownImage: true });
 }
 

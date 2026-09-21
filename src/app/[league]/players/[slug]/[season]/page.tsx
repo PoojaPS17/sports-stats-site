@@ -3,7 +3,8 @@ import { teamDisplayName } from "@/lib/teamName";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { isLeague, isCricketLeague, LEAGUE_LABEL, getPlayerBySlug, getPlayerLog, getPlayerEspnSeasons, getPlayerReportedGames, getPlayerSeasonStatsBySeason, getPlayerSeasons, formatSeasonLabel, type League } from "@/lib/queries";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { LEAGUE_SHORT } from "@/lib/leagues";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { PlayerHeader } from "@/components/PlayerHeader";
@@ -69,7 +70,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
       empty = !hasGames(staged) && !(await getPlayerSeasonStatsBySeason(league, player.espn_id, Number(season)));
     }
   }
-  return pageMeta(`${player.name} ${seasonLabel} ${LEAGUE_LABEL[league]} Stats`, seasonDescription(league, player.name, seasonLabel, regular), `/${league}/players/${slug}/${season}`, { noindex: empty });
+  return pageMeta(fitTitle(`${player.name} ${seasonLabel} ${LEAGUE_LABEL[league]} Stats`, `${player.name} ${seasonLabel} ${LEAGUE_SHORT[league]} Stats`), seasonDescription(league, player.name, seasonLabel, regular), `/${league}/players/${slug}/${season}`, { noindex: empty });
 }
 
 export default async function PlayerSeasonPage({ params }: { params: Promise<{ league: string; slug: string; season: string }> }) {

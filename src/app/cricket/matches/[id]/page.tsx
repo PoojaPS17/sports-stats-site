@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
 import { absoluteUrl } from "@/lib/site";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -42,11 +42,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // keeps the address as its canonical; the title and description stay the site's.
   if (!m) return { alternates: { canonical: absoluteUrl(`/cricket/matches/${id}`) } };
   // Name, stage and series when they fit a search result's title; otherwise the month
-  // stands in for the series, which the description still names.
+  // stands in for the series (which the description still names), then the stage, then the name alone.
   const stage = m.description ? `, ${m.description}` : "";
   const full = `${m.name}${stage} | ${m.series_name}`;
   const month = m.date ? `, ${new Date(m.date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}` : "";
-  return pageMeta(full.length <= 60 ? full : `${m.name}${stage}${month}`, cricketMatchDescription(m), `/cricket/matches/${id}`);
+  return pageMeta(fitTitle(full, `${m.name}${stage}${month}`, `${m.name}${stage}`, m.name), cricketMatchDescription(m), `/cricket/matches/${id}`);
 }
 
 export default async function CricketLiveMatchPage({ params }: { params: Promise<{ id: string }> }) {

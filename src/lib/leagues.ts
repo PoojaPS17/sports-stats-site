@@ -68,6 +68,30 @@ export const LEAGUE_LABEL: Record<League, string> = {
   ucl: "Champions League",
 };
 
+// Short names for a page <title>, which search results cut at about 70 characters (see fitTitle in metadata.ts).
+export const LEAGUE_SHORT: Record<League, string> = {
+  nba: "NBA",
+  nfl: "NFL",
+  epl: "EPL",
+  ipl: "IPL",
+  bbl: "BBL",
+  cwc: "Cricket WC",
+  t20wc: "T20 WC",
+  test: "Tests",
+  odi: "ODIs",
+  t20i: "T20Is",
+  wpl: "WPL",
+  wbbl: "WBBL",
+  wcwc: "Women's WC",
+  wt20wc: "Women's T20 WC",
+  wodi: "Women's ODIs",
+  wt20i: "Women's T20Is",
+  laliga: "La Liga",
+  bundesliga: "Bundesliga",
+  seriea: "Serie A",
+  ucl: "UCL",
+};
+
 export function isWomensCricket(league: League): boolean {
   return (WOMENS_CRICKET as string[]).includes(league);
 }

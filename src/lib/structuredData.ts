@@ -81,6 +81,18 @@ export function athleteSchema(
   };
 }
 
+/** A tennis player (their page is /tennis/<tour>/players/<slug>). No nationality: the site stores a country code, and schema.org wants a name. */
+export function tennisPlayerSchema(tour: string, player: { name: string; slug: string; headshot_url: string | null }) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: player.name,
+    url: absoluteUrl(`/tennis/${tour}/players/${player.slug}`),
+    jobTitle: "Tennis player",
+    ...(player.headshot_url ? { image: player.headshot_url } : {}),
+  };
+}
+
 /**
  * The description of a finished game. Cricket says "Result: <result text>. <first side> <score>, <second side> <score>."
  * with the batting-first side first (from the scorecard when the page has one, else the score lines, else away first);

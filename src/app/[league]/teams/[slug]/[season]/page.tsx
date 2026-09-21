@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGamesBySeason, getTeamSeasons, formatSeasonLabel } from "@/lib/queries";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { LEAGUE_SHORT } from "@/lib/leagues";
 import { teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamSeasonGames } from "@/components/TeamSeasonGames";
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
   const seasonLabel = formatSeasonLabel(league, Number(season)) ?? season;
-  return pageMeta(`${team.name} ${seasonLabel} ${LEAGUE_LABEL[league]} Results`, `Every ${team.name} result from the ${seasonLabel} ${LEAGUE_LABEL[league]} season.`, `/${league}/teams/${slug}/${season}`);
+  return pageMeta(fitTitle(`${team.name} ${seasonLabel} ${LEAGUE_LABEL[league]} Results`, `${team.name} ${seasonLabel} ${LEAGUE_SHORT[league]} Results`), `Every ${team.name} result from the ${seasonLabel} ${LEAGUE_LABEL[league]} season.`, `/${league}/teams/${slug}/${season}`);
 }
 
 export default async function TeamSeasonPage({

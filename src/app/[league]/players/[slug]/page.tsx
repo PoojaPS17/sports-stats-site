@@ -23,7 +23,8 @@ import {
   type League,
   type PlayerRow,
 } from "@/lib/queries";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { LEAGUE_SHORT } from "@/lib/leagues";
 import { formatGameDate } from "@/lib/gameDay";
 import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
@@ -83,14 +84,14 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!player) return {};
   if (isCricketLeague(league)) {
     const team = player.team_name ? ` (${player.team_name})` : "";
-    return pageMeta(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name}${team} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`, `/${league}/players/${slug}`);
+    return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), `${player.name}${team} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`, `/${league}/players/${slug}`);
   }
   const staged = await loadStaged(league, player);
   const profile = staged?.regular ?? null;
   const seasons = hasGames(staged) ? [] : await getPlayerSeasons(league, player.espn_id);
   const empty = !hasGames(staged) && seasons.length === 0;
   // The competition is named because a player has a page in each one he plays in.
-  return pageMeta(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, profileSummary(league, player.name, profile, true), `/${league}/players/${slug}`, { noindex: empty });
+  return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), profileSummary(league, player.name, profile, true), `/${league}/players/${slug}`, { noindex: empty });
 }
 
 export default async function PlayerPage({

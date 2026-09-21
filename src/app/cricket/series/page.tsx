@@ -10,6 +10,8 @@ import { byPriority, getCricketSeriesWindow, getLiveCricketMatches, SERIES_KIND_
 import { isFeaturedCricket } from "@/lib/cricketFeatured";
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema } from "@/lib/structuredData";
 
 export const revalidate = 15;
 
@@ -81,6 +83,7 @@ export default async function CricketSeriesPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      <JsonLd data={breadcrumbSchema([{ label: "Cricket series" }])} />
       <LiveRefresh active={liveAll.length > 0} />
       <PageHeader
         title="Cricket Series"

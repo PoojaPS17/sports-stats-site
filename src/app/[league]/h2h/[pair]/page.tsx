@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel, type GameRow } from "@/lib/queries";
 import { getHeadToHead, isSoccer } from "@/lib/analytics";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { LEAGUE_SHORT } from "@/lib/leagues";
 import { h2hDescription, h2hPath } from "@/lib/h2h";
 import { AdSlot } from "@/components/AdSlot";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -48,7 +49,11 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // Two clubs can meet in more than one competition (a domestic league and the
   // Champions League), which would otherwise give two pages the same bare title.
   return pageMeta(
-    `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_LABEL[league]})`,
+    fitTitle(
+      `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_LABEL[league]})`,
+      `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_SHORT[league]})`,
+      `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head`
+    ),
     h2hDescription(h2h.teamA.name, h2h.teamB.name, LEAGUE_LABEL[league], h2h.meetings, record),
     h2hPath(league, slugs[0], slugs[1]),
     // No counted meeting: the page still renders for visitors, but has nothing to index. The h2h sitemap

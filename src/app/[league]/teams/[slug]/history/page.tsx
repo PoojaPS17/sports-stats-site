@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, isCupCompetition, isCricketLeague, hasTies, LEAGUE_LABEL, getTeamBySlug, formatSeasonLabel } from "@/lib/queries";
 import { getTeamHistory, isSoccer } from "@/lib/analytics";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { LEAGUE_SHORT } from "@/lib/leagues";
 import { teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamHeader } from "@/components/TeamHeader";
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
-  return pageMeta(`${team.name} ${LEAGUE_LABEL[league]} Season History`, `${team.name} ${LEAGUE_LABEL[league]} finishes, records and points for every season on record.`, `/${league}/teams/${slug}/history`);
+  return pageMeta(fitTitle(`${team.name} ${LEAGUE_LABEL[league]} Season History`, `${team.name} ${LEAGUE_SHORT[league]} Season History`), `${team.name} ${LEAGUE_LABEL[league]} finishes, records and points for every season on record.`, `/${league}/teams/${slug}/history`);
 }
 
 function ordinal(n: number): string {

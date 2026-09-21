@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { LEAGUE_SHORT } from "@/lib/leagues";
 import { teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamHeader } from "@/components/TeamHeader";
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
-  return pageMeta(`About ${team.name} (${LEAGUE_LABEL[league]})`, `${team.name} ${LEAGUE_LABEL[league]} facts: home venue, location and head coach.`, `/${league}/teams/${slug}/about`);
+  return pageMeta(fitTitle(`About ${team.name} (${LEAGUE_LABEL[league]})`, `About ${team.name} (${LEAGUE_SHORT[league]})`), `${team.name} ${LEAGUE_LABEL[league]} facts: home venue, location and head coach.`, `/${league}/teams/${slug}/about`);
 }
 
 function InfoRow({ label, value }: { label: string; value: string | null }) {

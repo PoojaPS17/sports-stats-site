@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, isCricketLeague, isFirstClassCricket, LEAGUE_LABEL, getGameByEspnId, getGameDetails, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
 import { formatGameDate } from "@/lib/gameDay";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
@@ -101,7 +101,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     const month = formatGameDate(game.date, league, { month: "long", year: "numeric" }, game.local_date);
     return pageMeta(`${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`, description, `/${league}/games/${id}`, { ownImage: true });
   }
-  return pageMeta(`${teamDisplayName(first)} vs ${teamDisplayName(second)}${score}`, description, `/${league}/games/${id}`, { ownImage: true });
+  // The score is dropped when two long names and a score would not fit a search result.
+  const sides = `${teamDisplayName(first)} vs ${teamDisplayName(second)}`;
+  return pageMeta(fitTitle(`${sides}${score}`, sides), description, `/${league}/games/${id}`, { ownImage: true });
 }
 
 export default async function GameDetailPage({ params }: { params: Promise<{ league: string; id: string }> }) {
