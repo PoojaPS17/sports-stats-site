@@ -38,28 +38,41 @@ export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRo
   return when;
 }
 
-/** Screen-reader name of a game card. Football names the home side first ("Arsenal v Chelsea"), the US leagues the visitors ("Chelsea at Arsenal"). */
+/**
+ * Screen-reader name of a game card. It lists the sides in the order the card does (`scoreLineSides`: football home first,
+ * the NBA and NFL the visitors, cricket the side that batted first), so a screen-reader user and a sighted one read the same
+ * card. A fixture reads "Arsenal v Chelsea" in football, "Chelsea at Arsenal" in the US leagues, and "Mumbai v Chennai" in
+ * cricket, the home side first as the match page's title and heading name it. A finished cricket match ends in the word its
+ * pill prints ("Result", or its stage), where "final" would read as the tournament decider.
+ */
 export function gameAccessibleLabel(
   league: League,
-  game: StatusFields & StageFields & Pick<GameRow, "date" | "local_date" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
+  game: StatusFields & StageFields & Pick<GameRow, "date" | "local_date" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display"> &
+    Partial<Pick<GameRow, "home_team_espn_id" | "away_team_espn_id">>,
 ): string {
   const off = gameCalledOffLabel(game);
-  const homeFirst = scoreLineHomeFirst(league);
+  const cricket = isCricketLeague(league);
   const home = teamDisplayName(game.home_name);
   const away = teamDisplayName(game.away_name);
   if (game.completed && !off) {
     const homeScore = game.home_score_display ?? game.home_score ?? "";
     const awayScore = game.away_score_display ?? game.away_score ?? "";
-    const line = homeFirst ? `${home} ${homeScore}, ${away} ${awayScore}` : `${away} ${awayScore}, ${home} ${homeScore}`;
+    const parts = { home: `${home} ${homeScore}`, away: `${away} ${awayScore}` };
+    // A card has no scorecard, so the two team ids (which only a scorecard is matched against) may be absent.
+    const [first, second] = scoreLineSides(league, { ...game, league, home_team_espn_id: game.home_team_espn_id ?? "", away_team_espn_id: game.away_team_espn_id ?? "" });
+    const line = `${parts[first]}, ${parts[second]}`;
+    // A cricket match ends in what its pill says: "Result", or its stage.
+    if (cricket) return `${line}, ${finishedPillLabel(league, game)}`;
     // A stage label replaces the plain word, so "final" follows it: the name always says the game is over
     // ("..., NBA Cup · Group play, final"). A label that already ends in it is left alone: "Final", "Semi-Final",
     // "NBA Cup final" and overtime ("Final/OT", "Play-In · Final/2OT") would otherwise read "Final, final".
     const label = finishedPillLabel(league, game, "final");
     return `${line}, ${/final(\/\d*OT)?$/i.test(label) ? label : `${label}, final`}`;
   }
-  // The day the match is filed under (cricket's local date where there is one), and football's home-first order.
+  // The day the match is filed under (cricket's local date where there is one). Football and cricket name the home side
+  // first ("v", as the match page's title does), the US leagues the visitors ("at").
   const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" }, game.local_date);
-  const label = homeFirst ? `${home} v ${away}, ${date}` : `${away} at ${home}, ${date}`;
+  const label = cricket || scoreLineHomeFirst(league) ? `${home} v ${away}, ${date}` : `${away} at ${home}, ${date}`;
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
 
