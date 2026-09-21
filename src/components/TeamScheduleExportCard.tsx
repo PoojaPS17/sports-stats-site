@@ -6,18 +6,25 @@ import { ExportMore, capRows } from "./ExportShell";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 import { scheduleRowHeading } from "@/lib/gameDisplay";
+import { scoreLineOrder } from "@/lib/cricketOrder";
 
 function ScheduleRow({ league, game }: { league: League; game: GameRow }) {
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
+  // Cricinfo lists the side that batted first first (the score lines say which); every other sport keeps away-then-home.
+  const order = scoreLineOrder(game);
+  const lines = {
+    away: <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />,
+    home: <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />,
+  };
 
   return (
     <div style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: CARD.textFaint }}>
         {scheduleRowHeading(league, game)}
       </div>
-      <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
-      <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
+      {lines[order[0]]}
+      {lines[order[1]]}
     </div>
   );
 }

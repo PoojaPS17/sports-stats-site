@@ -421,6 +421,7 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
        g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.completed,
+       g.local_date::text as local_date, g.end_date::text as end_date,
        g.home_team_espn_id, g.away_team_espn_id,
        ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
        at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color

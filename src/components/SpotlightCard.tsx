@@ -8,6 +8,7 @@ import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { LocalTime } from "./LocalTime";
 import { dayTimeZone } from "@/lib/gameDay";
+import { scoreLineOrder } from "@/lib/cricketOrder";
 
 // The one game worth leading the homepage with: live if anything is on, else the
 // next big kickoff, else the biggest recent result.
@@ -47,6 +48,12 @@ export function SpotlightCard({ game }: { game: GameRow }) {
   const label = live ? "Live now" : game.completed ? "Latest result" : "Coming up";
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
+  // Cricinfo lists the side that batted first first (the score lines say which); every other sport keeps away-then-home.
+  const order = scoreLineOrder(game);
+  const teams = {
+    away: <Team name={teamDisplayName(game.away_name)} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />,
+    home: <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />,
+  };
 
   return (
     <Link href={`/${league}/games/${game.espn_id}`} className={`card block px-5 py-4 ${live ? "border-[var(--live)]/40" : ""}`}>
@@ -57,8 +64,8 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={finishedLabel(league)} serverTimeZone={dayTimeZone(league)} />
       </div>
       <div className="flex flex-col gap-2.5">
-        <Team name={teamDisplayName(game.away_name)} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
-        <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
+        {teams[order[0]]}
+        {teams[order[1]]}
       </div>
       <p className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-2.5 text-xs font-medium text-[var(--text-muted)]">
         <span>

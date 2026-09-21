@@ -3,6 +3,7 @@ import { ExportShell, ExportTitle, ExportMore, capRows } from "./ExportShell";
 import { isCricketLeague, type GameRow, type League } from "@/lib/queries";
 import { scoreboardTileStatus } from "@/lib/gameDisplay";
 import { teamDisplayName } from "@/lib/teamName";
+import { scoreLineOrder } from "@/lib/cricketOrder";
 import { CARD } from "@/lib/exportTheme";
 
 /** One column for cricket, whose scores are long ("161/5 (18/20 ov)"), two for everything else. */
@@ -14,11 +15,17 @@ function Tile({ league, game, withDate }: { league: League; game: GameRow; withD
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
   const showScore = game.completed || game.status_state === "in";
+  // Cricinfo lists the side that batted first first (the score lines say which); every other sport keeps away-then-home.
+  const order = scoreLineOrder(game);
+  const lines = {
+    away: <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} showScore={showScore} />,
+    home: <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} showScore={showScore} />,
+  };
   return (
     <div style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: game.status_state === "in" ? CARD.loss : CARD.textFaint }}>{scoreboardTileStatus(league, game, withDate)}</div>
-      <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} showScore={showScore} />
-      <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} showScore={showScore} />
+      {lines[order[0]]}
+      {lines[order[1]]}
       {game.completed && game.status_summary && <div style={{ fontSize: 12, fontWeight: 600, color: CARD.textMuted }}>{teamDisplayName(game.status_summary)}</div>}
     </div>
   );
