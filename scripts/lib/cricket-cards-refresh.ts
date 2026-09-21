@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import { isCricketLeague, isFirstClassCricket, type League } from "../../src/lib/leagues";
 import { parseCricketScorecard } from "../../src/lib/matchDetail";
 import { CARD_VERSION, extractCricketMatchStats } from "./cricket-career";
+import { isCricsheetReport, isEspnReport } from "./cricsheet-report";
 
 export interface RefreshResult {
   /** Why the match was left entirely alone (nothing written), or null when it was refreshed. */
@@ -19,42 +20,26 @@ export interface RefreshResult {
   battingRows: { before: number; after: number } | null;
 }
 
-// A stored report is Cricsheet's when its first batting row exists and has no dismissal text
-// (the ESPN parser always writes one, "not out" included; Cricsheet's reports never do). A
-// Cricsheet match's cards are computed ball by ball, and ESPN's derived figures must never
-// replace them, so such a match is left alone. A match with no stored report is ESPN-only by
-// construction (the Cricsheet importer always stores one) and is refreshed. SQL and JS forms
-// of the same test; the SQL one needs the game_details table aliased as `d`.
-export const CRICSHEET_REPORT_SQL = `d.details -> 'scorecard' -> 0 -> 'battingRows' -> 0 is not null and not (d.details -> 'scorecard' -> 0 -> 'battingRows' -> 0 ? 'dismissal')`;
-const firstBattingRow = (scorecard: any) => (Array.isArray(scorecard) ? scorecard[0]?.battingRows?.[0] : undefined);
-export const isCricsheetReport = (scorecard: any): boolean => {
-  const row = firstBattingRow(scorecard);
-  return row != null && typeof row === "object" && !("dismissal" in row);
-};
-export const isEspnReport = (scorecard: any): boolean => {
-  const row = firstBattingRow(scorecard);
-  return row != null && typeof row === "object" && "dismissal" in row;
-};
-
 const battingRowCount = (scorecard: any): number => (Array.isArray(scorecard) ? scorecard.reduce((n, t) => n + (t?.battingRows?.length ?? 0), 0) : 0);
 const inningsTotalCount = (scorecard: any): number => (Array.isArray(scorecard) ? scorecard.reduce((n, t) => n + (Array.isArray(t?.innings) ? t.innings.length : 0), 0) : 0);
 
 export async function refreshMatchCards(db: Pick<Pool, "query">, league: string, gameId: string, summary: any, opts: { dryRun: boolean }): Promise<RefreshResult> {
   const skip = (skipped: string): RefreshResult => ({ skipped, inserted: 0, updated: 0, duplicates: 0, orphans: 0, battingRows: null });
 
-  // Never touch a match whose stored report is Cricsheet's: those cards are computed ball by ball.
+  // Never touch a match whose stored report is Cricsheet's: those cards are computed ball by ball. (Only
+  // in a league Cricsheet feeds; anywhere else a stored report is ESPN's, see cricsheet-report.ts.)
   const { rows: stored } = await db.query(`select details -> 'scorecard' as scorecard from game_details where league = $1 and game_espn_id = $2`, [league, gameId]);
   const storedScorecard = stored[0]?.scorecard;
-  if (isCricsheetReport(storedScorecard)) return skip("its stored report is Cricsheet's");
+  if (isCricsheetReport(league, storedScorecard)) return skip("its stored report is Cricsheet's");
   // With no stored report (or none that carries a scorecard) the cards are refreshed and there is
   // nothing to rebuild: a report is never created here.
-  const rebuildReport = isEspnReport(storedScorecard);
+  const rebuildReport = isEspnReport(league, storedScorecard);
 
   // A partial copy of the match (no competitors, or no class on a Test) reads wrongly rather than
   // emptily: a Test would lose its second innings. Refuse it, so the match is counted as failed and retried.
   const competition = summary?.header?.competitions?.[0];
   if (!competition?.competitors?.length) throw new Error("summary has no competitors (a partial copy of the match)");
-  if (isFirstClassCricket(league as League) && !competition.class) throw new Error("summary has no match class, so a Test's innings cannot be told apart");
+  if (isFirstClassCricket(league as League) && !competition.class?.generalClassCard) throw new Error("summary has no match class, so a Test's innings cannot be told apart");
 
   const { players } = extractCricketMatchStats(summary);
   // An empty read is a bad response, not a match nobody played in: leave the rows be.

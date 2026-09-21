@@ -235,6 +235,9 @@ test("a summary with no competitors is refused, and so is a Test without its mat
   // The summary above carries competitors but no class: fine for a limited-overs league, not for a Test.
   await seedMatch("test", "r7", { scorecard: oldScorecard });
   await assert.rejects(refresh("test", "r7"), /no match class/);
+  // A class object without its generalClassCard tells a Test from nothing either.
+  const emptyClass = { ...summary, header: { competitions: [{ ...summary.header.competitions[0], class: {} }] } };
+  await assert.rejects(refresh("test", "r7", emptyClass), /no match class/);
   assert.equal((await stored("test", "r7"))[0].stats.v, 2);
   assert.deepEqual((await report("test", "r7")).scorecard, oldScorecard);
 
@@ -290,4 +293,59 @@ test("an inserted row counts as an orphan only when its player has no players ro
   for (const id of ["11", "12"]) await db.pool.query(`insert into players (league, espn_id, name, slug) values ('ipl', $1, $1, $1)`, [id]);
   const result = await refresh("ipl", "r11");
   assert.deepEqual([result.inserted, result.orphans], [3, 1]);
+});
+
+// An ESPN report stored before fe9fbff has no dismissal on its batting rows, like a Cricsheet one; only a league
+// Cricsheet feeds can tell them apart that way.
+const bareReport = [{ teamId: "1", teamName: "One", battingLabels: ["R"], battingRows: [{ athleteId: "10", name: "Player 10", stats: ["20"] }], bowlingLabels: [], bowlingRows: [] }];
+const testClass = { ...summary, header: { competitions: [{ ...summary.header.competitions[0], class: { generalClassCard: "Test" } }] } };
+
+test("a Test report with no dismissal key is ESPN's and is rebuilt", async () => {
+  await seedMatch("test", "r13", { scorecard: bareReport, venue: "Ground" });
+  const result = await refresh("test", "r13", testClass);
+  assert.equal(result.skipped, null);
+  assert.deepEqual(result.battingRows, { before: 1, after: 2 });
+  const details = await report("test", "r13");
+  assert.deepEqual(details.scorecard[0].battingRows.map((r: { athleteId: string }) => r.athleteId), ["10", "11"]);
+  assert.equal(details.venue, "Ground");
+  assert.equal((await stored("test", "r13")).length, 4);
+});
+
+test("every league Cricsheet does not feed treats a report with no dismissal key as ESPN's", async () => {
+  for (const league of ["wodi", "wt20i", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"]) {
+    await seedMatch(league, "r14", { scorecard: bareReport });
+    const result = await refresh(league, "r14");
+    assert.equal(result.skipped, null, league);
+    assert.equal((await report(league, "r14")).scorecard[0].battingRows.length, 2, league);
+  }
+});
+
+test("an odi or ipl report with no dismissal key is still Cricsheet's and is skipped, whichever team entry has the rows", async () => {
+  const laterEntry = [{ ...bareReport[0], battingRows: [] }, { ...bareReport[0], teamId: "2" }];
+  for (const [league, id, scorecard] of [["odi", "r15", bareReport], ["ipl", "r16", bareReport], ["odi", "r17", laterEntry], ["bbl", "r18", laterEntry]] as const) {
+    await seedMatch(league, id, { scorecard });
+    const before = await stored(league, id);
+    const result = await refresh(league, id);
+    assert.match(result.skipped ?? "", /Cricsheet/, `${league} ${id}`);
+    assert.deepEqual(await stored(league, id), before, `${league} ${id}`);
+    assert.deepEqual((await report(league, id)).scorecard, scorecard, `${league} ${id}`);
+  }
+});
+
+test("the ESPN report is found in the first team entry that has batting rows", async () => {
+  const espnLater = [{ ...bareReport[0], battingRows: [] }, { ...bareReport[0], teamId: "2", battingRows: [{ athleteId: "20", name: "Player 20", stats: ["5"], dismissal: "b x" }] }];
+  await seedMatch("ipl", "r19", { scorecard: espnLater });
+  const result = await refresh("ipl", "r19");
+  assert.equal(result.skipped, null);
+  assert.deepEqual(result.battingRows, { before: 1, after: 2 });
+});
+
+test("a report where no team entry has batting rows is left as it is while the cards are refreshed", async () => {
+  const noRows = [{ ...bareReport[0], battingRows: [] }, { ...bareReport[0], teamId: "2", battingRows: [] }];
+  await seedMatch("odi", "r20", { scorecard: noRows });
+  const result = await refresh("odi", "r20");
+  assert.equal(result.skipped, null);
+  assert.equal(result.battingRows, null);
+  assert.deepEqual((await report("odi", "r20")).scorecard, noRows);
+  assert.equal((await stored("odi", "r20")).length, 4);
 });

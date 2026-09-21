@@ -28,7 +28,8 @@
 // Arguments are checked strictly: exactly one cricket league and only the flags above.
 import { pool } from "./lib/db";
 import { CARD_VERSION } from "./lib/cricket-career";
-import { CRICSHEET_REPORT_SQL, REFRESH_USAGE, parseRefreshArgs, refreshMatchCards } from "./lib/cricket-cards-refresh";
+import { REFRESH_USAGE, parseRefreshArgs, refreshMatchCards } from "./lib/cricket-cards-refresh";
+import { CRICSHEET_REPORT_SQL } from "./lib/cricsheet-report";
 
 const SUMMARY_URL = (seriesId: string, eventId: string) => `https://site.api.espn.com/apis/site/v2/sports/cricket/${seriesId}/summary?event=${eventId}`;
 // Same as import-cricket-espn.ts: ESPN's summary endpoint resolves any cricket event

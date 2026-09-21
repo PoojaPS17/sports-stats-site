@@ -42,10 +42,10 @@ import { slugify } from "./lib/espn";
 import { uniqueSlugFor } from "./lib/players";
 import { buildCards, buildScorecard, oversText, parseMatch, type Innings, type ParsedMatch } from "./lib/cricsheet-parse";
 import { selectCardsOnlyGames } from "./lib/cricsheet-targets";
+import { isCricsheetLeague, type CricsheetLeague } from "./lib/cricsheet-report";
 
-type IntlLeague = "odi" | "t20i";
-type CardsLeague = "ipl" | "bbl";
-type CsLeague = IntlLeague | CardsLeague;
+// Derived from the shared list of Cricsheet leagues, so the two cannot drift apart.
+type CsLeague = CricsheetLeague;
 const MATCH_TYPE: Record<CsLeague, string> = { odi: "ODI", t20i: "T20", ipl: "T20", bbl: "T20" };
 const CARDS_ONLY: Record<CsLeague, boolean> = { odi: false, t20i: false, ipl: true, bbl: true };
 const NAME_FETCH_CONCURRENCY = 4;
@@ -63,7 +63,7 @@ function parseArgs() {
   };
   const league = positional[0] as CsLeague | undefined;
   const dir = positional[1];
-  if (!league || !(league in MATCH_TYPE) || !dir || !opt("people")) {
+  if (!league || !isCricsheetLeague(league) || !dir || !opt("people")) {
     console.error("usage: import-cricsheet.ts <odi|t20i|ipl|bbl> <dir> --people <people.csv> [--names <cache.json>] [--missing] [--limit N] [--rewrite-cards (ipl|bbl only)]");
     process.exit(1);
   }
