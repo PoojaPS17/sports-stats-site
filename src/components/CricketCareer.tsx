@@ -71,7 +71,7 @@ export function CricketCareer({
             ? `From every women's ${league === "wodi" ? "ODI" : "T20 international"} on record (2009 onward, World Cups included). Matches counts every game the player was in the playing XI for.`
             : isInternationalCricket(league)
             ? `From every men's ${league === "odi" ? "ODI" : "T20 international"} on record (${league === "odi" ? "2002" : "2005"} onward, World Cups included). Matches counts every game the player was in the playing XI for.`
-            : `From every ${LEAGUE_LABEL[league]} match on record. ${LEAGUE_LABEL[league]} only: other competitions and formats are not counted.`}
+            : `From every ${LEAGUE_LABEL[league]} match on record. ${LEAGUE_LABEL[league]} only: other competitions and formats are not counted. Matches counts every game the player was in the playing XI for.`}
         </p>
         <div className="flex flex-col gap-4">
           <div>

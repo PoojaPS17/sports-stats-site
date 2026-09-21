@@ -136,8 +136,8 @@ test("each split panel carries its own row's figures", () => {
   }
 });
 
-test("the career note says Matches counts every game in the XI, whatever the format", () => {
-  for (const league of ["test", "odi", "t20i", "wodi", "wt20i"] as const) {
+test("the career note says Matches counts every game in the XI, whatever the league", () => {
+  for (const league of ["test", "odi", "t20i", "wodi", "wt20i", "ipl", "bbl", "wpl", "wbbl", "cwc", "t20wc", "wcwc", "wt20wc"] as const) {
     const html = renderToStaticMarkup(createElement(CricketCareer, { league, career, splits }));
     assert.ok(html.includes("Matches counts every game the player was in the playing XI for."), `${league} note`);
     assert.doesNotMatch(html, /batted, bowled or took a catch/);
