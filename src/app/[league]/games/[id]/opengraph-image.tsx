@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { PixelBall } from "@/components/Logo";
-import { isLeague, LEAGUE_LABEL, getGameByEspnId } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetails } from "@/lib/queries";
+import { scoreLineOrder } from "@/lib/cricketOrder";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
 import { finishedNoScoreNote, shareImageStatus } from "@/lib/gameDisplay";
 import { formatGameDate } from "@/lib/gameDay";
@@ -42,8 +43,16 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const awayWon = played && (game.away_winner ?? game.away_score! > game.home_score!);
   // A finished match with no scores (abandoned, no result) says how it ended instead of a bare date and "vs".
   const note = off ? null : finishedNoScoreNote(game);
-  const status = shareImageStatus(game);
+  const status = shareImageStatus(game, game.league);
+  // Cricinfo lists the side that batted first first: the stored scorecard says which, the score lines are the fallback.
+  const scorecard = isCricketLeague(game.league) && game.completed ? ((await getGameDetails(game.league, id))?.scorecard ?? null) : null;
+  const order = scoreLineOrder(game, scorecard);
   const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, game.local_date);
+
+  const sides = {
+    away: <Side name={game.away_name} logo={game.away_logo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />,
+    home: <Side name={game.home_name} logo={game.home_logo} score={played ? String(game.home_score_display ?? game.home_score) : null} muted={played && !homeWon} />,
+  };
 
   return new ImageResponse(
     (
@@ -65,9 +74,9 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           <span>{status ? `${status} · ${when}` : when}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Side name={game.away_name} logo={game.away_logo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />
+          {sides[order[0]]}
           <div style={{ display: "flex", justifyContent: "center", textAlign: "center", ...(note ? { width: 280, fontSize: 28, color: "#9aa7bd" } : { fontSize: 40, color: "#6b788f" }), fontWeight: 700 }}>{played ? "" : (note ?? "vs")}</div>
-          <Side name={game.home_name} logo={game.home_logo} score={played ? String(game.home_score_display ?? game.home_score) : null} muted={played && !homeWon} />
+          {sides[order[1]]}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 26, color: "#6ea0ff", fontWeight: 700 }}>
           <PixelBall size={28} fill="#6ea0ff" live="#f87171" />

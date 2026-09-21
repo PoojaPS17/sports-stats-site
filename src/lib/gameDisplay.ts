@@ -110,10 +110,13 @@ export function scoresDayDescription(league: League, dayLabel: string, games: (S
 /**
  * The status word over a game's share image: the reason for a called-off game, "Final" for a scored result,
  * "Result" for a finished match with no scores (abandoned, no result), null for a fixture or a game in play.
+ * A finished cricket match is never "Final" unless it is the final: it says its stage when it has one
+ * ("Qualifier 1", "Final") and "Result" otherwise, as the match header does. Pass `league` for that.
  */
-export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary">): string | null {
+export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary"> & { round?: string | null }, league?: League): string | null {
   const off = gameCalledOffLabel(g);
   if (off) return off;
   if (!g.completed) return null;
+  if (league && isCricketLeague(league)) return normalizeStage(g.round) ?? finishedLabel(league);
   return finishedNoScoreNote(g) ? "Result" : "Final";
 }
