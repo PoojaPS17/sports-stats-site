@@ -61,7 +61,7 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
   if (isCricketLeague(league)) return null;
   const [{ rows: upTo }, teams] = await Promise.all([
     pool.query<ResultRow>(
-      `select espn_id, date, season_year, round, stage, home_team_espn_id, away_team_espn_id, home_score, away_score
+      `select espn_id, date, season_year, round, stage, neutral_site, home_team_espn_id, away_team_espn_id, home_score, away_score
        from games
        where league = $1 and completed = true and home_score is not null and away_score is not null and date <= $2
          and stage <> 'excluded'
@@ -74,7 +74,7 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
   const played = game.completed && game.home_score != null && game.away_score != null;
   // A game that says nothing about strength (preseason, All-Star, the NBA Cup final) does not move Elo either.
   const thisGame: ResultRow | null = played && game.stage !== "excluded"
-    ? { espn_id: game.espn_id, date: game.date, season_year: game.season_year, round: game.round, stage: game.stage, home_team_espn_id: game.home_team_espn_id, away_team_espn_id: game.away_team_espn_id, home_score: game.home_score!, away_score: game.away_score! }
+    ? { espn_id: game.espn_id, date: game.date, season_year: game.season_year, round: game.round, stage: game.stage, neutral_site: game.neutral_site, home_team_espn_id: game.home_team_espn_id, away_team_espn_id: game.away_team_espn_id, home_score: game.home_score!, away_score: game.away_score! }
     : null;
   const after = thisGame ? [...before, thisGame] : null;
 
@@ -85,7 +85,7 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
   const hasHistory = (id: string) => before.some((g) => g.home_team_espn_id === id || g.away_team_espn_id === id);
   const h = game.home_team_espn_id;
   const a = game.away_team_espn_id;
-  const probabilities = hasHistory(h) && hasHistory(a) ? matchProbabilities(league, eloBefore.get(h)!, eloBefore.get(a)!) : null;
+  const probabilities = hasHistory(h) && hasHistory(a) ? matchProbabilities(league, eloBefore.get(h)!, eloBefore.get(a)!, game.neutral_site) : null;
 
   // Regular-season games only: playoffs, the play-in and cup knockouts sit outside the table.
   const inTable = isRegularSeasonGame(game) && game.season_year != null && (!isCupCompetition(league) || game.season_year >= UCL_LEAGUE_PHASE_FROM);

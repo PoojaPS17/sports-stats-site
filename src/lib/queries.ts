@@ -97,7 +97,7 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
     `select
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.neutral_site, g.completed,
        g.local_date::text as local_date, g.end_date::text as end_date,
        g.home_team_espn_id, g.away_team_espn_id,
        g.odds_details, g.odds_spread, g.odds_over_under, g.odds_provider,

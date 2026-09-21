@@ -71,7 +71,7 @@ async function getSeasonResults(league: League, season: number, regularSeasonOnl
 // says nothing about strength (preseason, All-Star, the NBA Cup final) is skipped.
 async function getAllResults(league: League): Promise<ResultRow[]> {
   const { rows } = await pool.query(
-    `select espn_id, date, season_year, round, stage, home_team_espn_id, away_team_espn_id, home_score, away_score
+    `select espn_id, date, season_year, round, stage, neutral_site, home_team_espn_id, away_team_espn_id, home_score, away_score
      from games
      where league = $1 and completed = true and home_score is not null and away_score is not null
        and stage <> 'excluded'
@@ -229,10 +229,17 @@ export async function getEloRatings(league: League): Promise<{ ratings: Map<stri
   return { ratings, teams, lastResult: results.length ? results[results.length - 1].date : null };
 }
 
-/** Probability the home side wins (draws excluded), given both ratings. */
-export function homeWinProbability(league: League, homeRating: number, awayRating: number): number {
+/**
+ * The rating points the listed home side gains from playing at its own ground: the league's home advantage, or none for a
+ * game at a neutral site (the NBA Cup's Las Vegas semifinals, a Mexico City game), which is no home game for either side.
+ * A null or absent flag is an ordinary home game.
+ */
+const homeAdvantageFor = (p: { homeAdvantage: number }, neutral: boolean | null | undefined): number => (neutral ? 0 : p.homeAdvantage);
+
+/** Probability the home side wins (draws excluded), given both ratings. `neutral`: the game is at a neutral site, so neither side has home advantage. */
+export function homeWinProbability(league: League, homeRating: number, awayRating: number, neutral?: boolean | null): number {
   const p = ELO_PARAMS[league] ?? ELO_PARAMS.default;
-  return expectedScore(homeRating + p.homeAdvantage, awayRating);
+  return expectedScore(homeRating + homeAdvantageFor(p, neutral), awayRating);
 }
 
 /**
@@ -265,7 +272,7 @@ export function computeElo(league: League, results: ResultRow[], teams: Map<stri
 
     const h = get(g.home_team_espn_id);
     const a = get(g.away_team_espn_id);
-    const expHome = expectedScore(h + p.homeAdvantage, a);
+    const expHome = expectedScore(h + homeAdvantageFor(p, g.neutral_site), a);
     const margin = Math.abs(g.home_score - g.away_score);
     const actualHome = g.home_score > g.away_score ? 1 : g.home_score < g.away_score ? 0 : 0.5;
     // Margin-of-victory multiplier, damped so blowouts don't swing ratings wildly.

@@ -70,8 +70,8 @@ function drawProbability(homeWinIfDecided: number): number {
   return 0.27 * (1 - Math.abs(homeWinIfDecided - 0.5) * 1.4);
 }
 
-export function matchProbabilities(league: League, homeRating: number, awayRating: number): { homeWin: number; draw: number; awayWin: number } {
-  const p = homeWinProbability(league, homeRating, awayRating);
+export function matchProbabilities(league: League, homeRating: number, awayRating: number, neutral?: boolean | null): { homeWin: number; draw: number; awayWin: number } {
+  const p = homeWinProbability(league, homeRating, awayRating, neutral);
   if (!isSoccer(league)) return { homeWin: p, draw: 0, awayWin: 1 - p };
   const draw = drawProbability(p);
   return { homeWin: (1 - draw) * p, draw, awayWin: (1 - draw) * (1 - p) };
@@ -233,7 +233,7 @@ export async function getSeasonProjection(league: League): Promise<SeasonProject
       const hi = index.get(g.home_team_espn_id);
       const ai = index.get(g.away_team_espn_id);
       if (hi === undefined || ai === undefined) return null;
-      const p = matchProbabilities(league, states[hi].rating, states[ai].rating);
+      const p = matchProbabilities(league, states[hi].rating, states[ai].rating, g.neutral_site);
       return { hi, ai, ...p };
     })
     .filter((f): f is NonNullable<typeof f> => f !== null);
@@ -373,7 +373,7 @@ export async function getSeasonProjection(league: League): Promise<SeasonProject
     .map((g) => {
       const hr = ratings.get(g.home_team_espn_id) ?? 1500;
       const ar = ratings.get(g.away_team_espn_id) ?? 1500;
-      return { game: g, ...matchProbabilities(league, hr, ar) };
+      return { game: g, ...matchProbabilities(league, hr, ar, g.neutral_site) };
     });
 
   return {
