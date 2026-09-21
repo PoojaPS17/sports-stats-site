@@ -53,14 +53,26 @@ test("rankingLabel reads 'Ranking of Mon 14 Sep 2026', and falls back until a we
   assert.equal(rankingLabel(null), "Official world rankings");
 });
 
-test("newerRankingNote: a week or more after the ranking's Monday, the newer Monday is named as not in the feed yet", () => {
+// The tours publish no ranking on the middle Monday of a Slam (ESPN has no week 36 for either tour: Mon 7 Sep 2026), so the
+// note must never assert a publication: only that the ranking is dated, and that a newer one may exist.
+const NOTE = (monday: string) => `Rankings as of ${monday}. A newer ranking may have been published since.`;
+
+test("newerRankingNote: a week or more after the ranking's Monday it says the ranking is dated and a newer one may exist", () => {
   assert.equal(newerRankingNote("2026-09-14", "2026-09-20"), null);
   assert.equal(newerRankingNote("2026-09-14", "2026-09-14"), null);
-  assert.equal(newerRankingNote("2026-09-14", "2026-09-21"), "The Mon 21 Sep ranking is published but not in our feed yet, so this is the previous week.");
-  assert.equal(newerRankingNote("2026-09-14", "2026-09-27"), "The Mon 21 Sep ranking is published but not in our feed yet, so this is the previous week.");
-  // two weeks behind: the newest Monday is named
-  assert.match(newerRankingNote("2026-09-14", "2026-10-06") ?? "", /Mon 5 Oct/);
+  assert.equal(newerRankingNote("2026-09-14", "2026-09-21"), NOTE("Mon 14 Sep"));
+  assert.equal(newerRankingNote("2026-09-14", "2026-10-06"), NOTE("Mon 14 Sep"), "the same words however far behind");
   assert.equal(newerRankingNote(null, "2026-09-21"), null);
+});
+
+test("newerRankingNote: Slam fortnight - stored Monday 31 Aug, today 7-13 Sep (no ranking was published on 7 Sep) - asserts no publication", () => {
+  for (const today of ["2026-09-07", "2026-09-08", "2026-09-10", "2026-09-13"]) {
+    const note = newerRankingNote("2026-08-31", today);
+    assert.equal(note, NOTE("Mon 31 Aug"), today);
+    assert.doesNotMatch(note ?? "", /is published|was published|has been published|not in our feed|ranking of Mon 7/i, today);
+    assert.match(note ?? "", /may have been published/);
+  }
+  assert.equal(newerRankingNote("2026-08-31", "2026-09-06"), null);
 });
 
 /* ---- the schema: additive, and applying it again keeps the rows ---- */
@@ -126,12 +138,12 @@ test("the page (and the share image) say which ranking they show", async () => {
   assert.ok((markup.match(/Ranking of Mon 14 Sep 2026/g) ?? []).length >= 2);
 });
 
-test("a ranking older than a week shows the not-in-our-feed note; the current one does not", async () => {
+test("a ranking older than a week carries the dated-ranking note; the current one does not", async () => {
   await store("wta", "1", 2, 2, "2026-01-08T07:00Z"); // Monday 2026-01-12, long past
-  assert.match(text(await render()), /published but not in our feed yet/);
+  assert.match(text(await render()), /Rankings as of Mon 12 Jan\. A newer ranking may have been published since\./);
   await db.pool.query(`delete from tennis_rankings`);
   await store("wta", "1", 2, 99, "2099-01-01T07:00Z"); // in the future: nothing newer can exist
-  assert.doesNotMatch(text(await render()), /not in our feed yet/);
+  assert.doesNotMatch(text(await render()), /A newer ranking may have been published/);
 });
 
 test("before the loader has stored a week, the page still says it is the official ranking, with no date", async () => {

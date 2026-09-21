@@ -28,14 +28,13 @@ export function rankingLabel(asOf: string | null): string {
 }
 
 /**
- * When a newer Monday than the stored ranking's has already come round, the tour has published a ranking this site
- * does not have yet (the feed serves it later). Says so, naming the newest Monday, rather than letting an old week
- * pass as current. Null when the ranking is the latest possible, or its week is unknown.
+ * A week or more after the stored ranking's Monday, the page says the ranking is dated and a newer one may exist.
+ * It must never assert that one WAS published: the tours publish nothing on some Mondays (the middle Monday of a
+ * Slam; ESPN has no week 36 for either tour, Mon 7 Sep 2026), so "the Mon X ranking is published" can be false.
+ * Null within the first week, or when the ranking's week is unknown.
  */
 export function newerRankingNote(asOf: string | null, today: string): string | null {
   if (!asOf) return null;
-  const weeks = Math.floor((utcNoon(today) - utcNoon(asOf)) / (7 * DAY_MS));
-  if (weeks < 1) return null;
-  const newest = dayString(utcNoon(asOf) + weeks * 7 * DAY_MS);
-  return `The ${formatMonday(newest, false)} ranking is published but not in our feed yet, so this is ${weeks === 1 ? "the previous week" : "an earlier week"}.`;
+  if (utcNoon(today) - utcNoon(asOf) < 7 * DAY_MS) return null;
+  return `Rankings as of ${formatMonday(asOf, false)}. A newer ranking may have been published since.`;
 }
