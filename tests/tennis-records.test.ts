@@ -158,3 +158,43 @@ test("United Cup singles (typed mixed-doubles with one-player sides) count; a re
   await put({ id: "u2", type: "mixed-doubles", date: "2024-01-04T12:00:00Z", p1: P, p2: "20", winner: P, tournament: "someopen-2024", ids1: [P, "40"], ids2: ["20", "50"] });
   assert.deepEqual(await record(), { season: 2024, wins: before!.wins, losses: before!.losses + 1, titles: before!.titles });
 });
+
+/* ---- fix round 2: a team-event rubber is never a title or a champion ---- */
+
+// ESPN labels the rubbers of a United Cup final tie "Final" (Hurkacz vs Zverev 2024-01-07, Fritz vs Hurkacz 2025-01-05, Swiatek vs
+// Kerber 2024-01-06) and types them 'mixed-doubles' with one-player sides. Winning one is not winning the tournament.
+test("a United Cup Final rubber win adds a win, not a title; a genuine singles final still does", async () => {
+  const before = await record();
+  await put({ id: "uf", type: "mixed-doubles", date: "2024-01-07T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "918-2024", tname: "United Cup" });
+  assert.deepEqual(await record(), { season: 2024, wins: before!.wins + 1, losses: before!.losses, titles: before!.titles });
+  // positive control: a tour singles final (mens-singles, no side ids other than one player) is a title
+  await put({ id: "tf", type: "mens-singles", date: "2024-10-06T12:00:00Z", p1: P, p2: "30", winner: P, round: "Final", tournament: "5-2024", tname: "Some Masters" });
+  assert.deepEqual(await record(), { season: 2024, wins: before!.wins + 2, losses: before!.losses, titles: before!.titles + 1 });
+  // and a lost United Cup final rubber is a loss with no effect on titles
+  await put({ id: "ul", type: "mixed-doubles", date: "2024-01-06T12:00:00Z", p1: "20", p2: P, winner: "20", round: "Final", tournament: "918-2024", tname: "United Cup" });
+  assert.deepEqual(await record(), { season: 2024, wins: before!.wins + 2, losses: before!.losses + 1, titles: before!.titles + 1 });
+});
+
+test("a Slam mixed-doubles final (two-player sides) is not in a player's singles record at all", async () => {
+  const before = await record();
+  await put({ id: "mx", type: "mixed-doubles", date: "2024-07-14T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "188-2024", tname: "Wimbledon", ids1: [P, "40"], ids2: ["20", "50"] });
+  assert.deepEqual(await record(), before);
+});
+
+test("the tournament page lists no champion from a team event's final rubbers (United Cup), but still lists a Slam mixed-doubles champion pair", async () => {
+  await db.pool.query(`delete from tennis_matches`);
+  await db.pool.query(
+    `insert into tennis_tournaments (espn_id, tour, tournament_id, season, name, start_date, end_date) values
+       ('918-2024', 'atp', '918', 2024, 'United Cup', '2024-01-01T05:00:00Z', '2024-01-08T04:59:00Z'),
+       ('188-2024', 'both', '188', 2024, 'Wimbledon', '2024-07-01T04:00:00Z', '2024-07-15T03:59:00Z')`
+  );
+  await put({ id: "uc1", type: "mixed-doubles", date: "2024-01-07T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "918-2024", tname: "United Cup" });
+  await put({ id: "uc2", type: "mixed-doubles", date: "2024-01-07T13:00:00Z", p1: "30", p2: "40", winner: "30", round: "Final", tournament: "918-2024", tname: "United Cup" });
+  await put({ id: "uc3", type: "mixed-doubles", date: "2024-01-07T14:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "918-2024", tname: "United Cup", ids1: [P, "40"], ids2: ["20", "50"] }); // the tie's real mixed doubles rubber
+  await put({ id: "wm", type: "mixed-doubles", date: "2024-07-14T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "188-2024", tname: "Wimbledon", ids1: [P, "40"], ids2: ["20", "50"] });
+  await put({ id: "ws", type: "mens-singles", date: "2024-07-14T14:00:00Z", p1: P, p2: "30", winner: P, round: "Final", tournament: "188-2024", tname: "Wimbledon" });
+  const united = await tennis.getTennisTournament("918-2024");
+  assert.deepEqual(united?.champions, [], "a team event has no per-draw champions: not from its singles rubbers, nor from its mixed-doubles rubber");
+  const slam = await tennis.getTennisTournament("188-2024");
+  assert.deepEqual(slam?.champions.map((c) => c.competition_type), ["mens-singles", "mixed-doubles"], "a real Slam mixed-doubles pair is");
+});

@@ -198,6 +198,13 @@ export interface TennisTournament {
   champions: { competition_type: CompetitionType; names: string[]; slugs: (string | null)[] }[];
 }
 
+// A rubber of a team event, on the given alias: ESPN files Davis Cup, ATP Cup, Billie Jean King Cup and Laver Cup
+// rubbers under competition_type 'team-cup', and every United Cup rubber under 'mixed-doubles', its singles rubbers
+// with a one-player side. ESPN also labels the rubbers of a final tie "Final", so such a row must never be read as a
+// tournament final (a title, a champion). A real mixed-doubles match has two-player sides.
+const TEAM_RUBBER_SQL = (a: string) => `(${a}.competition_type = 'team-cup'
+       or (${a}.competition_type = 'mixed-doubles' and ${a}.side1 is not null and jsonb_array_length(${a}.side1 -> 'ids') = 1))`;
+
 const TOURNAMENT_SELECT = `
   select t.espn_id, t.tour, t.tournament_id, t.season, t.name, t.location, t.major,
          ${easternDateSql("t.start_date")} as start_date,
@@ -217,8 +224,9 @@ const TOURNAMENT_SELECT = `
                  from tennis_matches m
                  where m.tournament_espn_id = t.espn_id and m.completed and m.winner_espn_id is not null
                    and m.side1 is not null and lower(m.round) = 'final'
-                   -- a team event's Final tie is several rubbers, not one champion
-                   and m.competition_type is distinct from 'team-cup') f
+                   -- a team event (Davis Cup, United Cup...) has no per-draw champion: its Final tie is several rubbers,
+                   -- and the tie's mixed-doubles rubber has two-player sides, so the event is recognised as a whole
+                   and not exists (select 1 from tennis_matches x where x.tournament_espn_id = t.espn_id and ${TEAM_RUBBER_SQL("x")})) f
          ), '[]'::jsonb) as champions
   from tennis_tournaments t`;
 
@@ -323,7 +331,7 @@ export async function getTennisPlayerSeasonRecords(tour: Tour, playerEspnId: str
     `select extract(year from m.date)::int as season,
             count(*) filter (where ${PLAYED_SQL} and m.winner_espn_id = $2)::int as wins,
             count(*) filter (where ${PLAYED_SQL} and m.winner_espn_id is not null and m.winner_espn_id <> $2)::int as losses,
-            count(*) filter (where m.winner_espn_id = $2 and lower(m.round) = 'final' and m.competition_type is distinct from 'team-cup')::int as titles
+            count(*) filter (where m.winner_espn_id = $2 and lower(m.round) = 'final' and not ${TEAM_RUBBER_SQL("m")})::int as titles
      from tennis_matches m
      where m.tour = $1 and m.completed and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
        and ${SINGLES_SQL}

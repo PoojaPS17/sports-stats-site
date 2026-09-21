@@ -25,7 +25,7 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
   if (!isTour(tour)) notFound();
 
   const [rankings, { asOf }] = await Promise.all([getTennisRankings(tour), getTennisRankingsAsOf(tour)]);
-  // Says which ranking this is, and (when the tour has published a newer one this site does not have yet) that it is not the newest.
+  // Says which ranking this is; a week or more on, that it is dated and a newer one may have been published (never that one was: some Mondays have none).
   const subtitle = `${rankingLabel(asOf)}, with movement since the previous week`;
   const stale = newerRankingNote(asOf, tennisToday());
 
