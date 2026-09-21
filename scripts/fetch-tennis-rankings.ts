@@ -1,5 +1,5 @@
 import { pool } from "./lib/db";
-import { fetchTennisRankings, fetchByRef, type Tour } from "./lib/tennis";
+import { fetchTennisRankings, fetchByRef, pruneStaleRankings, type Tour } from "./lib/tennis";
 import { uniqueSlugFor } from "./lib/players";
 
 const TOURS: Tour[] = ["atp", "wta"];
@@ -14,6 +14,7 @@ async function processTour(tour: Tour) {
 
   const ranks: any[] = (data.ranks ?? []).slice(0, TOP_N);
   let count = 0;
+  const storedIds: string[] = [];
   for (const r of ranks) {
     const athleteRef = r.athlete?.["$ref"];
     if (!athleteRef) continue;
@@ -39,11 +40,21 @@ async function processTour(tour: Tour) {
         [tour, athlete.id, r.current, r.previous ?? null, r.points ?? null]
       );
       count++;
+      storedIds.push(String(athlete.id));
     } catch (err) {
       console.error(`[fetch-tennis-rankings] ${tour} rank ${r.current} failed:`, err instanceof Error ? err.message : err);
     }
   }
   console.log(`[fetch-tennis-rankings] ${tour}: upserted ${count}/${ranks.length} ranked players`);
+
+  // Remove players who left the top 100 so their old rank does not linger next to the real holder of that rank.
+  // Only when every ranked entry was stored: a partial run must not delete players it simply failed to reach.
+  if (count === ranks.length && count > 0) {
+    const pruned = await pruneStaleRankings(pool, tour, storedIds);
+    console.log(`[fetch-tennis-rankings] ${tour}: pruned ${pruned} players no longer ranked`);
+  } else {
+    console.log(`[fetch-tennis-rankings] ${tour}: pruning skipped because some entries were not stored (${count}/${ranks.length})`);
+  }
 }
 
 async function main() {

@@ -1,6 +1,8 @@
 // Tennis-specific ESPN fetchers. Separate from lib/espn.ts's SPORT_PATH map since
 // tennis isn't a `League` in the team-sports sense (no teams, no standings) — it's
 // its own small parallel pipeline (see tennis_matches/tennis_rankings in schema.sql).
+import type { Pool } from "pg";
+
 export type Tour = "atp" | "wta";
 
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports/tennis";
@@ -71,4 +73,15 @@ export function fetchTennisEvent(tour: Tour, eventId: string) {
 // Every tournament edition of a season, as $ref pointers — the season calendar.
 export function fetchTennisSeasonEventRefs(tour: Tour, year: number) {
   return getJson<{ items?: { $ref: string }[] }>(`${CORE_BASE}/leagues/${tour}/seasons/${year}/types/2/events?limit=300&lang=en&region=us`);
+}
+
+// tennis_rankings holds the CURRENT ranking only and the loader upserts by (tour, player), so a player who drops out
+// of ESPN's top 100 would otherwise keep last week's rank and points forever and sit next to whoever now holds that
+// rank. Given the ids that were just stored for the tour, delete that tour's rows for everyone else. An empty list
+// deletes nothing (a fetch that came back empty must never wipe a tour). The other tour and the players table are
+// never touched. Returns the number of rows deleted.
+export async function pruneStaleRankings(db: Pick<Pool, "query">, tour: Tour, currentPlayerIds: string[]): Promise<number> {
+  if (currentPlayerIds.length === 0) return 0;
+  const res = await db.query(`delete from tennis_rankings where tour = $1 and not (player_espn_id = any($2::text[]))`, [tour, currentPlayerIds]);
+  return res.rowCount ?? 0;
 }
