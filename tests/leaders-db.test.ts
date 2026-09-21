@@ -100,6 +100,7 @@ before(async () => {
   await player("epl", "o2", "Older Timer", "2");
   await pss("epl", 2025, "o1", "2", { goals: 20, assists: 3 });
   await pss("epl", 2025, "o2", "2", { goals: 20, assists: 9 });
+  await pss("epl", 2025, "gone", "2", { goals: 30, assists: 1 }); // the top of the stored standing, with no players row
   // 2024: finished, with box scores; ESPN's final row says 7, the box scores (and the player page) say 6.
   await game("epl", "f1", "2025-01-10T14:00:00Z", 2024);
   await row("epl", "f1", "a", "2", soccer(6));
@@ -263,7 +264,7 @@ test("a finished season with box scores is the box scores (what the player page 
 
 test("a season with no box scores keeps ESPN's rows (the boundary), with the same tie rules and the stored club", async () => {
   const board = await queries.getLeaderBoard("epl", "goals", { limit: 10, season: 2025, ties: true });
-  assert.deepEqual(board.rows.map((r) => [r.name, r.value, r.rank, r.team_name]), [["Older Timer", 20, 1, "Arsenal"], ["Old Timer", 20, 1, "Arsenal"]]);
+  assert.deepEqual(board.rows.map((r) => [r.name, r.value, r.rank, r.team_name]), [["Older Timer", 20, 2, "Arsenal"], ["Old Timer", 20, 2, "Arsenal"]], "the two share rank 2: the 30-goal row with no players row keeps rank 1 unseen, nobody is promoted");
 });
 
 test("the board's season is the latest with box scores or stored figures; next season's empty rows do not win; UCL stays on its stored rows", async () => {
@@ -440,4 +441,32 @@ test("a 1,234-yard board row and the player page's cell print the identical stri
   const recap = { season: 2026, seasonLabel: "2026", seasonOver: true, nextFixtureOn: null, endedOn: null, champion: null, closingGames: [], playoffs: [], table: [], tableSize: 0, leaders: [{ label: "Passing Yards", unit: "YDS", rows: board.rows.slice(0, 3) }] };
   const html = text(renderToStaticMarkup(createElement(OffseasonRecap, { league: "nfl", recap } as never)));
   assert.match(html, /Big QB.* 1,234 YDS/);
+});
+
+// ---------------------------------------------------------------------------
+// Fix round 3
+// ---------------------------------------------------------------------------
+test("a stored-season board whose top row has no players row keeps the others' ranks and is not padded", async () => {
+  // EPL 2025 has stored rows only: "gone" (30 goals, no players row), then two players level on 20.
+  const three = await queries.getLeaderBoard("epl", "goals", { limit: 3, season: 2025, ties: true });
+  assert.deepEqual(three.rows.map((r) => [r.name, r.rank]), [["Older Timer", 2], ["Old Timer", 2]]);
+  // A top one is just the hidden row: nobody else is pulled in to fill it, and nobody becomes rank 1.
+  assert.deepEqual((await queries.getLeaderBoard("epl", "goals", { limit: 1, season: 2025, ties: true })).rows, []);
+  assert.deepEqual(await queries.getLeaders("epl", "goals", 1, 2025), []);
+  assert.deepEqual((await queries.getLeaders("epl", "goals", 2, 2025)).map((r) => [r.name, r.rank]), [["Older Timer", 2], ["Old Timer", 2]]);
+});
+
+test("the stored side of the season resolver counts a season with a figure in ANY one of the eight board columns, and none with all null", async () => {
+  const columns = ["goals", "assists", "passing_yards", "rushing_yards", "receiving_yards", "pts_avg", "reb_avg", "ast_avg"];
+  assert.equal(await queries.getLeadersSeason("bundesliga"), null);
+  await team("bundesliga", "1", "Bayern");
+  await player("bundesliga", "bp", "Bundes Player", "1");
+  await pss("bundesliga", 2030, "bp", "1", {});
+  assert.equal(await queries.getLeadersSeason("bundesliga"), null, "an all-null row is no season");
+  for (const column of columns) {
+    await q(`update player_season_stats set goals = null, assists = null, passing_yards = null, rushing_yards = null, receiving_yards = null, pts_avg = null, reb_avg = null, ast_avg = null where league = 'bundesliga'`);
+    await q(`update player_season_stats set ${column} = 7 where league = 'bundesliga'`);
+    assert.equal(await queries.getLeadersSeason("bundesliga"), 2030, column);
+  }
+  await q(`delete from player_season_stats where league = 'bundesliga'`);
 });

@@ -143,7 +143,8 @@ test("postseasonCategoriesOf: the postseason categories for seasontype 3, nothin
 });
 
 test("a stat-less rostered player (ESPN answers with no categories and no seasontype filter, twice) is silently 0: nothing written, no failure", async () => {
-  // Real answers for athletes 5142718 and 5105841 (0 years of experience): neither response carries `categories` or a `seasontype` filter.
+  // Shaped from the description of ESPN's answer for athletes 5142718 and 5105841 (0 years of experience), not fetched fixtures: neither
+  // response carries `categories` or a `seasontype` filter.
   regularAnswer = () => json({ filters: [], glossary: [], teams: {} });
   postseasonAnswer = () => json({ filters: [], glossary: [], teams: {} });
   assert.equal(await loader.upsertPlayerSeasonStats("nba", "5142718", null), 0);

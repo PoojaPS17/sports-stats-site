@@ -23,7 +23,7 @@
 import { pool } from "./db";
 import { espnSeasonTotals, type EspnSeasonTotals } from "./espnSeason";
 import { isCupCompetition, type League } from "./leagues";
-import { nbaPerGame, nbaQualifyingGames, orderLeaders, pickLeaders, rankLeaders, roundLeaderAverage, seasonTeams, takeLeaders, teamsLabel, type NbaStat, type Rankable, type TeamStint } from "./leaders";
+import { nbaPerGame, nbaQualifyingGames, orderLeaders, rankLeaders, roundLeaderAverage, seasonTeams, takeLeaders, teamsLabel, type NbaStat, type Rankable, type TeamStint } from "./leaders";
 import { noStatLineGameSql } from "./playerLog";
 import { playerSport, type PlayerSport } from "./playerProfile";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
@@ -103,22 +103,27 @@ async function storedBoard(league: League, season: number, column: string, limit
     ? `and pss.games_played >= ceil(0.7 * (select max(games_played) from player_season_stats q where q.league = pss.league and q.season = pss.season))`
     : "";
   const secondary = column === "goals" ? "pss.assists" : column === "assists" ? "pss.goals" : "null";
+  // Ranked over every stored row BEFORE the join to `players`, so a top row with no players row (which cannot be shown) leaves
+  // the others their own ranks instead of promoting the next player to 1: a hole is fine, a wrong rank is not.
   const { rows } = await pool.query(
-    `select * from (
-       select pss.player_espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
-              t.name as team_name, t.slug as team_slug, pss.${column} as value, ${secondary} as secondary,
+    `select x.player_espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
+            t.name as team_name, t.slug as team_slug, x.value, x.secondary, x.rk
+     from (
+       select pss.player_espn_id, pss.team_espn_id, pss.${column} as value, ${secondary} as secondary,
               rank() over (order by pss.${column} desc) as rk
        from player_season_stats pss
-       join players p on p.league = pss.league and p.espn_id = pss.player_espn_id
-       left join teams t on t.league = pss.league and t.espn_id = pss.team_espn_id
-       where pss.league = $1 and pss.${column} is not null and ${notPseudoAthleteSql()}
+       where pss.league = $1 and pss.${column} > 0 and ${notPseudoAthleteSql("pss.player_espn_id")}
          and pss.season = $3
          ${qualifier}
-     ) x where x.rk <= $2`,
+     ) x
+     join players p on p.league = $1 and p.espn_id = x.player_espn_id
+     left join teams t on t.league = $1 and t.espn_id = x.team_espn_id
+     where x.rk <= $2`,
     [league, limit, season]
   );
-  const candidates = rows.map((r) => ({ ...r, value: Number(r.value), secondary: r.secondary === null ? null : Number(r.secondary) }));
-  const picked = pickLeaders(candidates, limit, { ties });
+  // Best first with real names for equal figures, each row keeping the rank the whole standing gave it.
+  const ranked = orderLeaders(rows.map((r) => ({ ...r, value: Number(r.value), secondary: r.secondary === null ? null : Number(r.secondary), rank: Number(r.rk) })));
+  const picked = takeLeaders(ranked, limit, { ties });
   return {
     rows: picked.rows.map((r): LeaderRow => ({ player_espn_id: r.player_espn_id, name: r.name, slug: r.slug, headshot_url: r.headshot_url, team_name: r.team_name, team_slug: r.team_slug, value: r.value, rank: r.rank })),
     omitted: picked.omitted,
