@@ -85,7 +85,7 @@ test("the splits are no longer separate addresses to crawl", () => {
 
 /** The career tiles as rendered, in order: [label, value]. */
 function careerTiles(html: string): [string, string][] {
-  return [...html.matchAll(/<p class="text-lg font-extrabold tabular-nums">([^<]*)<\/p><p class="[^"]*">([^<]*)<\/p>/g)].map((m) => [m[2], m[1]]);
+  return [...html.matchAll(/<p class="text-lg font-extrabold tabular-nums">([^<]*)<\/p><p class="[^"]*">([^<]*)<\/p>/g)].map((m) => [m[2].replace(/&amp;/g, "&"), m[1]]);
 }
 
 // Every figure the career block shows, for the fixture above. Averages and rates are derived in the
@@ -106,7 +106,7 @@ const CAREER = [
   ["Average", "23.33"],
   ["Economy", "8.40"],
   ["5w", "0"],
-  ["Catches", "5"],
+  ["Catches & stumpings", "5"],
 ];
 
 test("the career figures are exactly the ones the data gives", () => {
@@ -133,5 +133,13 @@ test("each split panel carries its own row's figures", () => {
     const figures = [...panels[i].matchAll(/tabular-nums[^>]*">([^<]*)<\/td>/g)].map((m) => m[1]);
     assert.deepEqual(figures, [String(row.matches), String(row.runs), String(row.wickets)], `${key} panel figures`);
     assert.ok(panels[i].includes(row.label), `${key} panel names ${row.label}`);
+  }
+});
+
+test("the career note says Matches counts every game in the XI, whatever the format", () => {
+  for (const league of ["test", "odi", "t20i", "wodi", "wt20i"] as const) {
+    const html = renderToStaticMarkup(createElement(CricketCareer, { league, career, splits }));
+    assert.ok(html.includes("Matches counts every game the player was in the playing XI for."), `${league} note`);
+    assert.doesNotMatch(html, /batted, bowled or took a catch/);
   }
 });

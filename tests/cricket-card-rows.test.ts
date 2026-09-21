@@ -65,6 +65,45 @@ test("a Test's empty row is one match, not an innings", async () => {
   assert.equal(career?.average, 60);
 });
 
+test("the comparison counts an empty row as a game and labels the fielding line catches and stumpings", async () => {
+  for (const id of ["p1", "p2"]) await db.pool.query(`insert into players (league, espn_id, name, slug) values ('odi', $1, $1, $1)`, [id]);
+  const compare = await import("../src/lib/compare");
+  const cmp = await compare.getPlayerComparison("odi", "p1", "p2");
+  // p1: two games with figures and two empty rows; p2: two empty rows.
+  assert.equal(cmp?.a.gamesLogged, 4);
+  assert.equal(cmp?.b.gamesLogged, 2);
+  const [career] = cmp!.groups;
+  assert.deepEqual(career.metrics.map((m) => m.label), ["Matches", "Catches & stumpings"]);
+  const matches = career.metrics[0];
+  assert.deepEqual([matches.a, matches.b], [4, 2]);
+});
+
+test("splits, leaders and centuries read an empty row as a match with nothing in it", async () => {
+  await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('t20i', '1', 'One', 'one'), ('t20i', '2', 'Two', 'two')`);
+  for (const id of ["p8", "p9"]) await db.pool.query(`insert into players (league, espn_id, name, slug) values ('t20i', $1, $1, $1)`, [id]);
+  for (const g of ["g1", "g2"]) {
+    await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed, season_year, venue) values ('t20i', $1, now(), 'x', '1', '2', true, 2025, 'Ground')`, [g]);
+  }
+  await addRow("t20i", "g1", "p9", { v: 3 });
+  await addRow("t20i", "g2", "p9", { batting: { runs: 104, ballsFaced: 60, fours: 9, sixes: 4, notOut: true }, v: 3 });
+  await addRow("t20i", "g1", "p8", {});
+  await addRow("t20i", "g2", "p8", { v: 3 });
+
+  for (const dimension of ["team", "opponent", "venue"] as const) {
+    const [split] = await queries.getPlayerCricketSplits("t20i", "p9", dimension);
+    assert.equal(Number(split.matches), 2, dimension);
+    assert.equal(Number(split.runs), 104, dimension);
+    assert.equal(Number(split.wickets), 0, dimension);
+  }
+  const onlyEmpty = await queries.getPlayerCricketSplits("t20i", "p8", "venue");
+  assert.deepEqual(onlyEmpty.map((r) => [Number(r.matches), Number(r.runs), Number(r.wickets)]), [[2, 0, 0]]);
+
+  const runs = await queries.getCricketLeaders("t20i", "runs", 2025);
+  assert.deepEqual(runs.map((r) => [r.name, r.value]), [["p9", 104]], "a player with nothing but empty rows is not on the board");
+  const centuries = await queries.getCricketCenturies("t20i");
+  assert.deepEqual(centuries.map((c) => [c.player_name, c.runs]), [["p9", 104]]);
+});
+
 /* ------------------------------------------------------------------------ */
 /* refresh-cricket-cards                                                     */
 /* ------------------------------------------------------------------------ */

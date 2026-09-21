@@ -288,7 +288,7 @@ function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | nul
     {
       title: "Career on record",
       note: "Every match in the competitions we track. International and other domestic cricket is not included.",
-      metrics: [metric("Matches", ...g("matches"), { noBar: true }), metric("Catches", ...g("catches"))],
+      metrics: [metric("Matches", ...g("matches"), { noBar: true }), metric("Catches & stumpings", ...g("catches"))],
     },
     {
       title: "Batting",
