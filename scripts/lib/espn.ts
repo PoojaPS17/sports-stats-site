@@ -1,3 +1,5 @@
+import { cricketSummaryPaths, fetchCricketSummaryVia, type CricketSummaryOptions } from "../../src/lib/cricketSummary";
+
 export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "wpl" | "wbbl" | "wcwc" | "wt20wc" | "laliga" | "bundesliga" | "seriea" | "ucl";
 
 // Cricket competition ids: IPL 8048, Big Bash League 8044, ICC Cricket World Cup
@@ -158,7 +160,16 @@ export function fetchStandingsBySeason(league: League, season: number) {
   return getJson<any>(`${CORE_BASE}/${SPORT_PATH[league]}/standings?${q}`);
 }
 
-export function fetchSummary(league: League, eventId: string) {
+// A cricket summary is read by scripts/lib's robust path (../../src/lib/cricketSummary.ts):
+// ESPN's 502 error body parses as JSON, which getJson deliberately trusts, so it is checked
+// for a match header/rosters, retried, and read through the IPL id when the league's own
+// path fails. Every other sport keeps the plain getJson read.
+export function fetchCricketSummary(eventId: string, paths: string[], options?: CricketSummaryOptions) {
+  return fetchCricketSummaryVia((path) => getJson<unknown>(`${SITE_BASE}/${path}/summary?event=${eventId}`), eventId, paths, options);
+}
+
+export function fetchSummary(league: League, eventId: string, cricketOptions?: CricketSummaryOptions) {
+  if (isCricketLeague(league)) return fetchCricketSummary(eventId, cricketSummaryPaths(SPORT_PATH[league]), cricketOptions);
   return getJson<any>(`${SITE_BASE}/${SPORT_PATH[league]}/summary?event=${eventId}`);
 }
 
