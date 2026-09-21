@@ -218,3 +218,22 @@ test("backfill:cricket-dates reads its arguments: every league given, the limit 
   assert.equal(parseDateBackfillArgs(["test", "--limit"]).ok, false);
   assert.equal(parseDateBackfillArgs(["test", "--dry-run"]).ok, false);
 });
+
+test("storing the same dates again writes nothing, so the live scrape makes no row version per poll", async () => {
+  await insertTest("noop", "2025-12-25T23:30:00Z");
+  const args = ["test", "noop", "4th Test, England tour of Australia at Melbourne, Dec 26-27 2025", null, "2025-12-25T23:30Z"] as const;
+  await games.storeCricketDates(...args);
+  const xmin = async () => (await db.pool.query(`select xmin::text as x from games where league = 'test' and espn_id = 'noop'`)).rows[0].x;
+  const first = await xmin();
+  await games.storeCricketDates(...args);
+  await games.storeCricketDates(...args);
+  assert.equal(await xmin(), first, "the row was not rewritten");
+  assert.deepEqual(await dates("test", "noop"), { local_date: "2025-12-26", end_date: "2025-12-27" });
+  // a feed with no date, against a row that already has one, is also a no-op
+  await games.storeCricketDates("test", "noop", "4th Test, England tour of Australia at Melbourne", null, "2025-12-25T23:30Z");
+  assert.equal(await xmin(), first);
+  // and a real change still lands
+  await games.storeCricketDates("test", "noop", "4th Test, England tour of Australia at Melbourne, Dec 26-29 2025", null, "2025-12-25T23:30Z");
+  assert.equal((await dates("test", "noop")).end_date, "2025-12-29");
+  assert.notEqual(await xmin(), first);
+});

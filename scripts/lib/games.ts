@@ -139,11 +139,15 @@ export function parseCricketRound(description: string): string | null {
 export async function storeCricketDates(league: string, espnId: string, description: unknown, notes: unknown, startIso: string): Promise<CricketLocalDates["source"] | null> {
   const parsed = parseCricketLocalDates(description, notes, startIso);
   if (!parsed.localDate) return null;
+  // Only when something would change: the live scrape calls this on every poll for every cricket match, and an
+  // update that rewrites the same values still makes a new row version (and bloat) for nothing.
   await pool.query(
-    `update games set
-       local_date = case when $4 then $2::date else coalesce(local_date, $2::date) end,
-       end_date = case when $4 then $3::date else end_date end
-     where league = $1 and espn_id = $5`,
+    `update games g set local_date = n.local_date, end_date = n.end_date
+     from (select case when $4 then $2::date else coalesce(g2.local_date, $2::date) end as local_date,
+                  case when $4 then $3::date else g2.end_date end as end_date
+           from games g2 where g2.league = $1 and g2.espn_id = $5) n
+     where g.league = $1 and g.espn_id = $5
+       and (g.local_date, g.end_date) is distinct from (n.local_date, n.end_date)`,
     [league, parsed.localDate, parsed.endDate, parsed.source !== "utc", espnId]
   );
   return parsed.source;
