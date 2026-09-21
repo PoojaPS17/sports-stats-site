@@ -2,6 +2,7 @@ import { pool } from "./db";
 import { isLeague, type League } from "./leagues";
 import { featuredMatchSql, featuredSeriesSql, isFeaturedCricket } from "./cricketFeatured";
 import { CALLED_OFF } from "./gameStatus";
+import { baseSeriesId, editionLabel, isEditionKey } from "./cricketSeriesKey";
 
 export type SeriesKind = "international" | "womens-international" | "domestic" | "womens-domestic" | "other";
 
@@ -77,7 +78,7 @@ export interface CricketSeriesMatch {
 }
 
 const SERIES_LEAGUE_SQL = `
-  case s.espn_id when '8048' then 'ipl' when '8044' then 'bbl' when '8039' then 'cwc' when '8604' then 't20wc'
+  case split_part(s.espn_id, '-', 1) when '8048' then 'ipl' when '8044' then 'bbl' when '8039' then 'cwc' when '8604' then 't20wc'
                  when '21282' then 'wpl' when '21284' then 'wbbl' when '8584' then 'wcwc' when '8634' then 'wt20wc' end as league`;
 
 const SERIES_SELECT = `
@@ -128,6 +129,43 @@ export async function getCricketSeriesSeasons(): Promise<number[]> {
 export async function getCricketSeries(espnId: string): Promise<CricketSeries | null> {
   const { rows } = await pool.query(`${SERIES_SELECT} where s.espn_id = $1`, [espnId]);
   return rows[0] ? shape(rows[0]) : null;
+}
+
+/**
+ * A tournament is one series per edition ("8044-2025-26"), but ESPN's league id alone ("8044") is what older links,
+ * follows and search results carry. The newest edition of that league, when `espnId` is a bare league id that has
+ * editions; null for an edition key, a bilateral series or an unknown id.
+ */
+export async function getLatestCricketEdition(espnId: string): Promise<string | null> {
+  if (!/^\d+$/.test(espnId)) return null;
+  const { rows } = await pool.query(
+    `select espn_id from cricket_series where espn_id like $1 order by start_date desc nulls last, espn_id desc limit 1`,
+    [`${espnId}-%`]
+  );
+  return rows[0]?.espn_id ?? null;
+}
+
+export interface CricketSeriesEdition {
+  espn_id: string;
+  /** "2025-26" */
+  label: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  match_count: number;
+}
+
+/** Every edition of the tournament `espnId` belongs to, newest first (empty for a bilateral series, which has no other editions). */
+export async function getCricketSeriesEditions(espnId: string): Promise<CricketSeriesEdition[]> {
+  if (!isEditionKey(espnId)) return [];
+  const { rows } = await pool.query(
+    `select s.espn_id, s.name, s.match_count,
+            to_char(s.start_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as start_date,
+            to_char(s.end_date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as end_date
+     from cricket_series s where s.espn_id like $1 order by s.start_date desc nulls last, s.espn_id desc`,
+    [`${baseSeriesId(espnId)}-%`]
+  );
+  return rows.map((r) => ({ ...r, label: editionLabel(r.espn_id) as string }));
 }
 
 const MATCH_SELECT = `

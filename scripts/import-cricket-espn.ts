@@ -418,7 +418,7 @@ export async function findMissingInternationals(cap: number, only?: IntlLeague):
        and coalesce(m.status_summary, '') !~* '(abandoned|cancelled|called off) without a ball'
        and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any($3::text[]))`;
   const [{ rows }, { rows: count }] = await Promise.all([
-    pool.query(`select m.espn_id, m.series_espn_id, m.date, m.name, m.international_class_id from cricket_series_matches m where ${where} order by m.date desc limit $4`, [classIds, RECONCILE_FROM, INTL_LEAGUES, cap]),
+    pool.query(`select m.espn_id, split_part(m.series_espn_id, '-', 1) as series_espn_id, m.date, m.name, m.international_class_id from cricket_series_matches m where ${where} order by m.date desc limit $4`, [classIds, RECONCILE_FROM, INTL_LEAGUES, cap]),
     pool.query(`select count(*)::int as n from cricket_series_matches m where ${where}`, [classIds, RECONCILE_FROM, INTL_LEAGUES]),
   ]);
   const matches: Found[] = rows

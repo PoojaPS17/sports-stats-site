@@ -55,7 +55,7 @@ export async function findTopUpCandidates(cap: number, leagues: readonly string[
   const [{ rows: games }, { rows: count }] = await Promise.all([
     pool.query(
       `select g.league, g.espn_id, g.home_team_espn_id, g.away_team_espn_id,
-              (select m.series_espn_id from cricket_series_matches m where m.espn_id = g.espn_id) as series_id
+              (select split_part(m.series_espn_id, '-', 1) from cricket_series_matches m where m.espn_id = g.espn_id) as series_id
        from games g where ${where} order by g.date desc limit $2`,
       [leagues, cap]
     ),

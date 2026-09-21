@@ -6,6 +6,7 @@
 // through the series picker (nav Cricket menu, /cricket/series) and search.
 //
 // Pure constants, safe to import from Client Components (no database import).
+import { baseSeriesId } from "./cricketSeriesKey";
 
 /** ESPN series ids of the featured competitions, with a short display name. */
 export const FEATURED_SERIES: Record<string, string> = {
@@ -37,7 +38,8 @@ export const FEATURED_SERIES: Record<string, string> = {
 export const FEATURED_CLASS_IDS = ["1", "2", "3", "8", "9", "10"];
 
 export function isFeaturedSeriesId(seriesEspnId: string | null | undefined): boolean {
-  return Boolean(seriesEspnId && FEATURED_SERIES[seriesEspnId]);
+  // A tournament's series id is an edition key ("8044-2025-26"); the competition is its ESPN league id.
+  return Boolean(seriesEspnId && FEATURED_SERIES[baseSeriesId(seriesEspnId)]);
 }
 
 /** True for a match in a featured competition or an official international (Test, ODI, T20I, men's or women's). */
@@ -49,11 +51,11 @@ const list = (values: string[]) => values.map((v) => `'${v}'`).join(",");
 
 /** SQL predicate for the same rule over a `cricket_series_matches` row aliased `alias`. */
 export function featuredMatchSql(alias = "m"): string {
-  return `(${alias}.series_espn_id in (${list(Object.keys(FEATURED_SERIES))}) or ${alias}.international_class_id in (${list(FEATURED_CLASS_IDS)}))`;
+  return `(split_part(${alias}.series_espn_id, '-', 1) in (${list(Object.keys(FEATURED_SERIES))}) or ${alias}.international_class_id in (${list(FEATURED_CLASS_IDS)}))`;
 }
 
 /** SQL predicate for a `cricket_series` row aliased `alias`: a featured competition, or a series with an official international in it. */
 export function featuredSeriesSql(alias = "s"): string {
-  return `(${alias}.espn_id in (${list(Object.keys(FEATURED_SERIES))})
+  return `(split_part(${alias}.espn_id, '-', 1) in (${list(Object.keys(FEATURED_SERIES))})
     or exists (select 1 from cricket_series_matches x where x.series_espn_id = ${alias}.espn_id and x.international_class_id in (${list(FEATURED_CLASS_IDS)})))`;
 }

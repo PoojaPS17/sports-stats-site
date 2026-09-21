@@ -5,6 +5,7 @@
 // a 10-second cache and overlay it on the stored rows.
 import type { CricketSeriesMatch, SeriesKind, SeriesSide } from "./cricketSeries";
 import { resolveTeamLogo } from "@/lib/teamLogos";
+import { baseSeriesId, seriesEdition, seriesTitle } from "./cricketSeriesKey";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
 const LIVE_REVALIDATE = 10;
@@ -65,12 +66,13 @@ export async function fetchLiveCricketFromEspn(): Promise<CricketSeriesMatch[]> 
           if (ev.status !== "in" || !ev.id || out.has(String(ev.id))) continue;
           // Flagged "in" from the scheduled start, but the summary says play has not begun.
           if (/scheduled to begin/i.test(String(ev.fullStatus?.longSummary ?? ev.summary ?? ""))) continue;
-          const seriesId = String(lg.id ?? "");
-          const league = LEAGUE_BY_SERIES[seriesId] ?? null;
+          // Filed under the same key the stored rows carry (an edition for a tournament), or the series page's overlay would drop it.
+          const { id: seriesId, label } = seriesEdition(lg, ev);
+          const league = LEAGUE_BY_SERIES[String(lg.id ?? "")] ?? null;
           out.set(String(ev.id), {
             espn_id: String(ev.id),
             series_espn_id: seriesId,
-            series_name: String(lg.name ?? ""),
+            series_name: seriesTitle(String(lg.name ?? ""), label),
             series_kind: kindOf(ev),
             date: ev.date,
             name: String(ev.name ?? ""),
@@ -109,7 +111,7 @@ export async function overlayLiveCricket(rows: CricketSeriesMatch[], seriesEspnI
 /** One match's full summary (scorecard, officials, venue), fresh enough for a match in play. */
 export async function fetchCricketSummaryLive(espnId: string, seriesId = "8048"): Promise<any | null> {
   try {
-    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/cricket/${seriesId}/summary?event=${espnId}`, { next: { revalidate: LIVE_REVALIDATE } });
+    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/cricket/${baseSeriesId(seriesId)}/summary?event=${espnId}`, { next: { revalidate: LIVE_REVALIDATE } });
     if (!res.ok) return null;
     const data = await res.json();
     return data?.header?.competitions?.[0]?.competitors?.length ? data : null;
