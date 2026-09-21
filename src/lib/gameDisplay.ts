@@ -3,13 +3,15 @@
 // kickoff time goes through here.
 import type { GameRow } from "./queries";
 import { dayTimeZone, dayZoneLabel, formatGameDate, formatGameTime } from "./gameDay";
-import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
+import { gameCalledOffLabel, isGameCalledOff, isTimeTbd } from "./gameStatus";
 import { isCricketLeague, LEAGUE_LABEL } from "./leagues";
 import { teamDisplayName } from "./teamName";
-import { finishedLabel, normalizeStage } from "./stage";
+import { finishedPillLabel, overtimeFinal } from "./stage";
+import { scoreLineHomeFirst } from "./gamePage";
 import type { League } from "./leagues";
 
 type StatusFields = Pick<GameRow, "completed" | "status_state" | "status_detail">;
+type StageFields = Pick<GameRow, "round" | "stage" | "competition_type">;
 
 /** A game still to be played: not finished, not in play, and not called off. */
 export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.status_state !== "in" && !isGameCalledOff(g);
@@ -25,6 +27,8 @@ export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRo
   const off = gameCalledOffLabel(g);
   if (off) return `${when} · ${off}`;
   if (isUpcomingGame(g)) {
+    // A fixture with no kickoff time yet has a day and "TBD": the feed's placeholder clock time would read as a real one.
+    if (isTimeTbd(g)) return `${when} · TBD`;
     // A US game's kickoff names its zone (the card's footer says UTC, which a bare clock time would invite reading as UTC too);
     // every other league keeps its wording exactly.
     const zone = dayTimeZone(league) === "UTC" ? "" : ` ${dayZoneLabel(league)}`;
@@ -33,33 +37,39 @@ export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRo
   return when;
 }
 
-/** Screen-reader name of a game card. */
+/** Screen-reader name of a game card. Football names the home side first ("Arsenal v Chelsea"), the US leagues the visitors ("Chelsea at Arsenal"). */
 export function gameAccessibleLabel(
   league: League,
-  game: StatusFields & Pick<GameRow, "date" | "round" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
+  game: StatusFields & StageFields & Pick<GameRow, "date" | "home_name" | "away_name" | "home_score" | "away_score" | "home_score_display" | "away_score_display">,
 ): string {
   const off = gameCalledOffLabel(game);
+  const homeFirst = scoreLineHomeFirst(league);
+  const home = teamDisplayName(game.home_name);
+  const away = teamDisplayName(game.away_name);
   if (game.completed && !off) {
-    return `${teamDisplayName(game.away_name)} ${game.away_score_display ?? game.away_score ?? ""}, ${teamDisplayName(game.home_name)} ${
-      game.home_score_display ?? game.home_score ?? ""
-    }, ${game.round ?? "final"}`;
+    const homeScore = game.home_score_display ?? game.home_score ?? "";
+    const awayScore = game.away_score_display ?? game.away_score ?? "";
+    const line = homeFirst ? `${home} ${homeScore}, ${away} ${awayScore}` : `${away} ${awayScore}, ${home} ${homeScore}`;
+    return `${line}, ${finishedPillLabel(league, game, "final")}`;
   }
   const date = formatGameDate(game.date, league, { weekday: "long", month: "long", day: "numeric" });
-  const label = `${teamDisplayName(game.away_name)} at ${teamDisplayName(game.home_name)}, ${date}`;
+  const label = homeFirst ? `${home} v ${away}, ${date}` : `${away} at ${home}, ${date}`;
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
 
 /** The status line of one tile on a scoreboard image: result, live detail, kickoff (in the league's day zone, labelled), or why a called-off game is off. */
-export function scoreboardTileStatus(league: League, g: StatusFields & Pick<GameRow, "date" | "round">, withDate: boolean): string {
+export function scoreboardTileStatus(league: League, g: StatusFields & StageFields & Pick<GameRow, "date">, withDate: boolean): string {
   const off = gameCalledOffLabel(g);
   const live = g.status_state === "in" && !g.completed;
   if (withDate) {
     const day = formatGameDate(g.date, league, { month: "short", day: "numeric", year: "numeric" });
-    return `${day} · ${off ?? (g.completed ? (normalizeStage(g.round) ?? finishedLabel(league)) : live ? (g.status_detail ?? "Live") : "Upcoming")}`;
+    return `${day} · ${off ?? (g.completed ? finishedPillLabel(league, g) : live ? (g.status_detail ?? "Live") : "Upcoming")}`;
   }
   if (off) return off;
-  if (g.completed) return normalizeStage(g.round) ?? finishedLabel(league);
+  if (g.completed) return finishedPillLabel(league, g);
   if (live) return g.status_detail ?? "Live";
+  // No kickoff time set yet: the tile's date says which day, and a placeholder clock time would be wrong.
+  if (isTimeTbd(g)) return "TBD";
   return `${new Date(g.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: dayTimeZone(league) })} ${dayZoneLabel(league)}`;
 }
 
@@ -108,12 +118,12 @@ export function scoresDayDescription(league: League, dayLabel: string, games: (S
 }
 
 /**
- * The status word over a game's share image: the reason for a called-off game, "Final" for a scored result,
+ * The status word over a game's share image: the reason for a called-off game, "Final" (or "Final/OT") for a scored result,
  * "Result" for a finished match with no scores (abandoned, no result), null for a fixture or a game in play.
  */
 export function shareImageStatus(g: StatusFields & Pick<GameRow, "home_score" | "away_score" | "status_summary">): string | null {
   const off = gameCalledOffLabel(g);
   if (off) return off;
   if (!g.completed) return null;
-  return finishedNoScoreNote(g) ? "Result" : "Final";
+  return finishedNoScoreNote(g) ? "Result" : (overtimeFinal(g.status_detail) ?? "Final");
 }

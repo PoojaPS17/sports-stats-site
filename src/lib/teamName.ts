@@ -9,3 +9,12 @@ export function teamDisplayName<T extends string | null | undefined>(name: T): T
   if (!name) return name;
   return name.replace(/ Wom[ae]n\b(?!['’]s)/g, "-W") as T;
 }
+
+/**
+ * The teams a traded player played for in one season (or a career), in the order given, joined with " / " so
+ * two clubs never run together ("Chicago BullsCleveland Cavaliers"). Used for a cell's `title` and any plain-text
+ * mention; a table draws the same separator between its links.
+ */
+export function joinTeams(teams: readonly { name: string }[]): string {
+  return teams.map((t) => t.name).join(" / ");
+}

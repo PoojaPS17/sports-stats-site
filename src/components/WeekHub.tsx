@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
-import { LEAGUE_LABEL, formatSeasonLabel, type League } from "@/lib/queries";
+import { LEAGUE_LABEL, formatSeasonLabel, type GameRow, type League } from "@/lib/queries";
 import { isCupCompetition, UCL_LEAGUE_PHASE_FROM } from "@/lib/leagues";
 import { isSoccer } from "@/lib/analytics";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 import {
   currentWeekIndex,
   getWeekPerformers,
@@ -119,6 +120,12 @@ export async function WeekHub({
   const next = weeks.find((w) => w.index === week.index + 1) ?? null;
   const seasonArg = isCurrentSeason ? null : season;
   const scoreWord = soccer ? "goals" : "points";
+  // The biggest margin as a score line: football lists the home side first, the NBA and NFL the visitors.
+  const biggestLine = (g: GameRow) => {
+    const away = `${g.away_abbr ?? teamDisplayName(g.away_name)} ${g.away_score}`;
+    const home = `${g.home_abbr ?? teamDisplayName(g.home_name)} ${g.home_score}`;
+    return scoreLineHomeFirst(league) ? `${home}–${away}` : `${away}–${home}`;
+  };
   const days = groupByDay(league, week.games);
 
   return (
@@ -174,7 +181,7 @@ export async function WeekHub({
             {
               label: "Biggest margin",
               value: summary.biggest ? Math.abs(summary.biggest.home_score! - summary.biggest.away_score!) : "—",
-              sub: summary.biggest ? `${summary.biggest.away_abbr ?? teamDisplayName(summary.biggest.away_name)} ${summary.biggest.away_score}–${summary.biggest.home_score} ${summary.biggest.home_abbr ?? teamDisplayName(summary.biggest.home_name)}` : "",
+              sub: summary.biggest ? biggestLine(summary.biggest) : "",
             },
           ].map((s) => (
             <div key={s.label} className="card flex flex-col gap-0.5 px-4 py-3">

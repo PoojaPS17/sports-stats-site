@@ -2,6 +2,7 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import type { TimelineEvent, TimelineEventType } from "@/lib/matchDetail";
 import type { GameRow, League } from "@/lib/queries";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 const BADGE: Record<TimelineEventType, { text: string; cls: string }> = {
   goal: { text: "Goal", cls: "bg-[var(--win)] text-white" },
@@ -66,7 +67,7 @@ export function MatchTimeline({ league, game, events, playerSlugs }: { league: L
             </span>
             {scoring && (
               <span className="shrink-0 font-bold tabular-nums">
-                {e.away_score}–{e.home_score}
+                {scoreLineHomeFirst(league) ? `${e.home_score}–${e.away_score}` : `${e.away_score}–${e.home_score}`}
               </span>
             )}
           </li>

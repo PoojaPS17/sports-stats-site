@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { teamDisplayName } from "@/lib/teamName";
+import { Fragment } from "react";
+import { joinTeams, teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, LEAGUE_LABEL, type League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
@@ -23,13 +24,21 @@ export function PlayerCareerStrip({ league, profile }: { league: League; profile
           {LEAGUE_LABEL[league]}{span ? `, ${span}` : ""}.
         </span>
         {profile.teams.length > 0 && (
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1" title={profile.teams.length > 1 ? joinTeams([...profile.teams].reverse()) : undefined}>
             <span>Played for</span>
-            {profile.teams.map((t) => (
-              <Link key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 font-semibold text-[var(--text)] hover:text-[var(--accent)]">
-                <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={14} />
-                {t.name}
-              </Link>
+            {/* The profile keeps the latest club first; the line reads oldest to newest, with a slash between clubs. */}
+            {[...profile.teams].reverse().map((t, i) => (
+              <Fragment key={t.espn_id}>
+                {i > 0 && (
+                  <span aria-hidden className="text-[var(--text-faint)]">
+                    /
+                  </span>
+                )}
+                <Link href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 font-semibold text-[var(--text)] hover:text-[var(--accent)]">
+                  <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={14} />
+                  {t.name}
+                </Link>
+              </Fragment>
             ))}
           </span>
         )}

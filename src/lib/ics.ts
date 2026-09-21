@@ -8,7 +8,9 @@ import { getF1Calendar, getF1Seasons, type F1EventRow } from "./f1";
 import { f1EventStatus } from "./f1Status";
 import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
-import { gameCalledOffLabel } from "./gameStatus";
+import { gameCalledOffLabel, isTimeTbd } from "./gameStatus";
+import { gameDayIso } from "./gameDay";
+import { overtimeFinal, specialStageLabel } from "./stage";
 
 const SITE = SITE_URL;
 const PRODID = "-//SportsDB//Fixtures//EN";
@@ -142,16 +144,21 @@ function gameSummary(league: League, g: GameWithVenue, perspectiveTeamId?: strin
 }
 
 export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: string): IcsEvent {
-  const start = new Date(g.date);
-  const end = new Date(start.getTime() + durationMinutes(league) * 60_000);
+  // A fixture with no kickoff time yet (NFL week 18 is filed at a placeholder 05:00 UTC) is an all-day event on the
+  // league's own calendar day: no clock time, and no end time computed from one.
+  const tbd = isTimeTbd(g);
+  const start = tbd ? new Date(`${gameDayIso(g.date, league)}T00:00:00Z`) : new Date(g.date);
+  const end = tbd ? undefined : new Date(start.getTime() + durationMinutes(league) * 60_000);
   const label = LEAGUE_LABEL[league];
   const parts = [label];
-  if (g.round) parts.push(g.round);
+  const stage = g.round ?? specialStageLabel(g);
+  if (stage) parts.push(stage);
   // A postponed or cancelled game stays in the archive as its original event; the replay has its own uid. Mark it
   // cancelled so a subscriber's calendar does not keep a fixture that is not happening.
   const off = gameCalledOffLabel(g);
   if (off) parts.push(off);
-  else if (g.completed) parts.push(`Final${g.status_summary ? `: ${g.status_summary}` : ""}`);
+  else if (g.completed) parts.push(`${overtimeFinal(g.status_detail) ?? "Final"}${g.status_summary ? `: ${g.status_summary}` : ""}`);
+  else if (tbd) parts.push("Kickoff time to be announced");
   else if (g.status_state === "in") parts.push("In progress");
   parts.push(`Match page: ${SITE}/${league}/games/${g.espn_id}`);
   const location = g.venue_name ? [g.venue_name, g.venue_city].filter(Boolean).join(", ") : undefined;
@@ -159,6 +166,7 @@ export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: 
     uid: `${league}-${g.espn_id}@sportsdb`,
     start,
     end,
+    ...(tbd ? { allDay: true } : {}),
     summary: off ? `${gameSummary(league, g, perspectiveTeamId)} (${off})` : gameSummary(league, g, perspectiveTeamId),
     description: parts.join("\n"),
     location,

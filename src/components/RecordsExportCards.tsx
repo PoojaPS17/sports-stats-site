@@ -5,6 +5,7 @@ import type { League } from "@/lib/queries";
 import type { RecordGame, StreakRecord } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 import { formatGameDate } from "@/lib/gameDay";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 const fmtDate = (iso: string, league: League) => formatGameDate(iso, league, { month: "short", day: "numeric", year: "numeric" });
 
@@ -12,17 +13,21 @@ function gameRows(league: League, games: RecordGame[], unit: string): ExportList
   return games.map((g) => {
     const homeWon = g.home_score > g.away_score;
     const side = (won: boolean) => ({ fontWeight: won ? 700 : 500, color: won ? CARD.text : CARD.textMuted });
+    // Football lists the home side first; the NBA and NFL list the visitors first.
+    const away = { team: g.away, score: g.away_score, won: !homeWon };
+    const home = { team: g.home, score: g.home_score, won: homeWon };
+    const [first, second] = scoreLineHomeFirst(league) ? [home, away] : [away, home];
     return {
       key: g.espn_id,
       title: (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <TeamLogo name={g.away.name} logoUrl={g.away.logo_url} color={g.away.color} size={18} />
-          <span style={side(!homeWon)}>{g.away.name}</span>
+          <TeamLogo name={first.team.name} logoUrl={first.team.logo_url} color={first.team.color} size={18} />
+          <span style={side(first.won)}>{first.team.name}</span>
           <span style={{ fontWeight: 800 }}>
-            {g.away_score}–{g.home_score}
+            {first.score}–{second.score}
           </span>
-          <TeamLogo name={g.home.name} logoUrl={g.home.logo_url} color={g.home.color} size={18} />
-          <span style={side(homeWon)}>{g.home.name}</span>
+          <TeamLogo name={second.team.name} logoUrl={second.team.logo_url} color={second.team.color} size={18} />
+          <span style={side(second.won)}>{second.team.name}</span>
         </span>
       ),
       sub: fmtDate(g.date, league),

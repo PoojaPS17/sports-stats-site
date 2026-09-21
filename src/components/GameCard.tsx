@@ -3,10 +3,10 @@ import { teamDisplayName } from "@/lib/teamName";
 import type { GameRow, League } from "@/lib/queries";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
-import { LocalTime } from "./LocalTime";
-import { finishedLabel } from "@/lib/stage";
-import { dayTimeZone, formatGameDate } from "@/lib/gameDay";
+import { Kickoff } from "./Kickoff";
+import { formatGameDate } from "@/lib/gameDay";
 import { gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 function TeamRow({
   name,
@@ -68,6 +68,10 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   const live = game.status_state === "in";
   // A called-off game is not upcoming: it has no kickoff time to show.
   const upcoming = isUpcomingGame(game);
+  const away = { side: "away", name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color, score: game.away_score, scoreDisplay: game.away_score_display, won: awayWon };
+  const home = { side: "home", name: game.home_name, abbr: game.home_abbr, logo: game.home_logo, color: game.home_color, score: game.home_score, scoreDisplay: game.home_score_display, won: homeWon };
+  // Football lists the home side first, as BBC and ESPN.com do; the NBA and NFL list the visitors first.
+  const sides = scoreLineHomeFirst(league) ? [home, away] : [away, home];
 
   return (
     <Link
@@ -82,11 +86,12 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           date={game.date}
           completed={game.completed}
           round={game.round}
-          completedLabel={finishedLabel(league)}
-          serverTimeZone={dayTimeZone(league)}
+          stage={game.stage}
+          competitionType={game.competition_type}
+          league={league}
         />
         {upcoming ? (
-          <LocalTime iso={game.date} format="time" className="text-xs font-medium text-[var(--text-muted)]" serverTimeZone={dayTimeZone(league)} />
+          <Kickoff league={league} game={game} format="time" className="text-xs font-medium text-[var(--text-muted)]" />
         ) : live && game.status_detail ? (
           <span className="text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_detail)}</span>
         ) : (
@@ -95,28 +100,20 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           </span>
         )}
       </div>
-      <TeamRow
-        name={teamDisplayName(game.away_name)}
-        abbr={game.away_abbr}
-        logo={game.away_logo}
-        color={game.away_color}
-        score={game.away_score}
-        scoreDisplay={game.away_score_display}
-        completed={game.completed}
-        live={live}
-        won={awayWon}
-      />
-      <TeamRow
-        name={teamDisplayName(game.home_name)}
-        abbr={game.home_abbr}
-        logo={game.home_logo}
-        color={game.home_color}
-        score={game.home_score}
-        scoreDisplay={game.home_score_display}
-        completed={game.completed}
-        live={live}
-        won={homeWon}
-      />
+      {sides.map((t) => (
+        <TeamRow
+          key={t.side}
+          name={teamDisplayName(t.name)}
+          abbr={t.abbr}
+          logo={t.logo}
+          color={t.color}
+          score={t.score}
+          scoreDisplay={t.scoreDisplay}
+          completed={game.completed}
+          live={live}
+          won={t.won}
+        />
+      ))}
       {game.completed && game.status_summary && (
         <p className="mt-1.5 border-t border-[var(--border)] pt-1.5 text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_summary)}</p>
       )}
