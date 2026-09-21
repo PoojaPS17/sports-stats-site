@@ -19,11 +19,14 @@
 import { pool } from "./lib/db";
 import { fetchF1SeasonEventRefs, fetchByRef as fetchEspnRef } from "./lib/f1";
 import { uniqueSlugFor } from "./lib/players";
-import { f1BackfillSessionStatus } from "../src/lib/f1Status";
+import { saveBackfilledSession } from "./lib/f1-session";
 import { addF1DidNotStartRows, f1CompetitorDetail, f1SessionHasStatuses, isPracticeOnlyCompetitor, loadKnownF1Details, saveF1CompetitorResult } from "./lib/f1-competitor";
 
 const YEARS_BACK = 10;
 const CONCURRENCY = 6;
+
+// Sessions (event id/session id) whose status could not be read; the run exits non-zero when there are any.
+const statusUnread: string[] = [];
 
 // Every ESPN request this run makes goes through here, so the total is logged at the end.
 let espnRequests = 0;
@@ -78,25 +81,11 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
 
   let resultCount = 0;
   for (const comp of event.competitions ?? []) {
-    // Unlike the live scoreboard (fetch-f1-scores.ts), this endpoint's `status` is a
-    // bare $ref with no inline `.type` — the same shape tennis's historical events
-    // have. Every session backfilled here is from a past event by construction, so
-    // it's marked final outright rather than fetching yet another $ref just to
-    // confirm what's already true (this was the actual bug: without this, every
-    // backfilled session sat at completed=false despite having real results).
-    // The exception is a session with no competitors: a Grand Prix ESPN cancelled
-    // (2026 Bahrain and Saudi Arabia) lists every session with an empty field and
-    // STATUS_CANCELED, which "final" would hide, so only those read their status.
-    const noField = (comp.competitors ?? []).length === 0;
-    const status = noField && comp.status?.["$ref"] ? await fetchByRef<any>(comp.status["$ref"]).catch(() => null) : null;
-    const session = f1BackfillSessionStatus(status);
-    await pool.query(
-      `insert into f1_sessions (espn_id, event_espn_id, session_type, date, status_state, status_detail, completed, updated_at)
-       values ($1,$2,$3,$4,$5,$6,$7, now())
-       on conflict (espn_id) do update set
-         status_state = excluded.status_state, status_detail = excluded.status_detail, completed = excluded.completed, updated_at = now()`,
-      [comp.id, event.id, comp.type?.abbreviation ?? null, comp.date, session.state, session.detail, session.completed]
-    );
+    // Unlike the live scoreboard (fetch-f1-scores.ts), this endpoint's `status` is a bare $ref with no inline `.type`, so a
+    // session that ran is marked final outright rather than fetching yet another $ref to confirm what is already true. A
+    // session with no competitors is a Grand Prix ESPN cancelled and reads its status; if that read fails its stored status
+    // is left alone and the run fails at the end (scripts/lib/f1-session.ts).
+    if ((await saveBackfilledSession(pool, event.id, comp, fetchByRef)) === "status-unread") statusUnread.push(`${event.id}/${comp.id}`);
 
     // A race or sprint driver's status (retired, disqualified, ...) and laps completed are only bare refs in the event
     // resource: one request for his status, and one more for his laps when he did not finish. Drivers already stored with
@@ -168,6 +157,11 @@ async function main() {
   console.log(`[backfill-f1-events] done: ${jobs.length} events, ${totalResults} session results, ${driverNameCache.size} unique drivers, ${espnRequests} ESPN requests`);
 
   await pool.end();
+
+  if (statusUnread.length > 0) {
+    console.error(`[backfill-f1-events] ERROR: the status of ${statusUnread.length} empty session(s) could not be read, so their stored status was left as it was: ${statusUnread.join(", ")}. Run the backfill again.`);
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {
