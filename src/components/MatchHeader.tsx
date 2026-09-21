@@ -5,7 +5,7 @@ import { StatusPill } from "./StatusPill";
 import { FollowButton } from "./FollowButton";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { formatGameDateRange } from "@/lib/gameDay";
-import { scoreLineHomeFirst, scoreLineSides } from "@/lib/gamePage";
+import { matchupLabel, scoreLineSides } from "@/lib/gamePage";
 import { isUpcomingGame } from "@/lib/gameDisplay";
 import type { CricketTeamScorecard } from "@/lib/matchDetail";
 
@@ -50,9 +50,8 @@ function TeamLine({
 export function MatchHeader({ league, game, scorecard }: { league: League; game: GameRow; scorecard?: CricketTeamScorecard[] | null }) {
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
-  const homeFirst = scoreLineHomeFirst(league);
-  // The page title names football's home side first ("Manchester City vs Sunderland"), so the follow label and the score lines do too.
-  const matchLabel = homeFirst ? `${teamDisplayName(game.home_name)} vs ${teamDisplayName(game.away_name)}` : `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}`;
+  // The follow label names the matchup as the page's title does (one rule, `matchupLabel`); the score lines below have their own order.
+  const matchLabel = matchupLabel(league, game);
   const path = `/${league}/games/${game.espn_id}`;
   const rows = {
     away: (

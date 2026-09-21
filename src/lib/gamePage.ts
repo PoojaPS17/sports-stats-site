@@ -44,9 +44,13 @@ export function scoreLineSides(
   return scoreLineHomeFirst(league) ? ["home", "away"] : ["away", "home"];
 }
 
-/** "Manchester City vs Sunderland": the two names as a score line orders them (see scoreLineHomeFirst), for share titles and follow labels. */
+/**
+ * "Manchester City vs Sunderland": the two names as the page's title names the matchup (`gameSides`: the NBA and NFL
+ * visitors first, football and cricket the home side first), for the heading, breadcrumb, share titles and follow labels.
+ * It is not a score line: a cricket score line lists the side that batted first (`scoreLineSides`), a matchup name does not.
+ */
 export function matchupLabel(league: League, game: { home_name: string; away_name: string }): string {
-  const [first, second] = scoreLineHomeFirst(league) ? [game.home_name, game.away_name] : [game.away_name, game.home_name];
+  const { first, second } = gameSides(league, game);
   return `${teamDisplayName(first)} vs ${teamDisplayName(second)}`;
 }
 

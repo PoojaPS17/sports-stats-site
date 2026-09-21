@@ -157,8 +157,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const winProb = show.winProbability ? (details?.win_probability ?? []) : [];
   const leaders = gameLeadersShown(show, noBoxScore, details?.leaders);
 
-  const awayFirst = league === "nfl" || league === "nba";
-  const matchName = awayFirst ? `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}` : `${teamDisplayName(game.home_name)} vs ${teamDisplayName(game.away_name)}`;
+  // The heading, breadcrumb and share titles name the matchup as every other label on the page does (`matchupLabel`).
+  const matchName = matchupLabel(league, game);
 
   return (
     <div className="flex flex-col gap-6">
