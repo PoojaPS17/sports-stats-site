@@ -85,12 +85,7 @@ export function parseRound(league: League, ev: any): string | null {
   // Chennai, May 23 2023" for a playoff match, or "69th Match (D/N), Indian Premier
   // League at Mumbai, May 21 2023" for an ordinary league one — shorten the latter to
   // "Match 69" instead of discarding it, so every card shows something specific.
-  if (typeof ev.description === "string") {
-    const stage = ev.description.match(/^(.+?)\s*\([DN/]+\)/)?.[1]?.trim();
-    if (!stage) return null;
-    const numbered = stage.match(/^(\d+)(?:st|nd|rd|th)\s+Match$/i);
-    return numbered ? `Match ${numbered[1]}` : stage;
-  }
+  if (typeof ev.description === "string") return parseCricketRound(ev.description);
   // NBA/NFL: a `notes` entry like {"type":"event","headline":"AFC Wild Card Playoffs"}
   // or "NBA Finals - Game 6" exists on real postseason games, but the *same* notes
   // shape also appears on plenty of regular-season games with special billing (NBA
@@ -105,6 +100,31 @@ export function parseRound(league: League, ev: any): string | null {
   if (seasonType !== 3 || competitionType === "ALLSTAR") return null;
   const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
   return typeof headline === "string" ? normalizeStage(headline) : null;
+}
+
+// "Match 12" for a numbered league match; anything else as given.
+function matchNumber(stage: string): string {
+  const numbered = stage.match(/^(\d+)(?:st|nd|rd|th)\s+Match$/i);
+  return numbered ? `Match ${numbered[1]}` : stage;
+}
+
+/**
+ * The stage in a cricket event's `description`: "<stage>[ (D/N)], <series> at <venue>, <date>", where the
+ * stage may itself hold a comma ("22nd Match, Group B"). A match with a day/night marker keeps what
+ * precedes the marker, exactly as it always has. A daytime match has no marker ("Final, Women's Big
+ * Bash League at Hobart, Nov 30 2024", the CWC 2019 semi-finals, T20 World Cup 2010): its stage is
+ * what precedes the "<series> at <venue>" segment, or the first comma segment when the description
+ * has no such segment. Named stages get the usual spelling (normalizeStage), so "2nd Semi-final"
+ * reads as "2nd Semi-Final". A description that is only "<series> at <venue>" has no stage.
+ */
+export function parseCricketRound(description: string): string | null {
+  const marked = description.match(/^(.+?)\s*\([DN/]+\)/)?.[1]?.trim();
+  if (marked) return matchNumber(marked);
+  const parts = description.split(",").map((p) => p.trim());
+  const seriesAt = parts.findIndex((p) => / at /.test(p));
+  if (seriesAt === 0 || (seriesAt === -1 && parts.length < 2)) return null;
+  const stage = parts.slice(0, seriesAt === -1 ? 1 : seriesAt).join(", ").replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return stage ? normalizeStage(matchNumber(stage)) : null;
 }
 
 // Cup competitions (Champions League): every event carries its stage — as
