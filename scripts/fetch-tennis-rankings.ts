@@ -1,5 +1,5 @@
 import { pool } from "./lib/db";
-import { fetchTennisRankings, fetchByRef, pruneStaleRankings, type Tour } from "./lib/tennis";
+import { fetchTennisRankings, fetchByRef, pruneStaleRankings, upsertRanking, type Tour } from "./lib/tennis";
 import { uniqueSlugFor } from "./lib/players";
 
 const TOURS: Tour[] = ["atp", "wta"];
@@ -13,6 +13,8 @@ async function processTour(tour: Tour) {
   }
 
   const ranks: any[] = (data.ranks ?? []).slice(0, TOP_N);
+  // Which ranking this is: ESPN's week number and its lastUpdated (a Thursday; the tour publishes the Monday after).
+  const meta = { week: typeof data.occurrence?.number === "number" ? data.occurrence.number : null, lastUpdated: typeof data.lastUpdated === "string" ? data.lastUpdated : null };
   let count = 0;
   const storedIds: string[] = [];
   for (const r of ranks) {
@@ -32,13 +34,7 @@ async function processTour(tour: Tour) {
         [tour, athlete.id, name, slug, athlete.headshot?.href ?? null]
       );
 
-      await pool.query(
-        `insert into tennis_rankings (tour, player_espn_id, rank, previous_rank, points, updated_at)
-         values ($1, $2, $3, $4, $5, now())
-         on conflict (tour, player_espn_id) do update set
-           rank = excluded.rank, previous_rank = excluded.previous_rank, points = excluded.points, updated_at = now()`,
-        [tour, athlete.id, r.current, r.previous ?? null, r.points ?? null]
-      );
+      await upsertRanking(pool, tour, athlete.id, r, meta);
       count++;
       storedIds.push(String(athlete.id));
     } catch (err) {

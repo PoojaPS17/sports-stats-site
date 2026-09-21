@@ -1,6 +1,7 @@
 import { pool } from "./db";
 import type { Tour } from "./tennisTours";
 import { easternDateSql, TENNIS_ZONE } from "./tennisDates";
+import { rankingAsOf } from "./tennisRankings";
 
 export type { Tour } from "./tennisTours";
 export { TOURS, TOUR_LABEL, isTour } from "./tennisTours";
@@ -31,6 +32,16 @@ export async function getTennisRankings(tour: Tour, limit = 100): Promise<Tennis
     [tour, limit]
   );
   return rows;
+}
+
+/** Which ranking the stored rows are: ESPN's week number and the Monday the tour dates it (null until the loader has stored one). */
+export async function getTennisRankingsAsOf(tour: Tour): Promise<{ week: number | null; asOf: string | null }> {
+  const { rows } = await pool.query(
+    `select max(ranking_week)::int as week, to_char(max(espn_updated) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as updated from tennis_rankings where tour = $1`,
+    [tour]
+  );
+  const { week, updated } = rows[0] ?? {};
+  return { week: week ?? null, asOf: updated ? rankingAsOf(updated) : null };
 }
 
 /* ------------------------------------------------------------------------ */
