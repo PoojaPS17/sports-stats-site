@@ -17,6 +17,13 @@ function tidyConference(name: string | null): string | null {
   return m ? `Group ${m[1].toUpperCase()}` : name;
 }
 
+// ESPN's own position in the table. Only a real position (1, 2, 3, ...) is kept: a missing stat, a
+// dash or a 0 means the feed has no rank for the row, and the site then falls back to its own keys.
+export function espnRank(value: string | undefined): number | null {
+  const n = Math.round(Number(value));
+  return value !== undefined && Number.isFinite(n) && n >= 1 ? n : null;
+}
+
 function collectEntries(node: any, conference: string | null, out: any[]) {
   if (node.standings?.entries) {
     // A group nested under a conference that is not itself a conference is a
@@ -48,12 +55,13 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
     const goalsAgainst = statValue(stats, "pointsAgainst");
     const noResult = statValue(stats, "noresult");
     const netRunRate = statValue(stats, "netrr");
+    const rank = espnRank(statValue(stats, "rank"));
     await pool.query(
       `insert into standings (
          league, season, team_espn_id, conference, wins, losses,
          win_percent, streak, playoff_seed, games_behind,
-         draws, points, goals_for, goals_against, no_result, net_run_rate, division, updated_at
-       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17, now())
+         draws, points, goals_for, goals_against, no_result, net_run_rate, division, rank, updated_at
+       ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18, now())
        on conflict (league, season, team_espn_id, coalesce(conference, '')) do update set
          division = coalesce(excluded.division, standings.division),
          wins = excluded.wins, losses = excluded.losses,
@@ -62,6 +70,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          draws = excluded.draws, points = excluded.points,
          goals_for = excluded.goals_for, goals_against = excluded.goals_against,
          no_result = excluded.no_result, net_run_rate = excluded.net_run_rate,
+         rank = excluded.rank,
          updated_at = now()`,
       [
         league,
@@ -86,6 +95,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
         noResult !== undefined ? Math.round(Number(noResult)) : null,
         netRunRate !== undefined ? Number(netRunRate) : null,
         division,
+        rank,
       ]
     );
   }

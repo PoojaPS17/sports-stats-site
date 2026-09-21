@@ -8,11 +8,13 @@ import type { GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
+import { sortStandings } from "./standingsOrder";
 import type { EspnSeasonTotals } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 
 export type { League } from "./leagues";
-export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, isFirstClassCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
+export { sortStandings } from "./standingsOrder";
+export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, isFirstClassCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, hasTies, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
 
 export interface GameRow {
   league: League;
@@ -196,24 +198,23 @@ export interface StandingRow {
   goals_against: number | null;
   no_result: number | null;
   net_run_rate: string | null;
+  /** ESPN's own position in its table (head-to-head and the other tie-breaks applied); null when the feed sent none. */
+  rank: number | null;
+  /** Set by sortStandings on every row of a table nobody has played in yet: it has no order, so no positions are shown. */
+  unranked?: boolean;
 }
 
 const STANDING_SELECT = `
   select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
          s.conference, s.division, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
-         s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate
+         s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate, s.rank
   from standings s
   join teams t on t.league = s.league and t.espn_id = s.team_espn_id
 `;
-// Soccer's real tiebreaker after points is goal difference — without it, the sort can
-// misorder two teams on equal points (which matters for showing the right champion
-// and relegated teams in the season summary), so it's added ahead of net_run_rate
-// (which only ever applies to cricket, where goals_for/against are always null).
-// A tournament with two stages (T20 World Cup groups, then Super Eights) keeps a
-// table per stage; the later stage leads.
-const STANDING_ORDER = `order by (s.conference ~* 'super|second round') desc, s.conference, s.points desc nulls last,
-  (s.goals_for - s.goals_against) desc nulls last, s.goals_for desc nulls last,
-  s.net_run_rate desc nulls last, s.wins desc, s.losses asc`;
+// The rows come out of SQL in a stable order only; sortStandings (src/lib/standingsOrder.ts) puts
+// them into tables and orders each one: ESPN's rank for soccer and cricket, win percentage for the
+// NFL and NBA, the later stage of a two-stage tournament first.
+const STANDING_ROW_ORDER = `order by s.conference nulls last, t.name`;
 
 // The `standings` table now holds every backfilled historical season too, so this
 // must pin to the most recent one rather than returning every season's rows mixed
@@ -222,18 +223,18 @@ export async function getStandings(league: League): Promise<StandingRow[]> {
   const { rows } = await pool.query(
     `${STANDING_SELECT}
      where s.league = $1 and s.season = (select max(season) from standings where league = $1)
-     ${STANDING_ORDER}`,
+     ${STANDING_ROW_ORDER}`,
     [league]
   );
-  return rows;
+  return sortStandings(league, rows);
 }
 
 export async function getStandingsBySeason(league: League, season: number): Promise<StandingRow[]> {
   const { rows } = await pool.query(
-    `${STANDING_SELECT} where s.league = $1 and s.season = $2 ${STANDING_ORDER}`,
+    `${STANDING_SELECT} where s.league = $1 and s.season = $2 ${STANDING_ROW_ORDER}`,
     [league, season]
   );
-  return rows;
+  return sortStandings(league, rows);
 }
 
 // Every season with a standings table on file, most recent first — powers the

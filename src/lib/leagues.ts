@@ -111,6 +111,12 @@ export function scheduleWords(league: League): { upcoming: string; heading: stri
   return { upcoming: "fixtures", heading: "Fixtures", start: "kick-off times" };
 }
 
+// A regular-season NFL game can end level, and ESPN counts it as half a win: records read W-L-T
+// and win percentage is (W + T/2) / games. NBA games cannot tie; football's draws are their own column.
+export function hasTies(league: League): boolean {
+  return league === "nfl";
+}
+
 export function isSoccerLeague(league: League): boolean {
   return (SOCCER_LEAGUES as string[]).includes(league);
 }

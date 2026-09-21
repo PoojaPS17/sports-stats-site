@@ -236,6 +236,15 @@ alter table standings add column if not exists net_run_rate numeric;
 -- Division within the conference (NFL: "AFC East"). Only the NFL standings fetch
 -- asks ESPN for division-level groups; other leagues leave this null.
 alter table standings add column if not exists division text;
+-- ESPN's own position in its table (`rank` stat), which applies head-to-head and the other
+-- tie-breaks that points, goal difference and goals scored cannot. Soccer and cricket tables
+-- order by it; null when the feed sent none (older rows until `npm run backfill:standings`).
+alter table standings add column if not exists rank int;
+-- One row per stage table a team appears in (a T20 World Cup side has a group row and a Super
+-- Eights row), which is the conflict target scripts/lib/standings.ts upserts on. The table was
+-- created with a (league, season, team_espn_id) primary key; drop it and key on the conference too.
+alter table standings drop constraint if exists standings_pkey;
+create unique index if not exists standings_stage_key on standings (league, season, team_espn_id, (coalesce(conference, '')));
 
 -- One row per real page view of a match-detail page, recorded client-side (see
 -- src/app/api/track-view) so it reflects actual visits rather than server-render
