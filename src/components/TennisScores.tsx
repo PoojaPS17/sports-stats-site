@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/LocalTime";
-import { tennisMatchStatus } from "@/lib/tennisDisplay";
+import { setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
 import { formatTournamentRange, tournamentInPlay } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type TennisMatch, type TennisSide, type TennisTournament } from "@/lib/tennis";
 
@@ -42,7 +42,7 @@ function shiftDay(day: string, delta: number): string {
 /* One match, ESPN-style: a status line, then one row per side              */
 /* ------------------------------------------------------------------------ */
 
-function SideRow({ tour, side, won, decided, setCount }: { tour: string; side: TennisSide; won: boolean; decided: boolean; setCount: number }) {
+function SideRow({ tour, side, other, won, decided, setCount }: { tour: string; side: TennisSide; other: TennisSide; won: boolean; decided: boolean; setCount: number }) {
   const loser = decided && !won;
   const nameClass = loser ? "text-[var(--text-muted)]" : "font-semibold text-[var(--text)]";
   return (
@@ -79,10 +79,11 @@ function SideRow({ tour, side, won, decided, setCount }: { tour: string; side: T
         <div className="flex shrink-0 gap-2.5 tabular-nums">
           {Array.from({ length: setCount }, (_, i) => {
             const set = side.sets[i];
+            const cell = setCell(set, other.sets[i]);
             return (
-              <span key={i} className={`w-5 text-right text-[15px] ${set?.winner ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
-                {set ? set.games : ""}
-                {set?.tiebreak != null && <sup className="ml-px text-[9px] font-medium">{set.tiebreak}</sup>}
+              <span key={i} className={`${cell?.wide ? "w-8" : "w-5"} text-right text-[15px] ${set?.winner ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+                {cell?.text}
+                {cell?.sup != null && <sup className="ml-px text-[9px] font-medium">{cell.sup}</sup>}
               </span>
             );
           })}
@@ -121,8 +122,8 @@ export function TennisMatchLine({ match, showTournament = false }: { match: Tenn
         </span>
         {where && <span className="shrink-0 truncate text-[var(--text-faint)]">{where}</span>}
       </div>
-      <SideRow tour={tourForLinks} side={match.side1} won={match.winner_side === 1} decided={decided} setCount={setCount} />
-      <SideRow tour={tourForLinks} side={match.side2} won={match.winner_side === 2} decided={decided} setCount={setCount} />
+      <SideRow tour={tourForLinks} side={match.side1} other={match.side2} won={match.winner_side === 1} decided={decided} setCount={setCount} />
+      <SideRow tour={tourForLinks} side={match.side2} other={match.side1} won={match.winner_side === 2} decided={decided} setCount={setCount} />
       {!decided && status.kind === "result" && match.status_detail && match.status_detail !== "Final" && (
         <p className="mt-1 text-xs text-[var(--text-muted)]">{match.status_detail}</p>
       )}

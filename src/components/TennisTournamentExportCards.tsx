@@ -1,7 +1,7 @@
 import { ExportShell, ExportLabel } from "./ExportShell";
 import { COMPETITION_LABEL, type CompetitionType, type TennisMatch, type TennisSide } from "@/lib/tennis";
 import { CARD } from "@/lib/exportTheme";
-import { tennisMatchStatus } from "@/lib/tennisDisplay";
+import { setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
 
 type TournamentInfo = { name: string; season: number; tourLabel: string; major: boolean; location: string | null; range: string | null };
 
@@ -17,7 +17,7 @@ function TournamentHeader({ t, label }: { t: TournamentInfo; label: string }) {
   );
 }
 
-function SideRow({ side, won, decided, setCount }: { side: TennisSide; won: boolean; decided: boolean; setCount: number }) {
+function SideRow({ side, other, won, decided, setCount }: { side: TennisSide; other: TennisSide; won: boolean; decided: boolean; setCount: number }) {
   const loser = decided && !won;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 0" }}>
@@ -29,10 +29,11 @@ function SideRow({ side, won, decided, setCount }: { side: TennisSide; won: bool
       <span style={{ display: "flex", gap: 8, fontVariantNumeric: "tabular-nums" }}>
         {Array.from({ length: setCount }, (_, i) => {
           const set = side.sets[i];
+          const cell = setCell(set, other.sets[i]);
           return (
-            <span key={i} style={{ width: 20, textAlign: "right", fontSize: 14, fontWeight: set?.winner ? 800 : 400, color: set?.winner ? CARD.text : CARD.textMuted }}>
-              {set ? set.games : ""}
-              {set?.tiebreak != null && <sup style={{ fontSize: 9 }}>{set.tiebreak}</sup>}
+            <span key={i} style={{ width: cell?.wide ? 32 : 20, textAlign: "right", fontSize: 14, fontWeight: set?.winner ? 800 : 400, color: set?.winner ? CARD.text : CARD.textMuted }}>
+              {cell?.text}
+              {cell?.sup != null && <sup style={{ fontSize: 9 }}>{cell.sup}</sup>}
             </span>
           );
         })}
@@ -47,8 +48,8 @@ export function MatchBox({ m, caption }: { m: TennisMatch; caption?: string | nu
   return (
     <div style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 10, padding: "8px 12px" }}>
       {caption && <div style={{ marginBottom: 2, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: m.status_state === "in" ? CARD.loss : CARD.textFaint }}>{caption}</div>}
-      <SideRow side={m.side1} won={m.winner_side === 1} decided={decided} setCount={setCount} />
-      <SideRow side={m.side2} won={m.winner_side === 2} decided={decided} setCount={setCount} />
+      <SideRow side={m.side1} other={m.side2} won={m.winner_side === 1} decided={decided} setCount={setCount} />
+      <SideRow side={m.side2} other={m.side1} won={m.winner_side === 2} decided={decided} setCount={setCount} />
       {!decided && tennisMatchStatus(m).kind === "result" && m.status_detail && m.status_detail !== "Final" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{m.status_detail}</div>}
     </div>
   );
