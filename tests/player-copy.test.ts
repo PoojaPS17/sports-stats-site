@@ -122,3 +122,22 @@ test("the GS header tooltip: ESPN's count for an ESPN season, else box-score gam
   assert.equal(nbaGamesStartedTitle(true), "Games started. For a season shown from ESPN's season figures this is ESPN's count; for other seasons it counts only games with a box score.");
   assert.equal(nbaGamesStartedTitle(false), "Games started, counted only in games with a box score.");
 });
+
+test("the source-limit notes are one short line each", async () => {
+  const { NFL_PLAYER_DATA_NOTE, ROSTER_SOURCE_NOTE, SOCCER_CARDS_NOTE, rosterSourceNote } = await import("../src/lib/playerCopy");
+  assert.equal(NFL_PLAYER_DATA_NOTE, "Figures are summed from ESPN box scores; ESPN occasionally leaves a stat unrecorded or uncorrected (for example a tackle credited to the wrong game).");
+  assert.equal(SOCCER_CARDS_NOTE, "Cards as reported by ESPN; occasional omissions.");
+  assert.equal(ROSTER_SOURCE_NOTE, "Roster as listed by ESPN; camp and two-way signings appear when ESPN adds them.");
+  assert.equal(rosterSourceNote("nba"), ROSTER_SOURCE_NOTE);
+  assert.equal(rosterSourceNote("nfl"), ROSTER_SOURCE_NOTE);
+  // Soccer has no camp or two-way signings.
+  assert.equal(rosterSourceNote("epl"), undefined);
+});
+
+test("the pages use the source-limit notes where the figures appear", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = (p: string) => readFileSync(p, "utf8");
+  assert.match(read("src/app/[league]/teams/[slug]/page.tsx"), /description=\{rosterSourceNote\(league\)\}/);
+  assert.match(read("src/app/[league]/games/[id]/page.tsx"), /description=\{isSoccerLeague\(league\) \? SOCCER_CARDS_NOTE : undefined\}/);
+  assert.match(read("src/app/[league]/players/[slug]/[season]/page.tsx"), /NFL_PLAYER_DATA_NOTE/);
+});

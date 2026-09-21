@@ -1072,26 +1072,55 @@ export interface SearchResult {
   image: string | null;
 }
 
+// A player has "games on record" when the site holds a box score row for one of his completed games. Tennis players and F1
+// drivers have no box scores here (their results live in other tables), so they are not held back by the rule.
+const HAS_GAMES_SQL = `exists (select 1 from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
+                                where s.league = p.league and s.player_espn_id = p.espn_id and g.completed)`;
+
+// Results with games on record come first, then by name: a roster-only namesake (the Browns' Justin Jefferson holds the bare slug
+// because he was inserted first; the Vikings receiver has an id suffix) must not outrank the player people are looking for.
+// Teams and series have no such rule and count as having games. The limit applies after the ordering.
 export async function search(query: string, limit = 20): Promise<SearchResult[]> {
   const like = `%${query}%`;
   const { rows } = await pool.query(
-    `select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image
-     from teams where name ilike $1
-     union all
-     select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image
-     from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-     where p.name ilike $1 and ${notPseudoAthleteSql()}
-     union all
-     -- Every cricket series and tournament in the database, current or past (Ranji Trophy, PSL, a bilateral tour).
-     select 'series' as type, 'cricket' as league, s.name, s.espn_id as slug,
-            nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
-                                                 when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
-                                    to_char(s.start_date, 'YYYY')), '') as subtitle,
-            null as image
-     from cricket_series s
-     where s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1
+    `select type, league, name, slug, subtitle, image from (
+       select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games
+       from teams where name ilike $1
+       union all
+       select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image,
+              (p.league in ('atp', 'wta', 'f1') or ${HAS_GAMES_SQL}) as has_games
+       from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+       where p.name ilike $1 and ${notPseudoAthleteSql()}
+       union all
+       -- Every cricket series and tournament in the database, current or past (Ranji Trophy, PSL, a bilateral tour).
+       select 'series' as type, 'cricket' as league, s.name, s.espn_id as slug,
+              nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
+                                                   when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
+                                      to_char(s.start_date, 'YYYY')), '') as subtitle,
+              null as image, true as has_games
+       from cricket_series s
+       where s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1
+     ) r
+     order by has_games desc, name, type, league, slug
      limit $2`,
     [like, limit]
   );
   return rows;
+}
+
+/** A player with games on record who has the same name as one who has none (two Justin Jeffersons: the Browns' linebacker holds
+ * the bare slug and has no games, the Vikings' receiver has them under an id-suffixed one), for the page of the one without to
+ * point to. The namesake with the most games; null when there is none. */
+export async function getSameNamePlayerWithGames(league: League, name: string, excludeEspnId: string): Promise<{ slug: string; name: string; position: string | null; team_name: string | null } | null> {
+  const { rows } = await pool.query(
+    `select p.slug, p.name, p.position, t.name as team_name,
+            (select count(*) from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
+             where s.league = p.league and s.player_espn_id = p.espn_id and g.completed) as games
+     from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+     where p.league = $1 and lower(p.name) = lower($2) and p.espn_id <> $3 and ${notPseudoAthleteSql()} and ${HAS_GAMES_SQL}
+     order by games desc, p.slug
+     limit 1`,
+    [league, name, excludeEspnId]
+  );
+  return rows[0] ? { slug: rows[0].slug, name: rows[0].name, position: rows[0].position, team_name: rows[0].team_name } : null;
 }

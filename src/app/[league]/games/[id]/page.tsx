@@ -40,6 +40,7 @@ import { supportsScoreAnalytics } from "@/lib/analytics";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 import { formatSeasonLabel } from "@/lib/queries";
 import type { League } from "@/lib/queries";
+import { SOCCER_CARDS_NOTE } from "@/lib/playerCopy";
 
 // Completed games read their stored report from the database. Games in progress (or
 // not yet backfilled) fall back to a live fetch (see lib/matchDetail.ts), so the
@@ -212,6 +213,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
       {events.length > 0 && (
         <section>
           <SectionHeader
+            description={isSoccerLeague(league) ? SOCCER_CARDS_NOTE : undefined}
             tools={
               <ImageActions
                 filename={`${id}-${isSoccerLeague(league) ? "timeline" : "scoring"}-${league}`}

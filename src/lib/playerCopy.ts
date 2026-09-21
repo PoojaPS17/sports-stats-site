@@ -1,5 +1,6 @@
 // Copy for the NFL player pages, which show ESPN's games played but total stats from the box scores, and for the
 // NBA player pages, where ESPN's box scores have no stat line for some games.
+import { formatSeasonLabel, HISTORY_START, LEAGUE_LABEL, type League } from "./leagues";
 import type { GamesSource } from "./playerProfile";
 
 const NFL_REGULAR_SEASON_ESPN_NOTE =
@@ -98,3 +99,78 @@ export function noBoxScoreGamesTitle(n: number, source: GamesSource): string {
 
 /** The game log's line when games with no box score are missing from it. */
 export const unlistedGamesNote = (n: number): string => `${games(n)} without a box score ${n === 1 ? "is" : "are"} not listed.`;
+
+// ---------------------------------------------------------------------------
+// What a player's totals cover. The site's box scores start at the league's HISTORY_START (NBA 2014-15, NFL 2015, the
+// soccer leagues 2015-16), so a player's "career" here is the seasons since then, and every place that would say
+// "Career" says "since <that season>" instead. One helper, so the wording cannot drift between the pages.
+// ---------------------------------------------------------------------------
+export interface CareerWording {
+  /** The first season on the site, as the league labels it ("2014-15", "2015", "2015-16"); null for a league with no start. */
+  since: string | null;
+  /** The main page's totals header: "Regular season since 2014-15" (NBA, NFL, where the stages are separate) or "Since 2015-16". */
+  heroTitle: string;
+  /** The line under it, or null when there is nothing to disclose. */
+  heroNote: string | null;
+  /** The totals row of a season table. */
+  seasonTotal: string;
+  /** The totals row of the playoffs table and of the play-in table. */
+  playoffsTotal: string;
+  playinTotal: string;
+  /** What the downloadable card's numbers cover ("NBA stats since 2014-15"). */
+  cardContext: string;
+  /** The compare page's line when no season is in play. */
+  compareNote: string;
+  /** The season page's link back to the player's page. */
+  allSeasonsLabel: (name: string) => string;
+}
+
+/** `split` is true where the regular season, playoffs and play-in are separate tables (NBA, NFL). */
+export function careerWording(league: League, split: boolean): CareerWording {
+  const since = formatSeasonLabel(league, HISTORY_START[league] ?? null);
+  const label = LEAGUE_LABEL[league];
+  if (!since) {
+    // A league with no pinned start keeps the plain wording; no player page is in one today.
+    return {
+      since: null,
+      heroTitle: split ? "Career (regular season)" : "Career",
+      heroNote: null,
+      seasonTotal: "Career on record",
+      playoffsTotal: "Career playoffs",
+      playinTotal: "Career play-in",
+      cardContext: "Career stats",
+      compareNote: "Career figures on record",
+      allSeasonsLabel: (name) => `${name} career`,
+    };
+  }
+  return {
+    since,
+    heroTitle: split ? `Regular season since ${since}` : `Since ${since}`,
+    heroNote: `Games before ${since} are not on this site, so these are not career totals.`,
+    seasonTotal: `Total since ${since}`,
+    playoffsTotal: `Playoffs since ${since}`,
+    playinTotal: `Play-in since ${since}`,
+    cardContext: `${label} stats since ${since}`,
+    compareNote: `Totals since ${since}`,
+    allSeasonsLabel: (name) => `${name} since ${since}`,
+  };
+}
+
+/** The line under the totals strip: the competition, the span of the seasons shown, and (when the first season shown is the
+ * first on the site, so the player may have played earlier) that earlier seasons are not here. `firstSeason` is the first
+ * season shown, in ESPN's year. */
+export function careerStripSuffix(league: League, firstSeason: number | null): string {
+  return firstSeason !== null && firstSeason === HISTORY_START[league] ? " Earlier seasons are not on this site." : "";
+}
+
+// Data notes: the limits of the source, said once where the figures appear.
+
+/** The disclosure under an NFL player's figures. */
+export const NFL_PLAYER_DATA_NOTE = "Figures are summed from ESPN box scores; ESPN occasionally leaves a stat unrecorded or uncorrected (for example a tackle credited to the wrong game).";
+
+/** Under a soccer match's timeline, where the cards are. */
+export const SOCCER_CARDS_NOTE = "Cards as reported by ESPN; occasional omissions.";
+
+/** Under a team's "Current roster": ESPN's roster lags the league's own (camp and two-way signings). NBA and NFL only. */
+export const ROSTER_SOURCE_NOTE = "Roster as listed by ESPN; camp and two-way signings appear when ESPN adds them.";
+export const rosterSourceNote = (league: League): string | undefined => (league === "nba" || league === "nfl" ? ROSTER_SOURCE_NOTE : undefined);

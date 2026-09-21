@@ -34,6 +34,7 @@ import { LocalTime } from "@/components/LocalTime";
 import { dayTimeZone } from "@/lib/gameDay";
 import { JsonLd } from "@/components/JsonLd";
 import { teamSchema } from "@/lib/structuredData";
+import { rosterSourceNote } from "@/lib/playerCopy";
 
 export const revalidate = 300;
 
@@ -193,6 +194,7 @@ export default async function TeamPage({
 
       <section>
         <SectionHeader
+          description={rosterSourceNote(league)}
           tools={
             roster.length > 0 && (
               <ImageActions
