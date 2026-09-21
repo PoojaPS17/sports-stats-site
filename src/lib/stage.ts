@@ -1,4 +1,5 @@
 import { isCricketLeague, isSoccerLeague, type League } from "./leagues";
+import { cupNoteLabel } from "./gameNote";
 
 // Stage labels arrive in every spelling the sources use ("Semi Final", "1st semi-final",
 // "3rd Place Play-Off", "2nd QF"). One form each, Cricinfo's, so the same stage reads
@@ -68,9 +69,9 @@ export function specialStageLabel(g: { stage?: string | null; competition_type?:
   return null;
 }
 
-/** The stage label a card shows: the game's round, else its play-in / Cup-final label, else null. */
-export function gameRoundLabel(g: { round: string | null; stage?: string | null; competition_type?: string | null }): string | null {
-  return normalizeStage(g.round) ?? specialStageLabel(g);
+/** The stage label a card shows: the game's round, else its play-in / Cup-final label, else its NBA Cup note label (see gameNote.ts), else null. */
+export function gameRoundLabel(g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null }): string | null {
+  return normalizeStage(g.round) ?? specialStageLabel(g) ?? cupNoteLabel(g);
 }
 
 /**
@@ -80,7 +81,7 @@ export function gameRoundLabel(g: { round: string | null; stage?: string | null;
  */
 export function finishedPillLabel(
   league: League,
-  g: { round: string | null; stage?: string | null; competition_type?: string | null; status_detail: string | null | undefined },
+  g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null; status_detail: string | null | undefined },
   fallback: string = finishedLabel(league),
 ): string {
   const stage = gameRoundLabel(g);

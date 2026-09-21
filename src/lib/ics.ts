@@ -11,6 +11,7 @@ import { SITE_URL } from "./site";
 import { gameCalledOffLabel, isTimeTbd } from "./gameStatus";
 import { gameDayIso } from "./gameDay";
 import { overtimeFinal, specialStageLabel } from "./stage";
+import { cupNoteLabel } from "./gameNote";
 
 const SITE = SITE_URL;
 const PRODID = "-//SportsDB//Fixtures//EN";
@@ -151,7 +152,7 @@ export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: 
   const end = tbd ? undefined : new Date(start.getTime() + durationMinutes(league) * 60_000);
   const label = LEAGUE_LABEL[league];
   const parts = [label];
-  const stage = g.round ?? specialStageLabel(g);
+  const stage = g.round ?? specialStageLabel(g) ?? cupNoteLabel(g);
   if (stage) parts.push(stage);
   // A postponed or cancelled game stays in the archive as its original event; the replay has its own uid. Mark it
   // cancelled so a subscriber's calendar does not keep a fixture that is not happening.

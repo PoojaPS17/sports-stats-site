@@ -88,6 +88,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           round={game.round}
           stage={game.stage}
           competitionType={game.competition_type}
+          note={game.note}
           league={league}
         />
         {upcoming ? (

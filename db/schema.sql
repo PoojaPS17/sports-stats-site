@@ -130,6 +130,14 @@ update games set first_seen_date = date where first_seen_date is null;
 -- ALLSTAR (NBA All-Star, NFL Pro Bowl), CC (NBA Cup final), playoff rounds RD16/QTR/SEMI/FINAL.
 alter table games add column if not exists season_type int;
 alter table games add column if not exists competition_type text;
+-- A game played away from either club's ground (the NBA's Mexico City, Paris, Berlin and London games, the Cup's semifinals
+-- and final in Las Vegas): ESPN's competition `neutralSite`. Its Home and Away tables and a player's Home and Road splits leave
+-- such a game out, while the overall record counts it. Null where the feed does not say.
+alter table games add column if not exists neutral_site boolean;
+-- ESPN's event note headline ("NBA Cup - Group Play", "NBA Cup - Semifinals", "NBA Mexico City Game 2025", a makeup date).
+-- The NBA Cup's group games and semifinals are ordinary regular-season games to the feed, and this is the only place that
+-- names them (see src/lib/gameNote.ts). Not `round`, which marks playoff rounds.
+alter table games add column if not exists note text;
 -- The one rule for "what kind of game is this". ESPN's headline player totals count regular-season
 -- games only: they leave out preseason, play-in, All-Star and the NBA Cup final. A game with no
 -- known type falls back to the old `round is null` reading so nothing changes until it is typed.

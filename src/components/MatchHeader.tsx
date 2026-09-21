@@ -55,7 +55,7 @@ export function MatchHeader({ league, game }: { league: League; game: GameRow })
   return (
     <div className="card overflow-hidden px-6 py-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} league={league} kickoff="datetime" />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} note={game.note} league={league} kickoff="datetime" />
         <div className="flex items-center gap-3">
           <span className="text-xs text-[var(--text-muted)]">
             {formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}

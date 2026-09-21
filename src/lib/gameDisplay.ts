@@ -11,7 +11,7 @@ import { scoreLineHomeFirst } from "./gamePage";
 import type { League } from "./leagues";
 
 type StatusFields = Pick<GameRow, "completed" | "status_state" | "status_detail">;
-type StageFields = Pick<GameRow, "round" | "stage" | "competition_type">;
+type StageFields = Pick<GameRow, "round" | "stage" | "competition_type" | "note">;
 
 /** A game still to be played: not finished, not in play, and not called off. */
 export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.status_state !== "in" && !isGameCalledOff(g);

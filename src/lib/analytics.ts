@@ -24,6 +24,8 @@ export interface ResultRow {
   away_team_espn_id: string;
   home_score: number;
   away_score: number;
+  /** games.neutral_site: played at neither club's ground, so it is no home game for either side. Absent or null where unknown. */
+  neutral_site?: boolean | null;
 }
 
 export interface TeamRef {
@@ -54,7 +56,7 @@ export function supportsInjuryTracker(league: League): boolean {
 // them. Cricket keeps every game: its "Match N"/"Final" labels are rounds too.
 async function getSeasonResults(league: League, season: number, regularSeasonOnly: boolean): Promise<ResultRow[]> {
   const { rows } = await pool.query(
-    `select espn_id, date, season_year, round, stage, home_team_espn_id, away_team_espn_id, home_score, away_score
+    `select espn_id, date, season_year, round, stage, neutral_site, home_team_espn_id, away_team_espn_id, home_score, away_score
      from games
      where league = $1 and season_year = $2 and completed = true
        and home_score is not null and away_score is not null
@@ -141,6 +143,8 @@ export function computeTable(league: League, results: ResultRow[], teams: Map<st
     for (const s of sides) {
       if (scope === "home" && !s.home) continue;
       if (scope === "away" && s.home) continue;
+      // A neutral-site game is nobody's home or away game (ESPN's Home and Road records leave it out); Overall and Form keep it.
+      if ((scope === "home" || scope === "away") && g.neutral_site) continue;
       if (!bump(s.id)) continue;
       const r: "W" | "D" | "L" = s.gf > s.ga ? "W" : s.gf < s.ga ? "L" : "D";
       perTeam.get(s.id)!.push({ gf: s.gf, ga: s.ga, r });
@@ -420,7 +424,7 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
     `select
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.completed,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
        g.home_team_espn_id, g.away_team_espn_id,
        ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
        at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
