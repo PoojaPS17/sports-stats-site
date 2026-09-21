@@ -12,12 +12,13 @@
 //
 //   npx tsx --env-file=.env.local scripts/refresh-cricket-cards.ts <league> [--espn-cards-only] [--since-year YYYY] [--dry-run]
 //
-// Only matches whose stored report was fed by ESPN (its batting rows carry dismissal text)
-// are ever touched. ODIs, T20Is, IPL and BBL mix both sources, and a Cricsheet match's
-// cards are computed ball by ball: ESPN's derived figures must never replace them, so
-// those matches (and any with no stored report) are skipped and the count is printed.
-// `--espn-cards-only` is therefore always on; the flag is still accepted, and does nothing,
-// so command lines that carry it keep working.
+// A match whose stored report was built from Cricsheet (its batting rows carry no dismissal
+// text) is never touched. ODIs, T20Is, IPL and BBL mix both sources, and a Cricsheet match's
+// cards are computed ball by ball: ESPN's derived figures must never replace them, so those
+// matches are skipped and the count is printed. A match with no stored report is ESPN-only
+// (the Cricsheet importer always stores one): its cards are refreshed, and no report is
+// created for it. `--espn-cards-only` is therefore always on; the flag is still accepted,
+// and does nothing, so command lines that carry it keep working.
 //
 // A match is also left entirely alone (counted, one line each) when the rebuilt report
 // would be thinner than the stored one (fewer batting rows, or no innings totals where the
@@ -27,7 +28,7 @@
 // Arguments are checked strictly: exactly one cricket league and only the flags above.
 import { pool } from "./lib/db";
 import { CARD_VERSION } from "./lib/cricket-career";
-import { ESPN_REPORT_SQL, REFRESH_USAGE, parseRefreshArgs, refreshMatchCards } from "./lib/cricket-cards-refresh";
+import { CRICSHEET_REPORT_SQL, REFRESH_USAGE, parseRefreshArgs, refreshMatchCards } from "./lib/cricket-cards-refresh";
 
 const SUMMARY_URL = (seriesId: string, eventId: string) => `https://site.api.espn.com/apis/site/v2/sports/cricket/${seriesId}/summary?event=${eventId}`;
 // Same as import-cricket-espn.ts: ESPN's summary endpoint resolves any cricket event
@@ -73,11 +74,11 @@ async function main() {
   }
   const { league, dryRun, sinceYear } = parsed;
 
-  // `espn_report`: the stored match report came from ESPN. Only those matches are read from ESPN and
-  // refreshed; the rest are counted and left alone (refreshMatchCards checks this again before writing).
+  // `cricsheet_report`: the stored match report came from Cricsheet. Those matches are counted and left
+  // alone without a request (refreshMatchCards checks this again before writing).
   const { rows: games } = await pool.query(
     `select g.espn_id, g.date, exists (
-         select 1 from game_details d where d.league = g.league and d.game_espn_id = g.espn_id and ${ESPN_REPORT_SQL}) as espn_report
+         select 1 from game_details d where d.league = g.league and d.game_espn_id = g.espn_id and ${CRICSHEET_REPORT_SQL}) as cricsheet_report
      from games g
      where g.league = $1 and g.completed
        and ($2::int is null or g.season_year >= $2)
@@ -85,9 +86,9 @@ async function main() {
      order by g.date asc`,
     [league, sinceYear, CARD_VERSION]
   );
-  const todo = games.filter((g) => g.espn_report);
-  const notEspn = games.length - todo.length;
-  console.log(`[refresh-cricket-cards] ${league}: ${todo.length} matches to re-read${dryRun ? " (dry run, nothing is written)" : ""}; ${notEspn} skipped because the stored report is not ESPN-fed (Cricsheet cards are never overwritten)`);
+  const todo = games.filter((g) => !g.cricsheet_report);
+  const cricsheet = games.length - todo.length;
+  console.log(`[refresh-cricket-cards] ${league}: ${todo.length} matches to re-read${dryRun ? " (dry run, nothing is written)" : ""}; ${cricsheet} skipped because the stored report is Cricsheet's (Cricsheet cards are never overwritten)`);
 
   let done = 0;
   let failed = 0;
@@ -109,8 +110,8 @@ async function main() {
         updated += r.updated;
         duplicates += r.duplicates;
         orphans += r.orphans;
-        reports++;
-        if (dryRun) console.log(`[dry-run] ${league} ${espn_id} ${day}: ${r.inserted} rows to insert, ${r.updated} to update${r.duplicates ? `, ${r.duplicates} already stored under another id` : ""}, report batting rows ${r.battingRows!.before} -> ${r.battingRows!.after}`);
+        if (r.battingRows) reports++;
+        if (dryRun) console.log(`[dry-run] ${league} ${espn_id} ${day}: ${r.inserted} rows to insert, ${r.updated} to update${r.duplicates ? `, ${r.duplicates} already stored under another id` : ""}, ${r.battingRows ? `report batting rows ${r.battingRows.before} -> ${r.battingRows.after}` : "no stored report to rebuild"}`);
         done++;
       }
     } catch (err) {
@@ -121,7 +122,7 @@ async function main() {
     await sleep(REQUEST_DELAY_MS);
   }
   console.log(
-    `[refresh-cricket-cards] ${league}: ${dryRun ? "would refresh" : "refreshed"} ${done}/${todo.length} matches, ${inserted} player rows ${dryRun ? "to insert" : "inserted"}, ${updated} ${dryRun ? "to rewrite" : "rewritten"}, ${reports} reports ${dryRun ? "to rebuild" : "rebuilt"}; ${notEspn} skipped (report not ESPN-fed), ${skipped} skipped (rebuilt report thinner), ${failed} failed`
+    `[refresh-cricket-cards] ${league}: ${dryRun ? "would refresh" : "refreshed"} ${done}/${todo.length} matches, ${inserted} player rows ${dryRun ? "to insert" : "inserted"}, ${updated} ${dryRun ? "to rewrite" : "rewritten"}, ${reports} reports ${dryRun ? "to rebuild" : "rebuilt"}; ${cricsheet} skipped (Cricsheet report), ${skipped} skipped (rebuilt report thinner), ${failed} failed`
   );
   // The refresh does not create players. An inserted row for a player with no `players` row has no
   // page and adds nothing to a leader board until backfill-cricket-player-stats.ts (which creates him) is run.

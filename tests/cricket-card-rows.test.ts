@@ -182,24 +182,42 @@ test("a dry run reads and reports but writes nothing", async () => {
   assert.deepEqual((await report("ipl", "r2")).scorecard, oldScorecard);
 });
 
-test("a match whose stored report is not ESPN's is never touched: not the cards, not the report", async () => {
+test("a match whose stored report is Cricsheet's is never touched: not the cards, not the report", async () => {
   // Cricsheet's report has no dismissal text on its batting rows.
   const cricsheet = [{ teamId: "1", teamName: "One", battingLabels: ["R"], battingRows: [{ athleteId: "10", name: "Player 10", stats: ["20"] }], bowlingLabels: [], bowlingRows: [] }];
   await seedMatch("odi", "r3", { scorecard: cricsheet });
   const before = await stored("odi", "r3");
   const kept = await refresh("odi", "r3");
-  assert.match(kept.skipped ?? "", /not ESPN/);
+  assert.match(kept.skipped ?? "", /Cricsheet/);
   assert.deepEqual([kept.inserted, kept.updated, kept.battingRows], [0, 0, null]);
   assert.deepEqual((await report("odi", "r3")).scorecard, cricsheet);
   assert.deepEqual(await stored("odi", "r3"), before, "the Cricsheet card is not overwritten by ESPN's figures");
-  assert.equal((await refresh("odi", "r3", summary, true)).skipped !== null, true, "also in a dry run");
+  assert.notEqual((await refresh("odi", "r3", summary, true)).skipped, null, "also in a dry run");
+});
 
-  // No stored report at all: not ESPN's either.
+test("a match with no stored report is ESPN-only: its cards are refreshed and no report is created", async () => {
   await seedMatch("odi", "r4", {});
   await db.pool.query(`delete from game_details where league = 'odi' and game_espn_id = 'r4'`);
-  assert.notEqual((await refresh("odi", "r4")).skipped, null);
-  assert.equal((await stored("odi", "r4")).length, 1);
-  assert.equal((await db.pool.query(`select 1 from game_details where league = 'odi' and game_espn_id = 'r4'`)).rowCount, 0);
+  const dry = await refresh("odi", "r4", summary, true);
+  assert.deepEqual(dry, { skipped: null, inserted: 3, updated: 1, duplicates: 0, orphans: 3, battingRows: null });
+  assert.equal((await stored("odi", "r4")).length, 1, "a dry run writes nothing");
+
+  const result = await refresh("odi", "r4");
+  assert.equal(result.skipped, null);
+  assert.deepEqual([result.inserted, result.updated, result.battingRows], [3, 1, null]);
+  const rows = await stored("odi", "r4");
+  assert.deepEqual(rows.map((r) => r.player_espn_id), ["10", "11", "12", "20"]);
+  assert.equal(rows[0].stats.v, 3);
+  assert.equal((await db.pool.query(`select 1 from game_details where league = 'odi' and game_espn_id = 'r4'`)).rowCount, 0, "no game_details row is created");
+});
+
+test("a stored report with no scorecard rows is left as it is while the cards are refreshed", async () => {
+  await seedMatch("odi", "r12", { venue: "Ground" });
+  const result = await refresh("odi", "r12");
+  assert.equal(result.skipped, null);
+  assert.equal(result.battingRows, null);
+  assert.equal((await stored("odi", "r12")).length, 4);
+  assert.deepEqual(await report("odi", "r12"), { venue: "Ground" });
 });
 
 test("a summary with no figures is refused and leaves the rows as they were", async () => {

@@ -19,13 +19,20 @@ export interface RefreshResult {
   battingRows: { before: number; after: number } | null;
 }
 
-// A stored report was fed by ESPN when its first batting row has dismissal text (the ESPN
-// parser always writes one, "not out" included; Cricsheet's reports never do). Only such a
-// match may be refreshed: a Cricsheet match's cards are computed ball by ball, and ESPN's
-// derived figures must never replace them. SQL and JS forms of the same test.
-export const ESPN_REPORT_SQL = `d.details -> 'scorecard' -> 0 -> 'battingRows' -> 0 ? 'dismissal'`;
+// A stored report is Cricsheet's when its first batting row exists and has no dismissal text
+// (the ESPN parser always writes one, "not out" included; Cricsheet's reports never do). A
+// Cricsheet match's cards are computed ball by ball, and ESPN's derived figures must never
+// replace them, so such a match is left alone. A match with no stored report is ESPN-only by
+// construction (the Cricsheet importer always stores one) and is refreshed. SQL and JS forms
+// of the same test; the SQL one needs the game_details table aliased as `d`.
+export const CRICSHEET_REPORT_SQL = `d.details -> 'scorecard' -> 0 -> 'battingRows' -> 0 is not null and not (d.details -> 'scorecard' -> 0 -> 'battingRows' -> 0 ? 'dismissal')`;
+const firstBattingRow = (scorecard: any) => (Array.isArray(scorecard) ? scorecard[0]?.battingRows?.[0] : undefined);
+export const isCricsheetReport = (scorecard: any): boolean => {
+  const row = firstBattingRow(scorecard);
+  return row != null && typeof row === "object" && !("dismissal" in row);
+};
 export const isEspnReport = (scorecard: any): boolean => {
-  const row = Array.isArray(scorecard) ? scorecard[0]?.battingRows?.[0] : undefined;
+  const row = firstBattingRow(scorecard);
   return row != null && typeof row === "object" && "dismissal" in row;
 };
 
@@ -35,9 +42,13 @@ const inningsTotalCount = (scorecard: any): number => (Array.isArray(scorecard) 
 export async function refreshMatchCards(db: Pick<Pool, "query">, league: string, gameId: string, summary: any, opts: { dryRun: boolean }): Promise<RefreshResult> {
   const skip = (skipped: string): RefreshResult => ({ skipped, inserted: 0, updated: 0, duplicates: 0, orphans: 0, battingRows: null });
 
-  // Never touch a match whose stored report is not ESPN's (or that has none): those cards are Cricsheet's.
+  // Never touch a match whose stored report is Cricsheet's: those cards are computed ball by ball.
   const { rows: stored } = await db.query(`select details -> 'scorecard' as scorecard from game_details where league = $1 and game_espn_id = $2`, [league, gameId]);
-  if (!stored[0] || !isEspnReport(stored[0].scorecard)) return skip("its stored report is not ESPN's");
+  const storedScorecard = stored[0]?.scorecard;
+  if (isCricsheetReport(storedScorecard)) return skip("its stored report is Cricsheet's");
+  // With no stored report (or none that carries a scorecard) the cards are refreshed and there is
+  // nothing to rebuild: a report is never created here.
+  const rebuildReport = isEspnReport(storedScorecard);
 
   // A partial copy of the match (no competitors, or no class on a Test) reads wrongly rather than
   // emptily: a Test would lose its second innings. Refuse it, so the match is counted as failed and retried.
@@ -50,11 +61,11 @@ export async function refreshMatchCards(db: Pick<Pool, "query">, league: string,
   if (players.length === 0) throw new Error("summary has no player figures");
 
   // A report that would lose content is a degraded response: leave the whole match as it is.
-  const scorecard = parseCricketScorecard(summary);
-  const before = battingRowCount(stored[0].scorecard);
+  const scorecard = rebuildReport ? parseCricketScorecard(summary) : [];
+  const before = battingRowCount(storedScorecard);
   const after = battingRowCount(scorecard);
-  if (after < before) return skip(`the rebuilt report has fewer batting rows (${after}, was ${before})`);
-  if (inningsTotalCount(scorecard) === 0 && inningsTotalCount(stored[0].scorecard) > 0) return skip("the rebuilt report has no innings totals, the stored one does");
+  if (rebuildReport && after < before) return skip(`the rebuilt report has fewer batting rows (${after}, was ${before})`);
+  if (rebuildReport && inningsTotalCount(scorecard) === 0 && inningsTotalCount(storedScorecard) > 0) return skip("the rebuilt report has no innings totals, the stored one does");
 
   const { rows: have } = await db.query(
     `select s.player_espn_id, s.team_espn_id, p.name from player_game_stats s
@@ -84,13 +95,15 @@ export async function refreshMatchCards(db: Pick<Pool, "query">, league: string,
     updated: rows.length - insertIds.length,
     duplicates: duplicates.length,
     orphans: orphan[0].n,
-    battingRows: { before, after },
+    battingRows: rebuildReport ? { before, after } : null,
   };
   if (opts.dryRun) return result;
 
   // The report goes first: the card rows' version stamp is what marks a match done, so a
   // failure here leaves the match to be picked up again rather than half-refreshed.
-  await db.query(`update game_details set details = details || jsonb_build_object('scorecard', $3::jsonb) where league = $1 and game_espn_id = $2`, [league, gameId, JSON.stringify(scorecard)]);
+  if (rebuildReport) {
+    await db.query(`update game_details set details = details || jsonb_build_object('scorecard', $3::jsonb) where league = $1 and game_espn_id = $2`, [league, gameId, JSON.stringify(scorecard)]);
+  }
   // An existing row keeps the side it was filed under.
   await db.query(
     `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
