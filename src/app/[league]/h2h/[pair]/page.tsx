@@ -52,6 +52,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     fitTitle(
       `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_LABEL[league]})`,
       `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head (${LEAGUE_SHORT[league]})`,
+      `${h2h.teamA.name} vs ${h2h.teamB.name} (${LEAGUE_SHORT[league]})`,
       `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head`
     ),
     h2hDescription(h2h.teamA.name, h2h.teamB.name, LEAGUE_LABEL[league], h2h.meetings, record),

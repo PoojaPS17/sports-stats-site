@@ -81,6 +81,7 @@ test("the short league names keep the long ones' meaning and stay short", () => 
   for (const league of ALL_LEAGUES) {
     assert.ok(LEAGUE_SHORT[league].length > 0 && LEAGUE_SHORT[league].length <= LEAGUE_LABEL[league].length, league);
   }
+  assert.equal(new Set(ALL_LEAGUES.map((l) => LEAGUE_SHORT[l])).size, ALL_LEAGUES.length, "two leagues must not share a short name, or their pages would share a title");
   assert.equal(LEAGUE_SHORT.wpl, "WPL");
   assert.equal(LEAGUE_SHORT.ucl, "UCL");
 });
@@ -93,4 +94,10 @@ test("real long titles now fit", () => {
   const h2h = fitTitle("Borussia Dortmund vs Paris Saint-Germain Head-to-Head (Champions League)", `Borussia Dortmund vs Paris Saint-Germain Head-to-Head (${LEAGUE_SHORT.ucl})`, "Borussia Dortmund vs Paris Saint-Germain Head-to-Head");
   assert.equal(h2h, "Borussia Dortmund vs Paris Saint-Germain Head-to-Head (UCL)");
   assert.ok(team.length <= TITLE_BUDGET && h2h.length <= TITLE_BUDGET);
+});
+
+// TITLE_BUDGET assumes the root layout appends " | SportsDB"; a different template must change it too.
+test("the title budget matches the root layout's template", () => {
+  const layout = readFileSync(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
+  assert.match(layout, /template: "%s \| SportsDB"/);
 });

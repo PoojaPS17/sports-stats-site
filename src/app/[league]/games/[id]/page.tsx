@@ -101,9 +101,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     const month = formatGameDate(game.date, league, { month: "long", year: "numeric" }, game.local_date);
     return pageMeta(`${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`, description, `/${league}/games/${id}`, { ownImage: true });
   }
-  // The score is dropped when two long names and a score would not fit a search result.
+  // When two long names and a score would not fit a search result the score goes, then (if it fits) the date stands in for it.
   const sides = `${teamDisplayName(first)} vs ${teamDisplayName(second)}`;
-  return pageMeta(fitTitle(`${sides}${score}`, sides), description, `/${league}/games/${id}`, { ownImage: true });
+  return pageMeta(fitTitle(`${sides}${score}`, `${sides}, ${date}`, sides), description, `/${league}/games/${id}`, { ownImage: true });
 }
 
 export default async function GameDetailPage({ params }: { params: Promise<{ league: string; id: string }> }) {

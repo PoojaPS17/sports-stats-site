@@ -55,13 +55,12 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   // The competition is part of the title: the same side has a page in each one it plays
   // in (India in Tests, ODIs and T20Is; a club in its league and the Champions League).
   const cricket = isCricketLeague(league);
+  const short = LEAGUE_SHORT[league];
+  const title = cricket
+    ? fitTitle(`${team.name} ${label} Results, Fixtures & Squad`, `${team.name} ${short} Results, Fixtures & Squad`, `${team.name} ${short} Results & Squad`, `${team.name} ${short} Results`)
+    : fitTitle(`${team.name} ${label} Schedule, Results & Roster`, `${team.name} ${short} Schedule, Results & Roster`, `${team.name} ${short} Schedule & Roster`, `${team.name} ${short} Schedule`);
   return pageMeta(
-    (() => {
-      const short = LEAGUE_SHORT[league];
-      return cricket
-        ? fitTitle(`${team.name} ${label} Results, Fixtures & Squad`, `${team.name} ${short} Results, Fixtures & Squad`, `${team.name} ${short} Results & Squad`, `${team.name} ${short} Results`)
-        : fitTitle(`${team.name} ${label} Schedule, Results & Roster`, `${team.name} ${short} Schedule, Results & Roster`, `${team.name} ${short} Schedule & Roster`, `${team.name} ${short} Schedule`);
-    })(),
+    title,
     cricket ? `${team.name} ${label} results and fixtures, the current squad, and every result year by year.` : `${team.name} ${label} fixtures, results, current roster, injuries and season-by-season history.`, `/${league}/teams/${slug}`, { ownImage: true });
 }
 
