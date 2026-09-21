@@ -10,8 +10,8 @@ import { AdSlot } from "@/components/AdSlot";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
-import { LocalTime } from "@/components/LocalTime";
-import { dayTimeZone, formatGameDate } from "@/lib/gameDay";
+import { Kickoff } from "@/components/Kickoff";
+import { formatGameDate } from "@/lib/gameDay";
 import { ImageActions } from "@/components/ImageActions";
 import { ProjectionTableExportCard, UpcomingProbabilityExportCard } from "@/components/ProjectionsExportCards";
 
@@ -82,7 +82,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
             {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => (
               <Link key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
                 <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                  <LocalTime iso={game.date} format="datetime" serverTimeZone={dayTimeZone(league)} />
+                  <Kickoff league={league} game={game} format="datetime" />
                 </div>
                 <div className="flex items-center justify-between gap-2 text-sm font-semibold">
                   <span className="flex min-w-0 items-center gap-2">

@@ -4,6 +4,7 @@ import type { GameRow, League } from "@/lib/queries";
 import { ExportShell } from "./ExportShell";
 import { MatchScoreHeader } from "./MatchScoreHeader";
 import { CARD } from "@/lib/exportTheme";
+import { matchupLabel, scoreLineHomeFirst } from "@/lib/gamePage";
 
 const BADGE: Record<TimelineEventType, { text: string; bg: string; fg: string }> = {
   goal: { text: "Goal", bg: CARD.win, fg: "#fff" },
@@ -29,7 +30,7 @@ function describe(e: TimelineEvent, nflStyle: boolean): string {
 export function MatchTimelineExportCard({ league, game, events, title }: { league: League; game: GameRow; events: TimelineEvent[]; title: string }) {
   const nflStyle = events.every((e) => e.type === "score");
   return (
-    <ExportShell header={<MatchScoreHeader league={league} game={game} />} context={`${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)} · ${title}`}>
+    <ExportShell header={<MatchScoreHeader league={league} game={game} />} context={`${matchupLabel(league, game)} · ${title}`}>
       <div style={{ borderTop: `1px solid ${CARD.border}`, paddingTop: 12, fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>{title}</div>
       <div style={{ display: "flex", flexDirection: "column", marginTop: 6 }}>
         {events.map((e, i) => {
@@ -44,7 +45,7 @@ export function MatchTimelineExportCard({ league, game, events, title }: { leagu
                 <span style={{ fontWeight: 600 }}>{describe(e, nflStyle)}</span>
                 <span style={{ marginLeft: 6, fontSize: 12, color: CARD.textMuted }}>{home ? (game.home_abbr ?? teamDisplayName(game.home_name)) : (game.away_abbr ?? teamDisplayName(game.away_name))}</span>
               </span>
-              {scoring && <span style={{ flexShrink: 0, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{e.away_score}–{e.home_score}</span>}
+              {scoring && <span style={{ flexShrink: 0, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{scoreLineHomeFirst(league) ? `${e.home_score}–${e.away_score}` : `${e.away_score}–${e.home_score}`}</span>}
             </div>
           );
         })}

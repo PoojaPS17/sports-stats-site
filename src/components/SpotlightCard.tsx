@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
-import { finishedLabel } from "@/lib/stage";
 import { isCalledOff } from "@/lib/gameStatus";
 import type { GameRow, League } from "@/lib/queries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
-import { LocalTime } from "./LocalTime";
-import { dayTimeZone } from "@/lib/gameDay";
+import { Kickoff } from "./Kickoff";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 // The one game worth leading the homepage with: live if anything is on, else the
 // next big kickoff, else the biggest recent result.
@@ -47,6 +46,10 @@ export function SpotlightCard({ game }: { game: GameRow }) {
   const label = live ? "Live now" : game.completed ? "Latest result" : "Coming up";
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
+  const away = { side: "away", name: game.away_name, logo: game.away_logo, color: game.away_color, score: game.away_score, scoreDisplay: game.away_score_display, won: awayWon };
+  const home = { side: "home", name: game.home_name, logo: game.home_logo, color: game.home_color, score: game.home_score, scoreDisplay: game.home_score_display, won: homeWon };
+  // Football lists the home side first; the NBA and NFL list the visitors first.
+  const sides = scoreLineHomeFirst(league) ? [home, away] : [away, home];
 
   return (
     <Link href={`/${league}/games/${game.espn_id}`} className={`card block px-5 py-4 ${live ? "border-[var(--live)]/40" : ""}`}>
@@ -54,15 +57,16 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
           {label} · {LEAGUE_LABEL[league]}
         </span>
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} completedLabel={finishedLabel(league)} serverTimeZone={dayTimeZone(league)} />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} league={league} />
       </div>
       <div className="flex flex-col gap-2.5">
-        <Team name={teamDisplayName(game.away_name)} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
-        <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
+        {sides.map((t) => (
+          <Team key={t.side} name={teamDisplayName(t.name)} logo={t.logo} color={t.color} score={t.score} scoreDisplay={t.scoreDisplay} completed={game.completed} won={t.won} />
+        ))}
       </div>
       <p className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-2.5 text-xs font-medium text-[var(--text-muted)]">
         <span>
-          {game.completed ? (game.status_summary ?? "Full time") : live ? (game.status_detail ?? "In progress") : <LocalTime iso={game.date} format="datetime" serverTimeZone={dayTimeZone(league)} />}
+          {game.completed ? (game.status_summary ?? "Full time") : live ? (game.status_detail ?? "In progress") : <Kickoff league={league} game={game} format="datetime" />}
         </span>
         <span className="font-semibold text-[var(--accent)]">Match centre →</span>
       </p>

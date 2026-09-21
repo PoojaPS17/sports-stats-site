@@ -20,14 +20,20 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
   const ended = recap.endedOn ? formatGameDate(recap.endedOn, league, { month: "long", day: "numeric", year: "numeric" }) : null;
   // World Cups are editions, not seasons.
   const noun = league === "cwc" || league === "t20wc" || league === "wcwc" || league === "wt20wc" ? "tournament" : "season";
-  const closingTitle = recap.playoffs.length > 0 ? `How the ${recap.seasonLabel} ${noun} ended` : `Final results of ${recap.seasonLabel}`;
+  // A season with fixtures still to come is in progress: it says when the next matchday is, never that it ended.
+  const inSeason = !recap.seasonOver;
+  const next = recap.nextFixtureOn ? formatGameDate(recap.nextFixtureOn, league, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : null;
+  const dayWord = league === "nba" || league === "nfl" ? "game day" : "matchday";
+  const closingTitle = inSeason ? "Latest results" : recap.playoffs.length > 0 ? `How the ${recap.seasonLabel} ${noun} ended` : `Final results of ${recap.seasonLabel}`;
 
   return (
     <>
       <div className="card px-5 py-5">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{noun === "season" ? "Between seasons" : "Between tournaments"}</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{inSeason ? "No games this week" : noun === "season" ? "Between seasons" : "Between tournaments"}</p>
         <p className="mt-1 text-lg font-bold tracking-tight">
-          {leagueNameWithArticle(league, true)} {recap.seasonLabel} {noun} {ended ? `ended on ${ended}` : "is complete"}.
+          {inSeason
+            ? `${leagueNameWithArticle(league, true)} ${recap.seasonLabel} ${noun} is in progress. Next ${dayWord}: ${next}.`
+            : `${leagueNameWithArticle(league, true)} ${recap.seasonLabel} ${noun} ${ended ? `ended on ${ended}` : "is complete"}.`}
         </p>
         {recap.champion && (
           <p className="mt-1 text-sm">
@@ -66,7 +72,7 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
           {recap.table.length > 0 && (
             <section>
               <SectionHeader action={{ label: `All ${recap.tableSize} teams`, href: `/${league}/standings/${recap.season}` }}>
-                Final table, {recap.seasonLabel}
+                {inSeason ? "Table" : "Final table"}, {recap.seasonLabel}
               </SectionHeader>
               <ol className="card overflow-hidden">
                 {recap.table.map((r, i) => (

@@ -46,3 +46,11 @@ export function schemaStatusForLabel(label: string | null): string {
  */
 export const schemaEventStatus = (g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined }): string =>
   schemaStatusForLabel(gameCalledOffLabel(g));
+
+/**
+ * A fixture whose kickoff time the feed has not set: ESPN files a placeholder clock time (NFL week 18 is stored
+ * at 05:00 UTC, "12:00 AM ET") with the status text "1/10 - TBD". Such a game has a date and no time, and every
+ * display shows "TBD" in place of a clock time.
+ */
+export const isTimeTbd = (g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined }): boolean =>
+  g.status_state === "pre" && !g.completed && /\bTBD\b/i.test(g.status_detail ?? "") && !isCalledOff(g.status_detail);

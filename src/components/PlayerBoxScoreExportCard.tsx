@@ -4,13 +4,14 @@ import { formatStat } from "@/lib/statGlossary";
 import type { GameRow, League } from "@/lib/queries";
 import { ExportShell, ExportGroup, ExportTable } from "./ExportShell";
 import { MatchScoreHeader } from "./MatchScoreHeader";
+import { matchupLabel } from "@/lib/gamePage";
 import { CARD } from "@/lib/exportTheme";
 
 // The downloadable Player Stats: the full box score for both teams, every category table,
 // under the scoreline.
 export function PlayerBoxScoreExportCard({ league, game, playerBox }: { league: League; game: GameRow; playerBox: TeamPlayerBox[] }) {
   return (
-    <ExportShell header={<MatchScoreHeader league={league} game={game} />} context={`${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)} · Box score`}>
+    <ExportShell header={<MatchScoreHeader league={league} game={game} />} context={`${matchupLabel(league, game)} · Box score`}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, borderTop: `1px solid ${CARD.border}`, paddingTop: 16 }}>
         {playerBox
           .filter((team) => team.categories.length > 0)

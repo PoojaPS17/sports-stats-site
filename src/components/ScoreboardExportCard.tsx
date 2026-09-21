@@ -2,6 +2,7 @@ import { ExportTeamLine } from "./ExportTeamLine";
 import { ExportShell, ExportTitle, ExportMore, capRows } from "./ExportShell";
 import { isCricketLeague, type GameRow, type League } from "@/lib/queries";
 import { scoreboardTileStatus } from "@/lib/gameDisplay";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 import { teamDisplayName } from "@/lib/teamName";
 import { CARD } from "@/lib/exportTheme";
 
@@ -14,11 +15,16 @@ function Tile({ league, game, withDate }: { league: League; game: GameRow; withD
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
   const showScore = game.completed || game.status_state === "in";
+  const away = { side: "away", name: game.away_name, logo: game.away_logo, color: game.away_color, score: game.away_score, scoreDisplay: game.away_score_display, won: awayWon };
+  const home = { side: "home", name: game.home_name, logo: game.home_logo, color: game.home_color, score: game.home_score, scoreDisplay: game.home_score_display, won: homeWon };
+  // Football lists the home side first; the NBA and NFL list the visitors first.
+  const sides = scoreLineHomeFirst(league) ? [home, away] : [away, home];
   return (
     <div style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: game.status_state === "in" ? CARD.loss : CARD.textFaint }}>{scoreboardTileStatus(league, game, withDate)}</div>
-      <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} showScore={showScore} />
-      <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} showScore={showScore} />
+      {sides.map((t) => (
+        <ExportTeamLine key={t.side} name={t.name} logo={t.logo} color={t.color} score={t.score} scoreDisplay={t.scoreDisplay} completed={game.completed} won={t.won} showScore={showScore} />
+      ))}
       {game.completed && game.status_summary && <div style={{ fontSize: 12, fontWeight: 600, color: CARD.textMuted }}>{teamDisplayName(game.status_summary)}</div>}
     </div>
   );

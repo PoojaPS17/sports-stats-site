@@ -322,6 +322,36 @@ export interface GameDetails {
 
 export type MatchSport = "soccer" | "cricket" | "american";
 
+/**
+ * ESPN's minute text as the BBC prints it: stoppage time "90'+4'" reads "90+4'", and a substitution at the interval
+ * (period 2, clock exactly 2700 seconds, which ESPN labels "45'") reads "46'". Pass the event's `period` and, when
+ * known, its clock `value`; stored reports keep only the text, so a period-2 "45'" stands for that interval
+ * substitution. Anything else ("67'", "Pen. missed") is returned as it was, and the result is itself a valid input,
+ * so a value that has already been converted converts to itself.
+ */
+export function formatMinute(clock: string, at: { period?: number; value?: number } = {}): string {
+  const stoppage = /^(\d+)'\+(\d+)'$/.exec(clock);
+  if (stoppage) return `${stoppage[1]}+${stoppage[2]}'`;
+  if (at.period === 2 && clock === "45'" && (at.value === undefined || at.value === 2700)) return "46'";
+  return clock;
+}
+
+/**
+ * A stored or freshly parsed report with its minutes in display form (see formatMinute). Reports are stored with
+ * ESPN's text untouched, so this runs where a report is read for display; it copies rather than editing the input,
+ * and applying it twice changes nothing.
+ */
+export function presentDetails(d: GameDetails): GameDetails {
+  return {
+    ...d,
+    events: d.events.map((e) => (e.clock ? { ...e, clock: formatMinute(e.clock, { period: e.period }) } : e)),
+    lineups: d.lineups.map((l) => {
+      const fix = (p: LineupPlayer): LineupPlayer => (p.minute ? { ...p, minute: formatMinute(p.minute) } : p);
+      return { ...l, starters: l.starters.map(fix), subs: l.subs.map(fix) };
+    }),
+  };
+}
+
 function clockValue(e: any): number {
   return typeof e.clock?.value === "number" ? e.clock.value : 0;
 }
@@ -383,7 +413,12 @@ function minuteNumber(m: string | null): number {
 }
 
 function soccerLineups(data: any): TeamLineup[] {
-  const subMinute = (p: any): string | null => (p.plays ?? []).find((x: any) => x.substitution)?.clock?.displayValue ?? null;
+  const subMinute = (p: any): string | null => {
+    const play = (p.plays ?? []).find((x: any) => x.substitution);
+    const shown = play?.clock?.displayValue;
+    // Stored in display form; the play's own period and clock value are known here, which a stored report no longer has.
+    return typeof shown === "string" ? formatMinute(shown, { period: play.period?.number, value: typeof play.clock?.value === "number" ? play.clock.value : undefined }) : null;
+  };
   const player = (p: any): LineupPlayer => ({
     id: String(p.athlete.id),
     name: p.athlete.displayName ?? p.athlete.fullName ?? "",

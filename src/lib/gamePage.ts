@@ -18,6 +18,19 @@ export function gameSides(league: League, game: { home_name: string; away_name: 
   return awayFirst ? { first: game.away_name, second: game.home_name, awayFirst } : { first: game.home_name, second: game.away_name, awayFirst };
 }
 
+/**
+ * True where a two-team score line (a card, a share image, an accessible name) lists the home side first: football,
+ * as BBC and ESPN.com print it. The NBA and NFL list the visitors first, and cricket cards keep the order they have
+ * always had (away first), so this is narrower than `gameSides`, which also puts the home side first in cricket titles.
+ */
+export const scoreLineHomeFirst = (league: League): boolean => isSoccerLeague(league);
+
+/** "Manchester City vs Sunderland": the two names as a score line orders them (see scoreLineHomeFirst), for share titles and follow labels. */
+export function matchupLabel(league: League, game: { home_name: string; away_name: string }): string {
+  const [first, second] = scoreLineHomeFirst(league) ? [game.home_name, game.away_name] : [game.away_name, game.home_name];
+  return `${teamDisplayName(first)} vs ${teamDisplayName(second)}`;
+}
+
 /** Why a game is off in a sentence: "postponed", "cancelled", "abandoned" or "suspended"; null for any other game. */
 const offWord = (game: Status): string | null => gameCalledOffLabel(game)?.toLowerCase() ?? null;
 

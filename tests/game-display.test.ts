@@ -55,7 +55,7 @@ test("scheduleRowHeading and gameAccessibleLabel put an NFL game on its US Easte
   // the same instant in a league whose day is UTC is the Monday
   assert.equal(scheduleRowHeading(LEAGUE, sundayNight), "Mon, Sep 21 · 12:20 AM");
   assert.equal(scoreboardTileStatus(LEAGUE, sundayNight, false), "00:20 UTC");
-  assert.equal(gameAccessibleLabel(LEAGUE, sundayNight), "Chelsea at Arsenal, Monday, September 21");
+  assert.equal(gameAccessibleLabel(LEAGUE, sundayNight), "Arsenal v Chelsea, Monday, September 21");
 });
 
 test("scheduleRowHeading: a called-off game shows the reason and no kickoff time", () => {
@@ -72,14 +72,14 @@ test("scheduleRowHeading: a finished game shows only the date", () => {
 });
 
 test("gameAccessibleLabel: an upcoming game reads as a fixture, a called-off one says why it is off", () => {
-  assert.equal(gameAccessibleLabel(LEAGUE, game()), "Chelsea at Arsenal, Sunday, September 20");
-  assert.equal(gameAccessibleLabel(LEAGUE, calledOff()), "Chelsea at Arsenal, Sunday, September 20, postponed");
-  assert.equal(gameAccessibleLabel(LEAGUE, calledOff("Canceled")), "Chelsea at Arsenal, Sunday, September 20, cancelled");
+  assert.equal(gameAccessibleLabel(LEAGUE, game()), "Arsenal v Chelsea, Sunday, September 20");
+  assert.equal(gameAccessibleLabel(LEAGUE, calledOff()), "Arsenal v Chelsea, Sunday, September 20, postponed");
+  assert.equal(gameAccessibleLabel(LEAGUE, calledOff("Canceled")), "Arsenal v Chelsea, Sunday, September 20, cancelled");
 });
 
 test("gameAccessibleLabel: a finished game reads as a result", () => {
-  assert.equal(gameAccessibleLabel(LEAGUE, finished()), "Chelsea 1, Arsenal 2, final");
-  assert.equal(gameAccessibleLabel(LEAGUE, game({ completed: true, status_detail: "Abandoned", round: "Match abandoned", home_score: 1, away_score: 1 })), "Chelsea 1, Arsenal 1, Match abandoned");
+  assert.equal(gameAccessibleLabel(LEAGUE, finished()), "Arsenal 2, Chelsea 1, final");
+  assert.equal(gameAccessibleLabel(LEAGUE, game({ completed: true, status_detail: "Abandoned", round: "Match abandoned", home_score: 1, away_score: 1 })), "Arsenal 1, Chelsea 1, Match abandoned");
 });
 
 test("scoreboardTileStatus: an upcoming game shows its kickoff, a called-off one shows why it is off", () => {
@@ -111,7 +111,7 @@ test("a cricket match ESPN cancelled but the writer stored as finished is still 
   const stored = game({ completed: true, status_state: "post", status_detail: "Canceled", home_score: null, away_score: null });
   assert.equal(isUpcomingGame(stored), false);
   assert.equal(scheduleRowHeading(LEAGUE, stored), "Sun, Sep 20 · Cancelled");
-  assert.equal(gameAccessibleLabel(LEAGUE, stored), "Chelsea at Arsenal, Sunday, September 20, cancelled");
+  assert.equal(gameAccessibleLabel(LEAGUE, stored), "Arsenal v Chelsea, Sunday, September 20, cancelled");
   assert.equal(scoreboardTileStatus("ipl", stored, false), "Cancelled");
   assert.equal(scoreboardTileStatus("ipl", stored, true), "Sep 20, 2026 · Cancelled");
   // whereas a finished abandoned match is a result
@@ -125,7 +125,7 @@ test("a live game is live even when its status text reads like a stoppage", () =
   assert.equal(scoreboardTileStatus("ipl", live, true), "Sep 20, 2026 · Suspended");
   assert.equal(isUpcomingGame(live), false);
   assert.equal(scheduleRowHeading(LEAGUE, live), "Sun, Sep 20");
-  assert.equal(gameAccessibleLabel(LEAGUE, live), "Chelsea at Arsenal, Sunday, September 20");
+  assert.equal(gameAccessibleLabel(LEAGUE, live), "Arsenal v Chelsea, Sunday, September 20");
 });
 
 test("finishedNoScoreNote: a finished match with no scores says how it ended, and is never a called-off label", () => {

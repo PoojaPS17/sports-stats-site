@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { teamDisplayName } from "@/lib/teamName";
+import { Fragment } from "react";
+import { joinTeams, teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { formatSeasonLabel, type League } from "@/lib/queries";
 import { formatStat, gamesHeader, noBoxScoreGames, type PlayerProfile, type SeasonLine } from "@/lib/playerProfile";
@@ -79,13 +80,21 @@ export function PlayerSeasonTable({
                     {formatSeasonLabel(league, row.season)}
                   </Link>
                 </td>
-                <td className="py-2 pl-2">
+                <td className="py-2 pl-2" title={row.teams.length > 1 ? joinTeams(row.teams) : undefined}>
                   <span className="flex items-center gap-1.5 whitespace-nowrap">
-                    {row.teams.map((t) => (
-                      <Link key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 hover:text-[var(--accent)]" title={t.name}>
-                        <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={16} />
-                        <span className="hidden sm:inline">{t.name}</span>
-                      </Link>
+                    {/* A traded player has several teams: chronological, with a slash between them so the names never run together. */}
+                    {row.teams.map((t, i) => (
+                      <Fragment key={t.espn_id}>
+                        {i > 0 && (
+                          <span aria-hidden className="hidden text-[var(--text-faint)] sm:inline">
+                            /
+                          </span>
+                        )}
+                        <Link href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 hover:text-[var(--accent)]" title={t.name}>
+                          <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={16} />
+                          <span className="hidden sm:inline">{t.name}</span>
+                        </Link>
+                      </Fragment>
                     ))}
                   </span>
                 </td>

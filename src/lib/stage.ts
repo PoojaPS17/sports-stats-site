@@ -41,3 +41,50 @@ export function finishedLabel(league: League): string {
   if (isSoccerLeague(league)) return "FT";
   return "Final";
 }
+
+const OVERTIME_FINAL = /^Final\/(\d*OT)$/;
+
+/**
+ * "Final/OT" or "Final/2OT" when the stored status says the game went to overtime (ESPN's own detail, which
+ * NBA.com and NFL.com print the same way); null for any other status text.
+ */
+export function overtimeFinal(statusDetail: string | null | undefined): string | null {
+  const m = OVERTIME_FINAL.exec((statusDetail ?? "").trim());
+  return m ? `Final/${m[1]}` : null;
+}
+
+/** What a finished game with no stage says: "Final/OT" or "Final/2OT" after overtime, else the league's usual word (see finishedLabel). */
+export function finalLabel(league: League, statusDetail: string | null | undefined): string {
+  return overtimeFinal(statusDetail) ?? finishedLabel(league);
+}
+
+/**
+ * The stage of a game that has no `round`, from the columns the NBA feed fills: a play-in game and the NBA Cup
+ * final. `round` itself is left alone (it marks playoff rounds, and a query for those must not pick these up).
+ */
+export function specialStageLabel(g: { stage?: string | null; competition_type?: string | null }): string | null {
+  if (g.stage === "playin") return "Play-In";
+  if (g.competition_type === "CC") return "NBA Cup final";
+  return null;
+}
+
+/** The stage label a card shows: the game's round, else its play-in / Cup-final label, else null. */
+export function gameRoundLabel(g: { round: string | null; stage?: string | null; competition_type?: string | null }): string | null {
+  return normalizeStage(g.round) ?? specialStageLabel(g);
+}
+
+/**
+ * The word on a finished game's pill or caption: its stage, and "Final/OT" after overtime ("Second Round ·
+ * Final/OT"); with no stage the league's finished word or, after overtime, "Final/OT". `fallback` replaces that
+ * word for a caller that wants something else when there is nothing to say (the accessible name uses "final").
+ */
+export function finishedPillLabel(
+  league: League,
+  g: { round: string | null; stage?: string | null; competition_type?: string | null; status_detail: string | null | undefined },
+  fallback: string = finishedLabel(league),
+): string {
+  const stage = gameRoundLabel(g);
+  const ot = overtimeFinal(g.status_detail);
+  if (stage && ot) return `${stage} · ${ot}`;
+  return stage ?? ot ?? fallback;
+}

@@ -17,6 +17,7 @@ import {
   type LeaderRow,
 } from "./queries";
 import { summarizePlayoffs, type PlayoffResult } from "./seasonSummary";
+import { pool } from "./db";
 
 // What a league hub shows while nothing is scheduled: the season just played, in
 // three glances — how it ended (the final or the last round), the final table, and
@@ -25,6 +26,13 @@ import { summarizePlayoffs, type PlayoffResult } from "./seasonSummary";
 export interface OffseasonRecap {
   season: number;
   seasonLabel: string;
+  /**
+   * False while the season still has fixtures to play: the league page then says when the next matchday is instead of
+   * "season ended". See seasonIsOver.
+   */
+  seasonOver: boolean;
+  /** Kickoff of the season's next fixture; set exactly when the season is not over. */
+  nextFixtureOn: string | null;
   /** Date of the season's last completed game. */
   endedOn: string | null;
   champion: { name: string; slug: string } | null;
@@ -35,6 +43,27 @@ export interface OffseasonRecap {
   table: StandingRow[];
   tableSize: number;
   leaders: { label: string; unit: string; rows: LeaderRow[] }[];
+}
+
+/**
+ * A season is over when a cup competition's final has been played, when a domestic league's table is complete, or
+ * when nothing is left to play: no fixture in the database for that season that is unfinished, in the future and not
+ * called off. Anything else is a season between matchdays (the Champions League between its league-phase rounds),
+ * which must not be announced as ended.
+ */
+export function seasonIsOver(s: { cup: boolean; finalPlayed: boolean; domesticTableComplete: boolean; hasFutureFixture: boolean }): boolean {
+  return (s.cup && s.finalPlayed) || s.domesticTableComplete || !s.hasFutureFixture;
+}
+
+/** Kickoff of the earliest fixture of a season still to be played (not finished, in the future, not postponed or cancelled). */
+async function getNextFixtureDate(league: League, season: number): Promise<string | null> {
+  const { rows } = await pool.query(
+    `select min(date) as next from games
+     where league = $1 and season_year = $2 and completed = false and date > now()
+       and coalesce(status_detail, '') !~* 'postpon|cancel|abandon|suspend'`,
+    [league, season]
+  );
+  return rows[0]?.next ? new Date(rows[0].next).toISOString() : null;
 }
 
 const gamesPlayed = (r: StandingRow) => r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0);
@@ -53,7 +82,8 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
 
   const cricket = isCricketLeague(league);
   const leaderCategories = cricket ? CRICKET_LEADER_CATEGORIES.map((c) => ({ label: c.label, unit: c.unit, key: c.key })) : LEADER_CATEGORIES[league].slice(0, 3);
-  const [playoffGames, lastResults, standings, leaderBoards] = await Promise.all([
+  const [nextFixture, playoffGames, lastResults, standings, leaderBoards] = await Promise.all([
+    getNextFixtureDate(league, season),
     getSeasonPlayoffGames(league, season),
     getSeasonLastResults(league, season, 6),
     getStandingsBySeason(league, season),
@@ -71,10 +101,15 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
 
   // Playoff competitions crown the winner of the last knockout result; a league
   // season's champion is the top of a finished table.
+  const decider = [...playoffs].reverse().find((r) => /final/i.test(r.round) && !/semi|quarter/i.test(r.round));
+  const domesticTableComplete = isSoccerLeague(league) && !isCupCompetition(league) && tableComplete(standings);
+  const seasonOver = seasonIsOver({ cup: isCupCompetition(league), finalPlayed: decider !== undefined, domesticTableComplete, hasFutureFixture: nextFixture !== null });
   let champion: OffseasonRecap["champion"] = null;
-  const decider = [...playoffs].reverse().find((r) => /final/i.test(r.round) && !/semi|quarter/i.test(r.round)) ?? playoffs[playoffs.length - 1];
-  if (decider) champion = { name: decider.winnerName, slug: decider.winnerSlug };
-  else if (isSoccerLeague(league) && !isCupCompetition(league) && tableComplete(standings)) champion = { name: standings[0].name, slug: standings[0].slug };
+  if (seasonOver) {
+    const closing = decider ?? playoffs[playoffs.length - 1];
+    if (closing) champion = { name: closing.winnerName, slug: closing.winnerSlug };
+    else if (domesticTableComplete) champion = { name: standings[0].name, slug: standings[0].slug };
+  }
 
   // Group-stage competitions (World Cups, the old Champions League groups) have no
   // single table worth previewing; leagues and the IPL/BBL do.
@@ -84,6 +119,8 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
   return {
     season,
     seasonLabel: formatSeasonLabel(league, season) ?? String(season),
+    seasonOver,
+    nextFixtureOn: seasonOver ? null : nextFixture,
     endedOn: lastResults[0]?.date ?? null,
     champion,
     closingGames,
