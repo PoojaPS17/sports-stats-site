@@ -50,7 +50,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
     boards = season
       ? await Promise.all(CRICKET_LEADER_CATEGORIES.map(async (c) => ({ label: c.label, unit: c.unit, rows: await getCricketLeaders(league, c.key, season!, 10) })))
       : [];
-    note = "Summed from the scorecard of every match on record for the season.";
+    note = "Summed from the scorecards of the season's completed matches; a match joins the totals once its scorecard is stored, usually within a day of the final ball.";
   } else {
     const categories = LEADER_CATEGORIES[league];
     const [lists, s] = await Promise.all([Promise.all(categories.map((c) => getLeaders(league, c.column, 10))), getLeadersSeason(league)]);

@@ -19,6 +19,14 @@
 //
 // Default window is the last 21 days (the weekly Cricsheet lag plus slack), which the
 // daily scrape runs; `--since` sweeps history.
+//
+//   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --reconcile [--league wt20i] [--cap N]
+//
+// `--reconcile` is the un-windowed safety net the daily scrape also runs: every finished
+// international the series listing (cricket_series_matches) knows, from 2015 on, that has no
+// game row and was not abandoned without a ball, is imported the same way (newest first, at
+// most `--cap`, default 40). A match that still fails is logged with its id and the error and
+// the run exits 1, so a gap the 21-day sweep keeps missing shows up instead of staying invisible.
 import { normalizeStage } from "../src/lib/stage";
 import { resolveCricketWinner } from "../src/lib/cricketResult";
 import { pool } from "./lib/db";
@@ -26,15 +34,15 @@ import { CARD_VERSION, extractCricketMatchStats } from "./lib/cricket-career";
 import { upsertTeam } from "./lib/teams";
 import { uniqueSlugFor } from "./lib/players";
 import { extractGameDetails } from "../src/lib/matchDetail";
+import { fetchCricketSummaryVia } from "../src/lib/cricketSummary";
 
-type IntlLeague = "test" | "odi" | "t20i" | "wodi" | "wt20i";
-const INTL_LEAGUES: IntlLeague[] = ["test", "odi", "t20i", "wodi", "wt20i"];
+export type IntlLeague = "test" | "odi" | "t20i" | "wodi" | "wt20i";
+export const INTL_LEAGUES: IntlLeague[] = ["test", "odi", "t20i", "wodi", "wt20i"];
 // ESPN's `class.internationalClassId`: 1 = men's Test, 2 = men's ODI, 3 = men's T20I (women's
 // internationals and every domestic/first-class card use other ids).
-const CLASS_TO_LEAGUE: Record<string, IntlLeague> = { "1": "test", "2": "odi", "3": "t20i", "9": "wodi", "10": "wt20i" };
+export const CLASS_TO_LEAGUE: Record<string, IntlLeague> = { "1": "test", "2": "odi", "3": "t20i", "9": "wodi", "10": "wt20i" };
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
-const SUMMARY_URL = (seriesId: string, eventId: string) => `https://site.api.espn.com/apis/site/v2/sports/cricket/${seriesId}/summary?event=${eventId}`;
 const REQUEST_DELAY_MS = 150;
 const DISCOVERY_CONCURRENCY = 4;
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -103,7 +111,7 @@ function ymd(d: Date): string {
 /* Discovery                                                                 */
 /* ------------------------------------------------------------------------ */
 
-interface Found {
+export interface Found {
   id: string;
   league: IntlLeague;
   seriesId: string;
@@ -195,13 +203,14 @@ function abbreviationOf(team: any): string {
 // id from the header feed occasionally returns a copy with no competitors.
 const FALLBACK_SERIES = "8048";
 
-async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
-  let summary = await getJson(SUMMARY_URL(FALLBACK_SERIES, f.id));
-  let comp = summary?.header?.competitions?.[0];
-  if (!comp?.competitors?.length) {
-    summary = await getJson(SUMMARY_URL(f.seriesId, f.id));
-    comp = summary?.header?.competitions?.[0];
-  }
+export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
+  // ESPN's 502 error body ({"code":2502,...}) parses as JSON, so a bare getJson reads it as a
+  // summary with no competitors and the match is skipped as if ESPN had nothing. The shared
+  // read rejects it, retries, and tries the IPL id then the series id (lib/cricketSummary.ts).
+  const summary = await fetchCricketSummaryVia((path) => getJson(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${f.id}`), f.id, [...new Set([`cricket/${FALLBACK_SERIES}`, `cricket/${f.seriesId}`])], {
+    accept: (s) => Boolean(s?.header?.competitions?.[0]?.competitors?.length),
+  });
+  const comp = summary?.header?.competitions?.[0];
   const home = comp?.competitors?.find((c: any) => c.homeAway === "home");
   const away = comp?.competitors?.find((c: any) => c.homeAway === "away");
   if (!comp || !home?.team?.id || !away?.team?.id) {
@@ -393,10 +402,90 @@ async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
 }
 
 /* ------------------------------------------------------------------------ */
+/* Reconcile: finished internationals the listing knows but games lacks       */
+/* ------------------------------------------------------------------------ */
+
+export const RECONCILE_CAP = 40;
+// The site's international archive starts here (like Cricsheet's); earlier listed matches are not gaps.
+const RECONCILE_FROM = "2015-01-01";
+
+export async function findMissingInternationals(cap: number, only?: IntlLeague): Promise<{ total: number; matches: Found[] }> {
+  const classIds = Object.entries(CLASS_TO_LEAGUE)
+    .filter(([, lg]) => !only || lg === only)
+    .map(([id]) => id);
+  // Same rule as writeMatch's own: a match abandoned before a ball was bowled is not an international.
+  const where = `m.status_state = 'post' and m.international_class_id = any($1::text[]) and m.date >= $2
+       and coalesce(m.status_summary, '') !~* '(abandoned|cancelled|called off) without a ball'
+       and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any($3::text[]))`;
+  const [{ rows }, { rows: count }] = await Promise.all([
+    pool.query(`select m.espn_id, m.series_espn_id, m.date, m.name, m.international_class_id from cricket_series_matches m where ${where} order by m.date desc limit $4`, [classIds, RECONCILE_FROM, INTL_LEAGUES, cap]),
+    pool.query(`select count(*)::int as n from cricket_series_matches m where ${where}`, [classIds, RECONCILE_FROM, INTL_LEAGUES]),
+  ]);
+  const matches: Found[] = rows
+    .map((r) => ({ id: String(r.espn_id), league: CLASS_TO_LEAGUE[String(r.international_class_id)], seriesId: String(r.series_espn_id), date: new Date(r.date).toISOString(), name: String(r.name) }))
+    // Oldest first, as the sweep writes, so a player's club ends up their latest one.
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { total: count[0].n, matches };
+}
+
+export interface ReconcileResult {
+  eligible: number;
+  attempted: number;
+  imported: string[];
+  /** writeMatch declined (logged with its reason): not finished after all, no scorecard on ESPN, no competitors. */
+  skipped: string[];
+  failed: { id: string; error: string }[];
+}
+
+export async function reconcileMissingInternationals(options: { cap?: number; league?: IntlLeague; delayMs?: number } = {}): Promise<ReconcileResult> {
+  const cap = options.cap ?? RECONCILE_CAP;
+  const { total, matches } = await findMissingInternationals(cap, options.league);
+  const result: ReconcileResult = { eligible: total, attempted: matches.length, imported: [], skipped: [], failed: [] };
+  for (const f of matches) {
+    try {
+      if (await writeMatch(f, false)) result.imported.push(`${f.league}/${f.id}`);
+      else result.skipped.push(`${f.league}/${f.id}`);
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      result.failed.push({ id: `${f.league}/${f.id}`, error });
+      console.error(`[import-cricket-espn] ${f.league} ${f.id} failed: ${error}`);
+    }
+    if (options.delayMs) await sleep(options.delayMs);
+  }
+  return result;
+}
+
+export function reconcileSummaryLine(r: ReconcileResult, cap: number): string {
+  return (
+    `[import-cricket-espn] reconcile: ${r.eligible} finished international(s) listed without a game row; attempted ${r.attempted} (cap ${cap}), ` +
+    `imported ${r.imported.length}${r.imported.length ? ` (${r.imported.join(", ")})` : ""}, ` +
+    `skipped ${r.skipped.length}${r.skipped.length ? ` (${r.skipped.join(", ")})` : ""}, failed ${r.failed.length}` +
+    (r.failed.length ? ` (${r.failed.map((f) => f.id).join(", ")})` : "") +
+    (r.eligible > r.attempted ? `; ${r.eligible - r.attempted} left for the next run` : "")
+  );
+}
+
+/* ------------------------------------------------------------------------ */
 /* Main                                                                      */
 /* ------------------------------------------------------------------------ */
 
+async function reconcileMain() {
+  const args = process.argv.slice(2);
+  const opt = (name: string) => (args.indexOf(`--${name}`) >= 0 ? args[args.indexOf(`--${name}`) + 1] : undefined);
+  const league = opt("league") as IntlLeague | undefined;
+  const cap = opt("cap") === undefined ? RECONCILE_CAP : Number(opt("cap"));
+  if ((league && !INTL_LEAGUES.includes(league)) || !Number.isInteger(cap) || cap < 1) {
+    console.error(`usage: import-cricket-espn.ts --reconcile [--league ${INTL_LEAGUES.join("|")}] [--cap N]`);
+    process.exit(2);
+  }
+  const result = await reconcileMissingInternationals({ cap, league, delayMs: REQUEST_DELAY_MS });
+  console.log(reconcileSummaryLine(result, cap));
+  await pool.end();
+  process.exit(result.failed.length > 0 ? 1 : 0);
+}
+
 async function main() {
+  if (process.argv.includes("--reconcile")) return reconcileMain();
   const { since, until, league, step, dryRun } = parseArgs();
   console.log(`[import-cricket-espn] ${league ?? "odi+t20i"} ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}${dryRun ? " (dry run)" : ""}`);
   const found = await discover(since, until, league, step);
@@ -428,7 +517,10 @@ async function main() {
   await pool.end();
 }
 
-main().catch((err) => {
-  console.error("[import-cricket-espn] failed:", err);
-  process.exit(1);
-});
+// Only when run as a script: the reconcile and the tests import writeMatch from here.
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("[import-cricket-espn] failed:", err);
+    process.exit(1);
+  });
+}

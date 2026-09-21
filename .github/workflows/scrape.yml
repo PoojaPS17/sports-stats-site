@@ -92,6 +92,21 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run import:cricket-espn
 
+      # Safety nets for cricket, run with the same daily gate: internationals the series
+      # listing knows but the three-week sweep missed, then scorecards (leader boards and
+      # match pages) for completed games that have no player rows yet. Bounded per run.
+      - name: Reconcile missing internationals
+        if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run import:cricket-espn -- --reconcile
+
+      - name: Top up cricket scorecards
+        if: github.event.schedule == '7 6 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run topup:cricket-player-stats
+
       # Whole-season schedules (every remaining fixture, plus NFL week numbers) —
       # once a day is plenty; the 15-minute tick only needs the scoreboard window.
       - name: Fetch full-season fixtures

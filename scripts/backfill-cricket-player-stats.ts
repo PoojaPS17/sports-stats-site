@@ -6,8 +6,9 @@
 // double-counted).
 import { pool } from "./lib/db";
 import { fetchSummary, type League } from "./lib/espn";
-import { CARD_VERSION, extractCricketMatchStats } from "./lib/cricket-career";
-import { uniqueSlugFor } from "./lib/players";
+import { extractCricketMatchStats } from "./lib/cricket-career";
+import { extractGameDetails } from "../src/lib/matchDetail";
+import { storeCricketDetailsIfMissing, writeCricketPlayerRows } from "./lib/cricket-player-rows";
 
 const REQUEST_DELAY_MS = 100;
 const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
@@ -18,10 +19,13 @@ function sleep(ms: number) {
 
 // `--missing` restricts the run to completed games that have no player rows yet — the
 // mode for topping up after a history extension, when re-reading every already-loaded
-// match would cost more requests than the new ones.
+// match would cost more requests than the new ones. The summary is read through the robust
+// cricket fetch (an ESPN error body is retried, then read via the IPL path, then reported
+// as a failure) — see lib/espn.ts. The daily job runs the bounded twin of this,
+// topup-cricket-player-stats.ts.
 async function backfillLeague(league: League, missingOnly: boolean) {
   const { rows: games } = await pool.query(
-    `select g.espn_id from games g
+    `select g.espn_id, g.home_team_espn_id, g.away_team_espn_id from games g
      where g.league = $1 and g.completed = true
        and ($2 = false or not exists (select 1 from player_game_stats s where s.league = g.league and s.game_espn_id = g.espn_id))
      order by g.date asc`,
@@ -30,7 +34,7 @@ async function backfillLeague(league: League, missingOnly: boolean) {
 
   let processed = 0;
   let playerRows = 0;
-  for (const { espn_id } of games) {
+  for (const { espn_id, home_team_espn_id, away_team_espn_id } of games) {
     try {
       const summary = await fetchSummary(league, espn_id);
       const { venue, players } = extractCricketMatchStats(summary);
@@ -39,30 +43,9 @@ async function backfillLeague(league: League, missingOnly: boolean) {
         await pool.query(`update games set venue = $1 where league = $2 and espn_id = $3`, [venue, league, espn_id]);
       }
 
-      for (const p of players) {
-        const slug = await uniqueSlugFor(league, p.athleteId, p.name);
-        // A full run walks games oldest-first, so the last upsert leaves each player on
-        // the club of their latest match. A --missing run only visits older, newly added
-        // games, so it must not move an existing player back to a club they have since
-        // left; it only creates players we have never seen.
-        await pool.query(
-          `insert into players (league, espn_id, team_espn_id, name, slug)
-           values ($1, $2, $3, $4, $5)
-           on conflict (league, espn_id) do update set
-             name = excluded.name,
-             team_espn_id = case when $6 then players.team_espn_id else excluded.team_espn_id end`,
-          [league, p.athleteId, p.teamId, p.name, slug, missingOnly]
-        );
-
-        await pool.query(
-          `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
-           values ($1, $2, $3, $4, $5, now())
-           on conflict (league, game_espn_id, player_espn_id) do update set
-             team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()`,
-          [league, espn_id, p.athleteId, p.teamId, JSON.stringify({ batting: p.batting, bowling: p.bowling, catches: p.catches, innings: p.innings, v: CARD_VERSION })]
-        );
-        playerRows++;
-      }
+      playerRows += await writeCricketPlayerRows(pool, league, espn_id, players, missingOnly);
+      // The match page reads this stored report; a game that has none with a scorecard gets it here too.
+      if (players.length > 0) await storeCricketDetailsIfMissing(pool, league, espn_id, extractGameDetails("cricket", summary, home_team_espn_id, away_team_espn_id));
       processed++;
     } catch (err) {
       console.error(`[backfill-cricket-player-stats] ${league} game ${espn_id} failed:`, err instanceof Error ? err.message : err);
