@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement, type ReactElement } from "react";
 import { startTestDb, type TestDb } from "./helpers/testDb";
-import { idsFollowingOnCourt, tennisMatchCaption, tennisMatchStatus } from "../src/lib/tennisDisplay";
+import { idsFollowingOnCourt, occupiesCourt, tennisMatchCaption, tennisMatchStatus } from "../src/lib/tennisDisplay";
 import { LocalTime } from "../src/components/LocalTime";
 import type { TennisMatch, TennisSet } from "../src/lib/tennis";
 
@@ -91,11 +91,15 @@ test("a suspended match shows 'Suspended' and its score on the page and the shar
   assert.doesNotMatch(text(page), /10:00/);
   assert.match(page, />4</);
   assert.equal(tennisMatchCaption(suspended()), "Suspended · Final · Quadra 1");
-  assert.match(text(renderToStaticMarkup(MatchBox({ m: suspended(), caption: tennisMatchCaption(suspended()) }) as ReactElement)), /^SUSPENDED|Suspended/i);
+  // a tile with a caption says it in the caption, once: the extra line is only for a tile without one
+  const tile = text(renderToStaticMarkup(MatchBox({ m: suspended(), caption: tennisMatchCaption(suspended()) }) as ReactElement));
+  assert.match(tile, /Suspended · Final · Quadra 1/);
+  assert.equal((tile.match(/Suspended/g) ?? []).length, 1);
 });
 
 test("the draw tile (no caption) says Suspended too, so a stopped match is not just a score", () => {
-  assert.match(text(renderToStaticMarkup(MatchBox({ m: suspended() }) as ReactElement)), /Suspended/);
+  const bare = text(renderToStaticMarkup(MatchBox({ m: suspended() }) as ReactElement));
+  assert.equal((bare.match(/Suspended/g) ?? []).length, 1);
   // and a settled or plain upcoming tile gets no extra line
   assert.doesNotMatch(text(renderToStaticMarkup(MatchBox({ m: upcoming() }) as ReactElement)), /Suspended|Postponed/);
 });
@@ -129,6 +133,25 @@ test("idsFollowingOnCourt: every match after the first on the same tournament, c
   assert.deepEqual([...got].sort(), ["b", "c"]);
 });
 
+test("idsFollowingOnCourt: an earlier match with no real start (TBD, postponed, cancelled) does not make a later one an estimate", () => {
+  const r = (id: string, date: string, occupies = true) => ({ id, tournament: "811-2026", court: "Center Court", day: "2026-09-22", date, occupies });
+  const got = idsFollowingOnCourt([r("tbd", "2026-09-22T04:00:00Z", false), r("off", "2026-09-22T05:00:00Z", false), r("real", "2026-09-22T07:00:00Z"), r("next", "2026-09-22T08:40:00Z")]);
+  assert.deepEqual([...got].sort(), ["next"]);
+});
+
+test("occupiesCourt: TBD, postponed, cancelled and stopped-before-play rows do not; real, live and finished ones do", () => {
+  assert.equal(occupiesCourt({ status_detail: "M/d - 'TBD'", completed: false }), false);
+  assert.equal(occupiesCourt({ status_detail: "Postponed", completed: false }), false);
+  assert.equal(occupiesCourt({ status_detail: "Postponed", completed: true }), false); // stored completed by the older scraper
+  assert.equal(occupiesCourt({ status_detail: "Canceled", completed: true }), false);
+  assert.equal(occupiesCourt({ status_detail: "Suspended", completed: false }), false);
+  assert.equal(occupiesCourt({ status_detail: "Mon, September 21st at 10:00 AM EDT", completed: false }), true);
+  assert.equal(occupiesCourt({ status_detail: "Final", completed: true }), true);
+  assert.equal(occupiesCourt({ status_detail: "Retired", completed: true }), true);
+  assert.equal(occupiesCourt({ status_detail: "Abandoned", completed: true }), true); // a finished abandoned match was played
+  assert.equal(occupiesCourt({ status_detail: null, completed: false }), true);
+});
+
 test("a match later on its court is shown as an estimate, with what it follows", () => {
   const first = line(upcoming());
   const later = line(upcoming({ after_court_match: true, date: "2026-09-22T09:40:00Z" }));
@@ -153,16 +176,16 @@ after(async () => {
   await (await import("../src/lib/db")).pool.end();
   await db?.stop();
 });
+const ins = (id: string, court: string | null, date: string, day: string, tournament = "811-2026", detail: string | null = null, completed = false) =>
+  db.pool.query(
+    `insert into tennis_matches (tour, espn_id, player1_espn_id, player2_espn_id, tournament_name, round, date, completed, status_state, status_detail, tournament_espn_id, competition_type, court, day, side1, side2)
+     values ('wta', $1, '1', '2', 'Korea Open', 'Round 1', $2, $6, 'pre', $7, $5, 'womens-singles', $3, $4::date,
+             '{"ids":["1"],"names":["A"],"countries":[null],"seed":null,"rank":null,"score":null,"sets":[]}',
+             '{"ids":["2"],"names":["B"],"countries":[null],"seed":null,"rank":null,"score":null,"sets":[]}')`,
+    [id, date, court, day, tournament, completed, detail]
+  );
 beforeEach(async () => {
   await db.pool.query(`delete from tennis_matches`);
-  const ins = (id: string, court: string | null, date: string, day: string, tournament = "811-2026") =>
-    db.pool.query(
-      `insert into tennis_matches (tour, espn_id, player1_espn_id, player2_espn_id, tournament_name, round, date, completed, status_state, tournament_espn_id, competition_type, court, day, side1, side2)
-       values ('wta', $1, '1', '2', 'Korea Open', 'Round 1', $2, false, 'pre', $5, 'womens-singles', $3, $4::date,
-               '{"ids":["1"],"names":["A"],"countries":[null],"seed":null,"rank":null,"score":null,"sets":[]}',
-               '{"ids":["2"],"names":["B"],"countries":[null],"seed":null,"rank":null,"score":null,"sets":[]}')`,
-      [id, date, court, day, tournament]
-    );
   await ins("a", "Center Court", "2026-09-22T08:00:00Z", "2026-09-22");
   await ins("b", "Center Court", "2026-09-22T09:40:00Z", "2026-09-22");
   await ins("c", "Grandstand", "2026-09-22T08:00:00Z", "2026-09-22");
@@ -175,4 +198,15 @@ test("getTennisDay flags exactly the matches that follow another on their court 
   assert.deepEqual(day.filter((m) => m.after_court_match).map((m) => m.espn_id), ["b"]);
   assert.deepEqual((await tennis.getTennisDay("2026-09-23")).filter((m) => m.after_court_match), []);
   assert.equal((await tennis.getTennisMatch("b"))?.after_court_match, true);
+});
+
+test("an earlier TBD, postponed or cancelled match on the court does not make a later one an estimate", async () => {
+  // Show Court 1, 22 Sep: a TBD placeholder (midnight Eastern), a postponed and a cancelled row, then the real first match, then a follower
+  await ins("x-tbd", "Show Court 1", "2026-09-22T04:00:00Z", "2026-09-22", "811-2026", "M/d - 'TBD'");
+  await ins("x-post", "Show Court 1", "2026-09-22T05:00:00Z", "2026-09-22", "811-2026", "Postponed", true);
+  await ins("x-canc", "Show Court 1", "2026-09-22T05:30:00Z", "2026-09-22", "811-2026", "Canceled", true);
+  await ins("x-real", "Show Court 1", "2026-09-22T07:00:00Z", "2026-09-22");
+  await ins("x-next", "Show Court 1", "2026-09-22T08:40:00Z", "2026-09-22");
+  const flagged = (await tennis.getTennisDay("2026-09-22")).filter((m) => m.court === "Show Court 1" && m.after_court_match).map((m) => m.espn_id);
+  assert.deepEqual(flagged, ["x-next"], "the first real match is not an estimate; only the one after it is");
 });

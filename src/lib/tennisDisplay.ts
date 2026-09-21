@@ -4,7 +4,7 @@
 // ESPN's tennis listing files a finished match, a retirement and a walkover all as state "post"; the scraper stores
 // state "post" as completed, so a postponed match can be stored completed with no winner. Called off is therefore
 // decided by the status text and there being no winner, not by the completed flag alone.
-import { calledOffLabel, isCalledOff } from "./gameStatus";
+import { calledOffLabel, isCalledOff, isNeverPlayed } from "./gameStatus";
 import type { TennisMatch, TennisSet } from "./tennis";
 
 // The sides are optional so a caller that only has the status fields (and older tests) still type-checks; a missing
@@ -68,14 +68,15 @@ export function setCell(own: TennisSet | undefined, other: TennisSet | undefined
 /**
  * The ids of the matches that follow another on the same tournament, court and day, given every match of that day.
  * ESPN gives the first match on a court its real start and the rest an estimate that moves with the play before it.
- * The SQL twin is `after_court_match` in tennis.ts.
+ * Rows with `occupies: false` (occupiesCourt) are not counted as "earlier". The SQL twin is `after_court_match` in tennis.ts.
  */
-export function idsFollowingOnCourt(rows: { id: string; tournament: string | null; court: string | null; day: string | null; date: string }[]): Set<string> {
+export function idsFollowingOnCourt(rows: { id: string; tournament: string | null; court: string | null; day: string | null; date: string; occupies?: boolean }[]): Set<string> {
   const key = (r: (typeof rows)[number]) => (r.tournament && r.court && r.day ? `${r.tournament}|${r.court}|${r.day}` : null);
   const first = new Map<string, number>();
   for (const r of rows) {
     const k = key(r);
-    if (k) first.set(k, Math.min(first.get(k) ?? Infinity, Date.parse(r.date)));
+    // a row with no real start (see occupiesCourt) cannot be what a later match follows
+    if (k && r.occupies !== false) first.set(k, Math.min(first.get(k) ?? Infinity, Date.parse(r.date)));
   }
   const out = new Set<string>();
   for (const r of rows) {
@@ -83,4 +84,17 @@ export function idsFollowingOnCourt(rows: { id: string; tournament: string | nul
     if (k && Date.parse(r.date) > (first.get(k) as number)) out.add(r.id);
   }
   return out;
+}
+
+/**
+ * Whether a match holds its court at its listed time, so a later match on that court follows it. A match with no time
+ * yet (ESPN's "M/d - 'TBD'", stored at a midnight-Eastern placeholder), one that was postponed or cancelled (stored
+ * completed by the older scraper, so `completed` is ignored for those), and one stopped before it was finished
+ * (suspended) do not; a finished match, even an abandoned one, and one in play do. The SQL twin is `OCCUPIES_COURT_SQL`
+ * in tennis.ts. (Midnight Eastern alone is not a marker: a noon start in Shanghai is 00:00 Eastern.)
+ */
+export function occupiesCourt(m: { status_detail: string | null; completed: boolean }): boolean {
+  const d = m.status_detail ?? "";
+  if (/\bTBD\b/i.test(d) || isNeverPlayed(d)) return false;
+  return m.completed || !isCalledOff(d);
 }

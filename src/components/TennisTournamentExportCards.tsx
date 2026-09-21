@@ -51,7 +51,7 @@ export function MatchBox({ m, caption }: { m: TennisMatch; caption?: string | nu
       {caption && <div style={{ marginBottom: 2, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: m.status_state === "in" ? CARD.loss : CARD.textFaint }}>{caption}</div>}
       <SideRow side={m.side1} other={m.side2} won={m.winner_side === 1} decided={decided} setCount={setCount} />
       <SideRow side={m.side2} other={m.side1} won={m.winner_side === 2} decided={decided} setCount={setCount} />
-      {!decided && tennisMatchStatus(m).kind === "result" && m.status_detail && m.status_detail !== "Final" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{m.status_detail}</div>}
+      {!decided && status.kind === "result" && m.status_detail && m.status_detail !== "Final" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{m.status_detail}</div>}
       {/* a called-off or suspended match shows why; a tile with a caption already says it there */}
       {!caption && !decided && status.kind === "called-off" && <div style={{ marginTop: 2, fontSize: 12, color: CARD.textMuted }}>{status.label}</div>}
     </div>

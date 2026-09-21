@@ -37,6 +37,8 @@ interface M {
   detail?: string;
   ids1?: string[]; // side ids, when they are not just [p1]
   ids2?: string[];
+  tournament?: string; // tournament_espn_id; default 't-<year>'
+  tname?: string;
   noSides?: boolean; // an early-backfill row: singles only, no side JSON
   completed?: boolean;
 }
@@ -45,8 +47,8 @@ async function put(m: M) {
   await db.pool.query(
     `insert into tennis_matches (tour, espn_id, tournament_espn_id, tournament_name, round, date, player1_espn_id, player2_espn_id, winner_espn_id,
                                  completed, status_state, status_detail, competition_type, day, side1, side2)
-     values ('atp', $1, 't-' || substr($2, 1, 4), 'Some Open', $3, $2::timestamptz, $4, $5, $6, $7, 'post', $8, $9, $2::date, $10::jsonb, $11::jsonb)`,
-    [m.id, m.date, m.round ?? "Round 1", m.p1, m.p2, m.winner, m.completed ?? true, m.detail ?? "Final", m.type, m.noSides ? null : side(m.ids1 ?? [m.p1]), m.noSides ? null : side(m.ids2 ?? [m.p2])]
+     values ('atp', $1, coalesce($12, 't-' || substr($2, 1, 4)), coalesce($13, 'Some Open'), $3, $2::timestamptz, $4, $5, $6, $7, 'post', $8, $9, $2::date, $10::jsonb, $11::jsonb)`,
+    [m.id, m.date, m.round ?? "Round 1", m.p1, m.p2, m.winner, m.completed ?? true, m.detail ?? "Final", m.type, m.noSides ? null : side(m.ids1 ?? [m.p1]), m.noSides ? null : side(m.ids2 ?? [m.p2]), m.tournament ?? null, m.tname ?? null]
   );
 }
 
@@ -120,4 +122,39 @@ test("a team-cup event has a label for its section, and no champions listed from
   const html = renderToStaticMarkup(createElement(Draw, { type: "team-cup", matches }));
   assert.match(html, />Team Cup</);
   assert.equal(tennis.COMPETITION_LABEL["team-cup"], "Team Cup");
+});
+
+/* ---- which team events count ---- */
+
+// ESPN files these as competition_type 'team-cup' (feed samples 2021-2025): Davis Cup (ids 810, 862, 928, 968...), ATP Cup
+// (827-838, 878), Billie Jean King Cup (863, 929, 967) and the Laver Cup (840). The ATP and WTA count the first three in
+// a player's record; the Laver Cup is an exhibition and neither tour nor Wikipedia counts it. United Cup (918) is typed
+// 'mixed-doubles' for every rubber, its singles ones with a one-player side.
+const record = async () => (await tennis.getTennisPlayerSeasonRecords("atp", P)).find((r) => r.season === 2024);
+const h2hIds = async () => (await tennis.getTennisHeadToHead("atp", P, "20")).map((m) => m.espn_id).sort();
+const rivalRow = async () => (await tennis.getTennisPlayerRivals("atp", P)).find((r) => r.espn_id === "20");
+
+test("Laver Cup singles (id 840, or the name when the id is missing) are in no record, head-to-head or rival count", async () => {
+  const before = [await record(), await h2hIds(), await rivalRow()];
+  await put({ id: "l1", type: "team-cup", date: "2024-09-21T12:00:00Z", p1: P, p2: "20", winner: P, round: "Final", tournament: "840-2024", tname: "Laver Cup" });
+  await put({ id: "l2", type: "team-cup", date: "2025-09-20T12:00:00Z", p1: "20", p2: P, winner: "20", tournament: "840-2025", tname: "Laver Cup" });
+  await put({ id: "l3", type: "team-cup", date: "2024-09-22T12:00:00Z", p1: P, p2: "20", winner: "20", tournament: "x-unknown", tname: "Laver Cup" }); // name fallback
+  assert.deepEqual([await record(), await h2hIds(), await rivalRow()], before);
+  assert.equal((await tennis.getTennisPlayerSeasonRecords("atp", P)).some((r) => r.season === 2025), false, "a Laver-Cup-only season has no row");
+});
+
+test("Davis Cup, ATP Cup and Billie Jean King Cup singles count, one-player sides only", async () => {
+  const before = await record();
+  await put({ id: "d1", type: "team-cup", date: "2024-11-20T12:00:00Z", p1: P, p2: "30", winner: P, round: "Quarterfinal", tournament: "862-2024", tname: "Davis Cup Finals" });
+  await put({ id: "d2", type: "team-cup", date: "2024-02-02T12:00:00Z", p1: "30", p2: P, winner: "30", tournament: "968-2024", tname: "Davis Cup World Group I" });
+  await put({ id: "d3", type: "team-cup", date: "2024-01-02T12:00:00Z", p1: P, p2: "30", winner: P, tournament: "878-2024", tname: "ATP Cup" });
+  await put({ id: "d4", type: "team-cup", date: "2024-11-13T12:00:00Z", p1: P, p2: "30", winner: P, tournament: "967-2024", tname: "Billie Jean King Cup Play-offs" });
+  assert.deepEqual(await record(), { season: 2024, wins: before!.wins + 3, losses: before!.losses + 1, titles: before!.titles });
+});
+
+test("United Cup singles (typed mixed-doubles with one-player sides) count; a real mixed-doubles pair does not", async () => {
+  const before = await record();
+  await put({ id: "u1", type: "mixed-doubles", date: "2024-01-03T12:00:00Z", p1: P, p2: "20", winner: "20", round: "Group Stage", tournament: "918-2024", tname: "United Cup" });
+  await put({ id: "u2", type: "mixed-doubles", date: "2024-01-04T12:00:00Z", p1: P, p2: "20", winner: P, tournament: "someopen-2024", ids1: [P, "40"], ids2: ["20", "50"] });
+  assert.deepEqual(await record(), { season: 2024, wins: before!.wins, losses: before!.losses + 1, titles: before!.titles });
 });

@@ -119,6 +119,12 @@ const SIDE_SQL = (side: "side1" | "side2", player: "player1_espn_id" | "player2_
     'seed', null, 'rank', null, 'score', case when m.winner_espn_id = m.${player} then m.score_display end, 'sets', '[]'::jsonb)
   end as ${side}`;
 
+// SQL twin of occupiesCourt (tennisDisplay.ts), on alias `o`: a match with no time yet (TBD), or postponed or cancelled,
+// or stopped before it was finished (suspended, abandoned and not completed) does not hold the court, so it is not
+// what a later match on that court follows.
+const OCCUPIES_COURT_SQL = `not (coalesce(o.status_detail, '') ~* '\\mTBD\\M|postpon|cancel'
+                                 or (not o.completed and coalesce(o.status_detail, '') ~* 'suspend|abandon'))`;
+
 const MATCH_SELECT = `
   select m.espn_id, m.tour, m.tournament_espn_id, m.tournament_name, t.location as tournament_location, coalesce(t.major, false) as major,
          m.competition_type, m.round, m.round_number, m.court,
@@ -127,7 +133,8 @@ const MATCH_SELECT = `
          case when m.winner_espn_id is null then null
               when m.winner_espn_id = m.player1_espn_id then 1 else 2 end as winner_side,
          exists (select 1 from tennis_matches o
-                 where o.tournament_espn_id = m.tournament_espn_id and o.court = m.court and o.day = m.day and o.date < m.date) as after_court_match,
+                 where o.tournament_espn_id = m.tournament_espn_id and o.court = m.court and o.day = m.day and o.date < m.date
+                   and ${OCCUPIES_COURT_SQL}) as after_court_match,
          ${SIDE_SQL("side1", "player1_espn_id")},
          ${SIDE_SQL("side2", "player2_espn_id")}
   from tennis_matches m
@@ -285,10 +292,17 @@ export async function getTennisPlayerMatches(tour: Tour, playerEspnId: string, l
 
 // What counts as a singles match in a player's record, head-to-head and rivals (SQL, on alias `m`).
 //  - the singles draws, plus a row with no draw type (the early Slam backfill stored singles only);
-//  - a team-cup (Davis Cup, United Cup) singles rubber: ESPN files singles and doubles rubbers of a tie under the one
-//    type 'team-cup', so it is told by both sides being one player. Those count in the record, as the tours count them.
+//  - a team-event singles rubber, told from a doubles rubber by both sides being one player. ESPN files every rubber
+//    of Davis Cup (ids 810, 862, 928, 968...), ATP Cup (827-838, 878) and Billie Jean King Cup (863, 929, 967) under
+//    competition_type 'team-cup', and every United Cup (918) rubber under 'mixed-doubles', so both types are read this
+//    way. The tours count those in a player's record;
+//  - but not the Laver Cup (id 840, also typed 'team-cup'): an exhibition that neither the ATP, the WTA nor Wikipedia
+//    counts. Excluded by tournament id, and by name when a row has no usable id. No other exhibition was typed
+//    team-cup in the feed samples 2021-2025.
 const SINGLES_SQL = `(m.competition_type is null or m.competition_type like '%singles'
-       or (m.competition_type = 'team-cup' and m.side1 is not null and jsonb_array_length(m.side1 -> 'ids') = 1 and jsonb_array_length(m.side2 -> 'ids') = 1))`;
+       or (m.competition_type in ('team-cup', 'mixed-doubles') and m.side1 is not null
+           and jsonb_array_length(m.side1 -> 'ids') = 1 and jsonb_array_length(m.side2 -> 'ids') = 1
+           and coalesce(m.tournament_espn_id, '') !~ '^840-' and m.tournament_name !~* '^laver cup'))`;
 // A walkover is not a match played: neither player's win nor loss (ESPN's detail is "Walkover"; a retirement, which
 // has a score and a result, is played and counts).
 const PLAYED_SQL = `coalesce(m.status_detail, '') not ilike 'walkover'`;
