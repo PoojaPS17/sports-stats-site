@@ -6,6 +6,7 @@ import { isSoccer } from "@/lib/analytics";
 import type { SeasonProjection } from "@/lib/simulator";
 import { CARD } from "@/lib/exportTheme";
 import { formatGameDate } from "@/lib/gameDay";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 export function pct(p: number): string {
   if (p >= 0.995) return ">99%";
@@ -63,34 +64,41 @@ export function UpcomingProbabilityExportCard({ league, proj, title }: { league:
   return (
     <ExportShell header={<ExportTitle league={league} title={title} subtitle={`Model win probability for the next seven days. ${formatSeasonLabel(league, proj.season)} season.`} />} context={title}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        {shown.map(({ game, homeWin, draw, awayWin }) => (
-          <div key={game.espn_id} style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: CARD.textFaint }}>
-              {formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric" })}
+        {shown.map(({ game, homeWin, draw, awayWin }) => {
+          const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "#d97706", win: awayWin };
+          const home = { name: game.home_name, abbr: game.home_abbr, logo: game.home_logo, color: game.home_color ?? CARD.accent, win: homeWin };
+          // Football lists the home side first ("MCI v SUN"); the NBA and NFL the visitors first ("SUN at MCI").
+          const homeFirst = scoreLineHomeFirst(league);
+          const [first, second] = homeFirst ? [home, away] : [away, home];
+          return (
+            <div key={game.espn_id} style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: CARD.textFaint }}>
+                {formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric" })}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6, fontSize: 14, fontWeight: 700, color: CARD.text }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <TeamLogo name={teamDisplayName(first.name)} logoUrl={first.logo} color={first.color} size={22} />
+                  {first.abbr ?? teamDisplayName(first.name)}
+                </span>
+                <span style={{ fontWeight: 500, color: CARD.textFaint }}>{homeFirst ? "v" : "at"}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {second.abbr ?? teamDisplayName(second.name)}
+                  <TeamLogo name={teamDisplayName(second.name)} logoUrl={second.logo} color={second.color} size={22} />
+                </span>
+              </div>
+              <div style={{ display: "flex", height: 8, overflow: "hidden", borderRadius: 999, background: CARD.border, marginTop: 8 }}>
+                <span style={{ width: `${first.win * 100}%`, background: first.color }} />
+                {soccer && <span style={{ width: `${draw * 100}%`, background: CARD.textFaint }} />}
+                <span style={{ flex: 1, background: second.color }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12, color: CARD.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                <span style={{ fontWeight: first.win > second.win ? 800 : 500, color: first.win > second.win ? CARD.text : CARD.textMuted }}>{pct(first.win)}</span>
+                {soccer && <span>draw {pct(draw)}</span>}
+                <span style={{ fontWeight: second.win > first.win ? 800 : 500, color: second.win > first.win ? CARD.text : CARD.textMuted }}>{pct(second.win)}</span>
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6, fontSize: 14, fontWeight: 700, color: CARD.text }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <TeamLogo name={teamDisplayName(game.away_name)} logoUrl={game.away_logo} color={game.away_color} size={22} />
-                {game.away_abbr ?? teamDisplayName(game.away_name)}
-              </span>
-              <span style={{ fontWeight: 500, color: CARD.textFaint }}>at</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                {game.home_abbr ?? teamDisplayName(game.home_name)}
-                <TeamLogo name={teamDisplayName(game.home_name)} logoUrl={game.home_logo} color={game.home_color} size={22} />
-              </span>
-            </div>
-            <div style={{ display: "flex", height: 8, overflow: "hidden", borderRadius: 999, background: CARD.border, marginTop: 8 }}>
-              <span style={{ width: `${awayWin * 100}%`, background: game.away_color ?? "#d97706" }} />
-              {soccer && <span style={{ width: `${draw * 100}%`, background: CARD.textFaint }} />}
-              <span style={{ flex: 1, background: game.home_color ?? CARD.accent }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12, color: CARD.textMuted, fontVariantNumeric: "tabular-nums" }}>
-              <span style={{ fontWeight: awayWin > homeWin ? 800 : 500, color: awayWin > homeWin ? CARD.text : CARD.textMuted }}>{pct(awayWin)}</span>
-              {soccer && <span>draw {pct(draw)}</span>}
-              <span style={{ fontWeight: homeWin > awayWin ? 800 : 500, color: homeWin > awayWin ? CARD.text : CARD.textMuted }}>{pct(homeWin)}</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <ExportMore boxed count={hidden} noun={hidden === 1 ? "more game" : "more games"} />
     </ExportShell>

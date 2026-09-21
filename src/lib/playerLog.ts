@@ -22,7 +22,7 @@ export function noStatLineGameSql(rowAlias: string): string {
 export async function fetchPlayerLog(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<PlayerLogRow[]> {
   const { rows } = await db.query(
     `select pgs.game_espn_id, g.date, g.season_year, g.round, g.week, g.stage, g.season_type, g.competition_type, pgs.stats,
-            (g.home_team_espn_id = pgs.team_espn_id) as is_home,
+            (g.home_team_espn_id = pgs.team_espn_id) as is_home, g.neutral_site,
             pgs.team_espn_id, tm.name as team_name, tm.slug as team_slug, tm.abbreviation as team_abbr, tm.logo_url as team_logo,
             op.espn_id as opponent_espn_id, op.name as opponent_name, op.slug as opponent_slug, op.abbreviation as opponent_abbr, op.logo_url as opponent_logo,
             case when g.home_team_espn_id = pgs.team_espn_id then g.home_score else g.away_score end as team_score,

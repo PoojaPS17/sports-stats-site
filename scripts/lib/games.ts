@@ -147,6 +147,21 @@ function parseCupSummary(ev: any): string | null {
   return /advance|aggregate|penalt/i.test(text) ? text : null;
 }
 
+// Whether the game was played at neither club's ground: the competition's `neutralSite` flag on both feeds (true for the NBA's
+// Mexico City / Paris / Berlin / London games and the Cup's Las Vegas semifinals and final, false for an ordinary game).
+// Null when the feed says nothing, which the upsert reads as "keep what is stored".
+export function parseNeutralSite(ev: any): boolean | null {
+  const flag = ev.competitions?.[0]?.neutralSite;
+  return typeof flag === "boolean" ? flag : null;
+}
+
+// The event note headline ("NBA Cup - Group Play", "NBA Cup - Semifinals", "NBA Mexico City Game 2025"), kept whole for
+// the label helper in src/lib/gameNote.ts. Unlike `round` it is stored for every game that has one.
+export function parseNote(ev: any): string | null {
+  const headline = ev.competitions?.[0]?.notes?.find((n: any) => n.type === "event")?.headline;
+  return typeof headline === "string" && headline.trim() ? headline.trim() : null;
+}
+
 // NFL events carry `week: { number, text }` on both the scoreboard and the team
 // schedule endpoints (playoff weeks continue the numbering: 19 = Wild Card). No
 // soccer or basketball endpoint exposes a round number, so this is null there.
@@ -206,9 +221,9 @@ export async function upsertEvent(league: League, ev: any) {
        status_state, status_detail, status_summary, round, period, clock, completed,
        odds_details, odds_spread, odds_over_under, odds_provider, broadcast_network,
        weather_display, weather_temperature, week, first_seen_date, updated_at,
-       season_type, competition_type
+       season_type, competition_type, neutral_site, note
      ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$3, now(),
-       $30,$31)
+       $30,$31,$32,$33)
      on conflict (league, espn_id) do update set
        date = excluded.date, home_score = excluded.home_score, away_score = excluded.away_score,
        home_score_display = excluded.home_score_display, away_score_display = excluded.away_score_display,
@@ -227,6 +242,8 @@ export async function upsertEvent(league: League, ev: any) {
        week = coalesce(excluded.week, games.week),
        season_type = coalesce(excluded.season_type, games.season_type),
        competition_type = coalesce(excluded.competition_type, games.competition_type),
+       neutral_site = coalesce(excluded.neutral_site, games.neutral_site),
+       note = coalesce(excluded.note, games.note),
        first_seen_date = coalesce(games.first_seen_date, excluded.first_seen_date),
        updated_at = now()`,
     [
@@ -265,6 +282,8 @@ export async function upsertEvent(league: League, ev: any) {
       parseWeek(ev),
       stageFields.seasonType,
       stageFields.competitionType,
+      parseNeutralSite(ev),
+      parseNote(ev),
     ]
   );
 }

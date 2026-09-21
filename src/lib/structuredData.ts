@@ -1,6 +1,7 @@
-import { gameStartDateIso } from "./gameDay";
+import { gameDayIso, gameStartDateIso } from "./gameDay";
 import { isSoccerLeague } from "./leagues";
-import { schemaEventStatus } from "./gameStatus";
+import { isTimeTbd, schemaEventStatus } from "./gameStatus";
+import { scoreLineHomeFirst } from "./gamePage";
 import { cricketSchemaStatus } from "./cricketMatchStatus";
 // schema.org builders for the structured data blocks on key pages.
 import { LEAGUE_LABEL, type GameRow, type League } from "./queries";
@@ -93,7 +94,8 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null)
     // American sports say "Away at Home"; football and cricket list the home side first.
     name: league === "nfl" || league === "nba" ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`,
     sport: sportName(league),
-    startDate: gameStartDateIso(game.date, league),
+    // A fixture with no kickoff time yet carries its day only; a placeholder clock time would be a false claim.
+    startDate: isTimeTbd(game) ? gameDayIso(game.date, league) : gameStartDateIso(game.date, league),
     eventStatus: status,
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url: absoluteUrl(`/${league}/games/${game.espn_id}`),
@@ -103,7 +105,11 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null)
     organizer: { "@type": "SportsOrganization", name: LEAGUE_LABEL[league] },
     ...(venue ? { location: { "@type": "Place", name: venue } } : {}),
     ...(game.completed && game.home_score != null && game.away_score != null
-      ? { description: `Final score: ${game.away_name} ${game.away_score_display ?? game.away_score}, ${game.home_name} ${game.home_score_display ?? game.home_score}.` }
+      ? {
+          description: scoreLineHomeFirst(league)
+            ? `Final score: ${game.home_name} ${game.home_score_display ?? game.home_score}, ${game.away_name} ${game.away_score_display ?? game.away_score}.`
+            : `Final score: ${game.away_name} ${game.away_score_display ?? game.away_score}, ${game.home_name} ${game.home_score_display ?? game.home_score}.`,
+        }
       : {}),
   };
 }

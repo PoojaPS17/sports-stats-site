@@ -8,9 +8,9 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
 import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
-import { fetchMatchSummary, extractGameDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
+import { fetchMatchSummary, extractGameDetails, presentDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
 import { getMatchContext } from "@/lib/matchContext";
-import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
+import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -64,7 +64,7 @@ async function loadDetails(league: League, id: string, homeId: string, awayId: s
     if (stored) return { details: stored, stored: true };
   }
   const summary = await fetchMatchSummary(league, id);
-  return { details: summary ? extractGameDetails(sportOf(league), summary, homeId, awayId) : null, stored: false };
+  return { details: summary ? presentDetails(extractGameDetails(sportOf(league), summary, homeId, awayId)) : null, stored: false };
 }
 
 function scorersLine(details: GameDetails | null): string {
@@ -247,14 +247,14 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
             tools={
               <ImageActions
                 filename={`${id}-team-stats-${league}`}
-                shareTitle={`${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)} ${statsFraming.shareLabel}`}
+                shareTitle={`${matchupLabel(league, game)} ${statsFraming.shareLabel}`}
                 card={<TeamStatsExportCard league={league} game={game} away={awayStats} home={homeStats} title={statsFraming.cardTitle} />}
               />
             }
           >
             {statsFraming.heading}
           </SectionHeader>
-          <TeamStatsComparison away={awayStats} home={homeStats} />
+          <TeamStatsComparison away={awayStats} home={homeStats} homeFirst={scoreLineHomeFirst(league)} />
         </section>
       )}
 
@@ -329,7 +329,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
             title: "Head-to-head",
             links: supportsScoreAnalytics(league)
               ? [
-                  { href: h2hPath(league, game.home_slug, game.away_slug), label: `${teamDisplayName(game.away_name)} vs ${teamDisplayName(game.home_name)}`, sub: "All-time record and every meeting" },
+                  { href: h2hPath(league, game.home_slug, game.away_slug), label: matchupLabel(league, game), sub: "All-time record and every meeting" },
                   { href: `/${league}/compare?a=${game.home_slug}&b=${game.away_slug}`, label: "Compare the two teams", sub: "Season stats side by side" },
                 ]
               : [],

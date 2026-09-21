@@ -30,6 +30,8 @@ export interface PlayerLogRow {
   season_type: number | null;
   competition_type: string | null;
   is_home: boolean;
+  /** games.neutral_site: neither a home nor an away game for the player (ESPN's Home and Road splits leave it out). Absent or null where unknown. */
+  neutral_site?: boolean | null;
   team_espn_id: string;
   team_name: string;
   team_slug: string;
@@ -718,7 +720,7 @@ export function buildProfile(
   for (const r of unrecordedRows.length > 0 ? [...rows, ...unrecordedRows].sort(newestFirst) : rows) teams.set(r.team_espn_id, { espn_id: r.team_espn_id, name: r.team_name, slug: r.team_slug, logo: r.team_logo });
 
   const split = (key: string, label: string, rs: PlayerLogRow[]): Split => ({ key, label, games: rs.length, record: record(rs), line: aggregate(rs, specs) });
-  const homeAway = [split("home", "Home", rows.filter((r) => r.is_home)), split("away", "Away", rows.filter((r) => !r.is_home))];
+  const homeAway = [split("home", "Home", rows.filter((r) => r.is_home && !r.neutral_site)), split("away", "Away", rows.filter((r) => !r.is_home && !r.neutral_site))];
   const byResult = [
     split("w", "In wins", rows.filter((r) => r.result === "W")),
     ...(sport === "soccer" ? [split("d", "In draws", rows.filter((r) => r.result === "D"))] : []),

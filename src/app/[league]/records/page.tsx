@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel, type League } from "@/lib/queries";
 import { formatGameDate } from "@/lib/gameDay";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 import { getLeagueRecords, isSoccer, supportsScoreAnalytics, type RecordGame, type StreakRecord } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
@@ -34,19 +35,23 @@ function GameList({ league, games, unit }: { league: League; games: RecordGame[]
     <ol>
       {games.map((g, i) => {
         const homeWon = g.home_score > g.away_score;
+        // Football lists the home side first; the NBA and NFL list the visitors first.
+        const away = { team: g.away, score: g.away_score, won: !homeWon };
+        const home = { team: g.home, score: g.home_score, won: homeWon };
+        const [first, second] = scoreLineHomeFirst(league) ? [home, away] : [away, home];
         return (
           <li key={g.espn_id} className="table-row first:border-t-0">
             <Link href={`/${league}/games/${g.espn_id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
               <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-1.5">
-                  <TeamLogo name={g.away.name} logoUrl={g.away.logo_url} color={g.away.color} size={18} />
-                  <span className={`truncate ${!homeWon ? "font-semibold" : "text-[var(--text-muted)]"}`}>{g.away.name}</span>
+                  <TeamLogo name={first.team.name} logoUrl={first.team.logo_url} color={first.team.color} size={18} />
+                  <span className={`truncate ${first.won ? "font-semibold" : "text-[var(--text-muted)]"}`}>{first.team.name}</span>
                   <span className="mx-1 shrink-0 tabular-nums font-bold">
-                    {g.away_score}–{g.home_score}
+                    {first.score}–{second.score}
                   </span>
-                  <TeamLogo name={g.home.name} logoUrl={g.home.logo_url} color={g.home.color} size={18} />
-                  <span className={`truncate ${homeWon ? "font-semibold" : "text-[var(--text-muted)]"}`}>{g.home.name}</span>
+                  <TeamLogo name={second.team.name} logoUrl={second.team.logo_url} color={second.team.color} size={18} />
+                  <span className={`truncate ${second.won ? "font-semibold" : "text-[var(--text-muted)]"}`}>{second.team.name}</span>
                 </span>
                 <span className="text-xs text-[var(--text-faint)]">{fmtDate(g.date, league)}</span>
               </span>

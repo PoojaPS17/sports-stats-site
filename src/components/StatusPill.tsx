@@ -1,6 +1,7 @@
-import { LocalTime } from "./LocalTime";
-import { normalizeStage } from "@/lib/stage";
+import { Kickoff } from "./Kickoff";
+import { finishedPillLabel, gameRoundLabel } from "@/lib/stage";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
+import type { League } from "@/lib/leagues";
 
 export function StatusPill({
   statusState,
@@ -8,25 +9,37 @@ export function StatusPill({
   date,
   completed,
   round: rawRound,
-  completedLabel,
-  serverTimeZone,
+  stage,
+  competitionType,
+  note,
+  league,
+  kickoff = "date",
+  clock = true,
 }: {
   statusState: string | null;
   statusDetail: string | null;
   date: string;
   completed: boolean;
   round?: string | null;
-  /** What a finished game with no stage is labelled; "Final" by default, "Result" for cricket. */
-  completedLabel?: string;
-  /** The zone of the fixture date in the server render, before hydration swaps in the visitor's own; see LocalTime. */
-  serverTimeZone?: string;
+  /** games.stage and games.competition_type: a play-in game and the NBA Cup final get their own label where a round would show. */
+  stage?: string | null;
+  competitionType?: string | null;
+  /** games.note: what says a regular-season game belongs to the NBA Cup. */
+  note?: string | null;
+  /** Names the finished word ("Final", "FT", "Result"), the zone of the fixture date in the server render (see LocalTime) and the clock style. */
+  league: League;
+  /** What an upcoming game's pill says besides its stage: the date alone (a card that shows the time beside it) or date and time. */
+  kickoff?: "date" | "datetime";
+  /** A game in play: put its clock ("Q3 4:12", "67'") after the stage label. False where the card already prints the clock beside the pill. */
+  clock?: boolean;
 }) {
-  const round = normalizeStage(rawRound);
+  const stageFields = { round: rawRound ?? null, stage, competition_type: competitionType, note };
+  const round = gameRoundLabel(stageFields);
   if (statusState === "in") {
     return (
       <span className="pill pill-live">
         <span className="live-dot" />
-        {round ?? statusDetail ?? "Live"}
+        {round ? (clock && statusDetail ? `${round} · ${statusDetail}` : round) : (statusDetail ?? "Live")}
       </span>
     );
   }
@@ -45,14 +58,15 @@ export function StatusPill({
     // them is actively misleading (it's also the name of one specific match). Show the
     // real stage instead when we have one; a numbered regular-season match still just
     // says "Final" — except in cricket, where "Final" is only ever the tournament
-    // decider, so callers pass "Result" (Cricinfo's word) instead.
-    return <span className="pill pill-final">{round ?? completedLabel ?? "Final"}</span>;
+    // decider, so the league supplies "Result" (Cricinfo's word) instead. A game that went to overtime says so
+    // ("Final/OT", "Final/2OT"), as NBA.com and NFL.com do, after its stage when it has one.
+    return <span className="pill pill-final">{finishedPillLabel(league, { ...stageFields, status_detail: statusDetail })}</span>;
   }
 
   return (
     <span className="pill pill-upcoming">
       {round ? `${round} · ` : ""}
-      <LocalTime iso={date} format="date" serverTimeZone={serverTimeZone} />
+      <Kickoff league={league} game={{ date, completed, status_state: statusState, status_detail: statusDetail }} format={kickoff} />
     </span>
   );
 }

@@ -322,6 +322,47 @@ export interface GameDetails {
 
 export type MatchSport = "soccer" | "cricket" | "american";
 
+/**
+ * ESPN's minute text as the BBC prints it: stoppage time "90'+4'" reads "90+4'", and a substitution at the interval
+ * (period 2, which ESPN labels "45'" for clock values from exactly 2700 seconds) reads "46'". Pass the event's `period`
+ * and, when known, its clock `value`; stored reports keep only the text, so a period-2 "45'" stands for that interval
+ * substitution. This is the one rule for the timeline and the line-ups, at parse time and at render time. Anything
+ * else ("67'", "Pen. missed") is returned as it was, and the result is itself a valid input, so a value that has
+ * already been converted converts to itself.
+ */
+export function formatMinute(clock: string, at: { period?: number; value?: number } = {}): string {
+  const stoppage = /^(\d+)'\+(\d+)'$/.exec(clock);
+  if (stoppage) return `${stoppage[1]}+${stoppage[2]}'`;
+  const inInterval = at.value === undefined || (at.value >= 2700 && at.value < 2760);
+  if (at.period === 2 && clock === "45'" && inInterval) return "46'";
+  return clock;
+}
+
+/**
+ * A stored or freshly parsed report with its minutes in display form (see formatMinute). Reports are stored with
+ * ESPN's text untouched, so this runs where a report is read for display; it copies rather than editing the input,
+ * and applying it twice changes nothing.
+ *
+ * A stored line-up minute has lost the period it happened in, so it cannot tell a half-time substitution from a
+ * first-half one on its own. The same substitution is a `sub` event in the timeline, which has the period: each
+ * line-up player takes the converted clock of the event that brought them on (a substitute) or took them off (a
+ * starter), so the two sections of a page always agree. A player with no matching event keeps the plain conversion.
+ */
+export function presentDetails(d: GameDetails): GameDetails {
+  const events = d.events.map((e) => (e.clock ? { ...e, clock: formatMinute(e.clock, { period: e.period }) } : e));
+  const subs = events.filter((e) => e.type === "sub" && e.players.length >= 2);
+  const clockOf = (playerId: string, slot: 0 | 1): string | null => subs.find((e) => e.players[slot].id === playerId)?.clock ?? null;
+  return {
+    ...d,
+    events,
+    lineups: d.lineups.map((l) => {
+      // players[0] came on, players[1] went off (the timeline reads "<0> on for <1>").
+      const fix = (p: LineupPlayer, slot: 0 | 1): LineupPlayer => (p.minute ? { ...p, minute: clockOf(p.id, slot) ?? formatMinute(p.minute) } : p);
+      return { ...l, starters: l.starters.map((p) => fix(p, 1)), subs: l.subs.map((p) => fix(p, 0)) };
+    }),
+  };
+}
+
 function clockValue(e: any): number {
   return typeof e.clock?.value === "number" ? e.clock.value : 0;
 }
@@ -383,7 +424,12 @@ function minuteNumber(m: string | null): number {
 }
 
 function soccerLineups(data: any): TeamLineup[] {
-  const subMinute = (p: any): string | null => (p.plays ?? []).find((x: any) => x.substitution)?.clock?.displayValue ?? null;
+  const subMinute = (p: any): string | null => {
+    const play = (p.plays ?? []).find((x: any) => x.substitution);
+    const shown = play?.clock?.displayValue;
+    // Stored in display form; the play's own period and clock value are known here, which a stored report no longer has.
+    return typeof shown === "string" ? formatMinute(shown, { period: play.period?.number, value: typeof play.clock?.value === "number" ? play.clock.value : undefined }) : null;
+  };
   const player = (p: any): LineupPlayer => ({
     id: String(p.athlete.id),
     name: p.athlete.displayName ?? p.athlete.fullName ?? "",

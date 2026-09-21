@@ -4,7 +4,7 @@ import { CALLED_OFF } from "./gameStatus";
 import { dayTimeZone } from "./gameDay";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
-import type { GameDetails } from "./matchDetail";
+import { presentDetails, type GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
 import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
@@ -35,6 +35,12 @@ export interface GameRow {
   round: string | null;
   /** The stored classification (games.stage): regular, playoffs, playin, excluded or other. Absent on rows from a query that does not select it. */
   stage?: GameStage | null;
+  /** ESPN's competition abbreviation (NBA/NFL only): STD, ALLSTAR, CC for the NBA Cup final, playoff rounds. Absent on rows from a query that does not select it. */
+  competition_type?: string | null;
+  /** The event note ESPN gives the game (games.note): the NBA Cup's group play and semifinals are named only here. Absent on rows from a query that does not select it. */
+  note?: string | null;
+  /** games.neutral_site: played at neither club's ground, so it is neither a home nor an away game (NBA only). Absent on rows from a query that does not select it; null where the feed did not say. */
+  neutral_site?: boolean | null;
   completed: boolean;
   /** Official week number from the feed (NFL only). */
   week?: number | null;
@@ -67,7 +73,7 @@ export const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-    g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.completed, g.week, g.first_seen_date,
+    g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
     g.home_team_espn_id, g.away_team_espn_id,
     ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
     at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
@@ -84,7 +90,7 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
     `select
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.completed,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
        g.home_team_espn_id, g.away_team_espn_id,
        g.odds_details, g.odds_spread, g.odds_over_under, g.odds_provider,
        g.broadcast_network, g.weather_display, g.weather_temperature,
@@ -103,7 +109,8 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
 // for completed games; null until the backfill reaches a game.
 export async function getGameDetails(league: League, espnId: string): Promise<GameDetails | null> {
   const { rows } = await pool.query(`select details from game_details where league = $1 and game_espn_id = $2`, [league, espnId]);
-  return rows[0]?.details ?? null;
+  // Reports are stored with ESPN's minute text; every reader gets it in display form (90+4', 46').
+  return rows[0]?.details ? presentDetails(rows[0].details) : null;
 }
 
 // Every game tagged with a playoff-stage round for a season, in chronological order —
@@ -762,7 +769,7 @@ export async function getTopGames(window: TopGamesWindow, filter: TopGamesFilter
   const { rows } = await pool.query(
     `select g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
             g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-            g.status_state, g.status_detail, g.status_summary, g.round, g.completed,
+            g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
             g.home_team_espn_id, g.away_team_espn_id,
             ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
             at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color,

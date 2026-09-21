@@ -6,18 +6,24 @@ import { ExportMore, capRows } from "./ExportShell";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 import { scheduleRowHeading } from "@/lib/gameDisplay";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 function ScheduleRow({ league, game }: { league: League; game: GameRow }) {
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
+  const away = { side: "away", name: game.away_name, logo: game.away_logo, color: game.away_color, score: game.away_score, scoreDisplay: game.away_score_display, won: awayWon };
+  const home = { side: "home", name: game.home_name, logo: game.home_logo, color: game.home_color, score: game.home_score, scoreDisplay: game.home_score_display, won: homeWon };
+  // Football lists the home side first; the NBA and NFL list the visitors first.
+  const sides = scoreLineHomeFirst(league) ? [home, away] : [away, home];
 
   return (
     <div style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: CARD.textFaint }}>
         {scheduleRowHeading(league, game)}
       </div>
-      <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />
-      <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />
+      {sides.map((t) => (
+        <ExportTeamLine key={t.side} name={t.name} logo={t.logo} color={t.color} score={t.score} scoreDisplay={t.scoreDisplay} completed={game.completed} won={t.won} />
+      ))}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { isCricketLeague, isSoccerLeague, type League } from "./leagues";
+import { cupNoteLabel } from "./gameNote";
+import { specialStageLabel } from "./stageLabels";
 
 // Stage labels arrive in every spelling the sources use ("Semi Final", "1st semi-final",
 // "3rd Place Play-Off", "2nd QF"). One form each, Cricinfo's, so the same stage reads
@@ -40,4 +42,47 @@ export function finishedLabel(league: League): string {
   if (isCricketLeague(league)) return "Result";
   if (isSoccerLeague(league)) return "FT";
   return "Final";
+}
+
+const OVERTIME_FINAL = /^Final\/(\d*OT)$/;
+
+/**
+ * "Final/OT" or "Final/2OT" when the stored status says the game went to overtime (ESPN's own detail, which
+ * NBA.com and NFL.com print the same way); null for any other status text.
+ */
+export function overtimeFinal(statusDetail: string | null | undefined): string | null {
+  const m = OVERTIME_FINAL.exec((statusDetail ?? "").trim());
+  return m ? `Final/${m[1]}` : null;
+}
+
+/** What a finished game with no stage says: "Final/OT" or "Final/2OT" after overtime, else the league's usual word (see finishedLabel). */
+export function finalLabel(league: League, statusDetail: string | null | undefined): string {
+  return overtimeFinal(statusDetail) ?? finishedLabel(league);
+}
+
+// The stage of a game that has no `round`, from the columns the NBA feed fills (a play-in game, the NBA Cup final),
+// is `specialStageLabel`, shared with the game log. `round` itself is left alone (it marks playoff rounds, and a
+// query for those must not pick these up).
+export { specialStageLabel };
+
+/** The stage label a card shows: the game's round, else its play-in / Cup-final label, else its NBA Cup note label (see gameNote.ts), else null. */
+export function gameRoundLabel(g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null }): string | null {
+  return normalizeStage(g.round) ?? specialStageLabel(g) ?? cupNoteLabel(g);
+}
+
+/**
+ * The word on a finished game's pill or caption: its stage, and "Final/OT" after overtime ("Second Round ·
+ * Final/OT"); with no stage the league's finished word or, after overtime, "Final/OT". `fallback` replaces that
+ * word for a caller that wants something else when there is nothing to say (the accessible name uses "final").
+ */
+export function finishedPillLabel(
+  league: League,
+  g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null; status_detail: string | null | undefined },
+  fallback?: string,
+): string {
+  const stage = gameRoundLabel(g);
+  const ot = overtimeFinal(g.status_detail);
+  if (stage && ot) return `${stage} · ${ot}`;
+  if (stage) return stage;
+  return ot || fallback === undefined ? finalLabel(league, g.status_detail) : fallback;
 }

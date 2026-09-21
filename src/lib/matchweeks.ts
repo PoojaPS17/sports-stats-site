@@ -355,8 +355,11 @@ export interface WeekSummary {
   /** Games in the week that were postponed, cancelled, abandoned or suspended. */
   calledOff: number;
   totalScore: number;
+  /** Wins by the listed home side and by the visitors, at a club's own ground: a neutral-site game is in neither. */
   homeWins: number;
   awayWins: number;
+  /** Games played at a neutral site (NBA), counted in neither homeWins nor awayWins. */
+  neutral: number;
   draws: number;
   biggest: GameRow | null;
   highest: GameRow | null;
@@ -368,6 +371,7 @@ export function summarizeWeek(week: Matchweek): WeekSummary {
   let totalScore = 0;
   let homeWins = 0;
   let awayWins = 0;
+  let neutral = 0;
   let draws = 0;
   let biggest: GameRow | null = null;
   let highest: GameRow | null = null;
@@ -375,14 +379,15 @@ export function summarizeWeek(week: Matchweek): WeekSummary {
     const h = g.home_score!;
     const a = g.away_score!;
     totalScore += h + a;
-    if (h > a) homeWins++;
+    if (g.neutral_site) neutral++;
+    else if (h > a) homeWins++;
     else if (a > h) awayWins++;
-    else draws++;
+    if (h === a) draws++;
     if (!biggest || Math.abs(h - a) > Math.abs(biggest.home_score! - biggest.away_score!)) biggest = g;
     if (!highest || h + a > highest.home_score! + highest.away_score!) highest = g;
   }
   const calledOff = week.calledOff;
-  return { played: done.length, scheduled: week.games.length - done.length - calledOff, calledOff, totalScore, homeWins, awayWins, draws, biggest, highest };
+  return { played: done.length, scheduled: week.games.length - done.length - calledOff, calledOff, totalScore, homeWins, awayWins, neutral, draws, biggest, highest };
 }
 
 /** "1 postponed", "2 cancelled", or "2 called off" when the reasons differ; null when nothing in the week was called off. */

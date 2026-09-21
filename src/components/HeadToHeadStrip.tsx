@@ -3,6 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { getHeadToHead, isSoccer } from "@/lib/analytics";
 import { h2hPath } from "@/lib/h2h";
 import type { League } from "@/lib/queries";
+import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 // Compact all-time record shown on a match page, linking to the full head-to-head
 // history. `excludeGameId` keeps a completed match from counting itself in "previous
@@ -18,7 +19,9 @@ export async function HeadToHeadStrip({
   awaySlug: string;
   excludeGameId: string | null;
 }) {
-  const h2h = await getHeadToHead(league, awaySlug, homeSlug);
+  // teamA is the side listed first: football lists the home side first (like the match header above), the NBA and NFL the visitors.
+  const [firstSlug, secondSlug] = scoreLineHomeFirst(league) ? [homeSlug, awaySlug] : [awaySlug, homeSlug];
+  const h2h = await getHeadToHead(league, firstSlug, secondSlug);
   if (!h2h) return null;
   const games = excludeGameId ? h2h.games.filter((g) => g.espn_id !== excludeGameId) : h2h.games;
   if (games.length === 0) return null;
@@ -65,7 +68,7 @@ export async function HeadToHeadStrip({
           const ga = aIsHome ? g.away_score! : g.home_score!;
           const r = gf > ga ? "W" : gf < ga ? "L" : "D";
           return (
-            <span key={g.espn_id} className={`result-badge result-${r.toLowerCase()}`} title={`${teamDisplayName(g.away_name)} ${g.away_score} - ${g.home_score} ${teamDisplayName(g.home_name)}`}>
+            <span key={g.espn_id} className={`result-badge result-${r.toLowerCase()}`} title={scoreLineHomeFirst(league) ? `${teamDisplayName(g.home_name)} ${g.home_score} - ${g.away_score} ${teamDisplayName(g.away_name)}` : `${teamDisplayName(g.away_name)} ${g.away_score} - ${g.home_score} ${teamDisplayName(g.home_name)}`}>
               {r === "W" ? (h2h.teamA.abbreviation ?? "A").slice(0, 3) : r === "L" ? (h2h.teamB.abbreviation ?? "B").slice(0, 3) : "D"}
             </span>
           );
