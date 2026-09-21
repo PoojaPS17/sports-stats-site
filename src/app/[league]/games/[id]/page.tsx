@@ -163,7 +163,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   return (
     <div className="flex flex-col gap-6">
       <ViewTracker league={league} gameId={id} />
-      <JsonLd data={gameSchema(league, game, details?.venue ?? null)} />
+      <JsonLd data={gameSchema(league, game, details?.venue ?? null, details?.scorecard)} />
       <Breadcrumbs
         items={[
           { label: LEAGUE_LABEL[league], href: `/${league}` },

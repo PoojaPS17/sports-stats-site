@@ -16,7 +16,8 @@ import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
 import { CalendarButton } from "@/components/CalendarButton";
 import { getOffseasonRecap } from "@/lib/offseason";
 import { OffseasonRecap } from "@/components/OffseasonRecap";
-import { formatGameDate, gameDayIso } from "@/lib/gameDay";
+import { formatGameDate } from "@/lib/gameDay";
+import { scoresImageDay } from "@/lib/gameDisplay";
 import type { League } from "@/lib/queries";
 
 export const revalidate = 15;
@@ -111,10 +112,10 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
           <SectionHeader
             tools={
               <ImageActions
-                filename={`${league}-scores-${gameDayIso(dayGames[0].date, league, dayGames[0].local_date)}`}
+                filename={`${league}-scores-${scoresImageDay(league, dayGames[0]).iso}`}
                 shareTitle={`${LEAGUE_LABEL[league]} scores, ${day}`}
                 width={scoreboardExportWidth(league)}
-                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${gameDayIso(dayGames[0].date, league, dayGames[0].local_date).slice(0, 4)}`} games={dayGames} />}
+                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${scoresImageDay(league, dayGames[0]).year}`} games={dayGames} />}
               />
             }
           >

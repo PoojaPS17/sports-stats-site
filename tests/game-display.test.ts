@@ -191,12 +191,12 @@ test("scoresDayDescription: games in play are in play, not still to be played", 
 
 test("shareImageStatus: the label over a game's share image: Final for a scored result, Result for a no-score match, the reason when called off", () => {
   const noScore = { completed: true, status_state: "post", status_detail: "Abandoned", home_score: null, away_score: null, status_summary: "Match abandoned without a ball bowled" };
-  assert.equal(shareImageStatus(noScore), "Result");
-  assert.equal(shareImageStatus({ ...noScore, home_score: 2, away_score: 1, status_summary: null }), "Final");
-  assert.equal(shareImageStatus({ ...noScore, completed: false, status_detail: "Postponed", home_score: 0, away_score: 0 }), "Postponed");
-  assert.equal(shareImageStatus({ ...noScore, completed: true, status_detail: "Canceled" }), "Cancelled");
-  assert.equal(shareImageStatus({ ...noScore, completed: false, status_state: "pre", status_detail: "Scheduled", status_summary: null }), null);
-  assert.equal(shareImageStatus({ ...noScore, completed: false, status_state: "in", status_detail: "Suspended" }), null);
+  assert.equal(shareImageStatus(noScore, LEAGUE), "Result");
+  assert.equal(shareImageStatus({ ...noScore, home_score: 2, away_score: 1, status_summary: null }, LEAGUE), "Final");
+  assert.equal(shareImageStatus({ ...noScore, completed: false, status_detail: "Postponed", home_score: 0, away_score: 0 }, LEAGUE), "Postponed");
+  assert.equal(shareImageStatus({ ...noScore, completed: true, status_detail: "Canceled" }, LEAGUE), "Cancelled");
+  assert.equal(shareImageStatus({ ...noScore, completed: false, status_state: "pre", status_detail: "Scheduled", status_summary: null }, LEAGUE), null);
+  assert.equal(shareImageStatus({ ...noScore, completed: false, status_state: "in", status_detail: "Suspended" }, LEAGUE), null);
 });
 
 test("scoresDayDescription: games still to come are not counted as played", () => {
@@ -217,5 +217,4 @@ test("shareImageStatus: a finished cricket match is its stage or Result, never F
   // every other league is unchanged, with or without the league argument
   assert.equal(shareImageStatus(scored, "nba"), "Final");
   assert.equal(shareImageStatus(scored, "epl"), "Final");
-  assert.equal(shareImageStatus(scored), "Final");
 });

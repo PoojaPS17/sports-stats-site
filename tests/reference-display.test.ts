@@ -167,8 +167,8 @@ test("scoreboardTileStatus and gameAccessibleLabel: overtime, stage, play-in and
   assert.match(gameAccessibleLabel("nfl", g({ status_detail: "Final/OT" })), /, Final\/OT$/);
   assert.match(gameAccessibleLabel("nba", g()), /, final$/);
   assert.match(gameAccessibleLabel("nba", g({ stage: "playin" })), /, Play-In, final$/);
-  assert.equal(shareImageStatus(g({ status_detail: "Final/2OT", status_summary: null })), "Final/2OT");
-  assert.equal(shareImageStatus(g({ status_summary: null })), "Final");
+  assert.equal(shareImageStatus(g({ status_detail: "Final/2OT", status_summary: null }), "nba"), "Final/2OT");
+  assert.equal(shareImageStatus(g({ status_summary: null }), "nba"), "Final");
 });
 
 test("gameAccessibleLabel: football names the home side first, the US leagues the visitors", () => {

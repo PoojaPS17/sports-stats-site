@@ -2,9 +2,8 @@ import { ImageResponse } from "next/og";
 import { PixelBall } from "@/components/Logo";
 import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetails } from "@/lib/queries";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
-import { finishedNoScoreNote, shareImageStatus } from "@/lib/gameDisplay";
+import { finishedNoScoreNote, shareImageModel } from "@/lib/gameDisplay";
 import { formatGameDate } from "@/lib/gameDay";
-import { scoreLineSides } from "@/lib/gamePage";
 
 export const alt = "Match page";
 export const size = { width: 1200, height: 630 };
@@ -43,11 +42,11 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const awayWon = played && (game.away_winner ?? game.away_score! > game.home_score!);
   // A finished match with no scores (abandoned, no result) says how it ended instead of a bare date and "vs".
   const note = off ? null : finishedNoScoreNote(game);
-  const status = shareImageStatus(game, game.league);
   // Cricinfo lists the side that batted first first: the stored scorecard says which, the score lines are the
-  // fallback. Football lists the home side first; the NBA and NFL list the visitors first.
+  // fallback. Football lists the home side first; the NBA and NFL list the visitors first. shareImageModel
+  // decides both the status word and that order, so the route holds no display rule of its own.
   const scorecard = isCricketLeague(game.league) && game.completed ? ((await getGameDetails(game.league, id))?.scorecard ?? null) : null;
-  const order = scoreLineSides(game.league, game, scorecard);
+  const { status, order } = shareImageModel(game, scorecard);
   const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, game.local_date);
 
   const sides = {
