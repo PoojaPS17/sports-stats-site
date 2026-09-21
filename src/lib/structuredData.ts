@@ -1,5 +1,7 @@
 import { gameStartDateIso } from "./gameDay";
-import { isSoccerLeague } from "./leagues";
+import { isCricketLeague, isSoccerLeague } from "./leagues";
+import { scoreLineOrder } from "./cricketOrder";
+import type { CricketTeamScorecard } from "./matchDetail";
 import { schemaEventStatus } from "./gameStatus";
 import { cricketSchemaStatus } from "./cricketMatchStatus";
 // schema.org builders for the structured data blocks on key pages.
@@ -79,7 +81,21 @@ export function athleteSchema(
   };
 }
 
-export function gameSchema(league: League, game: GameRow, venue?: string | null) {
+/**
+ * The description of a finished game. Cricket says "Result: <result text>. <first side> <score>, <second side> <score>."
+ * with the batting-first side first (from the scorecard when the page has one, else the score lines, else away first);
+ * every other sport keeps "Final score: away, home".
+ */
+function finishedDescription(league: League, game: GameRow, scorecard?: CricketTeamScorecard[] | null): string {
+  if (!isCricketLeague(league)) {
+    return `Final score: ${game.away_name} ${game.away_score_display ?? game.away_score}, ${game.home_name} ${game.home_score_display ?? game.home_score}.`;
+  }
+  const line = { home: `${game.home_name} ${game.home_score_display ?? game.home_score}`, away: `${game.away_name} ${game.away_score_display ?? game.away_score}` };
+  const [first, second] = scoreLineOrder(game, scorecard);
+  return `Result: ${game.status_summary ? `${game.status_summary}. ` : ""}${line[first]}, ${line[second]}.`;
+}
+
+export function gameSchema(league: League, game: GameRow, venue?: string | null, scorecard?: CricketTeamScorecard[] | null) {
   const status = schemaEventStatus(game);
   const team = (name: string, slug: string, logo: string | null) => ({
     "@type": "SportsTeam",
@@ -103,7 +119,7 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null)
     organizer: { "@type": "SportsOrganization", name: LEAGUE_LABEL[league] },
     ...(venue ? { location: { "@type": "Place", name: venue } } : {}),
     ...(game.completed && game.home_score != null && game.away_score != null
-      ? { description: `Final score: ${game.away_name} ${game.away_score_display ?? game.away_score}, ${game.home_name} ${game.home_score_display ?? game.home_score}.` }
+      ? { description: finishedDescription(league, game, scorecard) }
       : {}),
   };
 }

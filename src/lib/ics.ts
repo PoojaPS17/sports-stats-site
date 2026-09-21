@@ -9,6 +9,7 @@ import { f1EventStatus } from "./f1Status";
 import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
 import { gameCalledOffLabel } from "./gameStatus";
+import { scoreLineOrder } from "./cricketOrder";
 
 const SITE = SITE_URL;
 const PRODID = "-//SportsDB//Fixtures//EN";
@@ -132,6 +133,13 @@ function gameSummary(league: League, g: GameWithVenue, perspectiveTeamId?: strin
   if (g.completed && g.home_score != null && g.away_score != null) {
     const h = g.home_score_display ?? String(g.home_score);
     const a = g.away_score_display ?? String(g.away_score);
+    // Cricinfo lists the side that batted first first, and "@" (away at home) does not describe a cricket match.
+    // A calendar row has no scorecard, so the order is read from the score lines and is away-first when they do not say.
+    if (isCricketLeague(league)) {
+      const line = { home: `${g.home_name} ${h}`, away: `${g.away_name} ${a}` };
+      const [first, second] = scoreLineOrder(g);
+      return `${line[first]} v ${line[second]}`;
+    }
     return soccer ? `${g.home_name} ${h}–${a} ${g.away_name}` : `${g.away_name} ${a} @ ${g.home_name} ${h}`;
   }
   if (perspectiveTeamId) {
@@ -151,7 +159,8 @@ export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: 
   // cancelled so a subscriber's calendar does not keep a fixture that is not happening.
   const off = gameCalledOffLabel(g);
   if (off) parts.push(off);
-  else if (g.completed) parts.push(`Final${g.status_summary ? `: ${g.status_summary}` : ""}`);
+  // A finished cricket match is a "Result", never "Final" (which is only ever the tournament decider, and is then the round above).
+  else if (g.completed) parts.push(`${isCricketLeague(league) ? "Result" : "Final"}${g.status_summary ? `: ${g.status_summary}` : ""}`);
   else if (g.status_state === "in") parts.push("In progress");
   parts.push(`Match page: ${SITE}/${league}/games/${g.espn_id}`);
   const location = g.venue_name ? [g.venue_name, g.venue_city].filter(Boolean).join(", ") : undefined;
