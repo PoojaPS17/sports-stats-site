@@ -9,6 +9,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
 import { f1EventDescription, f1EventStatus } from "@/lib/f1Status";
+import { f1SessionLabel, sortF1Sessions } from "@/lib/f1Sessions";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -31,15 +32,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return pageMeta(`${event.name} ${year}: Results`, description, `/f1/events/${event.espn_id}`);
 }
 
-const SESSION_LABEL: Record<string, string> = {
-  FP1: "Free Practice 1",
-  FP2: "Free Practice 2",
-  FP3: "Free Practice 3",
-  Qual: "Qualifying",
-  Sprint: "Sprint",
-  Race: "Race",
-};
-
 export default async function F1EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const event = await getF1Event(id);
@@ -52,13 +44,9 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
     if (!bySession.has(r.session_espn_id)) bySession.set(r.session_espn_id, []);
     bySession.get(r.session_espn_id)!.push(r);
   }
-  // Race last, practice sessions first — the order a fan actually cares about.
-  const sessionOrder = ["FP1", "FP2", "FP3", "Sprint", "Qual", "Race"];
-  const sessions = [...bySession.values()].sort((a, b) => {
-    const ai = sessionOrder.indexOf(a[0]?.session_type ?? "");
-    const bi = sessionOrder.indexOf(b[0]?.session_type ?? "");
-    return ai - bi;
-  });
+  // In the order the weekend was run, the race last (f1Sessions.ts).
+  const sessions = sortF1Sessions(event.season_year, [...bySession.values()].map((rows) => ({ session_type: rows[0].session_type, rows })));
+  const sessionLabel = (type: string) => f1SessionLabel(event.season_year, type);
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,7 +70,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
           {status.kind === "called-off" ? `This race weekend was ${status.label?.toLowerCase()}.` : "No session results on record for this weekend yet."}
         </p>
       ) : (
-        sessions.map((sessionResults) => {
+        sessions.map(({ rows: sessionResults }) => {
           const first = sessionResults[0];
           return (
             <section key={first.session_espn_id}>
@@ -91,14 +79,14 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                   first.completed && (
                     <ImageActions
                       filename={`f1-${event.espn_id}-${first.session_type.toLowerCase()}`}
-                      shareTitle={`${event.name}: ${SESSION_LABEL[first.session_type] ?? first.session_type}`}
+                      shareTitle={`${event.name}: ${sessionLabel(first.session_type)}`}
                       width={640}
-                      card={<F1SessionExportCard event={{ name: event.name, date: event.date, circuit: event.circuit_name }} sessionLabel={SESSION_LABEL[first.session_type] ?? first.session_type} results={sessionResults} />}
+                      card={<F1SessionExportCard event={{ name: event.name, date: event.date, circuit: event.circuit_name }} sessionLabel={sessionLabel(first.session_type)} results={sessionResults} />}
                     />
                   )
                 }
               >
-                {SESSION_LABEL[first.session_type] ?? first.session_type}
+                {sessionLabel(first.session_type)}
               </SectionHeader>
               {!first.completed ? (
                 <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
