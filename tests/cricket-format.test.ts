@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { trunc2 } from "../src/lib/cricketFormat";
+import { trunc2, inningsStrikeRate } from "../src/lib/cricketFormat";
 import { cricketGroups } from "../src/lib/compare";
 import { CricketCareer } from "../src/components/CricketCareer";
 import { CRICKET_SPLIT_DIMENSIONS } from "../src/lib/queries";
@@ -71,4 +71,14 @@ test("the compare page's cricket metrics truncate too, and a missing rate is a d
   // counts and overs are not rates: unchanged
   assert.equal(metric("Runs").aText, "2609");
   assert.equal(metric("Overs").aText, "400.2");
+});
+
+test("an innings strike rate is rounded to two decimals as a scorecard writes it, so a century listing agrees with its match page", () => {
+  // Matt Renshaw, 109 off 94, Australia v Zimbabwe ODI 2026-09-15: 115.957..., "115.96" on the scorecard (one decimal read "116.0")
+  assert.equal(inningsStrikeRate(109, 94), "115.96");
+  assert.equal(inningsStrikeRate(112, 84), "133.33");
+  assert.equal(inningsStrikeRate(103, 102), "100.98");
+  assert.equal(inningsStrikeRate(100, 50), "200.00");
+  assert.equal(inningsStrikeRate(101, null), "-");
+  assert.equal(inningsStrikeRate(101, 0), "-");
 });

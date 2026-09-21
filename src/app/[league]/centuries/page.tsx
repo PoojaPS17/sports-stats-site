@@ -9,6 +9,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { ImageActions } from "@/components/ImageActions";
 import { CenturiesExportCard } from "@/components/CenturiesExportCard";
 import { formatGameDate } from "@/lib/gameDay";
+import { inningsStrikeRate } from "@/lib/cricketFormat";
 
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
@@ -101,7 +102,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                     <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.fours ?? "-"}</td>
                     <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.sixes ?? "-"}</td>
                     <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
-                      {c.balls_faced ? ((c.runs / c.balls_faced) * 100).toFixed(1) : "-"}
+                      {inningsStrikeRate(c.runs, c.balls_faced)}
                     </td>
                     <td className="px-2 py-2">
                       <Link href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">

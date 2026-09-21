@@ -20,3 +20,12 @@ export function trunc2(value: number | null | undefined, digits = 2, missing = "
   // -0.001 cuts to "-0.00": a negative zero is not a number anyone writes.
   return /^-0(\.0*)?$/.test(cut) ? cut.slice(1) : cut;
 }
+
+/**
+ * One innings' strike rate as a scorecard writes it: rounded (not cut) to two decimals, "-" without a ball count.
+ * A century listing shows the same innings a match page's scorecard does, so the two must agree: 109 off 94 is
+ * "115.96" on ESPN's and Cricinfo's scorecards, and one decimal ("116.0") reads as a different figure.
+ */
+export function inningsStrikeRate(runs: number, balls: number | null | undefined, missing = "-"): string {
+  return balls ? ((runs / balls) * 100).toFixed(2) : missing;
+}
