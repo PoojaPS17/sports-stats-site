@@ -2,7 +2,7 @@
 // completed with a called-off status; it must never read as a fixture still to come, so every "upcoming" test and
 // kickoff time goes through here.
 import type { GameRow } from "./queries";
-import { formatGameDate, formatGameTime } from "./gameDay";
+import { dayTimeZone, dayZoneLabel, formatGameDate, formatGameTime } from "./gameDay";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
 import { isCricketLeague, LEAGUE_LABEL } from "./leagues";
 import { teamDisplayName } from "./teamName";
@@ -24,7 +24,12 @@ export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRo
   const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" });
   const off = gameCalledOffLabel(g);
   if (off) return `${when} · ${off}`;
-  if (isUpcomingGame(g)) return `${when} · ${formatGameTime(g.date, league, { hour: "numeric", minute: "2-digit" })}`;
+  if (isUpcomingGame(g)) {
+    // A US game's kickoff names its zone (the card's footer says UTC, which a bare clock time would invite reading as UTC too);
+    // every other league keeps its wording exactly.
+    const zone = dayTimeZone(league) === "UTC" ? "" : ` ${dayZoneLabel(league)}`;
+    return `${when} · ${formatGameTime(g.date, league, { hour: "numeric", minute: "2-digit" })}${zone}`;
+  }
   return when;
 }
 
@@ -44,7 +49,7 @@ export function gameAccessibleLabel(
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
 
-/** The status line of one tile on a scoreboard image: result, live detail, kickoff (UTC), or why a called-off game is off. */
+/** The status line of one tile on a scoreboard image: result, live detail, kickoff (in the league's day zone, labelled), or why a called-off game is off. */
 export function scoreboardTileStatus(league: League, g: StatusFields & Pick<GameRow, "date" | "round">, withDate: boolean): string {
   const off = gameCalledOffLabel(g);
   const live = g.status_state === "in" && !g.completed;
@@ -55,7 +60,7 @@ export function scoreboardTileStatus(league: League, g: StatusFields & Pick<Game
   if (off) return off;
   if (g.completed) return normalizeStage(g.round) ?? finishedLabel(league);
   if (live) return g.status_detail ?? "Live";
-  return `${new Date(g.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
+  return `${new Date(g.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: dayTimeZone(league) })} ${dayZoneLabel(league)}`;
 }
 
 /**

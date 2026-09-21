@@ -1,3 +1,4 @@
+import { gameStartDateIso } from "./gameDay";
 import { isSoccerLeague } from "./leagues";
 import { schemaEventStatus } from "./gameStatus";
 import { cricketSchemaStatus } from "./cricketMatchStatus";
@@ -92,7 +93,7 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null)
     // American sports say "Away at Home"; football and cricket list the home side first.
     name: league === "nfl" || league === "nba" ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`,
     sport: sportName(league),
-    startDate: game.date,
+    startDate: gameStartDateIso(game.date, league),
     eventStatus: status,
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url: absoluteUrl(`/${league}/games/${game.espn_id}`),

@@ -120,13 +120,15 @@ export async function getSeasonPlayoffGames(league: League, season: number): Pro
 // NFL and the NBA, UTC for everything else. The exact test converts the stored instant into that zone,
 // which no index can help with, so it is paired with a coarse bound on g.date itself that the
 // (league, date) index does serve. The bounds are a day either side, wide enough for any zone on
-// earth, so they never exclude a game the exact test would have kept.
+// earth, so they never exclude a game the exact test would have kept. They are written as UTC
+// instants (`at time zone 'UTC'`): a bare date plus an interval is a zoneless timestamp that
+// Postgres would otherwise read in the session's TimeZone setting, which nothing here pins.
 export async function getGamesByDate(league: League, dateISO: string): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
      where g.league = $1
-       and g.date >= $2::date - interval '1 day'
-       and g.date < $2::date + interval '2 days'
+       and g.date >= ($2::date - interval '1 day') at time zone 'UTC'
+       and g.date < ($2::date + interval '2 days') at time zone 'UTC'
        and (g.date at time zone $3::text)::date = $2::date
      order by g.date asc`,
     [league, dateISO, dayTimeZone(league)]

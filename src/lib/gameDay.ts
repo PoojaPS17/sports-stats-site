@@ -10,6 +10,11 @@
 // Everything that shows or groups by a game's day goes through here, so the same game can never
 // appear under two different days on two different pages. This module is pure — it imports no
 // database code — so queries and Client Components can both use it without a cycle.
+//
+// Anything that needs "today" for a league's scores must use gameDayIso(new Date(), league), never
+// toISOString().slice(0, 10): the UTC date is already tomorrow for four to five hours every US
+// evening, which would resolve to an empty day. Nothing does today; the league home page selects
+// games by instant and only labels them by day.
 
 /** Leagues whose calendar day is the US Eastern one. */
 const EASTERN_DAY_LEAGUES = ["nfl", "nba"];
@@ -60,4 +65,38 @@ export function formatGameDate(date: string | Date, league: string, opts: Intl.D
  */
 export function formatGameTime(date: string | Date, league: string, opts: Intl.DateTimeFormatOptions): string {
   return new Date(date).toLocaleTimeString("en-US", { ...opts, timeZone: dayTimeZone(league) });
+}
+
+/** The short zone label printed beside a clock time that is not UTC: "ET" for the NFL and the NBA, "UTC" otherwise. */
+export function dayZoneLabel(league: string): string {
+  return dayTimeZone(league) === "UTC" ? "UTC" : "ET";
+}
+
+/**
+ * The instant the way schema.org wants a `startDate`: the wall clock in the league's day zone with
+ * that zone's offset, so a Sunday-night NFL game reads `2026-09-20T20:20:00-04:00` (the 20th, as the
+ * page and ESPN say) and not `2026-09-21T00:20:00.000Z`. It is the same instant either way; only the
+ * day a reader takes from the string differs. A UTC league gets `Z`, unchanged in meaning.
+ */
+export function gameStartDateIso(date: string | Date, league: string): string {
+  const timeZone = dayTimeZone(league);
+  const d = new Date(date);
+  if (timeZone === "UTC") return d.toISOString();
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "longOffset",
+    })
+      .formatToParts(d)
+      .map((p) => [p.type, p.value]),
+  );
+  const offset = String(parts.timeZoneName).replace("GMT", "") || "Z";
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${offset}`;
 }

@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { startTestDb, type TestDb } from "./helpers/testDb";
-import { dayTimeZone, formatGameDate, gameDayIso } from "../src/lib/gameDay";
+import { dayTimeZone, formatGameDate, gameDayIso, gameStartDateIso } from "../src/lib/gameDay";
 import { fmtDate } from "../src/components/PlayerStatsShared";
 import { GameCard } from "../src/components/GameCard";
 import type { GameRow } from "../src/lib/queries";
@@ -50,6 +50,20 @@ test("soccer and unknown leagues keep the UTC day", () => {
   for (const league of ["epl", "laliga", "ucl", "not-a-league"]) {
     assert.equal(gameDayIso("2026-09-20T23:30:00Z", league), "2026-09-20", league);
     assert.equal(gameDayIso("2026-09-21T00:10:00Z", league), "2026-09-21", league);
+  }
+});
+
+test("gameStartDateIso writes the instant with its league zone's offset, so the day it reads as is the league's", () => {
+  // Sunday night: 8:20 PM EDT on the 20th, which is 00:20 UTC on the 21st
+  assert.equal(gameStartDateIso("2026-09-21T00:20:00Z", "nfl"), "2026-09-20T20:20:00-04:00");
+  // winter offset, and a midnight that a 12-hour clock would print as 24
+  assert.equal(gameStartDateIso("2026-12-14T05:00:00Z", "nba"), "2026-12-14T00:00:00-05:00");
+  assert.equal(gameStartDateIso(new Date("2026-03-08T07:30:00Z"), "nfl"), "2026-03-08T03:30:00-04:00");
+  // every other league stays the same UTC instant it always was
+  assert.equal(gameStartDateIso("2026-09-21T00:10:00Z", "epl"), "2026-09-21T00:10:00.000Z");
+  // and it is the same instant either way
+  for (const [iso, league] of [["2026-09-21T00:20:00Z", "nfl"], ["2026-11-01T05:30:00Z", "nba"], ["2026-11-01T06:30:00Z", "nba"]] as const) {
+    assert.equal(new Date(gameStartDateIso(iso, league)).getTime(), new Date(iso).getTime(), `${league} ${iso}`);
   }
 });
 
@@ -98,11 +112,14 @@ test("formatGameDate keeps the caller's wording and only decides the zone", () =
 
 let db: TestDb;
 let queries: typeof import("../src/lib/queries");
+// structuredData imports queries, so it too must be loaded only after startTestDb has set DATABASE_URL.
+let structuredData: typeof import("../src/lib/structuredData");
 
 before(async () => {
   db = await startTestDb();
   // queries.ts builds its pool from DATABASE_URL at import time, which startTestDb has just set.
   queries = await import("../src/lib/queries");
+  structuredData = await import("../src/lib/structuredData");
   const q = (sql: string, args: unknown[] = []) => db.pool.query(sql, args);
   await q(`insert into teams (league, espn_id, name, slug) values
              ('nfl', '1', 'Home NFL', 'home-nfl'), ('nfl', '2', 'Away NFL', 'away-nfl'),
@@ -167,6 +184,14 @@ const gameRow = (over: Partial<GameRow> = {}): GameRow =>
     away_color: null,
     ...over,
   }) as GameRow;
+
+test("a game page's structured data starts the game on the same day its heading names", () => {
+  const nfl = structuredData.gameSchema("nfl", gameRow(), null);
+  assert.equal(nfl.startDate, "2026-09-20T20:20:00-04:00");
+  assert.equal(nfl.startDate.slice(0, 10), gameDayIso("2026-09-21T00:20:00Z", "nfl"));
+  const epl = structuredData.gameSchema("epl", gameRow({ date: "2026-09-21T00:10:00Z" }), null);
+  assert.equal(epl.startDate.slice(0, 10), "2026-09-21");
+});
 
 test("a game card puts a Sunday-night NFL game on the Sunday, and a soccer game on its UTC day", () => {
   const nfl = renderToStaticMarkup(createElement(GameCard, { league: "nfl", game: gameRow() }));

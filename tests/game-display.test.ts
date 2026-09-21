@@ -46,10 +46,15 @@ test("scheduleRowHeading: an upcoming game shows its date and kickoff time", () 
 test("scheduleRowHeading and gameAccessibleLabel put an NFL game on its US Eastern day", () => {
   // 00:20 UTC on the Monday is the Sunday-night game ESPN files under Sunday 20 September, 8:20 PM Eastern
   const sundayNight = game({ date: "2026-09-21T00:20:00.000Z" });
-  assert.equal(scheduleRowHeading("nfl", sundayNight), "Sun, Sep 20 · 8:20 PM");
+  // the kickoff names its zone, so a clock time in a picture that carries a UTC footer is not read as UTC
+  assert.equal(scheduleRowHeading("nfl", sundayNight), "Sun, Sep 20 · 8:20 PM ET");
+  // a scoreboard tile's kickoff is in the same zone as the date on the tile beside it, and labelled
+  assert.equal(scoreboardTileStatus("nfl", sundayNight, false), "20:20 ET");
+  assert.equal(scoreboardTileStatus("nfl", sundayNight, true), "Sep 20, 2026 · Upcoming");
   assert.equal(gameAccessibleLabel("nfl", sundayNight), "Chelsea at Arsenal, Sunday, September 20");
   // the same instant in a league whose day is UTC is the Monday
   assert.equal(scheduleRowHeading(LEAGUE, sundayNight), "Mon, Sep 21 · 12:20 AM");
+  assert.equal(scoreboardTileStatus(LEAGUE, sundayNight, false), "00:20 UTC");
   assert.equal(gameAccessibleLabel(LEAGUE, sundayNight), "Chelsea at Arsenal, Monday, September 21");
 });
 
@@ -78,10 +83,14 @@ test("gameAccessibleLabel: a finished game reads as a result", () => {
 });
 
 test("scoreboardTileStatus: an upcoming game shows its kickoff, a called-off one shows why it is off", () => {
-  assert.equal(scoreboardTileStatus("nba", game({ date: "2026-09-20T18:30:00.000Z" }), false), "18:30 UTC");
+  // an NBA tile's kickoff is read in Eastern and says so (18:30 UTC is 2:30 PM EDT); a UTC league keeps its UTC clock
+  assert.equal(scoreboardTileStatus("nba", game({ date: "2026-09-20T18:30:00.000Z" }), false), "14:30 ET");
+  assert.equal(scoreboardTileStatus("epl", game({ date: "2026-09-20T18:30:00.000Z" }), false), "18:30 UTC");
+  // a midnight kickoff is 00:xx, not 24:xx
+  assert.equal(scoreboardTileStatus("epl", game({ date: "2026-09-21T00:20:00.000Z" }), false), "00:20 UTC");
   assert.equal(scoreboardTileStatus("nba", calledOff(), false), "Postponed");
   assert.equal(scoreboardTileStatus("nba", calledOff("Canceled"), false), "Cancelled");
-  assert.doesNotMatch(scoreboardTileStatus("nba", calledOff(), false), /UTC/);
+  assert.doesNotMatch(scoreboardTileStatus("nba", calledOff(), false), /UTC|ET/);
 });
 
 test("scoreboardTileStatus: a list spanning days puts the date on the tile, and a called-off game is not Upcoming", () => {
