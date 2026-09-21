@@ -23,11 +23,16 @@ export function venueNamesCity(venue: string, city: string): boolean {
   return wanted.length > 0 && parts.length > 1 && parts.slice(1).includes(wanted);
 }
 
+/** The venue as printed: "Ground, City", with the city left out when the venue already names it. */
+export function venueWithCity(venue: string, city: string | null | undefined): string {
+  return city && !venueNamesCity(venue, city) ? `${venue}, ${city}` : venue;
+}
+
 // Venue, crowd and officials, plus the score by period when the feed carries it.
 export function MatchFacts({ league, game, details }: { league: League; game: GameRow; details: GameDetails }) {
   const facts: string[] = [];
   // ESPN's venue often already ends in its city ("Wankhede Stadium, Mumbai"), which the city then repeats.
-  if (details.venue) facts.push(details.city && !venueNamesCity(details.venue, details.city) ? `${details.venue}, ${details.city}` : details.venue);
+  if (details.venue) facts.push(venueWithCity(details.venue, details.city));
   if (details.attendance) facts.push(`Attendance ${details.attendance.toLocaleString("en-US")}`);
   const referees = details.officials.filter((o) => /referee|umpire/i.test(o.role) && !/assistant|video|fourth|replay/i.test(o.role));
   if (referees.length > 0) facts.push(`${referees.length > 1 ? "Officials" : referees[0].role || "Referee"}: ${referees.map((o) => o.name).join(", ")}`);

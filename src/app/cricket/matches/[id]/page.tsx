@@ -22,6 +22,7 @@ import { fetchCricketSummaryLive } from "@/lib/cricketLive";
 import { JsonLd } from "@/components/JsonLd";
 import { cricketSeriesMatchSchema } from "@/lib/structuredData";
 import { normalizeStage } from "@/lib/stage";
+import { venueWithCity } from "@/components/MatchFacts";
 import { classifyCricketMatch, cricketMatchDescription } from "@/lib/cricketMatchStatus";
 
 // The live page for any cricket match ESPN lists: read straight from ESPN's summary
@@ -123,7 +124,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
         {sideRow(sides[1])}
         {summaryText && <p className="text-sm font-medium">{teamDisplayName(summaryText)}</p>}
         {potm && <p className="text-xs text-[var(--text-muted)]">Player of the Match: {potm}</p>}
-        {details?.venue && <p className="text-xs text-[var(--text-muted)]">{details.city ? `${details.venue}, ${details.city}` : details.venue}</p>}
+        {details?.venue && <p className="text-xs text-[var(--text-muted)]">{venueWithCity(details.venue, details.city)}</p>}
       </section>
 
       <AdSlot label="Cricket live match top" />
