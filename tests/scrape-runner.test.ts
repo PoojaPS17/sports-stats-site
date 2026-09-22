@@ -38,6 +38,30 @@ exit 0
   );
   chmodSync(join(bin, "npm"), 0o755);
   chmodSync(join(bin, "git"), 0o755);
+  // Stub curl: "download" by touching whatever -o pointed at.
+  writeFileSync(
+    join(bin, "curl"),
+    `#!/bin/sh
+echo "curl $*" >> "$STUB_LOG"
+while [ $# -gt 0 ]; do
+  case "$1" in -o) touch "$2" ;; esac
+  shift
+done
+exit 0
+`
+  );
+  // Stub python3: the only call job_cricsheet makes is the zipfile extractall one-liner; fake it
+  // by creating the destination directory instead of really unzipping the (fake) archive.
+  writeFileSync(
+    join(bin, "python3"),
+    `#!/bin/sh
+echo "python3 $*" >> "$STUB_LOG"
+mkdir -p "$4"
+exit 0
+`
+  );
+  chmodSync(join(bin, "curl"), 0o755);
+  chmodSync(join(bin, "python3"), 0o755);
 });
 
 function run(job: string, env: Record<string, string> = {}, runner: string = RUNNER) {
@@ -201,4 +225,29 @@ test("only ticks record a heartbeat", () => {
   for (const job of ["daily", "hourly"]) {
     assert.ok(!run(job).calls.some((c) => c.includes("record:run")), `${job} must not record scrape-tick`);
   }
+});
+
+test("cricsheet: migrates, downloads and imports all four archives, and exits 0", () => {
+  const { status, calls, stderr } = run("cricsheet");
+  assert.equal(status, 0, stderr);
+  const steps = calls.map((c) => c.split(" | ")[0]);
+  assert.equal(steps[0], "npm run --silent migrate");
+  for (const archive of ["odi", "t20i", "ipl", "bbl"]) {
+    assert.ok(steps.some((s) => s.includes(`import:cricsheet -- ${archive} `)), `cricsheet should import ${archive}`);
+  }
+});
+
+test("cricsheet: its scratch dir is removed after the job returns, without an unbound-variable error", () => {
+  const tmp = join(dir, "tmp-cricsheet");
+  mkdirSync(tmp);
+  const { status, stderr } = run("cricsheet", { TMPDIR: tmp });
+  assert.equal(status, 0, stderr);
+  assert.doesNotMatch(stderr, /unbound variable/);
+  assert.deepEqual(readdirSync(tmp), []);
+});
+
+test("cricsheet: a failing import still exits 1 but does not leak an unbound-variable error", () => {
+  const { status, stderr } = run("cricsheet", { STUB_FAIL: "import:cricsheet -- ipl" });
+  assert.equal(status, 1);
+  assert.doesNotMatch(stderr, /unbound variable/);
 });

@@ -116,7 +116,10 @@ job_trending() {
 job_cricsheet() {
   local dir
   dir="$(mktemp -d "${TMPDIR:-/tmp}/cricsheet.XXXXXX")"
-  trap 'rm -rf "$dir"' RETURN
+  # Double-quoted so $dir is baked into the trap command now, not looked up when the trap fires:
+  # by the time job_cricsheet returns and this RETURN trap runs, the `local dir` binding above is
+  # already gone, and a live '$dir' reference would hit set -u's unbound-variable check.
+  trap "rm -rf '$dir'" RETURN
   run migrate
   if ! (
     set -e
