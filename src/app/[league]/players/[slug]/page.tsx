@@ -347,7 +347,7 @@ export default async function PlayerPage({
             {logNote ? (
               <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{logNote}</p>
             ) : (
-              <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={split} />
+              <PlayerGameLogTable league={league} slug={slug} profile={profile} rows={staged.log} split={split} />
             )}
           </section>
 

@@ -12,8 +12,9 @@ import { PlayerIndexList } from "../src/components/PlayerIndexList";
 import { packPlayers } from "../src/lib/playerIndex";
 import { TeamHeader } from "../src/components/TeamHeader";
 import { MatchHeader } from "../src/components/MatchHeader";
+import { PlayerGameLogTable } from "../src/components/PlayerGameLogTable";
+import { buildProfile, type PlayerLogRow, type Stats } from "../src/lib/playerProfile";
 import type { GameRow } from "../src/lib/queries";
-import type { PlayerLogRow } from "../src/lib/playerProfile";
 
 // Every element of `type` reachable through `props.children`, without rendering function components.
 function findAll(node: ReactNode, type: unknown, out: ReactElement<Record<string, unknown>>[] = []): ReactElement<Record<string, unknown>>[] {
@@ -184,6 +185,43 @@ test("the biggest players indexes stay under 1.5 MB of HTML plus page data", () 
     const data = Math.ceil(Buffer.byteLength(JSON.stringify(props)) * 1.1);
     assert.ok(html + data < 1_500_000, `${league}: ${count} players = ${html} bytes of HTML + ${data} of page data`);
   }
+});
+
+// A season's worth of one player's box-score lines, same shape every game (the numbers don't matter here).
+function seasonOfGames(season: number, games: number): PlayerLogRow[] {
+  const stats: Stats = { box: { MIN: "31", PTS: "12", REB: "4", AST: "3", STL: "1", BLK: "1", TO: "2", FG: "5-10", "3PT": "1-3", FT: "1-2", "+/-": "+2" } };
+  return Array.from({ length: games }, (_, i) => ({
+    game_espn_id: `${season}-${String(i).padStart(3, "0")}`,
+    date: `${season}-01-${String((i % 27) + 1).padStart(2, "0")}T00:00:00.000Z`,
+    season_year: season,
+    round: null,
+    week: null,
+    stage: "regular",
+    season_type: 2,
+    competition_type: "STD",
+    is_home: i % 2 === 0,
+    team_espn_id: "1", team_name: "Los Angeles Lakers", team_slug: "los-angeles-lakers", team_abbr: "LAL", team_logo: null,
+    opponent_espn_id: "2", opponent_name: "Boston Celtics", opponent_slug: "boston-celtics", opponent_abbr: "BOS", opponent_logo: null,
+    team_score: 100, opponent_score: 95, result: "W",
+    stats,
+  }));
+}
+
+// The player page's own game log (no `season` prop) is what carries every season on record; the RSC
+// payload duplicates whatever it renders into `self.__next_f.push(...)` (see next's own docs), so a long
+// career rendering every season as a full table doubles up hundreds of rows. Only the latest season should
+// render a table here; older seasons become a link to their own page instead.
+test("PlayerGameLogTable renders only the latest season as a table; older seasons are links to their own page", () => {
+  const rows = Array.from({ length: 20 }, (_, i) => seasonOfGames(2025 - i, 82)).flat(); // a 20-year, 82-games-a-season NBA career
+  const profile = buildProfile("nba", rows);
+  const html = renderToStaticMarkup(createElement(PlayerGameLogTable, { league: "nba", slug: "lebron-james", profile, rows, split: false }));
+  assert.equal((html.match(/<table/g) ?? []).length, 1, "only one season's table should render");
+  const trCount = (html.match(/<tr/g) ?? []).length;
+  assert.ok(trCount <= 90, `expected roughly one season of rows (<=90 <tr>), got ${trCount}`);
+  const links = html.match(/href="\/nba\/players\/lebron-james\/\d{4}"/g) ?? [];
+  assert.equal(links.length, 19, "the 19 older seasons should each link to their own season page");
+  assert.match(html, /href="\/nba\/players\/lebron-james\/2006"/); // the oldest season (2025 - 19)
+  assert.doesNotMatch(html, /href="\/nba\/players\/lebron-james\/2025"/); // the newest season is rendered inline, not linked
 });
 
 test("a team page header loads its crest straight away; a crest further down the page waits", () => {

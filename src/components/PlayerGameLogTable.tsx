@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatSeasonLabel, type League } from "@/lib/queries";
 import { stageCellText } from "@/lib/gameStage";
 import { formatStat, type PlayerLogRow, type PlayerProfile } from "@/lib/playerProfile";
@@ -51,11 +52,14 @@ function LogTable({ league, profile, rows, split }: { league: League; profile: P
   );
 }
 
-// The full log, one collapsible block per season with the latest open. A player
-// with a decade on record has a few hundred rows; the rest stay in the page (and in
-// the HTML search engines read) without burying the summary sections above. `rows` is every
-// appearance, including games that are not counted in the tables (`profile` supplies the columns).
-export function PlayerGameLogTable({ league, profile, rows, split, season }: { league: League; profile: PlayerProfile; rows: PlayerLogRow[]; split: boolean; season?: number | null }) {
+// The full log. On a player's own page (no `season`), only the latest season renders its full
+// table here — older seasons are a link to their own page (`/[league]/players/[slug]/[season]`,
+// this file's `season != null` branch) instead of a full table, so a long career doesn't multiply
+// the RSC hydration payload by every season on record. Each of those pages is still its own
+// crawlable, indexable URL, so nothing here is unreachable, just no longer duplicated onto every
+// player page at once. `rows` is every appearance, including games that are not counted in the
+// tables (`profile` supplies the columns).
+export function PlayerGameLogTable({ league, slug, profile, rows, split, season }: { league: League; slug: string; profile: PlayerProfile; rows: PlayerLogRow[]; split: boolean; season?: number | null }) {
   if (season != null) {
     return (
       <div className="card overflow-hidden">
@@ -73,17 +77,25 @@ export function PlayerGameLogTable({ league, profile, rows, split, season }: { l
   const seasons = [...bySeason.entries()].sort((a, b) => b[0] - a[0]);
   return (
     <div className="flex flex-col gap-2">
-      {seasons.map(([season, group], i) => (
-        <details key={season} className="card overflow-hidden" open={i === 0}>
-          <summary className="table-head flex cursor-pointer list-none items-center justify-between px-4 py-2.5">
+      {seasons.map(([season, group], i) =>
+        i === 0 ? (
+          <div key={season} className="card overflow-hidden">
+            <div className="table-head flex items-center justify-between px-4 py-2.5">
+              <span>
+                {formatSeasonLabel(league, season)} · {group.length} {split ? "games logged" : profile.profile.gamesLabel.toLowerCase()}
+              </span>
+            </div>
+            <LogTable league={league} profile={profile} rows={group} split={split} />
+          </div>
+        ) : (
+          <Link key={season} href={`/${league}/players/${slug}/${season}`} className="card table-head flex items-center justify-between px-4 py-2.5 hover:opacity-80">
             <span>
               {formatSeasonLabel(league, season)} · {group.length} {split ? "games logged" : profile.profile.gamesLabel.toLowerCase()}
             </span>
-            <span className="text-[10px] font-normal normal-case tracking-normal">{i === 0 ? "" : "Show"}</span>
-          </summary>
-          <LogTable league={league} profile={profile} rows={group} split={split} />
-        </details>
-      ))}
+            <span className="text-[10px] font-normal normal-case tracking-normal">Full season log →</span>
+          </Link>
+        )
+      )}
     </div>
   );
 }
