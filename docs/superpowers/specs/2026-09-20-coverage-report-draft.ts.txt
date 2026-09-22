@@ -1,0 +1,179 @@
+// DRAFT (not in the repo yet). Read-only. Answers: for each league and season, is the history in OUR
+// database complete, so nothing older needs to be pulled again?
+//   1. Schedule: does every team have the same number of completed regular games (and the full-season
+//      length, where the league has a fixed one)? Any hole of more than 10 days inside a season?
+//   2. Box scores: does every completed game of a box-score league have a stored report and player lines?
+//   3. Loose ends: games still unfinished long after their date; completed games without both scores.
+//   4. Standings: does each season have one row per team that played?
+// Ends with a verdict per league: the first season from which every closed season passes.
+//
+// Usage: tsx scripts/audit-coverage.ts [league] [--strict]
+import { pool } from "./lib/db";
+
+const TEAM_LEAGUES = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea"];
+const BOX_LEAGUES = ["nba", "nfl"];
+const STALE_DAYS = 3;
+/** Longest quiet stretch inside a season that is normal for the league (NFL has a two-week gap before the Super Bowl). */
+const GAP_DAYS: Record<string, number> = { nba: 10, nfl: 15 };
+/** ESPN keeps the original event of a postponed or cancelled game; it never completes and is not a hole in our data. */
+const POSTPONED = "('Postponed', 'Canceled', 'Cancelled')";
+/** Real events that make a season differ from the rule. Findings of these kinds are printed, not counted. */
+const KNOWN: Record<string, { covers: ("teams" | "gap" | "short")[]; reason: string }> = {
+  "nba:2020": { covers: ["teams", "gap", "short"], reason: "2019-20 was suspended 12 Mar to 31 Jul 2020 and finished in a bubble; teams played 63 to 75 games" },
+  "nfl:2022": { covers: ["teams"], reason: "Bills v Bengals was cancelled after Damar Hamlin's collapse; those two teams played 16" },
+};
+
+/** Games per team in a full regular season, by ESPN `season.year`. null = varied (skip the reference check). Informational. */
+function fullLength(league: string, year: number): number | null {
+  if (league === "nba") return year === 2020 ? null : year === 2021 ? 72 : 82;
+  if (league === "nfl") return year <= 2020 ? 16 : 17;
+  return null;
+}
+
+interface SeasonRow {
+  league: string;
+  season_year: number | null;
+  completed: number;
+  open: number; // not completed and not yet stale: still to be played or being played
+  stale: number; // not completed, dated more than STALE_DAYS ago, and not postponed or cancelled: a real loose end
+  postponed: number; // postponed or cancelled: expected
+  no_score: number; // completed with a missing score
+  with_report: number;
+  with_lines: number;
+  first: string;
+  last: string;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const strict = args.includes("--strict");
+  const only = args.find((a) => !a.startsWith("--"));
+  const leagueFilter = only ? `and league = '${only.replace(/[^a-z0-9.]/g, "")}'` : "";
+
+  // 1. one row per league and season, counted from all stages that count as real games
+  const { rows: seasons } = await pool.query<SeasonRow>(
+    `select g.league, g.season_year,
+       count(*) filter (where g.completed)::int as completed,
+       count(*) filter (where not g.completed and g.date >= now() - interval '${STALE_DAYS} days')::int as open,
+       count(*) filter (where not g.completed and g.date < now() - interval '${STALE_DAYS} days' and coalesce(g.status_detail, '') not in ${POSTPONED})::int as stale,
+       count(*) filter (where not g.completed and g.date < now() - interval '${STALE_DAYS} days' and coalesce(g.status_detail, '') in ${POSTPONED})::int as postponed,
+       count(*) filter (where g.completed and (g.home_score is null or g.away_score is null))::int as no_score,
+       count(*) filter (where g.completed and d.game_espn_id is not null)::int as with_report,
+       count(*) filter (where g.completed and p.game_espn_id is not null)::int as with_lines,
+       min(g.date)::date::text as first, max(g.date)::date::text as last
+     from games g
+     left join (select distinct league, game_espn_id from game_details) d on d.league = g.league and d.game_espn_id = g.espn_id
+     left join (select distinct league, game_espn_id from player_game_stats) p on p.league = g.league and p.game_espn_id = g.espn_id
+     where g.stage in ('regular', 'playoffs', 'playin') ${leagueFilter.replace("league", "g.league")}
+     group by 1, 2 order by 1, 2`
+  );
+
+  // 2. games per team, regular stage only
+  const { rows: perTeam } = await pool.query<{ league: string; season_year: number; team: string; n: number }>(
+    `select league, season_year, team, count(*)::int as n from (
+       select league, season_year, home_team_espn_id as team from games where completed and stage = 'regular' and league = any($1)
+       union all
+       select league, season_year, away_team_espn_id from games where completed and stage = 'regular' and league = any($1)
+     ) t where season_year is not null ${leagueFilter} group by 1, 2, 3`,
+    [TEAM_LEAGUES]
+  );
+
+  // 3. holes inside a season (dates with no game between two dates more than GAP_DAYS apart)
+  const { rows: gaps } = await pool.query<{ league: string; season_year: number; from: string; to: string; days: number }>(
+    `select league, season_year, d::text as "from", next_d::text as "to", (next_d - d)::int as days from (
+       select league, season_year, d, lead(d) over (partition by league, season_year order by d) as next_d from (
+         select distinct league, season_year, date::date as d from games
+         where completed and stage in ('regular', 'playoffs', 'playin') and league in ('nba', 'nfl') and season_year is not null ${leagueFilter}
+       ) x
+     ) y where next_d - d > case when league = 'nfl' then ${GAP_DAYS.nfl} else ${GAP_DAYS.nba} end order by 1, 2, 3`
+  );
+
+  // 4. standings rows per season
+  const { rows: standings } = await pool.query<{ league: string; season: number; teams: number }>(
+    `select league, season, count(*)::int as teams from standings where true ${leagueFilter} group by 1, 2`
+  );
+  const standingsBy = new Map(standings.map((s) => [`${s.league}:${s.season}`, s.teams]));
+
+  const teamsBy = new Map<string, number[]>();
+  for (const r of perTeam) {
+    const key = `${r.league}:${r.season_year}`;
+    teamsBy.set(key, [...(teamsBy.get(key) ?? []), r.n]);
+  }
+  const mode = (ns: number[]) => {
+    const c = new Map<number, number>();
+    for (const n of ns) c.set(n, (c.get(n) ?? 0) + 1);
+    return [...c.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+  };
+
+  const table: Record<string, string | number>[] = [];
+  const problems: string[] = [];
+  const knownFindings: string[] = [];
+  const firstGreen = new Map<string, { schedule: number | null; box: number | null }>();
+  for (const s of seasons) {
+    if (s.season_year === null) {
+      problems.push(`${s.league}: ${s.completed + s.open + s.stale + s.postponed} games have no season year`);
+      continue;
+    }
+    const closed = s.open === 0;
+    const key = `${s.league}:${s.season_year}`;
+    const counts = teamsBy.get(key) ?? [];
+    const m = counts.length ? mode(counts) : null;
+    const off = m === null ? 0 : counts.filter((n) => n !== m).length;
+    const ref = fullLength(s.league, s.season_year);
+    const short = m !== null && ref !== null && m < ref;
+    const seasonGaps = gaps.filter((g) => g.league === s.league && g.season_year === s.season_year);
+    const box = BOX_LEAGUES.includes(s.league);
+    const reportPct = s.completed ? (100 * s.with_report) / s.completed : 100;
+    const linesPct = s.completed ? (100 * s.with_lines) / s.completed : 100;
+
+    const known = KNOWN[key];
+    const scheduleIssues: string[] = [];
+    const knownIssues: string[] = [];
+    const flag = (kind: "teams" | "gap" | "short", text: string) => {
+      if (!closed) return; // an open season is still filling
+      if (known?.covers.includes(kind)) knownIssues.push(`${text} [known: ${known.reason}]`);
+      else scheduleIssues.push(text);
+    };
+    if (off) flag("teams", `${off} team(s) differ from the usual ${m} games`);
+    if (short) flag("short", `usual count ${m} is below the full season ${ref}`);
+    if (seasonGaps.length) flag("gap", `${seasonGaps.map((g) => `no games ${g.from} to ${g.to} (${g.days} days)`).join("; ")}`);
+    if (closed && s.stale) scheduleIssues.push(`${s.stale} game(s) never finished and are not marked postponed or cancelled`);
+    if (s.no_score) scheduleIssues.push(`${s.no_score} completed game(s) missing a score`);
+    const boxIssues: string[] = [];
+    if (box && s.with_report < s.completed) boxIssues.push(`${s.completed - s.with_report} game(s) without a report`);
+    if (box && s.with_lines < s.completed) boxIssues.push(`${s.completed - s.with_lines} game(s) without player lines`);
+
+    table.push({
+      league: s.league, season: s.season_year, state: closed ? "closed" : "open", games: s.completed,
+      "teams x games": m === null ? "-" : `${counts.length} x ${m}${off ? ` (${off} off)` : ""}`,
+      "vs full": ref === null ? "-" : short ? `SHORT (${ref})` : "ok", postponed: s.postponed,
+      reports: box ? `${reportPct.toFixed(1)}%` : "n/a", lines: box ? `${linesPct.toFixed(1)}%` : "n/a",
+      standings: standingsBy.get(key) ?? "none", first: s.first, last: s.last,
+    });
+    for (const i of scheduleIssues) problems.push(`${s.league} ${s.season_year} (schedule): ${i}`);
+    for (const i of boxIssues) problems.push(`${s.league} ${s.season_year} (box scores): ${i}`);
+    for (const i of knownIssues) knownFindings.push(`${s.league} ${s.season_year}: ${i}`);
+
+    if (closed) {
+      const f = firstGreen.get(s.league) ?? { schedule: null, box: null };
+      // "complete since": reset whenever a closed season fails, set when a passing season follows.
+      f.schedule = scheduleIssues.length ? null : (f.schedule ?? s.season_year);
+      f.box = !box ? null : boxIssues.length ? null : (f.box ?? s.season_year);
+      firstGreen.set(s.league, f);
+    }
+  }
+  console.table(table);
+  console.log("[audit-coverage] complete-since verdict (closed seasons only; open seasons are still filling):");
+  for (const [league, f] of firstGreen) {
+    console.log(`  ${league}: schedule complete from ${f.schedule ?? "no season yet"}${BOX_LEAGUES.includes(league) ? `, box scores complete from ${f.box ?? "no season yet"}` : ""}`);
+  }
+  if (knownFindings.length) console.log("[audit-coverage] known exceptions (not counted):\n  " + knownFindings.join("\n  "));
+  console.log(problems.length ? "[audit-coverage] findings:\n  " + problems.join("\n  ") : "[audit-coverage] no findings");
+  await pool.end();
+  if (strict && problems.length > 0) process.exit(1);
+}
+
+main().catch((err) => {
+  console.error("[audit-coverage] failed:", err);
+  process.exit(1);
+});
