@@ -1,0 +1,10 @@
+[Unit]
+Description=SportsDB trending signals: Wikipedia pageviews, App Store charts (hourly)
+
+[Timer]
+OnCalendar=*-*-* *:00:00 UTC
+AccuracySec=30s
+Unit=sportsdb-scrape@trending.service
+
+[Install]
+WantedBy=timers.target

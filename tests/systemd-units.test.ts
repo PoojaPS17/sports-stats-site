@@ -41,6 +41,9 @@ const TIMERS = [
   { job: "tick", onCalendar: "*:0/15", persistent: false },
   { job: "daily", onCalendar: "*-*-* 06:07:00 UTC", persistent: true },
   { job: "hourly", onCalendar: "*-*-* *:22:00", persistent: false },
+  { job: "rosters", onCalendar: "*-*-* 08:17:00 UTC", persistent: true },
+  { job: "trending", onCalendar: "*-*-* *:00:00 UTC", persistent: false },
+  { job: "cricsheet", onCalendar: "Mon *-*-* 05:41:00 UTC", persistent: true },
 ];
 
 for (const { job, onCalendar, persistent } of TIMERS) {
@@ -90,7 +93,7 @@ test("the ExecStart script exists in the repo and is executable", () => {
   accessSync(resolve(process.cwd(), relative), constants.X_OK);
 });
 
-test("install.sh is executable and installs and enables the service and all three timers", () => {
+test("install.sh is executable and installs and enables the service and all six timers", () => {
   const path = join(VM_DIR, "install.sh");
   accessSync(path, constants.X_OK);
   const script = readFileSync(path, "utf8");

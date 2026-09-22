@@ -1,0 +1,10 @@
+[Unit]
+Description=SportsDB rosters, player photos, team info (08:17 UTC)
+
+[Timer]
+OnCalendar=*-*-* 08:17:00 UTC
+Persistent=true
+Unit=sportsdb-scrape@rosters.service
+
+[Install]
+WantedBy=timers.target

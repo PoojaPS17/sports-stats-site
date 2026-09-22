@@ -93,12 +93,61 @@ job_hourly() {
   run check:stale
 }
 
+# Rosters barely change intra-day; once a day matches the old GitHub schedule (08:17 UTC).
+job_rosters() {
+  run migrate
+  run fetch:rosters
+  run fetch:cricket-rosters
+  run fetch:player-photos
+  run fetch:team-info
+}
+
+# Wikipedia pageviews and App Store charts; hourly, same as the old GitHub schedule.
+job_trending() {
+  run migrate
+  run fetch:trending-wikipedia
+  run fetch:trending-appstore
+}
+
+# Weekly Cricsheet archive import (Monday 05:41 UTC, matching the old GitHub schedule). The VM
+# has no `unzip`, so this unpacks with python3's zipfile module instead (present on every stock
+# Ubuntu image) rather than asking for a package install. Downloads go to a scratch directory
+# that is removed on exit, win or lose, so runs never see a previous run's leftovers.
+job_cricsheet() {
+  local dir
+  dir="$(mktemp -d "${TMPDIR:-/tmp}/cricsheet.XXXXXX")"
+  trap 'rm -rf "$dir"' RETURN
+  run migrate
+  if ! (
+    set -e
+    curl -sSL -o "$dir/odis_male_json.zip" https://cricsheet.org/downloads/odis_male_json.zip
+    curl -sSL -o "$dir/t20s_male_json.zip" https://cricsheet.org/downloads/t20s_male_json.zip
+    curl -sSL -o "$dir/ipl_male_json.zip" https://cricsheet.org/downloads/ipl_male_json.zip
+    curl -sSL -o "$dir/bbl_male_json.zip" https://cricsheet.org/downloads/bbl_male_json.zip
+    curl -sSL -o "$dir/people.csv" https://cricsheet.org/register/people.csv
+    for name in odis t20s ipl bbl; do
+      python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" "$dir/${name}_male_json.zip" "$dir/$name"
+    done
+  ); then
+    echo "[scrape] FAILED: cricsheet download/unzip" >&2
+    failed=1
+    return
+  fi
+  run import:cricsheet -- odi "$dir/odis" --people "$dir/people.csv" --missing
+  run import:cricsheet -- t20i "$dir/t20s" --people "$dir/people.csv" --missing
+  run import:cricsheet -- ipl "$dir/ipl" --people "$dir/people.csv"
+  run import:cricsheet -- bbl "$dir/bbl" --people "$dir/people.csv"
+}
+
 main() {
   case "${1:-}" in
     tick) job_tick ;;
     daily) job_daily ;;
     hourly) job_hourly ;;
-    *) echo "usage: scrape.sh <tick|daily|hourly>" >&2; exit 2 ;;
+    rosters) job_rosters ;;
+    trending) job_trending ;;
+    cricsheet) job_cricsheet ;;
+    *) echo "usage: scrape.sh <tick|daily|hourly|rosters|trending|cricsheet>" >&2; exit 2 ;;
   esac
 }
 

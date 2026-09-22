@@ -1,9 +1,8 @@
 name: Scrape rosters
 
+# The schedule (once a day, 08:17 UTC) now runs from the Oracle VM's systemd timers
+# (sportsdb-scrape-rosters.timer), so this workflow is manual only: run it from the Actions tab.
 on:
-  schedule:
-    # rosters barely change intra-day — once a day is plenty and keeps ESPN request volume low
-    - cron: "17 8 * * *"
   workflow_dispatch: {}
 
 concurrency:

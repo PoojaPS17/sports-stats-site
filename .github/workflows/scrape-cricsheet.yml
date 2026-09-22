@@ -1,10 +1,9 @@
 name: Import international cricket (Cricsheet)
 
+# The schedule (weekly, Mon 05:41 UTC) now runs from the Oracle VM's systemd timers
+# (sportsdb-scrape-cricsheet.timer, unzipped with python3 since the VM has no `unzip`), so this
+# workflow is manual only: run it from the Actions tab.
 on:
-  schedule:
-    # Cricsheet publishes a match within a day or two of it ending; a weekly top-up
-    # of matches not yet stored keeps the ODI/T20I archive current at one download.
-    - cron: "41 5 * * 1"
   workflow_dispatch: {}
 
 concurrency:

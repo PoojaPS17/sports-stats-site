@@ -1,7 +1,11 @@
 # Independent alarm for the scrapers. The VM's own hourly job runs `npm run check:stale`, but if
 # the VM's systemd schedule stops (VM down, timers disabled, job hung) nothing running inside it
 # can notice. This workflow runs on GitHub instead and fails when any scraper heartbeat is missing
-# or too old (see MAX_AGE_MINUTES in scripts/lib/heartbeat.ts); GitHub then emails the repo owner.
+# or too old. It reads /api/health over HTTPS (through Cloudflare) rather than connecting to the
+# database directly, so this workflow no longer needs the DATABASE_URL secret or a checkout at
+# all; /api/health runs the exact same check (see scripts/lib/heartbeat.ts, MAX_AGE_MINUTES) that
+# the route and check:stale both call, so the two can't drift out of sync. GitHub emails the repo
+# owner on failure.
 name: "Watchdog: scraper freshness"
 
 on:
@@ -20,17 +24,9 @@ jobs:
   check-stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Fail if any scraper heartbeat is stale
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npm run check:stale
+        run: |
+          body="$(curl -sS -w '\n%{http_code}' https://sports-db.live/api/health)"
+          code="$(echo "$body" | tail -1)"
+          echo "$body" | head -n -1
+          [ "$code" = "200" ] || { echo "health check returned HTTP $code"; exit 1; }

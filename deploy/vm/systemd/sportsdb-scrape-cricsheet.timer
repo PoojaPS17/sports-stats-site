@@ -1,0 +1,10 @@
+[Unit]
+Description=SportsDB weekly Cricsheet import (Mon 05:41 UTC)
+
+[Timer]
+OnCalendar=Mon *-*-* 05:41:00 UTC
+Persistent=true
+Unit=sportsdb-scrape@cricsheet.service
+
+[Install]
+WantedBy=timers.target
