@@ -196,7 +196,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
             {staged.log.length === 0 && unlisted ? (
               <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{unlisted}</p>
             ) : (
-              <PlayerGameLogTable league={league} profile={profile} rows={staged.log} split={staged.split} season={season} />
+              <PlayerGameLogTable league={league} slug={slug} profile={profile} rows={staged.log} split={staged.split} season={season} />
             )}
           </section>
         </>
