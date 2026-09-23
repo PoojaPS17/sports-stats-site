@@ -59,3 +59,13 @@ export function featuredSeriesSql(alias = "s"): string {
   return `(split_part(${alias}.espn_id, '-', 1) in (${list(Object.keys(FEATURED_SERIES))})
     or exists (select 1 from cricket_series_matches x where x.series_espn_id = ${alias}.espn_id and x.international_class_id in (${list(FEATURED_CLASS_IDS)})))`;
 }
+
+/**
+ * True for a cricket match at the Asian Games specifically (not the broader
+ * MULTI_SPORT_GAMES set in homeData.ts, which also matches Commonwealth Games and
+ * Olympic cricket for homepage ranking purposes). Matched on the series name, not
+ * a stored edition id, so the next Asian Games needs no code change here either.
+ */
+export function isAsianGamesCricket(m: { series_name: string }): boolean {
+  return /\basian games\b/i.test(m.series_name);
+}
