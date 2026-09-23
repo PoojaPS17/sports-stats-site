@@ -266,6 +266,22 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         <section>
           <SectionHeader tools={<ImageActions filename={`${id}-leaders-${league}`} width={860} shareTitle={`${matchName} game leaders`} card={<MatchLeadersExportCard league={league} game={game} leaders={leaders} />} />}>Game leaders</SectionHeader>
           <MatchLeaders league={league} game={game} leaders={leaders} playerSlugs={playerSlugs} />
+          {(league === "nba" || league === "nfl") && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {leaders.map((l) => {
+                const slug = playerSlugs.get(l.athlete_id);
+                if (!slug) return null;
+                return (
+                  <ImageActions
+                    key={l.athlete_id}
+                    filename={`${id}-${slug}-card-${league}`}
+                    imageUrl={`/${league}/games/${id}/players/${slug}/card?format=og`}
+                    shareTitle={`${l.athlete} performance card`}
+                  />
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
