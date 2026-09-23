@@ -5,6 +5,12 @@ import { CARD, CARD_FONT } from "@/lib/exportTheme";
 
 type Busy = "share" | "download" | null;
 
+function cardAnalytics(imageUrl: string | undefined): { league: string; format: string } | null {
+  if (!imageUrl) return null;
+  const m = imageUrl.match(/^\/(\w+)\/games\/.+\/card\?format=(\w+)/);
+  return m ? { league: m[1], format: m[2] } : null;
+}
+
 const pill =
   "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60";
 
@@ -53,6 +59,8 @@ export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle
     setBusy("download");
     try {
       save(await render());
+      const analytics = cardAnalytics(imageUrl);
+      if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "download" });
     } catch {
       /* a blocked cross-origin asset can fail the canvas export; the page still works */
     } finally {
@@ -63,22 +71,29 @@ export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle
   async function share() {
     if (busy) return;
     setBusy("share");
+    const analytics = cardAnalytics(imageUrl);
     try {
       const probe = new File([], `${filename}.png`, { type: "image/png" });
       if (navigator.canShare?.({ files: [probe] })) {
         const blob = await render();
         try {
           await navigator.share({ files: [new File([blob], `${filename}.png`, { type: "image/png" })], title: shareTitle });
+          if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "share" });
         } catch (e) {
-          if ((e as DOMException).name !== "AbortError") save(blob);
+          if ((e as DOMException).name !== "AbortError") {
+            save(blob);
+            if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "download" });
+          }
         }
       } else if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
         // Passing the pending render keeps the click's permission alive in Safari.
         await navigator.clipboard.write([new ClipboardItem({ "image/png": render() })]);
         setCopied(true);
+        if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "copy" });
         window.setTimeout(() => setCopied(false), 2500);
       } else {
         save(await render());
+        if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "download" });
       }
     } catch {
       /* clipboard or share refused: nothing was sent, and Download image is right beside it */
