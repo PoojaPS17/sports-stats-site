@@ -51,6 +51,13 @@ test("strips a trailing NOC code so a legacy-edition table's nation_slug matches
   assert.equal(japanLegacy.nation_name, "Japan");
 });
 
+test("strips a trailing NOC code immediately followed by a footnote marker (host-nation pattern, e.g. \"India (IND)*[a]\")", () => {
+  const legacyRows = parseMedalTableHtml(legacyFixture);
+  const india = legacyRows.find((r) => r.nation_slug === "india")!;
+  assert.equal(india.nation_name, "India");
+  assert.equal(india.nation_slug, "india");
+});
+
 test("returns an empty array for HTML with no gold/silver/bronze table", () => {
   assert.deepEqual(parseMedalTableHtml("<html><body><table class=\"wikitable\"><tr><th>A</th><th>B</th></tr></table></body></html>"), []);
 });

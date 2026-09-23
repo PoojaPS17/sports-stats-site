@@ -73,8 +73,10 @@ function walkRows(rows: RawCell[][], columnCount: number): string[][] {
 function cleanNationName(raw: string): string {
   return raw
     .replace(/\[.*?\]/g, "") // footnote markers, e.g. "China[a]"
+    .replace(/[*†‡]+\s*$/, "") // host-nation asterisk / footnote symbols — stripped before the NOC code below so
+    // a pattern like "Qatar (QAT)*" (NOC code immediately followed by a footnote symbol, common for the host
+    // nation) doesn't leave the ")" non-adjacent to end-of-string and defeat the NOC-code regex
     .replace(/\s*\([A-Z]{3}\)\s*$/, "") // trailing NOC code some editions' tables render, e.g. "Japan (JPN)" — strip so nation_slug/nation_name stay stable across editions that do and don't include it
-    .replace(/[*†‡]+\s*$/, "") // host-nation asterisk / footnote symbols
     .replace(/\s+/g, " ")
     .trim();
 }
