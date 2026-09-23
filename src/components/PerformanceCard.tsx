@@ -1,9 +1,48 @@
 // src/components/PerformanceCard.tsx
 import { CARD, CARD_FONT } from "@/lib/exportTheme";
 import { cardAccentColor } from "@/lib/cardColor";
-import { ExportFooter } from "./ExportFooter";
+import { PixelBall } from "./Logo";
+import { SITE_URL, X_HANDLE } from "@/lib/site";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import type { PerformanceStat } from "@/lib/performanceLine";
+
+// A card-only mirror of ExportFooter (src/components/ExportFooter.tsx), not that component itself.
+// ExportFooter's X/Twitter glyph span uses `display: "inline-flex"`, which Satori (next/og's
+// ImageResponse, used by the card route) rejects outright ("Allowed values: flex | block | contents |
+// none | -webkit-box") — confirmed by running the route's test against the real renderer, not assumed.
+// ExportFooter itself is left untouched since every other downloadable card on the site depends on its
+// current, working, html-to-image-rendered (real-browser) form; this drops the icon and prints the
+// handle as plain text instead, which needs no flex context at all. See task-5-report.md.
+function PerformanceCardFooter({ context }: { context: string }) {
+  const domain = SITE_URL.replace(/^https?:\/\//, "");
+  const stamp = `${new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", hourCycle: "h23" })} UTC`;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "8px 16px",
+        marginTop: 20,
+        paddingTop: 16,
+        borderTop: `1px solid ${CARD.border}`,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+        <PixelBall size={20} fill={CARD.accent} live={CARD.loss} />
+        <span style={{ fontSize: 14, fontWeight: 800, color: CARD.text }}>SportsDB</span>
+        <span style={{ fontSize: 13, color: CARD.textFaint }}>{domain}</span>
+        <span style={{ fontSize: 13, color: CARD.textFaint }}>·</span>
+        <span style={{ fontSize: 13, color: CARD.textFaint }}>@{X_HANDLE}</span>
+      </div>
+      <div style={{ display: "flex", fontSize: 12, color: CARD.textFaint, whiteSpace: "nowrap" }}>
+        {context} · {stamp}
+      </div>
+    </div>
+  );
+}
 
 export interface PerformanceCardProps {
   league: "nba" | "nfl";
@@ -51,7 +90,7 @@ export function PerformanceCard({ league, playerName, position, jersey, teamAbbr
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: CARD.text }}>{playerName}</div>
-          <div style={{ fontSize: 18, color: CARD.textMuted, marginTop: 4 }}>
+          <div style={{ display: "flex", fontSize: 18, color: CARD.textMuted, marginTop: 4 }}>
             {[position, jersey ? `#${jersey}` : null].filter(Boolean).join(" · ")}
             {opponentAbbr ? ` vs ${opponentAbbr}` : ""}
           </div>
@@ -78,7 +117,7 @@ export function PerformanceCard({ league, playerName, position, jersey, teamAbbr
       </div>
 
       <div style={{ display: "flex", flex: 1 }} />
-      <ExportFooter context={`${LEAGUE_LABEL[league]} · Player card`} />
+      <PerformanceCardFooter context={`${LEAGUE_LABEL[league]} · Player card`} />
     </div>
   );
 }

@@ -241,11 +241,15 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 //     uses America/New_York of its own accord; cricket and F1 pass timeZone: "UTC" explicitly)
 //   - LocalTime is the one component that is meant to render in the visitor's zone, after hydration
 //   - ExportFooter stamps the moment the picture was made, not a game's date
+//   - PerformanceCard's own footer mirrors ExportFooter's stamp for the same reason (Satori/next-og
+//     rejects ExportFooter's own `display: inline-flex` glyph span, so the card route cannot use
+//     ExportFooter as-is — see task-5-report.md)
 //   - Footer prints the current year
 //   - gameDay.ts is where the zone is decided
 const ALLOWLIST = new Set([
   "src/components/LocalTime.tsx",
   "src/components/ExportFooter.tsx",
+  "src/components/PerformanceCard.tsx",
   "src/components/Footer.tsx",
   "src/lib/gameDay.ts",
 ]);
