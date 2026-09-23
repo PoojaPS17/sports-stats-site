@@ -28,6 +28,7 @@ function expireTime(): number {
 const DYNAMIC_ON_PURPOSE: Record<string, string> = {
   "[league]/games/[id]/page.tsx": "live match state; a cached render is up to 5 minutes old and its pre-state render ships no LiveRefresh timer",
   "[league]/games/[id]/opengraph-image.tsx": "draws the live score",
+  "[league]/games/[id]/players/[slug]/card/route.ts": "reads ?format from the request and sets its own cache-control per game (5 min fresh, a day once settled) rather than a static revalidate window",
   "[league]/scores/[date]/page.tsx": "today's scores are live",
   "cricket/matches/[id]/page.tsx": "live match state",
   "cricket/series/[id]/page.tsx": "live overlay decides which matches are in play",

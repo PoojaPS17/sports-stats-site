@@ -5,6 +5,12 @@ import { CARD, CARD_FONT } from "@/lib/exportTheme";
 
 type Busy = "share" | "download" | null;
 
+function cardAnalytics(imageUrl: string | undefined): { league: string; format: string } | null {
+  if (!imageUrl) return null;
+  const m = imageUrl.match(/^\/(\w+)\/games\/.+\/card\?format=(\w+)/);
+  return m ? { league: m[1], format: m[2] } : null;
+}
+
 const pill =
   "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60";
 
@@ -21,12 +27,17 @@ function Icon({ children }: { children: ReactNode }) {
 // responsive DOM - so labels never truncate and the picture looks the same wherever it
 // ends up. Share hands the PNG to the native share sheet where the browser supports
 // files (phones), copies the image to the clipboard on desktop, and saves it otherwise.
-export function ImageActions({ filename, card, width = 720, shareTitle }: { filename: string; card: ReactNode; width?: number; shareTitle: string }) {
+export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle }: { filename: string; card?: ReactNode; imageUrl?: string; width?: number; shareTitle: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [copied, setCopied] = useState(false);
 
   const render = async (): Promise<Blob> => {
+    if (imageUrl) {
+      const res = await fetch(imageUrl);
+      if (!res.ok) throw new Error("render failed");
+      return res.blob();
+    }
     // Loaded on the first click rather than shipped with every page that has a share button.
     const { toBlob } = await import("html-to-image");
     const blob = ref.current ? await toBlob(ref.current, { pixelRatio: 2, cacheBust: true, backgroundColor: CARD.bg }) : null;
@@ -48,6 +59,8 @@ export function ImageActions({ filename, card, width = 720, shareTitle }: { file
     setBusy("download");
     try {
       save(await render());
+      const analytics = cardAnalytics(imageUrl);
+      if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "download" });
     } catch {
       /* a blocked cross-origin asset can fail the canvas export; the page still works */
     } finally {
@@ -58,22 +71,29 @@ export function ImageActions({ filename, card, width = 720, shareTitle }: { file
   async function share() {
     if (busy) return;
     setBusy("share");
+    const analytics = cardAnalytics(imageUrl);
     try {
       const probe = new File([], `${filename}.png`, { type: "image/png" });
       if (navigator.canShare?.({ files: [probe] })) {
         const blob = await render();
         try {
           await navigator.share({ files: [new File([blob], `${filename}.png`, { type: "image/png" })], title: shareTitle });
+          if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "share" });
         } catch (e) {
-          if ((e as DOMException).name !== "AbortError") save(blob);
+          if ((e as DOMException).name !== "AbortError") {
+            save(blob);
+            if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "download" });
+          }
         }
       } else if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
         // Passing the pending render keeps the click's permission alive in Safari.
         await navigator.clipboard.write([new ClipboardItem({ "image/png": render() })]);
         setCopied(true);
+        if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "copy" });
         window.setTimeout(() => setCopied(false), 2500);
       } else {
         save(await render());
+        if (analytics) window.gtag?.("event", "share_card", { ...analytics, action: "download" });
       }
     } catch {
       /* clipboard or share refused: nothing was sent, and Download image is right beside it */
@@ -108,11 +128,13 @@ export function ImageActions({ filename, card, width = 720, shareTitle }: { file
         </button>
         {copied && <span className="text-xs text-[var(--text-muted)]">Paste it into X, WhatsApp or any chat.</span>}
       </div>
-      <div style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }} aria-hidden="true">
-        <div ref={ref} style={{ width, boxSizing: "border-box", background: CARD.bg, padding: 20, fontFamily: CARD_FONT }}>
-          {card}
+      {card && (
+        <div style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }} aria-hidden="true">
+          <div ref={ref} style={{ width, boxSizing: "border-box", background: CARD.bg, padding: 20, fontFamily: CARD_FONT }}>
+            {card}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

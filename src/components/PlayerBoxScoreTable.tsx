@@ -2,13 +2,16 @@ import Link from "next/link";
 import type { League } from "@/lib/queries";
 import type { TeamPlayerBox } from "@/lib/matchDetail";
 import { formatStat, statTitle } from "@/lib/statGlossary";
+import { ImageActions } from "./ImageActions";
 
 export function PlayerBoxScoreTable({
   league,
+  gameId,
   team,
   playerSlugs,
 }: {
   league: League;
+  gameId: string;
   team: TeamPlayerBox;
   playerSlugs: Map<string, string>;
 }) {
@@ -42,13 +45,18 @@ export function PlayerBoxScoreTable({
                 return (
                 <tr key={row.athleteId} className="border-t border-[var(--border)]">
                   <td className="py-2 pl-4 font-medium">
-                    {slug ? (
-                      <Link href={`/${league}/players/${slug}`} className="hover:underline">
-                        {row.name}
-                      </Link>
-                    ) : (
-                      row.name
-                    )}
+                    <div className="flex items-center gap-2">
+                      {slug ? (
+                        <Link href={`/${league}/players/${slug}`} className="hover:underline">
+                          {row.name}
+                        </Link>
+                      ) : (
+                        row.name
+                      )}
+                      {slug && (league === "nba" || league === "nfl") && (
+                        <ImageActions filename={`${gameId}-${slug}-card-${league}`} imageUrl={`/${league}/games/${gameId}/players/${slug}/card?format=og`} shareTitle={`${row.name} performance card`} />
+                      )}
+                    </div>
                   </td>
                   {cat.labels.map((label, i) => (
                     <td key={label} className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
