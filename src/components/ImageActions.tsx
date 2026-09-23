@@ -21,12 +21,17 @@ function Icon({ children }: { children: ReactNode }) {
 // responsive DOM - so labels never truncate and the picture looks the same wherever it
 // ends up. Share hands the PNG to the native share sheet where the browser supports
 // files (phones), copies the image to the clipboard on desktop, and saves it otherwise.
-export function ImageActions({ filename, card, width = 720, shareTitle }: { filename: string; card: ReactNode; width?: number; shareTitle: string }) {
+export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle }: { filename: string; card?: ReactNode; imageUrl?: string; width?: number; shareTitle: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [copied, setCopied] = useState(false);
 
   const render = async (): Promise<Blob> => {
+    if (imageUrl) {
+      const res = await fetch(imageUrl);
+      if (!res.ok) throw new Error("render failed");
+      return res.blob();
+    }
     // Loaded on the first click rather than shipped with every page that has a share button.
     const { toBlob } = await import("html-to-image");
     const blob = ref.current ? await toBlob(ref.current, { pixelRatio: 2, cacheBust: true, backgroundColor: CARD.bg }) : null;
@@ -108,11 +113,13 @@ export function ImageActions({ filename, card, width = 720, shareTitle }: { file
         </button>
         {copied && <span className="text-xs text-[var(--text-muted)]">Paste it into X, WhatsApp or any chat.</span>}
       </div>
-      <div style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }} aria-hidden="true">
-        <div ref={ref} style={{ width, boxSizing: "border-box", background: CARD.bg, padding: 20, fontFamily: CARD_FONT }}>
-          {card}
+      {card && (
+        <div style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }}>
+          <div ref={ref} style={{ width, background: CARD.bg, padding: 20, fontFamily: CARD_FONT }}>
+            {card}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
