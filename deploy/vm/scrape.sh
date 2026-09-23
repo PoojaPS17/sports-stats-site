@@ -90,6 +90,7 @@ job_hourly() {
   run fetch:injuries
   run fetch:f1-scores
   run fetch:f1-standings
+  run fetch:asian-games-medals
   run check:stale
 }
 

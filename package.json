@@ -45,6 +45,8 @@
     "fetch:f1-standings": "tsx scripts/fetch-f1-standings.ts",
     "backfill:f1-events": "tsx scripts/backfill-f1-events.ts",
     "backfill:f1-standings": "tsx scripts/backfill-f1-standings.ts",
+    "fetch:asian-games-medals": "tsx scripts/fetch-asian-games-medals.ts",
+    "backfill:asian-games-medals": "tsx scripts/backfill-asian-games-medals.ts",
     "fetch:trending-wikipedia": "tsx scripts/fetch-trending-wikipedia.ts",
     "fetch:trending-appstore": "tsx scripts/fetch-trending-appstore.ts",
     "audit:freshness": "tsx scripts/audit-freshness.ts",

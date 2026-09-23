@@ -5,6 +5,7 @@ export const MAX_AGE_MINUTES: Record<string, number> = {
   "fetch-injuries": 120,
   "fetch-f1-scores": 120,
   "fetch-f1-standings": 120,
+  "fetch-asian-games-medals": 180,
   // A tick can legitimately wait behind the daily job's lock for ~100 minutes.
   "scrape-tick": 150,
 };
