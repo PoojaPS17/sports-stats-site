@@ -314,7 +314,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         <section className="flex flex-col gap-4">
           <SectionHeader tools={<ImageActions filename={`${id}-box-score-${league}`} width={900} shareTitle={`${matchName} box score`} card={<PlayerBoxScoreExportCard league={league} game={game} playerBox={playerBox} />} />}>Player Stats</SectionHeader>
           {playerBox.map((team) => (
-            <PlayerBoxScoreTable key={team.teamId} league={league} team={team} playerSlugs={playerSlugs} />
+            <PlayerBoxScoreTable key={team.teamId} league={league} gameId={id} team={team} playerSlugs={playerSlugs} />
           ))}
         </section>
       )}
