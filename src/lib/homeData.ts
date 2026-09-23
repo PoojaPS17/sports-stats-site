@@ -44,7 +44,12 @@ const readFixtures = unstable_cache(
   async () => {
     const [upcoming, cricketUpcoming, featured, sections] = await Promise.all([
       getUpcomingGames(6, 2),
-      getUpcomingCricketMatches(16, 7, true),
+      // A busy week (multiple concurrent bilateral tours plus a tournament like the
+      // Asian Games) regularly schedules 30+ featured internationals in 7 days; a
+      // small pool ordered by date alone fills up with whatever starts soonest and
+      // cuts the rest before the importance ranking below ever runs on them. 60 gives
+      // that ranking a pool wide enough to actually choose from.
+      getUpcomingCricketMatches(60, 7, true),
       Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3))).then((x) => x.flat()),
       Promise.all(SECTION_LEAGUES.map(async (league) => ({ league, games: (await getRecentAndUpcoming(league, 2, 5)).slice(0, 8) }))),
     ]);
@@ -80,10 +85,19 @@ export const importantCricket = isFeaturedCricket;
 
 const FULL_MEMBERS = /^(India|Australia|England|Pakistan|South Africa|New Zealand|Sri Lanka|West Indies|Bangladesh|Afghanistan|Zimbabwe|Ireland)( Women)?$/;
 
-// Full-member internationals before associate fixtures; the featured competitions
-// (IPL, World Cups, the big franchise leagues) rank with them.
-function cricketWeight(m: CricketSeriesMatch): number {
-  if (m.scorecard_league || isFeaturedSeriesId(m.series_espn_id)) return 0;
+// A multi-sport games' cricket competition (Asian Games, Commonwealth Games, an
+// Olympics) is headline news even when the fixture on a given day is between two
+// associate nations — unlike an ordinary bilateral tour, where an associate-only
+// match really is the least interesting thing in the pool. Matched on the series
+// name, not a stored edition id, so the next games (Asian Games 2030, etc.) rank
+// the same way with no code change.
+const MULTI_SPORT_GAMES = /\b(asian games|commonwealth games|olympic)/i;
+
+// Full-member internationals, featured competitions (IPL, World Cups, the big
+// franchise leagues) and multi-sport games cricket before ordinary associate
+// fixtures.
+export function cricketWeight(m: CricketSeriesMatch): number {
+  if (m.scorecard_league || isFeaturedSeriesId(m.series_espn_id) || MULTI_SPORT_GAMES.test(m.series_name)) return 0;
   const full = [m.home, m.away].filter((s) => s && FULL_MEMBERS.test(s.name)).length;
   return 2 - full;
 }
