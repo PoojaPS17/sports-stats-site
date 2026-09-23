@@ -40,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "F1", href: "/f1" },
+  { label: "Asian Games", href: "/asian-games" },
   { label: "Top Games", href: "/top-games" },
 ];
 
