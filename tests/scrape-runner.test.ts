@@ -128,14 +128,20 @@ test("hourly: injuries, F1 scores and standings, then the stale check last", () 
   assert.equal(status, 0);
   assert.deepEqual(
     calls.map((c) => c.split(" | ")[0]),
-    ["npm run --silent fetch:injuries", "npm run --silent fetch:f1-scores", "npm run --silent fetch:f1-standings", "npm run --silent check:stale"]
+    [
+      "npm run --silent fetch:injuries",
+      "npm run --silent fetch:f1-scores",
+      "npm run --silent fetch:f1-standings",
+      "npm run --silent fetch:asian-games-medals",
+      "npm run --silent check:stale",
+    ]
   );
 });
 
 test("a failing step does not stop later steps, but the job exits 1", () => {
   const { status, calls } = run("hourly", { STUB_FAIL: "fetch:injuries" });
   assert.equal(status, 1);
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 5);
 });
 
 test("unknown job exits 2", () => {
