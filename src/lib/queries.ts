@@ -183,11 +183,19 @@ export async function getLatestResults(league: League, limit = 12): Promise<Game
   return rows;
 }
 
+// The homepage hero's candidate pool: soonest upcoming/live game first, then most recent
+// completed game — per league, before the cross-league pool is truncated by pickSpotlight
+// (SpotlightCard.tsx). Completed games must sort by recency, not score margin: an earlier
+// blowout ranking ahead of a closer, more recent result would let the blowout win the
+// per-league LIMIT and get stuck as the "latest result" until something beats it on both
+// fronts.
 export async function getFeaturedGames(league: League, limit = 3): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
      where g.league = $1 and g.date > now() - interval '3 days' and g.date < now() + interval '10 days'
-     order by g.completed desc, abs(coalesce(g.home_score,0) - coalesce(g.away_score,0)) desc, g.date asc
+     order by g.completed desc,
+       case when g.completed then g.date end desc,
+       case when not g.completed then g.date end asc
      limit $2`,
     [league, limit]
   );
