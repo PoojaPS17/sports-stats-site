@@ -5,10 +5,16 @@
 import { pool } from "./lib/db";
 import { fetchMedalTable, upsertMedalTally } from "./lib/asianGamesMedals";
 import { recordRun } from "./lib/heartbeat";
-import { CURRENT_EDITION_YEAR } from "../src/lib/asianGamesEditions";
+import { CURRENT_EDITION_YEAR, currentEdition, isGamesOpen } from "../src/lib/asianGamesEditions";
 
 async function main() {
   try {
+    if (!isGamesOpen(currentEdition())) {
+      console.log(`[fetch-asian-games-medals] ${CURRENT_EDITION_YEAR}: Games closed, skipping fetch`);
+      await recordRun(pool, "fetch-asian-games-medals");
+      await pool.end();
+      return;
+    }
     const { rows, sourceUrl } = await fetchMedalTable(CURRENT_EDITION_YEAR);
     const count = await upsertMedalTally(CURRENT_EDITION_YEAR, rows, sourceUrl);
     console.log(`[fetch-asian-games-medals] ${CURRENT_EDITION_YEAR}: upserted ${count} rows`);

@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { parseMedalTableHtml } from "../scripts/lib/asianGamesMedals";
 
 const fixture = readFileSync(resolve(process.cwd(), "tests/fixtures/asian-games-medal-table.html"), "utf8");
+const legacyFixture = readFileSync(resolve(process.cwd(), "tests/fixtures/asian-games-medal-table-legacy.html"), "utf8");
 
 test("parses every real nation row, in source order", () => {
   const rows = parseMedalTableHtml(fixture);
@@ -39,6 +40,15 @@ test("drops the sortbottom Total row", () => {
   const rows = parseMedalTableHtml(fixture);
   assert.equal(rows.some((r) => /total/i.test(r.nation_name)), false);
   assert.equal(rows.length, 4);
+});
+
+test("strips a trailing NOC code so a legacy-edition table's nation_slug matches a modern-edition table's for the same nation", () => {
+  const modernRows = parseMedalTableHtml(fixture);
+  const legacyRows = parseMedalTableHtml(legacyFixture);
+  const japanModern = modernRows.find((r) => r.nation_slug === "japan")!;
+  const japanLegacy = legacyRows.find((r) => r.nation_name === "Japan")!;
+  assert.equal(japanLegacy.nation_slug, japanModern.nation_slug);
+  assert.equal(japanLegacy.nation_name, "Japan");
 });
 
 test("returns an empty array for HTML with no gold/silver/bronze table", () => {

@@ -11,7 +11,7 @@ import { wikipediaMedalTableTitle } from "../../src/lib/asianGamesEditions";
 
 const USER_AGENT = "SportsDB/1.0 (https://github.com/PoojaPS17/sports-stats-site)";
 
-export interface MedalTallyRow {
+export interface ScrapedMedalRow {
   nation_slug: string;
   nation_name: string;
   gold: number;
@@ -73,6 +73,7 @@ function walkRows(rows: RawCell[][], columnCount: number): string[][] {
 function cleanNationName(raw: string): string {
   return raw
     .replace(/\[.*?\]/g, "") // footnote markers, e.g. "China[a]"
+    .replace(/\s*\([A-Z]{3}\)\s*$/, "") // trailing NOC code some editions' tables render, e.g. "Japan (JPN)" — strip so nation_slug/nation_name stay stable across editions that do and don't include it
     .replace(/[*†‡]+\s*$/, "") // host-nation asterisk / footnote symbols
     .replace(/\s+/g, " ")
     .trim();
@@ -90,7 +91,7 @@ function parseCount(raw: string): number {
  * tables above it or which section the medal table sits in. Returns [] when no
  * such table is found.
  */
-export function parseMedalTableHtml(html: string): MedalTallyRow[] {
+export function parseMedalTableHtml(html: string): ScrapedMedalRow[] {
   const $ = cheerio.load(html);
   const tables = $("table.wikitable").toArray();
 
@@ -114,10 +115,10 @@ export function parseMedalTableHtml(html: string): MedalTallyRow[] {
       .map((tr) => readCells($, tr));
     const aligned = walkRows(bodyRows, headers.length);
 
-    const out: MedalTallyRow[] = [];
+    const out: ScrapedMedalRow[] = [];
     for (const line of aligned) {
       const nationName = cleanNationName(line[nationCol] ?? "");
-      if (!nationName || /^totals?$/i.test(nationName)) continue;
+      if (!nationName || /^totals?\b/i.test(nationName)) continue;
       out.push({
         nation_slug: slugify(nationName),
         nation_name: nationName,
@@ -147,7 +148,7 @@ async function fetchWikipediaHtml(title: string): Promise<string | null> {
  * header-content table search works on either page, so no section-heading
  * logic is needed for the fallback.
  */
-export async function fetchMedalTable(editionYear: number): Promise<{ rows: MedalTallyRow[]; sourceUrl: string; sourceTitle: string }> {
+export async function fetchMedalTable(editionYear: number): Promise<{ rows: ScrapedMedalRow[]; sourceUrl: string; sourceTitle: string }> {
   const standaloneTitle = wikipediaMedalTableTitle(editionYear);
   let html = await fetchWikipediaHtml(standaloneTitle);
   let title = standaloneTitle;
@@ -168,7 +169,7 @@ export async function fetchMedalTable(editionYear: number): Promise<{ rows: Meda
  * longer has (a rare source correction), so re-scrapes never accumulate stale
  * nations.
  */
-export async function upsertMedalTally(editionYear: number, rows: MedalTallyRow[], sourceUrl: string): Promise<number> {
+export async function upsertMedalTally(editionYear: number, rows: ScrapedMedalRow[], sourceUrl: string): Promise<number> {
   const sorted = sortMedalTally(rows);
   const ranks = medalRanks(sorted);
   for (let i = 0; i < sorted.length; i++) {

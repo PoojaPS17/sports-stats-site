@@ -19,7 +19,10 @@ export default async function AsianGamesPage() {
   const edition = currentEdition();
   const open = isGamesOpen(edition);
 
-  const [liveAll, upcomingAll] = await Promise.all([getLiveCricketMatches(true), getUpcomingCricketMatches(30, 20, true)]);
+  const [liveAll, upcomingAll] = await Promise.all([
+    getLiveCricketMatches(false, "asian games"),
+    getUpcomingCricketMatches(100, 20, false, "asian games"),
+  ]);
   const liveCricket = liveAll.filter(isAsianGamesCricket);
   const liveIds = new Set(liveCricket.map((m) => m.espn_id));
   const upcomingCricket = upcomingAll.filter((m) => isAsianGamesCricket(m) && !liveIds.has(m.espn_id));
