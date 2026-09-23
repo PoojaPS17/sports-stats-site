@@ -594,3 +594,21 @@ create table if not exists scrape_runs (
   last_ok_at timestamptz not null default now(),
   last_changed_at timestamptz
 );
+
+-- Medal tally per Asian Games edition, scraped from Wikipedia (see
+-- scripts/lib/asianGamesMedals.ts). `rank` is the site's own tie-aware
+-- computation (src/lib/medalTallyOrder.ts), not read from Wikipedia's markup.
+-- Edition metadata (host city, dates) lives in src/lib/asianGamesEditions.ts,
+-- not here — a new edition is a rare, curated code change, not scraped data.
+create table if not exists medal_tally (
+  edition_year integer not null,
+  nation_slug text not null,
+  nation_name text not null,
+  gold integer not null default 0,
+  silver integer not null default 0,
+  bronze integer not null default 0,
+  rank integer,
+  source_url text,
+  updated_at timestamptz not null default now(),
+  primary key (edition_year, nation_slug)
+);

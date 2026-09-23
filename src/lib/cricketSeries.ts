@@ -193,9 +193,13 @@ export async function getCricketSeriesMatch(espnId: string): Promise<CricketSeri
   return rows[0] ?? null;
 }
 
-/** Matches in play right now: every series, or only headline cricket. */
-export async function getLiveCricketMatches(featuredOnly = false): Promise<CricketSeriesMatch[]> {
-  const { rows } = await pool.query(`${MATCH_SELECT} where m.status_state = 'in' ${featuredOnly ? `and ${featuredMatchSql("m")}` : ""} order by m.date`);
+/** Matches in play right now: every series, or only headline cricket; optionally narrowed to series whose name matches `seriesNameLike`. */
+export async function getLiveCricketMatches(featuredOnly = false, seriesNameLike?: string): Promise<CricketSeriesMatch[]> {
+  const params = seriesNameLike ? [`%${seriesNameLike}%`] : [];
+  const { rows } = await pool.query(
+    `${MATCH_SELECT} where m.status_state = 'in' ${featuredOnly ? `and ${featuredMatchSql("m")}` : ""} ${seriesNameLike ? "and s.name ilike $1" : ""} order by m.date`,
+    params
+  );
   return rows;
 }
 
@@ -205,8 +209,10 @@ export async function getCricketMatchesOnDay(day: string): Promise<CricketSeries
   return rows;
 }
 
-/** The next fixtures, nearest first; every series or only headline cricket, youth and A-team cricket last. */
-export async function getUpcomingCricketMatches(limit = 6, withinDays = 7, featuredOnly = false): Promise<CricketSeriesMatch[]> {
+/** The next fixtures, nearest first; every series or only headline cricket, youth and A-team cricket last; optionally narrowed to series whose name matches `seriesNameLike`. */
+export async function getUpcomingCricketMatches(limit = 6, withinDays = 7, featuredOnly = false, seriesNameLike?: string): Promise<CricketSeriesMatch[]> {
+  const params: (string | number)[] = [limit, withinDays, CALLED_OFF.source];
+  if (seriesNameLike) params.push(`%${seriesNameLike}%`);
   const { rows } = await pool.query(
     `${MATCH_SELECT}
      where coalesce(m.status_state, 'pre') = 'pre' and m.date >= now() - interval '1 hour' and m.date <= now() + ($2 || ' days')::interval
@@ -215,8 +221,9 @@ export async function getUpcomingCricketMatches(limit = 6, withinDays = 7, featu
        -- a postponed or cancelled match is not a fixture to list
        and coalesce(m.status_summary, '') !~* $3
        ${featuredOnly ? `and ${featuredMatchSql("m")}` : ""}
+       ${seriesNameLike ? "and s.name ilike $4" : ""}
      order by s.kind = 'other', m.date limit $1`,
-    [limit, withinDays, CALLED_OFF.source]
+    params
   );
   return rows;
 }

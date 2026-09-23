@@ -45,6 +45,8 @@
     "fetch:f1-standings": "tsx scripts/fetch-f1-standings.ts",
     "backfill:f1-events": "tsx scripts/backfill-f1-events.ts",
     "backfill:f1-standings": "tsx scripts/backfill-f1-standings.ts",
+    "fetch:asian-games-medals": "tsx scripts/fetch-asian-games-medals.ts",
+    "backfill:asian-games-medals": "tsx scripts/backfill-asian-games-medals.ts",
     "fetch:trending-wikipedia": "tsx scripts/fetch-trending-wikipedia.ts",
     "fetch:trending-appstore": "tsx scripts/fetch-trending-appstore.ts",
     "audit:freshness": "tsx scripts/audit-freshness.ts",
@@ -54,6 +56,7 @@
     "fetch:all": "npm run fetch:scores && npm run fetch:standings && npm run fetch:player-stats && npm run fetch:news"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
     "html-to-image": "^1.11.11",
     "next": "16.3.5",

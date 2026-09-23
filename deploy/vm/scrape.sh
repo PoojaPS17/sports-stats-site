@@ -90,6 +90,9 @@ job_hourly() {
   run fetch:injuries
   run fetch:f1-scores
   run fetch:f1-standings
+  # This job only covers the CURRENT edition. After first deploying this feature, run
+  # `npm run backfill:asian-games-medals` once, manually, to seed every past edition (1951-2025).
+  run fetch:asian-games-medals
   run check:stale
 }
 
