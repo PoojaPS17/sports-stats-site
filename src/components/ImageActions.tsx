@@ -114,8 +114,8 @@ export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle
         {copied && <span className="text-xs text-[var(--text-muted)]">Paste it into X, WhatsApp or any chat.</span>}
       </div>
       {card && (
-        <div style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }}>
-          <div ref={ref} style={{ width, background: CARD.bg, padding: 20, fontFamily: CARD_FONT }}>
+        <div style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }} aria-hidden="true">
+          <div ref={ref} style={{ width, boxSizing: "border-box", background: CARD.bg, padding: 20, fontFamily: CARD_FONT }}>
             {card}
           </div>
         </div>
