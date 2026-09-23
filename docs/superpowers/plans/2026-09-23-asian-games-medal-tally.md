@@ -463,6 +463,7 @@ import type { Element } from "cheerio";
 import { pool } from "./db";
 import { slugify } from "./espn";
 import { sortMedalTally, medalRanks } from "../../src/lib/medalTallyOrder";
+import { wikipediaMedalTableTitle } from "../../src/lib/asianGamesEditions";
 
 const USER_AGENT = "SportsDB/1.0 (https://github.com/PoojaPS17/sports-stats-site)";
 
@@ -602,7 +603,7 @@ async function fetchWikipediaHtml(title: string): Promise<string | null> {
  * logic is needed for the fallback.
  */
 export async function fetchMedalTable(editionYear: number): Promise<{ rows: MedalTallyRow[]; sourceUrl: string; sourceTitle: string }> {
-  const standaloneTitle = `${editionYear} Asian Games medal table`;
+  const standaloneTitle = wikipediaMedalTableTitle(editionYear);
   let html = await fetchWikipediaHtml(standaloneTitle);
   let title = standaloneTitle;
   if (html === null) {
