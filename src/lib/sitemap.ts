@@ -14,6 +14,7 @@ import { supportsProjections } from "./simulator";
 import { playerSport } from "./playerProfile";
 import { noStatLineGameSql } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
+import { gameDayIso } from "./gameDay";
 
 type Entry = MetadataRoute.Sitemap[number];
 
@@ -36,6 +37,26 @@ const entry = (path: string, changeFrequency: Entry["changeFrequency"], priority
   priority,
   lastModified: lastModified ? new Date(lastModified) : undefined,
 });
+
+// The last 30 days of a league's scores-by-date pages (plus a few days ahead for scheduled
+// games), one entry per distinct calendar day the league actually played on — mirrors the
+// tennis `/tennis/scores/${day}` entries above, which this page type was missing. Days are
+// computed with gameDayIso so a late-night NFL/NBA game lands on the same day its own page
+// uses, not the raw UTC date.
+async function scoresByDate(league: League): Promise<Entry[]> {
+  const { rows } = await pool.query(
+    `select date, local_date, updated_at from games
+     where league = $1 and date >= now() - interval '30 days' and date <= now() + interval '3 days'`,
+    [league]
+  );
+  const days = new Map<string, Date | null>();
+  for (const { date, local_date, updated_at } of rows) {
+    const iso = gameDayIso(date, league, local_date);
+    const prev = days.get(iso);
+    if (!days.has(iso) || (updated_at && (!prev || updated_at > prev))) days.set(iso, updated_at ?? prev ?? null);
+  }
+  return [...days.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).map(([day, updated]) => entry(`/${league}/scores/${day}`, "daily", 0.4, updated));
+}
 
 async function core(): Promise<Entry[]> {
   const out: Entry[] = [
@@ -74,7 +95,13 @@ async function core(): Promise<Entry[]> {
   const { rows: tennisDays } = await pool.query(`select distinct to_char(day, 'YYYY-MM-DD') as day from tennis_matches where day >= current_date - 60 order by 1 desc`);
   for (const { day } of tennisDays) out.push(entry(`/tennis/scores/${day}`, "daily", 0.5));
   for (const league of ALL_LEAGUES) {
-    out.push(entry(`/${league}`, "hourly", 0.9), entry(`/${league}/teams`, "weekly", 0.7), entry(`/${league}/leaders`, "daily", 0.7));
+    out.push(
+      entry(`/${league}`, "hourly", 0.9),
+      entry(`/${league}/teams`, "weekly", 0.7),
+      entry(`/${league}/players`, "weekly", 0.6),
+      entry(`/${league}/leaders`, "daily", 0.7)
+    );
+    out.push(...(await scoresByDate(league)));
     if (hasStandings(league)) out.push(entry(`/${league}/standings`, "daily", 0.9));
     if (hasNewsFeed(league)) out.push(entry(`/${league}/news`, "hourly", 0.5));
     if (supportsScoreAnalytics(league)) {

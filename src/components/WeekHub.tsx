@@ -341,7 +341,7 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
       <PageHeader title={`${LEAGUE_LABEL[league]} ${noun}s`} subtitle={season === null ? undefined : `${formatSeasonLabel(league, season)} season, round by round`}>
         {seasons.length > 1 && (
           <div className="flex flex-wrap gap-1">
-            {seasons.slice(0, 6).map((s) => (
+            {seasons.map((s) => (
               <Link key={s} href={weekIndexPath(league, s === seasons[0] ? null : s)} className={`nav-pill ${s === season ? "nav-pill-active" : ""}`}>
                 {formatSeasonLabel(league, s)}
               </Link>

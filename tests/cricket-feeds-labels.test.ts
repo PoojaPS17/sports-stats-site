@@ -68,7 +68,9 @@ test("the scores image is filed by the first game's local day, across a New Year
 
 test("the league page names its scores images through scoresImageDay and no longer reads the UTC day itself", () => {
   const page = src("src/app/[league]/page.tsx");
-  assert.equal((page.match(/scoresImageDay\(league, dayGames\[0\]\)/g) ?? []).length, 2);
+  // Computed once per day group and reused for the image filename, the export card subtitle, and
+  // the "Full day" link to /[league]/scores/[date] — not recomputed at each call site.
+  assert.equal((page.match(/scoresImageDay\(league, dayGames\[0\]\)/g) ?? []).length, 1);
   assert.doesNotMatch(page, /gameDayIso\(/);
 });
 

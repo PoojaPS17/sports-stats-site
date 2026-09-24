@@ -92,9 +92,9 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
   const pctA = (h2h.winsA / total) * 100;
   const pctD = (h2h.draws / total) * 100;
   const { teamA, teamB } = h2h;
-  const [rivalsA, rivalsB] = await Promise.all([getMostFacedOpponents(league, teamA.espn_id, 7), getMostFacedOpponents(league, teamB.espn_id, 7)]);
+  const [rivalsA, rivalsB] = await Promise.all([getMostFacedOpponents(league, teamA.espn_id, 12), getMostFacedOpponents(league, teamB.espn_id, 12)]);
   const rivalLinks = (team: typeof teamA, other: typeof teamA, rivals: typeof rivalsA) =>
-    rivals.filter((r) => r.espn_id !== other.espn_id).slice(0, 6).map((r) => ({ href: h2hPath(league, team.slug, r.slug), label: `${teamDisplayName(team.name)} vs ${teamDisplayName(r.name)}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name }));
+    rivals.filter((r) => r.espn_id !== other.espn_id).slice(0, 10).map((r) => ({ href: h2hPath(league, team.slug, r.slug), label: `${teamDisplayName(team.name)} vs ${teamDisplayName(r.name)}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name }));
 
   const streakText =
     h2h.streak && h2h.streak.length > 1
