@@ -45,7 +45,7 @@ const entry = (path: string, changeFrequency: Entry["changeFrequency"], priority
 // uses, not the raw UTC date.
 async function scoresByDate(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
-    `select date, local_date, updated_at from games
+    `select date, local_date::text as local_date, updated_at from games
      where league = $1 and date >= now() - interval '30 days' and date <= now() + interval '3 days'`,
     [league]
   );
