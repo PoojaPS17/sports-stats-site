@@ -13,6 +13,7 @@ export function LeagueSubNav({ league }: { league: League }) {
     ...(hasStandings(league) ? [{ label: "Standings", href: `/${league}/standings` }] : []),
     ...(supportsProjections(league) ? [{ label: "Projections", href: `/${league}/projections` }] : []),
     { label: "Teams", href: `/${league}/teams` },
+    { label: "Players", href: `/${league}/players` },
     { label: "Leaders", href: `/${league}/leaders` },
     // Score-based analytics need plain integer scores, which cricket's innings totals
     // aren't; cricket gets the Centuries record list instead.

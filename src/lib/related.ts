@@ -156,7 +156,7 @@ export interface OpponentCount {
  * (countedMeetingSql is the SQL twin of isCountedMeeting, so preseason and other excluded games are left out) and a
  * pair with no counted meeting is not listed: its page says 0 meetings and is noindex, so it must not be offered.
  */
-export async function getMostFacedOpponents(league: League, teamEspnId: string, limit = 8): Promise<OpponentCount[]> {
+export async function getMostFacedOpponents(league: League, teamEspnId: string, limit = 12): Promise<OpponentCount[]> {
   const { rows } = await pool.query(
     `select t.espn_id, t.slug, t.name, t.logo_url, count(*)::int as games
      from games g

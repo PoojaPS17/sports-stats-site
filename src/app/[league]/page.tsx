@@ -107,27 +107,31 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
         </div>
       )}
 
-      {[...groups.entries()].map(([day, dayGames]) => (
-        <section key={day}>
-          <SectionHeader
-            tools={
-              <ImageActions
-                filename={`${league}-scores-${scoresImageDay(league, dayGames[0]).iso}`}
-                shareTitle={`${LEAGUE_LABEL[league]} scores, ${day}`}
-                width={scoreboardExportWidth(league)}
-                card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${scoresImageDay(league, dayGames[0]).year}`} games={dayGames} />}
-              />
-            }
-          >
-            {day}
-          </SectionHeader>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {dayGames.map((g) => (
-              <GameCard key={g.espn_id} league={league} game={g} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {[...groups.entries()].map(([day, dayGames]) => {
+        const { iso, year } = scoresImageDay(league, dayGames[0]);
+        return (
+          <section key={day}>
+            <SectionHeader
+              action={{ label: "Full day →", href: `/${league}/scores/${iso}` }}
+              tools={
+                <ImageActions
+                  filename={`${league}-scores-${iso}`}
+                  shareTitle={`${LEAGUE_LABEL[league]} scores, ${day}`}
+                  width={scoreboardExportWidth(league)}
+                  card={<ScoreboardExportCard league={league} title={`${LEAGUE_LABEL[league]} scores`} subtitle={`${day}, ${year}`} games={dayGames} />}
+                />
+              }
+            >
+              {day}
+            </SectionHeader>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {dayGames.map((g) => (
+                <GameCard key={g.espn_id} league={league} game={g} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
 
       {teams.length > 0 && (
         <section>
