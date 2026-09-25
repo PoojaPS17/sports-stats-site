@@ -15,6 +15,7 @@ import { playerSport } from "./playerProfile";
 import { noStatLineGameSql } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { gameDayIso } from "./gameDay";
+import { listArticles } from "./beyondTheScoreline";
 
 type Entry = MetadataRoute.Sitemap[number];
 
@@ -25,6 +26,7 @@ export const SITEMAP_IDS: string[] = [
   "core",
   "f1",
   "tennis",
+  "beyond-the-scoreline",
   ...SEASON_PAGE_LEAGUES.map((l) => `pseasons-${l}`),
   ...ALL_LEAGUES.flatMap((l) => [`teams-${l}`, `players-${l}`, `games-${l}`]),
   ...LEAGUES.filter((l) => supportsMatchweeks(l)).map((l) => `weeks-${l}`),
@@ -198,6 +200,13 @@ async function tennisPlayers(): Promise<Entry[]> {
   return rows.map(({ tour, slug }) => entry(`/tennis/${tour}/players/${slug}`, "weekly", 0.5));
 }
 
+function beyondTheScoreline(): Entry[] {
+  return [
+    entry("/beyond-the-scoreline", "weekly", 0.6),
+    ...listArticles().map((a) => entry(`/beyond-the-scoreline/${a.slug}`, "monthly", 0.5, a.publishedAt)),
+  ];
+}
+
 // Only players with something on the page: a game on record or a season stat line.
 // Roster-only players (no figures yet) render with noindex, so they stay out here too.
 async function players(league: League): Promise<Entry[]> {
@@ -267,6 +276,7 @@ export async function sitemapEntries(id: string): Promise<Entry[]> {
   if (id === "core") return core();
   if (id === "f1") return f1();
   if (id === "tennis") return tennisPlayers();
+  if (id === "beyond-the-scoreline") return beyondTheScoreline();
   const [kind, league] = id.split("-") as [string, League];
   if (!ALL_LEAGUES.includes(league)) return [];
   if (kind === "teams") return teams(league);
