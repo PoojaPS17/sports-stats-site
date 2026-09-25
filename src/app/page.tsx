@@ -9,7 +9,9 @@ import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
 import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
 import { MyFollows } from "@/components/MyFollows";
+import { ArticleTeaserCard } from "@/components/ArticleTeaserCard";
 import { getHomeData, type HomeSection } from "@/lib/homeData";
+import { listArticles } from "@/lib/beyondTheScoreline";
 import { absoluteUrl } from "@/lib/site";
 
 // Title, description and share card come from the root layout. The canonical lives here and not
@@ -67,6 +69,7 @@ function LeagueBlock({ section }: { section: HomeSection }) {
 export default async function HomePage() {
   const home = await getHomeData();
   const spotlight = pickSpotlight(home.featured);
+  const beyondTheScorelineArticles = listArticles().slice(0, 3);
 
   // League blocks most active first; the cricket block ranks by its own live count
   // (a full day of internationals outranks a league with nothing on). Leagues
@@ -153,6 +156,17 @@ export default async function HomePage() {
             <div className="flex flex-col gap-2">
               {home.news.map((a) => (
                 <NewsCard key={a.article_id} article={a} compact />
+              ))}
+            </div>
+          </aside>
+        )}
+
+        {beyondTheScorelineArticles.length > 0 && (
+          <aside className="lg:col-span-1">
+            <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
+            <div className="flex flex-col gap-2">
+              {beyondTheScorelineArticles.map((a) => (
+                <ArticleTeaserCard key={a.slug} article={a} />
               ))}
             </div>
           </aside>
