@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { assertUniqueSlugs, getArticle, listArticles, sortByPublishedDesc } from "../src/lib/beyondTheScoreline";
 
-test("listArticles returns [] when nothing is registered yet, and never throws", () => {
-  assert.deepEqual(listArticles(), []);
+test("listArticles returns at least the seed article, and never throws", () => {
+  assert.ok(listArticles().length >= 1);
 });
 
 test("getArticle returns undefined for a slug that isn't registered", () => {

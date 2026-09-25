@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { article as secondGoldAsianRecord } from "@/content/beyondTheScoreline/second-gold-asian-record";
 
 export interface BeyondTheScorelineRelatedLink {
   label: string;
@@ -37,7 +38,7 @@ export function sortByPublishedDesc<T extends { publishedAt: string }>(articles:
 // One import per article file (Task 5 adds the first one). Not auto-discovered from the
 // directory on purpose: a draft file can sit in src/content/beyondTheScoreline/ without being
 // live until it's added here — that's the whole draft/publish mechanism (see the design spec).
-export const ARTICLES: BeyondTheScorelineArticle[] = [];
+export const ARTICLES: BeyondTheScorelineArticle[] = [secondGoldAsianRecord];
 
 assertUniqueSlugs(ARTICLES);
 
