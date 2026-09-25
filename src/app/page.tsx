@@ -150,26 +150,29 @@ export default async function HomePage() {
           )}
         </div>
 
-        {home.news.length > 0 && (
-          <aside className="lg:col-span-1">
-            <SectionHeader>Latest news</SectionHeader>
-            <div className="flex flex-col gap-2">
-              {home.news.map((a) => (
-                <NewsCard key={a.article_id} article={a} compact />
-              ))}
-            </div>
-          </aside>
-        )}
-
-        {beyondTheScorelineArticles.length > 0 && (
-          <aside className="lg:col-span-1">
-            <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
-            <div className="flex flex-col gap-2">
-              {beyondTheScorelineArticles.map((a) => (
-                <ArticleTeaserCard key={a.slug} article={a} />
-              ))}
-            </div>
-          </aside>
+        {(home.news.length > 0 || beyondTheScorelineArticles.length > 0) && (
+          <div className="lg:col-span-1 flex flex-col gap-10">
+            {home.news.length > 0 && (
+              <aside>
+                <SectionHeader>Latest news</SectionHeader>
+                <div className="flex flex-col gap-2">
+                  {home.news.map((a) => (
+                    <NewsCard key={a.article_id} article={a} compact />
+                  ))}
+                </div>
+              </aside>
+            )}
+            {beyondTheScorelineArticles.length > 0 && (
+              <aside>
+                <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
+                <div className="flex flex-col gap-2">
+                  {beyondTheScorelineArticles.map((a) => (
+                    <ArticleTeaserCard key={a.slug} article={a} />
+                  ))}
+                </div>
+              </aside>
+            )}
+          </div>
         )}
       </div>
     </div>
