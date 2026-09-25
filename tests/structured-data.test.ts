@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { breadcrumbSchema, organizationSchema, tennisPlayerSchema } from "../src/lib/structuredData";
+import { blogPostingSchema, breadcrumbSchema, organizationSchema, tennisPlayerSchema } from "../src/lib/structuredData";
 import { SITE_URL } from "../src/lib/site";
 
 // The Organization logo was /icon.png, which does not exist (Next serves the generated icon at a
@@ -36,4 +36,15 @@ test("a breadcrumb trail starts at Home and links every step but the last", () =
   assert.equal(list[0].item, `${SITE_URL}/`);
   assert.equal(list[3].item, undefined);
   assert.deepEqual(breadcrumbSchema([{ label: "Cricket series" }]).itemListElement.map((i) => i.name), ["Home", "Cricket series"]);
+});
+
+test("a BlogPosting names the desk as author, reuses the Organization publisher, and links its own page", () => {
+  const schema = blogPostingSchema({ slug: "second-gold-asian-record", title: "T", dek: "D", publishedAt: "2026-09-25" });
+  assert.equal(schema["@type"], "BlogPosting");
+  assert.equal(schema.headline, "T");
+  assert.equal(schema.description, "D");
+  assert.equal(schema.datePublished, "2026-09-25");
+  assert.equal(schema.url, `${SITE_URL}/beyond-the-scoreline/second-gold-asian-record`);
+  assert.deepEqual(schema.publisher, organizationSchema());
+  assert.deepEqual(schema.author, { "@type": "Organization", name: "Beyond the Scoreline Desk", url: `${SITE_URL}/beyond-the-scoreline` });
 });

@@ -93,6 +93,21 @@ export function tennisPlayerSchema(tour: string, player: { name: string; slug: s
   };
 }
 
+export function blogPostingSchema(article: { slug: string; title: string; dek: string; publishedAt: string }) {
+  const url = absoluteUrl(`/beyond-the-scoreline/${article.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: article.title,
+    description: article.dek,
+    datePublished: article.publishedAt,
+    url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    author: { "@type": "Organization", name: "Beyond the Scoreline Desk", url: absoluteUrl("/beyond-the-scoreline") },
+    publisher: organizationSchema(),
+  };
+}
+
 /**
  * The description of a finished game. Cricket says "Result: <result text>. <first side> <score>, <second side> <score>."
  * with the batting-first side first (from the scorecard when the page has one, else the score lines, else away first);
