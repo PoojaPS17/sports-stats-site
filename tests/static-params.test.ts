@@ -55,6 +55,7 @@ const ABOVE_CAP: Record<string, string> = {
 // The exact window each cached route keeps. Listed so that changing one is deliberate and the
 // change shows up in a diff with a failing test behind it.
 const REVALIDATE: Record<string, number> = {
+  "beyond-the-scoreline/[slug]/page.tsx": 300,
   "[league]/h2h/[pair]/page.tsx": 300,
   "[league]/matchweek/[n]/page.tsx": 300,
   "[league]/matchweek/[n]/[week]/page.tsx": 300,

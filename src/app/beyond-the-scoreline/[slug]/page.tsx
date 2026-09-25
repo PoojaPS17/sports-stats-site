@@ -6,6 +6,8 @@ import { blogPostingSchema } from "@/lib/structuredData";
 import { BeyondTheScorelineArticleLayout } from "@/components/BeyondTheScorelineArticleLayout";
 import { JsonLd } from "@/components/JsonLd";
 
+export const revalidate = 300;
+
 export function generateStaticParams() {
   return listArticles().map((a) => ({ slug: a.slug }));
 }
