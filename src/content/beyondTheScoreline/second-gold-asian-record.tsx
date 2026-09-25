@@ -5,7 +5,7 @@ import { ShootingMedalsByEditionChart } from "@/components/ShootingMedalsByEditi
 export const article: BeyondTheScorelineArticle = {
   slug: "second-gold-asian-record",
   title: "India's Second Gold Comes With an Asian Record in Shooting",
-  dek: "Suruchi Singh and Kamaljeet broke an Asian Games record to win India's second gold at Aichi-Nagoya. Shooting has now delivered ten of India's twenty-three medals, with a week of competition still to come.",
+  dek: "Suruchi Singh and Kamaljeet broke an Asian Games record to win India's second gold. Shooting has now delivered ten of India's twenty-three medals.",
   publishedAt: "2026-09-25",
   readingMinutes: 2,
   tags: ["asian-games", "shooting", "india"],
