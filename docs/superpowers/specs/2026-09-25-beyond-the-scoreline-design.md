@@ -81,8 +81,10 @@ Applies to every draft, checked before the review step in the workflow above:
 - **Sentence length**: short sentences by default; a long sentence only when a genuinely complex idea needs one clause built on another, not as a stylistic default. No stacking three-plus subordinate clauses.
 - **Active/passive balance**: active by default (a specific person or team does something); passive only when the actor is unknown, irrelevant, or when passive genuinely reads more naturally for that sentence — not as a hedge to avoid naming who did what.
 - **No AI tells**: no "In conclusion," "It's worth noting," "This underscores," stacked hedges ("some might argue," "it could be said"), no summary-paragraph outro restating the piece, no listicle-with-emoji-headers formatting, no generic scene-setting throat-clearing before the actual news. Lead with a concrete detail, number, or moment.
+- **No em dashes**: flagged in review of the first draft as a recognizable AI tell. Use a period, comma, or colon instead — an em dash almost always signals a sentence that should have been split in two, or an appositive that a colon introduces more plainly.
 - **Voice**: opinionated where the facts support an opinion (like an experienced beat writer would), specific over generic, varied sentence rhythm paragraph to paragraph.
 - **Byline**: unsigned, "Beyond the Scoreline Desk," per the user's earlier decision — not a named persona.
+- **Footer attribution**: only a license-required data credit (e.g. the same Wikipedia/CC BY-SA line the medal-tally page already carries, verbatim, when an article uses that data), never a "sources cross-checked against X, Y, Z" line — that reads as an internal QA note, not something a bylined article would publish. Research sources back the fact-check; they don't appear in the piece unless a specific outlet's own reporting or an official statement is being credited inline.
 
 ## Explicitly out of scope
 
