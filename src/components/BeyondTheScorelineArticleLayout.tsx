@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { ShareButton } from "./ShareButton";
 import type { BeyondTheScorelineArticle } from "@/lib/beyondTheScoreline";
 
 const DESK_BYLINE = "Beyond the Scoreline Desk";
@@ -13,7 +14,10 @@ export function BeyondTheScorelineArticleLayout({ article }: { article: BeyondTh
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Beyond the Scoreline", href: "/beyond-the-scoreline" }, { label: article.title }]} />
       <article className="card mx-auto max-w-3xl px-6 py-8 sm:px-10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">Beyond the Scoreline</p>
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">Beyond the Scoreline</p>
+          <ShareButton path={`/beyond-the-scoreline/${article.slug}`} title={article.title} text={article.dek} />
+        </div>
         <h1 className="page-title mt-2">{article.title}</h1>
         <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-[var(--text-muted)]">{article.dek}</p>
 

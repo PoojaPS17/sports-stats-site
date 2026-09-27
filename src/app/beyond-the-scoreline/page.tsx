@@ -4,6 +4,7 @@ import { pageMeta } from "@/lib/metadata";
 import { listArticles } from "@/lib/beyondTheScoreline";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { PageHeader } from "@/components/PageHeader";
+import { ShareButton } from "@/components/ShareButton";
 
 export const metadata: Metadata = pageMeta(
   "Beyond the Scoreline",
@@ -27,9 +28,12 @@ export default function BeyondTheScorelineIndexPage() {
         <ul className="grid gap-4 sm:grid-cols-2">
           {articles.map((a) => (
             <li key={a.slug} className="card flex flex-col gap-2 px-5 py-5">
-              <Link href={`/beyond-the-scoreline/${a.slug}`} className="text-lg font-bold leading-snug text-[var(--text)] hover:text-[var(--accent)]">
-                {a.title}
-              </Link>
+              <div className="flex items-start justify-between gap-3">
+                <Link href={`/beyond-the-scoreline/${a.slug}`} className="text-lg font-bold leading-snug text-[var(--text)] hover:text-[var(--accent)]">
+                  {a.title}
+                </Link>
+                <ShareButton compact path={`/beyond-the-scoreline/${a.slug}`} title={a.title} text={a.dek} />
+              </div>
               <p className="text-sm text-[var(--text-muted)]">{a.dek}</p>
               <p className="text-xs text-[var(--text-faint)]">
                 {formatPublished(a.publishedAt)} &middot; {a.readingMinutes} min read
