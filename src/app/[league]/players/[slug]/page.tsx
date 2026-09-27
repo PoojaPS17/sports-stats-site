@@ -295,7 +295,7 @@ export default async function PlayerPage({
           {staged.counted.best.length > 0 && (
             <section>
               <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, countedNoBoxScore)}>Best games</SectionHeader>
-              <PlayerBestGames league={league} profile={staged.counted} />
+              <PlayerBestGames league={league} slug={slug} profile={staged.counted} />
             </section>
           )}
 
@@ -334,7 +334,7 @@ export default async function PlayerPage({
               {profile.milestones.length > 0 && (
                 <section>
                   <SectionHeader description={withMilestonesNote("Landmarks within the games on record, pinned to the game they came in.", regularNoBoxScore)}>Milestones</SectionHeader>
-                  <PlayerMilestones league={league} profile={profile} />
+                  <PlayerMilestones league={league} slug={slug} profile={profile} />
                 </section>
               )}
             </>

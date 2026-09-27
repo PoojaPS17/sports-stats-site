@@ -57,6 +57,8 @@ const ABOVE_CAP: Record<string, string> = {
 const REVALIDATE: Record<string, number> = {
   "beyond-the-scoreline/[slug]/page.tsx": 300,
   "[league]/h2h/[pair]/page.tsx": 300,
+  "[league]/games/[id]/players/[slug]/page.tsx": 300,
+  "[league]/games/[id]/players/[slug]/opengraph-image.tsx": 300,
   "[league]/matchweek/[n]/page.tsx": 300,
   "[league]/matchweek/[n]/[week]/page.tsx": 300,
   "[league]/players/[slug]/page.tsx": 300,

@@ -171,7 +171,7 @@ export default async function PlayerSeasonPage({ params }: { params: Promise<{ l
           {staged.counted.best.length > 0 && (
             <section>
               <SectionHeader description={withBoxRowsNote(staged.counted.profile.rankNote, countedNoBoxScore)}>Best games</SectionHeader>
-              <PlayerBestGames league={league} profile={staged.counted} />
+              <PlayerBestGames league={league} slug={slug} profile={staged.counted} />
             </section>
           )}
 

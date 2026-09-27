@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { League } from "@/lib/queries";
 import type { TeamPlayerBox } from "@/lib/matchDetail";
 import { formatStat, statTitle } from "@/lib/statGlossary";
+import { performancePagePath } from "@/lib/performanceCardData";
 import { ImageActions } from "./ImageActions";
 
 export function PlayerBoxScoreTable({
@@ -54,7 +55,12 @@ export function PlayerBoxScoreTable({
                         row.name
                       )}
                       {slug && (league === "nba" || league === "nfl") && (
-                        <ImageActions filename={`${gameId}-${slug}-card-${league}`} imageUrl={`/${league}/games/${gameId}/players/${slug}/card?format=og`} shareTitle={`${row.name} performance card`} />
+                        <>
+                          <ImageActions filename={`${gameId}-${slug}-card-${league}`} imageUrl={`/${league}/games/${gameId}/players/${slug}/card?format=og`} shareTitle={`${row.name} performance card`} />
+                          <Link href={performancePagePath(league, gameId, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
+                            View full breakdown
+                          </Link>
+                        </>
                       )}
                     </div>
                   </td>
