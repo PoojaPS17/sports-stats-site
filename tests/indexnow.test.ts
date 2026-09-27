@@ -150,3 +150,37 @@ test("requests are paced so a burst is not what gets the site throttled", async 
   assert.equal(waits.length, 1, "one pause between the two batches, none after the last");
   assert.ok(waits[0] > 0, "the pause should actually be a pause");
 });
+
+// A 429 carries Retry-After saying how long to wait. Guessing a backoff instead either
+// wastes time or retries too early and burns an attempt on another refusal.
+test("a refusal that says how long to wait is obeyed instead of the default backoff", async () => {
+  const waits: number[] = [];
+  let calls = 0;
+
+  await submitToIndexNow([`${ORIGIN}/epl`], {
+    origin: ORIGIN,
+    key: KEY,
+    sleepImpl: async (ms) => { waits.push(ms); },
+    fetchImpl: async () =>
+      ++calls === 1 ? new Response("", { status: 429, headers: { "retry-after": "30" } }) : new Response("", { status: 200 }),
+  });
+
+  assert.ok(waits.includes(30_000), `expected a 30s wait from Retry-After, got ${JSON.stringify(waits)}`);
+});
+
+test("a Retry-After given as a date is honoured too", async () => {
+  const waits: number[] = [];
+  let calls = 0;
+  const when = new Date(Date.now() + 45_000).toUTCString();
+
+  await submitToIndexNow([`${ORIGIN}/epl`], {
+    origin: ORIGIN,
+    key: KEY,
+    sleepImpl: async (ms) => { waits.push(ms); },
+    fetchImpl: async () =>
+      ++calls === 1 ? new Response("", { status: 429, headers: { "retry-after": when } }) : new Response("", { status: 200 }),
+  });
+
+  const waited = waits.find((w) => w > 40_000 && w <= 45_000);
+  assert.ok(waited, `expected roughly a 45s wait, got ${JSON.stringify(waits)}`);
+});

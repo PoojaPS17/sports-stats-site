@@ -51,6 +51,20 @@ const BACKOFF_MS = 5000;
 const wait = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
 
 /**
+ * How long a refusal asked us to wait. A 429 carries Retry-After -- either a number of
+ * seconds or an HTTP date -- and obeying it beats guessing: too short burns the next
+ * attempt on another refusal, too long stalls the run.
+ */
+function retryAfterMs(res: { headers: { get(name: string): string | null } }): number | null {
+  const header = res.headers.get("retry-after");
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+  const at = Date.parse(header);
+  return Number.isNaN(at) ? null : Math.max(0, at - Date.now());
+}
+
+/**
  * Groups URLs into protocol-legal requests. A URL on another host would have the whole
  * request rejected, so it is dropped here rather than sent; duplicates are collapsed
  * because submitting the same page twice buys nothing and counts against the site.
@@ -90,9 +104,11 @@ export async function submitToIndexNow(urls: string[], opts: SubmitOptions = {})
     if (index > 0) await sleepImpl(PACE_MS);
     let accepted = false;
     let reason = "no attempt";
+    let asked: number | null = null;
     for (let attempt = 0; attempt <= retries && !accepted; attempt++) {
-      // Back off further each time: a throttle that just said no needs longer than a pace.
-      if (attempt > 0) await sleepImpl(BACKOFF_MS * attempt);
+      // What the endpoint asked for, else a backoff that widens each time: a throttle
+      // that just said no needs longer than a pace.
+      if (attempt > 0) await sleepImpl(asked ?? BACKOFF_MS * attempt);
       try {
         const res = await fetchImpl(INDEXNOW_ENDPOINT, {
           method: "POST",
@@ -100,9 +116,13 @@ export async function submitToIndexNow(urls: string[], opts: SubmitOptions = {})
           body: JSON.stringify(batch),
         });
         if (res.ok) accepted = true;
-        else reason = String(res.status);
+        else {
+          reason = String(res.status);
+          asked = retryAfterMs(res);
+        }
       } catch (err) {
         reason = err instanceof Error ? err.message : String(err);
+        asked = null;
       }
     }
     if (accepted) submitted += batch.urlList.length;
