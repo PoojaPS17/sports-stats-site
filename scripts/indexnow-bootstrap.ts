@@ -6,8 +6,13 @@
 // not changed, which is exactly what gets a site throttled -- day to day, fetch-fixtures
 // announces the fixtures it actually created.
 //
-//   npx tsx scripts/indexnow-bootstrap.ts --dry-run   # count what would be sent
-//   npx tsx scripts/indexnow-bootstrap.ts             # send it
+//   npx tsx scripts/indexnow-bootstrap.ts --dry-run          # count what would be sent
+//   npx tsx scripts/indexnow-bootstrap.ts                    # send it
+//   npx tsx scripts/indexnow-bootstrap.ts --file urls.txt    # send exactly these instead
+//
+// --file takes one URL per line and skips the sitemaps entirely. It exists so an
+// interrupted bootstrap can be finished by announcing only what never arrived, rather
+// than re-announcing the whole site.
 import { INDEXNOW_KEY, INDEXNOW_ORIGIN, indexNowBatches, submitToIndexNow } from "../src/lib/indexnow";
 
 const UA = "sportsdb-indexnow-bootstrap";
@@ -22,6 +27,12 @@ const locs = (body: string): string[] => [...body.matchAll(/<loc>([^<]+)<\/loc>/
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
+  const fileArg = process.argv.indexOf("--file");
+  const listFile = fileArg >= 0 ? process.argv[fileArg + 1] : null;
+  if (fileArg >= 0 && !listFile) {
+    console.error("[indexnow] --file needs a path to a file of URLs, one per line");
+    process.exit(1);
+  }
 
   // The key has to be readable at its published address before anything is submitted,
   // or every batch is refused and the site looks like it is claiming a host it does not own.
@@ -35,16 +46,20 @@ async function main() {
   }
   console.log(`[indexnow] key verified at ${keyUrl}`);
 
-  const index = await xml(`${INDEXNOW_ORIGIN}/sitemap.xml`);
-  const maps = locs(index);
-  console.log(`[indexnow] ${maps.length} sitemaps listed`);
-
   const urls: string[] = [];
-  for (const map of maps) {
-    try {
-      urls.push(...locs(await xml(map)));
-    } catch (err) {
-      console.error(`[indexnow] skipped ${map}:`, err instanceof Error ? err.message : err);
+  if (listFile) {
+    const { readFileSync } = await import("node:fs");
+    urls.push(...readFileSync(listFile, "utf8").split("\n").map((l) => l.trim()).filter(Boolean));
+    console.log(`[indexnow] ${urls.length} URLs read from ${listFile}`);
+  } else {
+    const maps = locs(await xml(`${INDEXNOW_ORIGIN}/sitemap.xml`));
+    console.log(`[indexnow] ${maps.length} sitemaps listed`);
+    for (const map of maps) {
+      try {
+        urls.push(...locs(await xml(map)));
+      } catch (err) {
+        console.error(`[indexnow] skipped ${map}:`, err instanceof Error ? err.message : err);
+      }
     }
   }
 
@@ -55,9 +70,15 @@ async function main() {
     return;
   }
 
-  const { submitted, failed } = await submitToIndexNow(urls);
-  console.log(`[indexnow] announced ${submitted} URLs${failed ? `, ${failed} request(s) refused` : ""}`);
-  if (failed) process.exitCode = 1;
+  const { submitted, failed, refusals } = await submitToIndexNow(urls);
+  console.log(`[indexnow] announced ${submitted} of ${urls.length} URLs`);
+  if (failed) {
+    // The endpoint throttles a burst; the submission already paced and retried, so a
+    // refusal that survived that is worth seeing rather than counting.
+    console.error(`[indexnow] ${failed} request(s) refused after retries: ${refusals.join(", ")}`);
+    console.error("[indexnow] re-run later to announce the URLs those requests carried");
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {
