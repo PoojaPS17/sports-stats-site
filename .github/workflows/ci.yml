@@ -1,0 +1,45 @@
+# Types, lint and the test suite on every pull request and every push to main.
+#
+# `next build` is deliberately not here. It prerenders the sitemaps, so it needs a reachable
+# DATABASE_URL; running it per PR would either point CI at production or fail for a reason
+# that says nothing about the change. The deploy build is where that check happens, and its
+# failure mode is safe: a bad sitemap query fails the build and the live site keeps serving
+# the previous version.
+#
+# The tests need no database of their own -- tests/helpers/testDb.ts starts a throwaway
+# Postgres per test file and applies db/schema.sql to it.
+name: CI
+
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+# A new push to the same branch makes the previous run's answer irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
