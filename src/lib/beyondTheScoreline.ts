@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import { article as secondGoldAsianRecord } from "@/content/beyondTheScoreline/second-gold-asian-record";
+import { article as russellBakuWinCutsTitleGap } from "@/content/beyondTheScoreline/russell-baku-win-cuts-title-gap";
+import { article as kabaddiGoldenSweepAsianGames } from "@/content/beyondTheScoreline/kabaddi-golden-sweep-asian-games";
+import { article as manCityGuiltyVerdict115Charges } from "@/content/beyondTheScoreline/man-city-guilty-verdict-115-charges";
 
 export interface BeyondTheScorelineRelatedLink {
   label: string;
@@ -38,7 +41,12 @@ export function sortByPublishedDesc<T extends { publishedAt: string }>(articles:
 // One import per article file (Task 5 adds the first one). Not auto-discovered from the
 // directory on purpose: a draft file can sit in src/content/beyondTheScoreline/ without being
 // live until it's added here — that's the whole draft/publish mechanism (see the design spec).
-export const ARTICLES: BeyondTheScorelineArticle[] = [secondGoldAsianRecord];
+export const ARTICLES: BeyondTheScorelineArticle[] = [
+  secondGoldAsianRecord,
+  russellBakuWinCutsTitleGap,
+  kabaddiGoldenSweepAsianGames,
+  manCityGuiltyVerdict115Charges,
+];
 
 assertUniqueSlugs(ARTICLES);
 
