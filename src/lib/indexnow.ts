@@ -30,13 +30,25 @@ export interface SubmitOptions {
   origin?: string;
   key?: string;
   fetchImpl?: FetchLike;
+  /** How many times a refused batch is re-sent before it is given up on. */
+  retries?: number;
+  sleepImpl?: (ms: number) => Promise<void>;
 }
 
 export interface SubmitResult {
   batches: number;
   submitted: number;
   failed: number;
+  /** Why each given-up batch was refused (status code, or the transport error). */
+  refusals: string[];
 }
+
+// The endpoint throttles a burst: the first bootstrap sent 15 requests back to back and
+// had 7 refused. Pace them, and treat a refusal as worth retrying rather than lost.
+const PACE_MS = 2000;
+const BACKOFF_MS = 5000;
+
+const wait = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
 
 /**
  * Groups URLs into protocol-legal requests. A URL on another host would have the whole
@@ -69,22 +81,35 @@ export function indexNowBatches(urls: string[], origin: string = INDEXNOW_ORIGIN
  * engine had a bad minute, so a refusal or a dead connection is counted, never thrown.
  */
 export async function submitToIndexNow(urls: string[], opts: SubmitOptions = {}): Promise<SubmitResult> {
-  const { origin = INDEXNOW_ORIGIN, key = INDEXNOW_KEY, fetchImpl = fetch as FetchLike } = opts;
+  const { origin = INDEXNOW_ORIGIN, key = INDEXNOW_KEY, fetchImpl = fetch as FetchLike, retries = 3, sleepImpl = wait } = opts;
   const batches = indexNowBatches(urls, origin, key);
   let submitted = 0;
   let failed = 0;
-  for (const batch of batches) {
-    try {
-      const res = await fetchImpl(INDEXNOW_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-        body: JSON.stringify(batch),
-      });
-      if (res.ok) submitted += batch.urlList.length;
-      else failed += 1;
-    } catch {
+  const refusals: string[] = [];
+  for (const [index, batch] of batches.entries()) {
+    if (index > 0) await sleepImpl(PACE_MS);
+    let accepted = false;
+    let reason = "no attempt";
+    for (let attempt = 0; attempt <= retries && !accepted; attempt++) {
+      // Back off further each time: a throttle that just said no needs longer than a pace.
+      if (attempt > 0) await sleepImpl(BACKOFF_MS * attempt);
+      try {
+        const res = await fetchImpl(INDEXNOW_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify(batch),
+        });
+        if (res.ok) accepted = true;
+        else reason = String(res.status);
+      } catch (err) {
+        reason = err instanceof Error ? err.message : String(err);
+      }
+    }
+    if (accepted) submitted += batch.urlList.length;
+    else {
       failed += 1;
+      refusals.push(reason);
     }
   }
-  return { batches: batches.length, submitted, failed };
+  return { batches: batches.length, submitted, failed, refusals };
 }

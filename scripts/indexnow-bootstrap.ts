@@ -55,9 +55,15 @@ async function main() {
     return;
   }
 
-  const { submitted, failed } = await submitToIndexNow(urls);
-  console.log(`[indexnow] announced ${submitted} URLs${failed ? `, ${failed} request(s) refused` : ""}`);
-  if (failed) process.exitCode = 1;
+  const { submitted, failed, refusals } = await submitToIndexNow(urls);
+  console.log(`[indexnow] announced ${submitted} of ${urls.length} URLs`);
+  if (failed) {
+    // The endpoint throttles a burst; the submission already paced and retried, so a
+    // refusal that survived that is worth seeing rather than counting.
+    console.error(`[indexnow] ${failed} request(s) refused after retries: ${refusals.join(", ")}`);
+    console.error("[indexnow] re-run later to announce the URLs those requests carried");
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {

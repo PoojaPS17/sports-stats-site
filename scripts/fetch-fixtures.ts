@@ -57,8 +57,8 @@ async function main() {
     }
     console.log(`[fetch-fixtures] ${league} ${season}: upserted ${count} games across ${teams.length} teams`);
     if (fresh.length) {
-      const { submitted, failed } = await submitToIndexNow(fresh);
-      console.log(`[fetch-fixtures] ${league}: ${submitted}/${fresh.length} new fixtures announced to IndexNow${failed ? `, ${failed} batch(es) refused` : ""}`);
+      const { submitted, failed, refusals } = await submitToIndexNow(fresh);
+      console.log(`[fetch-fixtures] ${league}: ${submitted}/${fresh.length} new fixtures announced to IndexNow${failed ? `, ${failed} batch(es) refused (${refusals.join(", ")})` : ""}`);
     }
   }
   await pool.end();
