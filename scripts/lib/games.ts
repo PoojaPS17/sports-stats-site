@@ -144,7 +144,7 @@ export async function storeCricketDates(league: string, espnId: string, descript
   // Only when something would change: the live scrape calls this on every poll for every cricket match, and an
   // update that rewrites the same values still makes a new row version (and bloat) for nothing.
   await pool.query(
-    `update games g set local_date = n.local_date, end_date = n.end_date
+    `update games g set local_date = n.local_date, end_date = n.end_date, updated_at = now()
      from (select case when $4 then $2::date else coalesce(g2.local_date, $2::date) end as local_date,
                   case when $4 then $3::date else g2.end_date end as end_date
            from games g2 where g2.league = $1 and g2.espn_id = $5) n
@@ -221,13 +221,13 @@ function parseWeek(ev: any): number | null {
 // Upserts the game itself, plus the home/away teams it references (from the event's
 // own embedded team data) — needed so a several-years-old game whose team has since
 // been relegated/renamed/dissolved still resolves in every page's join against `teams`.
-export async function upsertEvent(league: League, ev: any) {
+export async function upsertEvent(league: League, ev: any): Promise<{ inserted: boolean }> {
   const comp = ev.competitions?.[0];
   // A malformed/incomplete event (seen occasionally from this unofficial API on
   // historical queries) shouldn't abort the whole batch it's part of.
   if (!comp) {
     console.error(`[upsertEvent] ${league} event ${ev?.id} has no competitions data, skipping`);
-    return;
+    return { inserted: false };
   }
   const home = comp.competitors?.find((c: any) => c.homeAway === "home");
   const away = comp.competitors?.find((c: any) => c.homeAway === "away");
@@ -236,14 +236,14 @@ export async function upsertEvent(league: League, ev: any) {
   const placeholder = (c: any) => !c?.team?.id || /^(tba|tbc|tbd)$/i.test(String(c.team.displayName ?? c.team.name ?? c.team.abbreviation ?? ""));
   if (placeholder(home) || placeholder(away) || String(home.team.id) === String(away.team.id)) {
     console.log(`[upsertEvent] ${league} event ${ev.id}: sides not yet known, skipped`);
-    return;
+    return { inserted: false };
   }
   // The All-Star Game and the Pro Bowl are exhibitions between made-up sides: not part of any
   // season's record, and their "teams" would be added to the teams table.
   const stageFields = parseStageFields(league, ev);
   if (stageFields.competitionType === "ALLSTAR") {
     console.log(`[upsertEvent] ${league} event ${ev.id}: all-star exhibition, skipped`);
-    return;
+    return { inserted: false };
   }
   const status = comp.status;
   const homeScore = parseScore(home?.score);
@@ -261,7 +261,9 @@ export async function upsertEvent(league: League, ev: any) {
   if (home?.team) await upsertTeam(league, home.team);
   if (away?.team) await upsertTeam(league, away.team);
 
-  await pool.query(
+  // A row the guard skipped returns nothing at all, so `inserted` is false for an
+  // untouched game as well as for a changed one -- only a genuinely new URL says true.
+  const upserted = await pool.query(
     `insert into games (
        league, espn_id, date, name, short_name,
        home_team_espn_id, away_team_espn_id, home_score, away_score,
@@ -293,7 +295,30 @@ export async function upsertEvent(league: League, ev: any) {
        neutral_site = coalesce(excluded.neutral_site, games.neutral_site),
        note = coalesce(excluded.note, games.note),
        first_seen_date = coalesce(games.first_seen_date, excluded.first_seen_date),
-       updated_at = now()`,
+       updated_at = now()
+     where (
+       games.date, games.home_score, games.away_score,
+       games.home_score_display, games.away_score_display, games.home_winner, games.away_winner,
+       games.season_year, games.status_state, games.status_detail, games.status_summary,
+       games.round, games.period, games.clock, games.completed,
+       games.odds_details, games.odds_spread, games.odds_over_under, games.odds_provider,
+       games.broadcast_network, games.weather_display, games.weather_temperature, games.week,
+       games.season_type, games.competition_type, games.neutral_site, games.note,
+       games.first_seen_date
+     ) is distinct from (
+       excluded.date, excluded.home_score, excluded.away_score,
+       excluded.home_score_display, excluded.away_score_display, excluded.home_winner, excluded.away_winner,
+       coalesce(excluded.season_year, games.season_year), excluded.status_state, excluded.status_detail, excluded.status_summary,
+       coalesce(excluded.round, games.round), excluded.period, excluded.clock, excluded.completed,
+       coalesce(excluded.odds_details, games.odds_details), coalesce(excluded.odds_spread, games.odds_spread),
+       coalesce(excluded.odds_over_under, games.odds_over_under), coalesce(excluded.odds_provider, games.odds_provider),
+       coalesce(excluded.broadcast_network, games.broadcast_network), coalesce(excluded.weather_display, games.weather_display),
+       coalesce(excluded.weather_temperature, games.weather_temperature), coalesce(excluded.week, games.week),
+       coalesce(excluded.season_type, games.season_type), coalesce(excluded.competition_type, games.competition_type),
+       coalesce(excluded.neutral_site, games.neutral_site), coalesce(excluded.note, games.note),
+       coalesce(games.first_seen_date, excluded.first_seen_date)
+     )
+     returning (xmax = 0) as inserted`,
     [
       league,
       ev.id,
@@ -336,4 +361,5 @@ export async function upsertEvent(league: League, ev: any) {
   );
   // The scoreboard's `description` ends with the match's local day(s); `date` alone is a UTC instant.
   if (isCricketLeague(league)) await storeCricketDates(league, String(ev.id), ev.description, [...(ev.notes ?? []), ...(comp.notes ?? [])], ev.date);
+  return { inserted: upserted.rows[0]?.inserted === true };
 }

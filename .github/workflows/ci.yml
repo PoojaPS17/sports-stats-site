@@ -1,0 +1,60 @@
+# Types, lint and the test suite on every pull request and every push to main.
+#
+# `next build` is deliberately not here. It prerenders the sitemaps, so it needs a reachable
+# DATABASE_URL; running it per PR would either point CI at production or fail for a reason
+# that says nothing about the change. The deploy build is where that check happens, and its
+# failure mode is safe: a bad sitemap query fails the build and the live site keeps serving
+# the previous version.
+#
+# The tests need no database of their own -- tests/helpers/testDb.ts starts a throwaway
+# Postgres per test file and applies db/schema.sql to it.
+name: CI
+
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+# A new push to the same branch makes the previous run's answer irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `LayoutProps`, `PageProps` and the route types are generated, not written, and they
+      # live in .next/types -- which a fresh checkout does not have. Without this, tsc fails
+      # on the generated names alone. typegen produces them without a build, so it needs no
+      # database.
+      - name: Generate route types
+        run: npx next typegen
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      # scripts/lib/db.ts throws on import when DATABASE_URL is missing, which fails test
+      # files that only ever import a parser from a module that happens to reach it. Nothing
+      # in CI connects to this: tests that need a database start their own throwaway Postgres
+      # (tests/helpers/testDb.ts) and point DATABASE_URL at that for their duration. The port
+      # is unroutable on purpose, so a test that did try to connect fails loudly here rather
+      # than reaching anything real.
+      - name: Test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:1/unused
+        run: npm test

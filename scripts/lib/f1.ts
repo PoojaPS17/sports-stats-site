@@ -84,7 +84,9 @@ export async function upsertF1StandingsForSeason(pool: import("pg").Pool, season
           `insert into f1_standings (season_year, standings_type, entity_espn_id, position, points, wins, updated_at)
            values ($1, $2, $3, $4, $5, $6, now())
            on conflict (season_year, standings_type, entity_espn_id) do update set
-             position = excluded.position, points = excluded.points, wins = excluded.wins, updated_at = now()`,
+             position = excluded.position, points = excluded.points, wins = excluded.wins, updated_at = now()
+     where (f1_standings.position, f1_standings.points, f1_standings.wins)
+       is distinct from (excluded.position, excluded.points, excluded.wins)`,
           [seasonYear, type, entityId, position, points, wins]
         );
         count++;

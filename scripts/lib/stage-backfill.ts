@@ -51,8 +51,11 @@ export async function classifyUntypedGames(
         `update games
             set season_type = coalesce($3, season_type),
                 competition_type = coalesce($4, competition_type),
-                round = coalesce($5, round)
-          where league = $1 and espn_id = $2`,
+                round = coalesce($5, round),
+                updated_at = now()
+          where league = $1 and espn_id = $2
+            and (season_type, competition_type, round)
+              is distinct from (coalesce($3, season_type), coalesce($4, competition_type), coalesce($5, round))`,
         [league, String(ev.id), stage.seasonType, stage.competitionType, parseRound(league, ev)]
       );
       if (!res.rowCount) continue;

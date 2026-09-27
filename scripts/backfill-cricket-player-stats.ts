@@ -40,7 +40,7 @@ async function backfillLeague(league: League, missingOnly: boolean) {
       const { venue, players } = extractCricketMatchStats(summary);
 
       if (venue) {
-        await pool.query(`update games set venue = $1 where league = $2 and espn_id = $3`, [venue, league, espn_id]);
+        await pool.query(`update games set venue = $1, updated_at = now() where league = $2 and espn_id = $3 and venue is distinct from $1`, [venue, league, espn_id]);
       }
 
       playerRows += await writeCricketPlayerRows(pool, league, espn_id, players, missingOnly);

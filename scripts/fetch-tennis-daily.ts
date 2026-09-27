@@ -211,7 +211,9 @@ async function upsertTournaments(rows: Map<string, { tour: Tour; name: string; l
        on conflict (espn_id) do update set
          tour = case when tennis_tournaments.tour = excluded.tour then excluded.tour else 'both' end,
          name = excluded.name, location = coalesce(excluded.location, tennis_tournaments.location),
-         major = tennis_tournaments.major or excluded.major, updated_at = now()`,
+         major = tennis_tournaments.major or excluded.major, updated_at = now()
+     where (tennis_tournaments.tour, tennis_tournaments.name, tennis_tournaments.location, tennis_tournaments.major)
+       is distinct from (case when tennis_tournaments.tour = excluded.tour then excluded.tour else 'both' end, excluded.name, coalesce(excluded.location, tennis_tournaments.location), tennis_tournaments.major or excluded.major)`,
       [id, t.tour, id.split("-")[0], t.season, t.name, t.location, t.major]
     );
   }
@@ -296,7 +298,9 @@ async function upsertMatches(matches: ParsedMatch[]) {
        completed = excluded.completed, status_state = excluded.status_state, status_detail = excluded.status_detail,
        tournament_espn_id = excluded.tournament_espn_id, competition_type = excluded.competition_type,
        round_number = excluded.round_number, court = coalesce(excluded.court, tennis_matches.court), day = excluded.day,
-       side1 = excluded.side1, side2 = excluded.side2, updated_at = now()`,
+       side1 = excluded.side1, side2 = excluded.side2, updated_at = now()
+     where (tennis_matches.tournament_name, tennis_matches.round, tennis_matches.date, tennis_matches.player1_espn_id, tennis_matches.player2_espn_id, tennis_matches.score_display, tennis_matches.winner_espn_id, tennis_matches.completed, tennis_matches.status_state, tennis_matches.status_detail, tennis_matches.tournament_espn_id, tennis_matches.competition_type, tennis_matches.round_number, tennis_matches.court, tennis_matches.day, tennis_matches.side1, tennis_matches.side2)
+       is distinct from (excluded.tournament_name, excluded.round, excluded.date, excluded.player1_espn_id, excluded.player2_espn_id, excluded.score_display, excluded.winner_espn_id, excluded.completed, excluded.status_state, excluded.status_detail, excluded.tournament_espn_id, excluded.competition_type, excluded.round_number, coalesce(excluded.court, tennis_matches.court), excluded.day, excluded.side1, excluded.side2)`,
     [
       col((m) => m.tour),
       col((m) => m.id),
@@ -334,7 +338,9 @@ async function upsertEventDetail(tour: Tour, ev: any) {
      on conflict (espn_id) do update set
        tour = case when tennis_tournaments.tour = excluded.tour then excluded.tour else 'both' end,
        name = excluded.name, location = coalesce(excluded.location, tennis_tournaments.location),
-       start_date = excluded.start_date, end_date = excluded.end_date, updated_at = now()`,
+       start_date = excluded.start_date, end_date = excluded.end_date, updated_at = now()
+     where (tennis_tournaments.tour, tennis_tournaments.name, tennis_tournaments.location, tennis_tournaments.start_date, tennis_tournaments.end_date)
+       is distinct from (case when tennis_tournaments.tour = excluded.tour then excluded.tour else 'both' end, excluded.name, coalesce(excluded.location, tennis_tournaments.location), excluded.start_date, excluded.end_date)`,
     [String(ev.id), tour, String(ev.id).split("-")[0], Number(String(ev.id).split("-")[1]) || new Date(ev.date).getUTCFullYear(), ev.name, loc, ev.date ?? null, ev.endDate ?? null]
   );
 }

@@ -111,7 +111,7 @@ export async function topUpCricketPlayerStats(options: { cap?: number; leagues?:
         await client.query("begin");
         await storeCricketDetailsIfMissing(client, game.league, game.espn_id, details);
         if (players.length > 0) {
-          if (venue) await client.query(`update games set venue = $3 where league = $1 and espn_id = $2 and venue is null`, [game.league, game.espn_id, venue]);
+          if (venue) await client.query(`update games set venue = $3, updated_at = now() where league = $1 and espn_id = $2 and venue is null`, [game.league, game.espn_id, venue]);
           rows = await writeCricketPlayerRows(client, game.league, game.espn_id, players, true);
         }
         await client.query("commit");

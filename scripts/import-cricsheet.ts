@@ -304,8 +304,10 @@ async function writeMatch(
        home_score_display = excluded.home_score_display, away_score_display = excluded.away_score_display,
        home_winner = excluded.home_winner, away_winner = excluded.away_winner, season_year = excluded.season_year,
        status_state = excluded.status_state, status_detail = excluded.status_detail, status_summary = excluded.status_summary,
-       round = excluded.round, period = excluded.period, completed = true, venue = excluded.venue, updated_at = now(),
-       local_date = excluded.local_date`,
+       round = excluded.round, period = excluded.period, completed = true, venue = excluded.venue,
+       local_date = excluded.local_date, updated_at = now()
+     where (games.date, games.name, games.short_name, games.home_team_espn_id, games.away_team_espn_id, games.home_score, games.away_score, games.home_score_display, games.away_score_display, games.home_winner, games.away_winner, games.season_year, games.status_state, games.status_detail, games.status_summary, games.round, games.period, games.completed, games.venue, games.local_date)
+       is distinct from (excluded.date, excluded.name, excluded.short_name, excluded.home_team_espn_id, excluded.away_team_espn_id, excluded.home_score, excluded.away_score, excluded.home_score_display, excluded.away_score_display, excluded.home_winner, excluded.away_winner, excluded.season_year, excluded.status_state, excluded.status_detail, excluded.status_summary, excluded.round, excluded.period, true, excluded.venue, excluded.local_date)`,
     [
       league,
       m.id,
@@ -387,7 +389,9 @@ async function writeMatch(
       `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
        values ${tuples.join(",")}
        on conflict (league, game_espn_id, player_espn_id) do update set
-         team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()`,
+         team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()
+     where (player_game_stats.team_espn_id, player_game_stats.stats)
+       is distinct from (excluded.team_espn_id, excluded.stats)`,
       values
     );
   }

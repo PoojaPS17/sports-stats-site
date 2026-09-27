@@ -114,9 +114,17 @@ test("the hub's in-play window ends with the Eastern last day: in on the 20th, o
   assert.ok((await around("2026-09-06")).includes("9001-2026"), "and it is listed the week before it starts");
 });
 
-test("the sitemap's lastmod for a tournament is its Eastern last day", async () => {
+// lastmod used to be the tournament's Eastern last day, which made the Eastern conversion
+// matter here too. It is now `updated_at` -- a stored instant with no calendar day to get
+// wrong -- because the final's date says when the tennis stopped, not when the page changed,
+// and a tournament still to come would otherwise be published with a lastmod in the future.
+// The Eastern conversion is still covered above, on the dates the tournament page shows.
+test("the sitemap's lastmod for a tournament is when its row last changed, not its last day", async () => {
   const entries = await sitemap.sitemapEntries("core");
   const e = entries.find((x) => x.url.endsWith("/tennis/tournaments/9001-2026"));
   assert.ok(e, "tournament is listed");
-  assert.equal(new Date(e.lastModified as string | Date).toISOString().slice(0, 10), "2026-09-20");
+
+  const { rows } = await db.pool.query(`select updated_at from tennis_tournaments where espn_id = '9001-2026'`);
+  assert.equal(new Date(e.lastModified as string | Date).getTime(), new Date(rows[0].updated_at).getTime());
+  assert.notEqual(new Date(e.lastModified as string | Date).toISOString().slice(0, 10), "2026-09-20");
 });

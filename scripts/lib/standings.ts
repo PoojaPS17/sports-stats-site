@@ -91,7 +91,9 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          no_result = excluded.no_result, net_run_rate = excluded.net_run_rate,
          rank = excluded.rank, zone = excluded.zone,
          qualified = excluded.qualified,
-         updated_at = now()`,
+         updated_at = now()
+     where (standings.division, standings.wins, standings.losses, standings.win_percent, standings.streak, standings.playoff_seed, standings.games_behind, standings.draws, standings.points, standings.goals_for, standings.goals_against, standings.no_result, standings.net_run_rate, standings.rank, standings.zone, standings.qualified)
+       is distinct from (coalesce(excluded.division, standings.division), excluded.wins, excluded.losses, excluded.win_percent, excluded.streak, excluded.playoff_seed, excluded.games_behind, excluded.draws, excluded.points, excluded.goals_for, excluded.goals_against, excluded.no_result, excluded.net_run_rate, excluded.rank, excluded.zone, excluded.qualified)`,
       [
         league,
         season,

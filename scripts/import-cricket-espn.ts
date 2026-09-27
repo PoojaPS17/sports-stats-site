@@ -284,7 +284,9 @@ export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
        home_score_display = excluded.home_score_display, away_score_display = excluded.away_score_display,
        home_winner = excluded.home_winner, away_winner = excluded.away_winner, season_year = excluded.season_year,
        status_state = excluded.status_state, status_detail = excluded.status_detail, status_summary = excluded.status_summary,
-       round = excluded.round, period = excluded.period, completed = true, venue = coalesce(excluded.venue, games.venue), updated_at = now()`,
+       round = excluded.round, period = excluded.period, completed = true, venue = coalesce(excluded.venue, games.venue), updated_at = now()
+     where (games.date, games.name, games.short_name, games.home_team_espn_id, games.away_team_espn_id, games.home_score, games.away_score, games.home_score_display, games.away_score_display, games.home_winner, games.away_winner, games.season_year, games.status_state, games.status_detail, games.status_summary, games.round, games.period, games.completed, games.venue)
+       is distinct from (excluded.date, excluded.name, excluded.short_name, excluded.home_team_espn_id, excluded.away_team_espn_id, excluded.home_score, excluded.away_score, excluded.home_score_display, excluded.away_score_display, excluded.home_winner, excluded.away_winner, excluded.season_year, excluded.status_state, excluded.status_detail, excluded.status_summary, excluded.round, excluded.period, true, coalesce(excluded.venue, games.venue))`,
     [
       f.league,
       f.id,
@@ -373,7 +375,9 @@ export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
        select $1, $2, r.id, r.team, r.stats::jsonb, now()
        from unnest($3::text[], $4::text[], $5::text[]) as r(id, team, stats)
        on conflict (league, game_espn_id, player_espn_id) do update set
-         team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()`,
+         team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()
+     where (player_game_stats.team_espn_id, player_game_stats.stats)
+       is distinct from (excluded.team_espn_id, excluded.stats)`,
       [f.league, f.id, players.map((p) => p.athleteId), players.map((p) => p.teamId), players.map((p) => JSON.stringify({ batting: p.batting, bowling: p.bowling, catches: p.catches, innings: p.innings, v: CARD_VERSION }))]
     );
   }

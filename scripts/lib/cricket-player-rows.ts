@@ -29,7 +29,9 @@ export async function writeCricketPlayerRows(db: Queryable, league: string, game
       `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
        values ($1, $2, $3, $4, $5, now())
        on conflict (league, game_espn_id, player_espn_id) do update set
-         team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()`,
+         team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()
+     where (player_game_stats.team_espn_id, player_game_stats.stats)
+       is distinct from (excluded.team_espn_id, excluded.stats)`,
       [league, gameEspnId, p.athleteId, p.teamId, JSON.stringify({ batting: p.batting, bowling: p.bowling, catches: p.catches, innings: p.innings, v: CARD_VERSION })]
     );
   }

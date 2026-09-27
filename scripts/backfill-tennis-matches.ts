@@ -71,7 +71,9 @@ async function backfillMajorYear(tour: Tour, major: { id: string; name: string }
        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,'post','Final', now())
        on conflict (tour, espn_id) do update set
          score_display = excluded.score_display, winner_espn_id = excluded.winner_espn_id,
-         completed = true, status_state = 'post', status_detail = 'Final', updated_at = now()`,
+         completed = true, status_state = 'post', status_detail = 'Final', updated_at = now()
+     where (tennis_matches.score_display, tennis_matches.winner_espn_id, tennis_matches.completed, tennis_matches.status_state, tennis_matches.status_detail)
+       is distinct from (excluded.score_display, excluded.winner_espn_id, true, 'post', 'Final')`,
       [tour, m.id, major.name, m.type?.text ?? null, m.date, p1.id, p2.id, scoreDisplay, winnerId]
     );
     count++;
