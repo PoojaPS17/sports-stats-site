@@ -54,6 +54,12 @@ export async function loadPerformanceCardData(league: string, id: string, slug: 
   return { league, game, player, row, profile, sport, stats, teamColor, isHomeTeam };
 }
 
+// The single place that builds the new performance page's URL — box-score rows and match leaders
+// both link here, so the path shape only needs to be right in one place.
+export function performancePagePath(league: "nba" | "nfl", gameId: string, slug: string): string {
+  return `/${league}/games/${gameId}/players/${slug}`;
+}
+
 // The single place that maps loaded data onto PerformanceCard's props — the card route and the new
 // page's opengraph-image both call this, so there is exactly one render path, never two to drift.
 export function buildPerformanceCardElement(data: PerformanceCardData): ReactElement {

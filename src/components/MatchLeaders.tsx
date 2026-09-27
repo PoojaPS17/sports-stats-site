@@ -2,6 +2,7 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import type { MatchLeader } from "@/lib/matchDetail";
 import type { GameRow, League } from "@/lib/queries";
+import { performancePagePath } from "@/lib/performanceCardData";
 import { ImageActions } from "./ImageActions";
 
 // gameId is only used to build the per-player performance-card image URL below (nba/nfl only);
@@ -30,8 +31,11 @@ export function MatchLeaders({ league, game, gameId, leaders, playerSlugs }: { l
             {/* Kept beside this player's own name/value, not in a separate list below, so a
                 Share/Download pair is never orphaned from whose card it shares. */}
             {showCardShare && slug && (
-              <div className="mt-1.5">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <ImageActions filename={`${gameId}-${slug}-card-${league}`} imageUrl={`/${league}/games/${gameId}/players/${slug}/card?format=og`} shareTitle={`${l.athlete} performance card`} />
+                <Link href={performancePagePath(league, gameId!, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
+                  View full breakdown
+                </Link>
               </div>
             )}
           </div>
