@@ -24,9 +24,18 @@ before(async () => {
   await q(`insert into players (league, espn_id, team_espn_id, name, slug) values ('nba', 'p2', '2', 'Jayson Tatum', 'jayson-tatum')`); // never a leader
   await q(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('nba', 'g1', 'p1', '1', '{}')`);
   await q(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('nba', 'g1', 'p2', '2', '{}')`);
+  // p1 leads two categories in the same game (points and assists) — a real case for a
+  // point guard, and the exact shape that must not produce a duplicate sitemap row.
   await q(
     `insert into game_details (league, game_espn_id, details) values ('nba', 'g1', $1)`,
-    [JSON.stringify({ leaders: [{ team_id: "1", label: "Points", athlete_id: "p1", athlete: "Luka Dončić", value: "34" }] })],
+    [
+      JSON.stringify({
+        leaders: [
+          { team_id: "1", label: "Points", athlete_id: "p1", athlete: "Luka Dončić", value: "34" },
+          { team_id: "1", label: "Assists", athlete_id: "p1", athlete: "Luka Dončić", value: "11" },
+        ],
+      }),
+    ],
   );
 });
 
@@ -46,4 +55,10 @@ test("the performances sitemap lists the leader's page and not the non-leader's"
   const paths = entries.map((e) => e.url);
   assert.ok(paths.some((p) => p.endsWith("/nba/games/g1/players/luka-doncic")));
   assert.ok(!paths.some((p) => p.endsWith("/nba/games/g1/players/jayson-tatum")));
+});
+
+test("a leader in two stat categories of the same game is listed exactly once", async () => {
+  const entries = await sitemapEntries("performances-nba");
+  const paths = entries.map((e) => e.url).filter((p) => p.endsWith("/nba/games/g1/players/luka-doncic"));
+  assert.equal(paths.length, 1);
 });

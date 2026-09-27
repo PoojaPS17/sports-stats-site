@@ -281,8 +281,14 @@ async function h2h(league: League): Promise<Entry[]> {
 // (same window games() already uses). jsonb_array_elements unpacks game_details.details->'leaders'
 // so this never needs a second, separately-maintained leaders table.
 async function performances(league: League): Promise<Entry[]> {
+  // distinct: a player who leads more than one stat category in the same game (e.g. a
+  // point guard leading both points and assists, a dual-threat QB leading passing and
+  // rushing yards) produces one `leaders` array entry per category, so the
+  // jsonb_array_elements join produces multiple rows for the same (game, player) pair.
+  // Postgres requires DISTINCT's ORDER BY expressions to appear in the select list, so
+  // g.updated_at (below) is selected as well as ordered on.
   const { rows } = await pool.query(
-    `select g.espn_id as game_espn_id, p.slug, g.date
+    `select distinct g.espn_id as game_espn_id, p.slug, g.updated_at
      from game_details gd
      cross join lateral jsonb_array_elements(gd.details->'leaders') as l
      join games g on g.league = gd.league and g.espn_id = gd.game_espn_id
@@ -290,13 +296,13 @@ async function performances(league: League): Promise<Entry[]> {
      where gd.league = $1
        and g.season_year >= (select max(season_year) from games where league = $1) - 1
        and exists (select 1 from player_game_stats s where s.league = $1 and s.game_espn_id = g.espn_id and s.player_espn_id = p.espn_id)
-     order by g.date desc`,
+     order by g.updated_at desc`,
     [league],
   );
-  // game_details has no updated_at column (checked db/schema.sql — only `fetched_at`, and a leader
-  // pair's underlying box score doesn't change once stored), so g.date is the right lastModified,
-  // same as games()'s own entries above.
-  return rows.map((r) => entry(`/${league}/games/${r.game_espn_id}/players/${r.slug}`, "monthly", 0.3, r.date));
+  // games has its own updated_at (refreshed whenever the game's row changes), the same
+  // freshness signal games()'s own entries above use — a better lastModified than the
+  // game_details table's, which has no updated_at column at all (only fetched_at).
+  return rows.map((r) => entry(`/${league}/games/${r.game_espn_id}/players/${r.slug}`, "monthly", 0.3, r.updated_at));
 }
 
 export async function sitemapEntries(id: string): Promise<Entry[]> {
