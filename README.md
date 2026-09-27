@@ -32,12 +32,31 @@ npm run dev             # http://localhost:3000
 
 ## Deploying
 
-1. **Database**: create a free [Supabase](https://supabase.com) Postgres project. Copy its connection string.
-2. **Schema**: run `DATABASE_URL=<supabase-url> npm run migrate && DATABASE_URL=<supabase-url> npm run seed:teams` once, locally, against the Supabase database.
-3. **Scraper**: push this repo to a public GitHub repo. Add a repo secret `DATABASE_URL` (the Supabase connection string). The `scrape.yml` workflow will then run every 15 minutes for free.
-4. **Frontend**: import the repo into [Vercel](https://vercel.com) (repo root is already the Next.js app, no subfolder to configure), add the `DATABASE_URL` env var, deploy.
-5. **Domain**: point your domain at the Vercel project once you own one.
-6. **Ads**: swap the `AdSlot` component (`src/components/AdSlot.tsx`) placeholders for real AdSense/Ezoic embed code once approved.
+**Live at [sports-db.live](https://sports-db.live)**, self-hosted (not Vercel/Supabase — the section below used to describe that pre-launch setup and was out of date). Layout: Cloudflare (DNS + proxy) in front of a single Oracle Cloud "Always Free" VM (`sportsdb-db`, user `ubuntu`). Postgres and the Next.js app (`sportsdb-app` systemd service, port 3000) both run on that VM; scrapers (`/opt/sportsdb/scrapers`) run there too on systemd timers, not GitHub Actions.
+
+**Code-only deploy** (no schema/migration changes):
+
+```bash
+cd /opt/sportsdb/repo
+sudo systemctl stop sportsdb-app
+git pull --ff-only
+npm ci
+source .env.production   # NEXT_PUBLIC_* vars are build-time, must be sourced before building
+npm run build
+sudo systemctl start sportsdb-app
+```
+
+This takes the app down for a few minutes; a failed build leaves the service stopped, so check `systemctl status sportsdb-app` after.
+
+**If `db/schema.sql` changed**, `git pull` does NOT apply it — run `npm run migrate` (and any relevant `npm run backfill:*` script) by hand afterward, from the VM checkout. Those scripts load `DATABASE_URL` via dotenv from a local `.env`/`.env.local`, which is empty on the VM; the real value lives in `/opt/sportsdb/scrape.env` (loaded automatically for the scraper timers, but not by an interactive shell). Plain `source /opt/sportsdb/scrape.env` has silently failed to export it before — use this instead:
+
+```bash
+export DATABASE_URL=$(grep '^DATABASE_URL=' /opt/sportsdb/scrape.env | cut -d= -f2- | tr -d '\r')
+```
+
+**Ads**: `AdSlot` (`src/components/AdSlot.tsx`) is already wired into every page template and renders nothing unless `NEXT_PUBLIC_ADS_ENABLED=true`. Once approved by an ad network, set that flag and swap in the real embed code — no placeholder work left to do.
+
+Every VM command here touches production directly and is run by the repo owner, never by an agent over SSH — and any command that sources `.env.production` or `scrape.env` can echo `DATABASE_URL` (including the plaintext DB password) into its output. Scan for a line starting with `DATABASE_URL=postgresql://` before pasting output anywhere, and redact it.
 
 ## Adding a betting-odds phase (later)
 
