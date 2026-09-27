@@ -48,5 +48,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # scripts/lib/db.ts throws on import when DATABASE_URL is missing, which fails test
+      # files that only ever import a parser from a module that happens to reach it. Nothing
+      # in CI connects to this: tests that need a database start their own throwaway Postgres
+      # (tests/helpers/testDb.ts) and point DATABASE_URL at that for their duration. The port
+      # is unroutable on purpose, so a test that did try to connect fails loudly here rather
+      # than reaching anything real.
       - name: Test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:1/unused
         run: npm test
