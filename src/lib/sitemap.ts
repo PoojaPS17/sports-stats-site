@@ -22,6 +22,10 @@ type Entry = MetadataRoute.Sitemap[number];
 // Leagues whose players have season-by-season pages (the ones with game logs).
 const SEASON_PAGE_LEAGUES = ALL_LEAGUES.filter((l) => playerSport(l) !== null);
 
+// Leagues the performance-card page exists for (nba/nfl only — same set as
+// SUPPORTED_LEAGUES in the card route and loadPerformanceCardData).
+const PERFORMANCE_CARD_LEAGUES: League[] = ["nba", "nfl"];
+
 export const SITEMAP_IDS: string[] = [
   "core",
   "f1",
@@ -31,6 +35,7 @@ export const SITEMAP_IDS: string[] = [
   ...ALL_LEAGUES.flatMap((l) => [`teams-${l}`, `players-${l}`, `games-${l}`]),
   ...LEAGUES.filter((l) => supportsMatchweeks(l)).map((l) => `weeks-${l}`),
   ...ALL_LEAGUES.filter((l) => supportsScoreAnalytics(l)).map((l) => `h2h-${l}`),
+  ...PERFORMANCE_CARD_LEAGUES.map((l) => `performances-${l}`),
 ];
 
 const entry = (path: string, changeFrequency: Entry["changeFrequency"], priority: number, lastModified?: string | Date | null): Entry => ({
@@ -272,6 +277,28 @@ async function h2h(league: League): Promise<Entry[]> {
   return [...paths].sort().map((path) => entry(path, "weekly", 0.4));
 }
 
+// One entry per (game, leader) pair with a stored stat line, for the last two seasons
+// (same window games() already uses). jsonb_array_elements unpacks game_details.details->'leaders'
+// so this never needs a second, separately-maintained leaders table.
+async function performances(league: League): Promise<Entry[]> {
+  const { rows } = await pool.query(
+    `select g.espn_id as game_espn_id, p.slug, g.date
+     from game_details gd
+     cross join lateral jsonb_array_elements(gd.details->'leaders') as l
+     join games g on g.league = gd.league and g.espn_id = gd.game_espn_id
+     join players p on p.league = gd.league and p.espn_id = (l->>'athlete_id')
+     where gd.league = $1
+       and g.season_year >= (select max(season_year) from games where league = $1) - 1
+       and exists (select 1 from player_game_stats s where s.league = $1 and s.game_espn_id = g.espn_id and s.player_espn_id = p.espn_id)
+     order by g.date desc`,
+    [league],
+  );
+  // game_details has no updated_at column (checked db/schema.sql — only `fetched_at`, and a leader
+  // pair's underlying box score doesn't change once stored), so g.date is the right lastModified,
+  // same as games()'s own entries above.
+  return rows.map((r) => entry(`/${league}/games/${r.game_espn_id}/players/${r.slug}`, "monthly", 0.3, r.date));
+}
+
 export async function sitemapEntries(id: string): Promise<Entry[]> {
   if (id === "core") return core();
   if (id === "f1") return f1();
@@ -285,5 +312,6 @@ export async function sitemapEntries(id: string): Promise<Entry[]> {
   if (kind === "games") return games(league);
   if (kind === "weeks") return supportsMatchweeks(league) ? weeks(league) : [];
   if (kind === "h2h") return supportsScoreAnalytics(league) ? h2h(league) : [];
+  if (kind === "performances") return PERFORMANCE_CARD_LEAGUES.includes(league) ? performances(league) : [];
   return [];
 }
