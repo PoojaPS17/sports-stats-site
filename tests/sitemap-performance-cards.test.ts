@@ -37,6 +37,16 @@ before(async () => {
       }),
     ],
   );
+  // A malformed `leaders` shape (not a JSON array) must not 500 the whole sitemap section — it
+  // should just exclude this game's entries. g2 has no player_game_stats row at all, so even if
+  // the guard were absent for a *valid empty array* it would already be excluded; the point here
+  // is that a non-array `leaders` must not throw jsonb_array_elements: cannot call
+  // jsonb_array_elements on a non-array.
+  await q(
+    `insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, season_year, completed, status_detail, home_score, away_score)
+     values ('nba', 'g2', now() - interval '2 hours', 'Lakers vs Celtics', '1', '2', 2025, true, 'Final', 100, 90)`,
+  );
+  await q(`insert into game_details (league, game_espn_id, details) values ('nba', 'g2', $1)`, [JSON.stringify({ leaders: {} })]);
 });
 
 after(async () => {
@@ -61,4 +71,13 @@ test("a leader in two stat categories of the same game is listed exactly once", 
   const entries = await sitemapEntries("performances-nba");
   const paths = entries.map((e) => e.url).filter((p) => p.endsWith("/nba/games/g1/players/luka-doncic"));
   assert.equal(paths.length, 1);
+});
+
+test("a non-array `leaders` shape does not throw and simply excludes that game", async () => {
+  let entries: { url: string }[] = [];
+  await assert.doesNotReject(async () => {
+    entries = await sitemapEntries("performances-nba");
+  });
+  const paths = entries.map((e) => e.url);
+  assert.ok(!paths.some((p) => p.includes("/nba/games/g2/")));
 });

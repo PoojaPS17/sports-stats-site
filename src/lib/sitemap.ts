@@ -290,7 +290,7 @@ async function performances(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
     `select distinct g.espn_id as game_espn_id, p.slug, g.updated_at
      from game_details gd
-     cross join lateral jsonb_array_elements(gd.details->'leaders') as l
+     cross join lateral jsonb_array_elements(case when jsonb_typeof(gd.details->'leaders') = 'array' then gd.details->'leaders' else '[]'::jsonb end) as l
      join games g on g.league = gd.league and g.espn_id = gd.game_espn_id
      join players p on p.league = gd.league and p.espn_id = (l->>'athlete_id')
      where gd.league = $1

@@ -1,6 +1,7 @@
 import { createElement, type ReactElement } from "react";
 import { isLeague, getGameByEspnId, getPlayerBySlug, getPlayerLog, getPlayerReportedGames, getPlayerEspnSeasons, type GameRow, type PlayerRow } from "./queries";
-import { buildStagedProfile, playerSport, type PlayerLogRow, type PlayerProfile } from "./playerProfile";
+import { buildStagedProfile, playerSport, type PlayerLogRow, type PlayerProfile, type StagedProfile } from "./playerProfile";
+import type { GameStage } from "./gameStage";
 import { performanceLine, type PerformanceStat } from "./performanceLine";
 import { PerformanceCard } from "@/components/PerformanceCard";
 import { gameRoundLabel } from "./stage";
@@ -19,6 +20,7 @@ export interface PerformanceCardData {
   player: PlayerRow;
   row: PlayerLogRow;
   profile: PlayerProfile;
+  stageProfile: PlayerProfile | null;
   sport: "nba" | "nfl";
   stats: PerformanceStat[];
   teamColor: string | null;
@@ -46,12 +48,24 @@ export async function loadPerformanceCardData(league: string, id: string, slug: 
   const row = log.find((r) => r.game_espn_id === id);
   if (!row) return null;
 
-  const profile = buildStagedProfile(sport, log, reportedGames, espnSeasons).regular;
+  const staged = buildStagedProfile(sport, log, reportedGames, espnSeasons);
+  const profile = staged.regular;
+  const stageProfile = stageProfileFor(staged, row.stage);
   const stats = performanceLine(sport, row, profile);
   const isHomeTeam = row.team_espn_id === game.home_team_espn_id;
   const teamColor = isHomeTeam ? game.home_color : game.away_color;
 
-  return { league, game, player, row, profile, sport, stats, teamColor, isHomeTeam };
+  return { league, game, player, row, profile, stageProfile, sport, stats, teamColor, isHomeTeam };
+}
+
+// The profile whose `.rows`/`.seasons` are the correct comparison set for a row of this stage —
+// regular-season and playoff/play-in games must never be compared against each other for
+// "Season high" purposes. Null for "excluded"-stage rows, which belong to no comparison set.
+export function stageProfileFor(staged: StagedProfile, stage: GameStage): PlayerProfile | null {
+  if (stage === "playoffs") return staged.playoffs;
+  if (stage === "playin") return staged.playin;
+  if (stage === "regular" || stage === "other") return staged.regular;
+  return null;
 }
 
 // The single place that builds the new performance page's URL — box-score rows and match leaders

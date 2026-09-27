@@ -8,6 +8,10 @@ import { getGameDetails } from "@/lib/queries";
 import { gameLeadersShown, gameSections, hasNoBoxScore } from "@/lib/gamePage";
 import { ImageActions } from "@/components/ImageActions";
 import { LEAGUE_LABEL } from "@/lib/leagues";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { teamDisplayName } from "@/lib/teamName";
+import { formatGameDate } from "@/lib/gameDay";
+import { gameRoundLabel } from "@/lib/stage";
 
 type Params = { league: string; id: string; slug: string };
 
@@ -50,13 +54,30 @@ export default async function PerformancePage({ params }: { params: Promise<Para
   const data = await loadPerformanceCardData(league, id, slug);
   if (!data) notFound();
 
-  const priorRows = data.profile.rows.filter((r) => r.season_year === data.row.season_year && r.game_espn_id !== data.row.game_espn_id);
-  const seasonEntry = data.profile.seasons.find((s) => s.season === data.row.season_year);
+  const priorRows = data.stageProfile
+    ? data.stageProfile.rows.filter((r) => r.season_year === data.row.season_year && r.game_espn_id !== data.row.game_espn_id)
+    : [];
+  const seasonEntry = data.stageProfile?.seasons.find((s) => s.season === data.row.season_year);
   const seasonComplete = seasonEntry ? seasonEntry.recorded === seasonEntry.games : false;
   const tags = performanceTags(data.row, priorRows, data.sport, seasonComplete);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
+      <Breadcrumbs
+        items={[
+          { label: LEAGUE_LABEL[data.league], href: `/${data.league}` },
+          { label: "Games", href: `/${data.league}/games/${id}` },
+          { label: data.player.name },
+        ]}
+      />
+      <h1 className="page-title mt-2">
+        {data.player.name} {data.row.is_home ? "vs" : "at"} {teamDisplayName(data.row.opponent_name)}: full stat line
+      </h1>
+      <p className="mt-1 text-sm text-[var(--text-muted)]">
+        {formatGameDate(data.game.date, data.league, { month: "short", day: "numeric", year: "numeric" })}
+        {data.row.team_score != null && data.row.opponent_score != null ? ` · ${data.row.team_score}-${data.row.opponent_score}` : ""}
+        {gameRoundLabel(data.game) ? ` · ${gameRoundLabel(data.game)}` : ""}
+      </p>
       <img
         src={`/${data.league}/games/${id}/players/${slug}/card?format=og`}
         alt={`${data.player.name} performance card`}
@@ -89,7 +110,7 @@ export default async function PerformancePage({ params }: { params: Promise<Para
           Back to the game
         </Link>
         <Link href={`/${data.league}/players/${slug}`} className="hover:text-[var(--accent)]">
-          {data.player.name}'s full stats
+          Full stats for {data.player.name}
         </Link>
       </div>
       <div className="mt-4">

@@ -1,6 +1,7 @@
 // tests/performance-page.test.ts
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
+import { renderToStaticMarkup } from "react-dom/server";
 import { startTestDb, type TestDb } from "./helpers/testDb";
 
 let db: TestDb;
@@ -49,6 +50,45 @@ before(async () => {
       }),
     ],
   );
+
+  // Two playoff games for p1, same season (2025) as the regular-season game g1 (34 pts).
+  // g2 (40 pts) beats g1's regular-season best but is *not* the postseason high (g3, 45 pts, is) —
+  // exactly the scenario the bug produced a false "Season high" tag for. season_type = 3 is what
+  // the generated `games.stage` column (db/schema.sql) turns into 'playoffs'.
+  const PLAYOFF_LINE_LOW = { box: { MIN: "38", PTS: "40", REB: "8", AST: "7", STL: "1", BLK: "0", TO: "2", FG: "15-24", "3PT": "4-9", FT: "6-7", "+/-": "3" } };
+  const PLAYOFF_LINE_HIGH = { box: { MIN: "40", PTS: "45", REB: "9", AST: "8", STL: "2", BLK: "0", TO: "3", FG: "17-27", "3PT": "5-10", FT: "6-7", "+/-": "10" } };
+  await q(
+    `insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, season_year, season_type, completed, status_detail, home_score, away_score)
+     values ('nba', 'g2', now() - interval '2 days', 'Lakers vs Celtics', '1', '2', 2025, 3, true, 'Final', 115, 102)`,
+  );
+  await q(
+    `insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, season_year, season_type, completed, status_detail, home_score, away_score)
+     values ('nba', 'g3', now() - interval '1 days', 'Lakers vs Celtics', '1', '2', 2025, 3, true, 'Final', 120, 110)`,
+  );
+  await q(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('nba', 'g2', 'p1', '1', $1)`, [JSON.stringify(PLAYOFF_LINE_LOW)]);
+  await q(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('nba', 'g3', 'p1', '1', $1)`, [JSON.stringify(PLAYOFF_LINE_HIGH)]);
+  for (const [gameId, pts] of [["g2", "40"], ["g3", "45"]] as const) {
+    await q(
+      `insert into game_details (league, game_espn_id, details) values ('nba', $1, $2)`,
+      [
+        gameId,
+        JSON.stringify({
+          venue: null,
+          city: null,
+          attendance: null,
+          officials: [],
+          linescores: null,
+          events: [],
+          lineups: [],
+          team_stats: [],
+          player_box: [],
+          scorecard: [],
+          leaders: [{ team_id: "1", label: "Points", athlete_id: "p1", athlete: "Luka Dončić", value: pts }],
+          win_probability: [],
+        }),
+      ],
+    );
+  }
 });
 
 after(async () => {
@@ -74,4 +114,20 @@ test("an unknown pair 404s the same way the card route does", async () => {
     () => PerformancePage({ params: Promise.resolve({ league: "nba", id: "g1", slug: "nobody" }) }),
     (e: unknown) => (e as { digest?: string }).digest === "NEXT_HTTP_ERROR_FALLBACK;404",
   );
+});
+
+test("a playoff game's Season high tag is computed against other playoff games, not the regular season", async () => {
+  // g2 (40 pts) beats the regular-season best (g1, 34 pts) but is not the postseason high
+  // (g3, 45 pts, is) — before the fix, g2 was wrongly tagged "Season high · PTS" purely for
+  // beating the regular-season best, because the comparison set was the regular-season profile.
+  const el = await PerformancePage({ params: Promise.resolve({ league: "nba", id: "g2", slug: "luka-doncic" }) });
+  const html = renderToStaticMarkup(el);
+  assert.doesNotMatch(html, /Season high/);
+});
+
+test("the performance page renders an h1 with the player's name", async () => {
+  const el = await PerformancePage({ params: Promise.resolve({ league: "nba", id: "g1", slug: "luka-doncic" }) });
+  const html = renderToStaticMarkup(el);
+  assert.match(html, /<h1[^>]*class="[^"]*page-title/);
+  assert.match(html, /Luka Dončić/);
 });
