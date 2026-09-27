@@ -4,7 +4,6 @@ import type { MetadataRoute } from "next";
 import { pool } from "./db";
 import { ALL_LEAGUES, LEAGUES, hasNewsFeed, hasStandings, isCricketLeague, type League } from "./leagues";
 import { TOURS } from "./tennisTours";
-import { easternDateSql } from "./tennisDates";
 import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
 import { hasWeeks, loadWeeks } from "./matchweekPage";
@@ -74,24 +73,27 @@ async function core(): Promise<Entry[]> {
   ];
   out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7), entry("/cricket/series", "hourly", 0.8));
   // Every series with at least one match on record; a finished one no longer changes.
+  // lastmod is `updated_at`, not `end_date`: a series that runs into next season has an end
+  // date months away, and a page cannot have been modified on a day that has not happened.
+  // `end_date` still decides how often the page is worth re-reading.
   const { rows: cricketSeries } = await pool.query(
-    `select s.espn_id, s.end_date, (s.end_date >= now() - interval '30 days') as recent from cricket_series s
+    `select s.espn_id, s.updated_at, (s.end_date >= now() - interval '30 days') as recent from cricket_series s
      where exists (select 1 from cricket_series_matches m where m.series_espn_id = s.espn_id)
      order by s.start_date desc`
   );
-  for (const { espn_id, end_date, recent } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, recent ? "daily" : "yearly", recent ? 0.5 : 0.3, end_date));
+  for (const { espn_id, updated_at, recent } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, recent ? "daily" : "yearly", recent ? 0.5 : 0.3, updated_at));
   // Matches outside the archived competitions live at /cricket/matches; the archived
   // ones are in their league's games sitemap.
   const { rows: seriesMatches } = await pool.query(
-    `select m.espn_id, m.date from cricket_series_matches m
+    `select m.espn_id, m.updated_at from cricket_series_matches m
      where m.date >= now() - interval '45 days' and m.date <= now() + interval '14 days'
        and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates))
      order by m.date desc`
   );
-  for (const { espn_id, date } of seriesMatches) out.push(entry(`/cricket/matches/${espn_id}`, "hourly", 0.4, date));
+  for (const { espn_id, updated_at } of seriesMatches) out.push(entry(`/cricket/matches/${espn_id}`, "hourly", 0.4, updated_at));
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
-  const { rows: tournaments } = await pool.query(`select espn_id, season, ${easternDateSql("end_date")} as end_date from tennis_tournaments order by season desc, start_date`);
-  for (const { espn_id, end_date } of tournaments) out.push(entry(`/tennis/tournaments/${espn_id}`, "weekly", 0.5, end_date));
+  const { rows: tournaments } = await pool.query(`select espn_id, updated_at from tennis_tournaments order by season desc, start_date`);
+  for (const { espn_id, updated_at } of tournaments) out.push(entry(`/tennis/tournaments/${espn_id}`, "weekly", 0.5, updated_at));
   const { rows: tennisSeasons } = await pool.query(`select distinct season from tennis_tournaments order by season desc`);
   for (const { season } of tennisSeasons.slice(1)) out.push(entry(`/tennis/tournaments/${season}`, "yearly", 0.4));
   const { rows: tennisDays } = await pool.query(`select distinct to_char(day, 'YYYY-MM-DD') as day from tennis_matches where day >= current_date - 60 order by 1 desc`);
@@ -171,8 +173,10 @@ async function playerSeasons(league: League): Promise<Entry[]> {
 // (a driver page with practice sessions only renders noindex).
 async function f1(): Promise<Entry[]> {
   const out: Entry[] = [];
-  const { rows: events } = await pool.query(`select espn_id, date, (date >= now() - interval '14 days') as recent from f1_events order by date desc`);
-  for (const e of events) out.push(entry(`/f1/events/${e.espn_id}`, e.recent ? "daily" : "yearly", e.recent ? 0.6 : 0.4, e.recent ? null : e.date));
+  // The race date says when the cars ran, not when this page last changed; `updated_at` is
+  // accurate for a weekend in progress and for an archived race alike, so both carry it.
+  const { rows: events } = await pool.query(`select espn_id, updated_at, (date >= now() - interval '14 days') as recent from f1_events order by date desc`);
+  for (const e of events) out.push(entry(`/f1/events/${e.espn_id}`, e.recent ? "daily" : "yearly", e.recent ? 0.6 : 0.4, e.updated_at));
   const { rows: drivers } = await pool.query(
     `select p.slug from players p where p.league = 'f1'
        and exists (select 1 from f1_session_results r join f1_sessions s on s.espn_id = r.session_espn_id

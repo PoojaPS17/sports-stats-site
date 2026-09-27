@@ -160,7 +160,9 @@ export async function storeMatches(rows: MatchRow[]): Promise<void> {
        series_espn_id = excluded.series_espn_id, date = excluded.date, name = excluded.name, short_name = excluded.short_name,
        description = coalesce(excluded.description, cricket_series_matches.description), class_card = excluded.class_card, class_name = excluded.class_name,
        international_class_id = excluded.international_class_id, status_state = excluded.status_state, status_summary = excluded.status_summary,
-       home = excluded.home, away = excluded.away, league_candidates = excluded.league_candidates, updated_at = now()`,
+       home = excluded.home, away = excluded.away, league_candidates = excluded.league_candidates, updated_at = now()
+     where (cricket_series_matches.series_espn_id, cricket_series_matches.date, cricket_series_matches.name, cricket_series_matches.short_name, cricket_series_matches.description, cricket_series_matches.class_card, cricket_series_matches.class_name, cricket_series_matches.international_class_id, cricket_series_matches.status_state, cricket_series_matches.status_summary, cricket_series_matches.home, cricket_series_matches.away, cricket_series_matches.league_candidates)
+       is distinct from (excluded.series_espn_id, excluded.date, excluded.name, excluded.short_name, coalesce(excluded.description, cricket_series_matches.description), excluded.class_card, excluded.class_name, excluded.international_class_id, excluded.status_state, excluded.status_summary, excluded.home, excluded.away, excluded.league_candidates)`,
     [
       rows.map((r) => r.id),
       rows.map((r) => r.series),
@@ -192,7 +194,9 @@ export async function storeSeries(seriesMeta: SeriesMap): Promise<void> {
        values ($1, $2, $3, $4, $5, $6, $7, now())
        on conflict (espn_id) do update set
          name = excluded.name, short_name = excluded.short_name, abbreviation = excluded.abbreviation, slug = excluded.slug,
-         is_tournament = excluded.is_tournament, kind = excluded.kind, updated_at = now()`,
+         is_tournament = excluded.is_tournament, kind = excluded.kind, updated_at = now()
+     where (cricket_series.name, cricket_series.short_name, cricket_series.abbreviation, cricket_series.slug, cricket_series.is_tournament, cricket_series.kind)
+       is distinct from (excluded.name, excluded.short_name, excluded.abbreviation, excluded.slug, excluded.is_tournament, excluded.kind)`,
       [id, meta.name, meta.short, meta.abbr, meta.slug, meta.isTournament, kindOf(meta.events, meta.name)]
     );
   }
@@ -202,9 +206,12 @@ export async function storeSeries(seriesMeta: SeriesMap): Promise<void> {
   const { rows: siblings } = await pool.query(`select espn_id from cricket_series where is_tournament and split_part(espn_id, '-', 1) = any($1::text[])`, [bases]);
   const ids = [...new Set([...seriesMeta.keys(), ...siblings.map((r) => r.espn_id as string)])];
   await pool.query(
+    // The recompute, not the label upsert above, is what changes the page a reader sees, so
+    // this is where lastmod has to move -- and only when one of these values actually differs,
+    // or every run would restamp every series it touched.
     `update cricket_series s set
        start_date = a.start_date, end_date = a.end_date, match_count = a.n, completed_count = a.done, formats = a.formats,
-       season = extract(year from a.start_date)::int, teams = a.teams
+       season = extract(year from a.start_date)::int, teams = a.teams, updated_at = now()
      from (
        select m.series_espn_id, min(m.date) as start_date, max(m.date) as end_date, count(*)::int as n,
               count(*) filter (where m.status_state = 'post')::int as done,
@@ -214,7 +221,9 @@ export async function storeSeries(seriesMeta: SeriesMap): Promise<void> {
                  where y.series_espn_id = m.series_espn_id and side ->> 'id' <> '' and side ->> 'name' !~* '^tb[ac]$'
                  order by side ->> 'id', y.date desc) q) as teams
        from cricket_series_matches m where m.series_espn_id = any($1::text[]) group by m.series_espn_id
-     ) a where a.series_espn_id = s.espn_id`,
+     ) a where a.series_espn_id = s.espn_id
+       and (s.start_date, s.end_date, s.match_count, s.completed_count, s.formats, s.season, s.teams)
+         is distinct from (a.start_date, a.end_date, a.n, a.done, a.formats, extract(year from a.start_date)::int, a.teams)`,
     [ids]
   );
   // A tournament row with no match left is an emptied one (the old merged row once its matches are refiled, or an edition a

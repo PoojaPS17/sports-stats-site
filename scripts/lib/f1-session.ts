@@ -33,7 +33,9 @@ export async function saveBackfilledSession(
       warn(`[backfill-f1-events] WARNING: could not read the status of session ${comp.id} of event ${eventId} (${why}); its stored status is left as it is`);
       await pool.query(
         `insert into f1_sessions (espn_id, event_espn_id, session_type, date, updated_at) values ($1,$2,$3,$4, now())
-         on conflict (espn_id) do update set session_type = excluded.session_type, date = excluded.date, updated_at = now()`,
+         on conflict (espn_id) do update set session_type = excluded.session_type, date = excluded.date, updated_at = now()
+     where (f1_sessions.session_type, f1_sessions.date)
+       is distinct from (excluded.session_type, excluded.date)`,
         args
       );
       return "status-unread";
@@ -50,7 +52,9 @@ async function writeStatus(pool: Pool, args: unknown[], session: { state: string
     `insert into f1_sessions (espn_id, event_espn_id, session_type, date, status_state, status_detail, completed, updated_at)
      values ($1,$2,$3,$4,$5,$6,$7, now())
      on conflict (espn_id) do update set
-       status_state = excluded.status_state, status_detail = excluded.status_detail, completed = excluded.completed, updated_at = now()`,
+       status_state = excluded.status_state, status_detail = excluded.status_detail, completed = excluded.completed, updated_at = now()
+     where (f1_sessions.status_state, f1_sessions.status_detail, f1_sessions.completed)
+       is distinct from (excluded.status_state, excluded.status_detail, excluded.completed)`,
     [...args, session.state, session.detail, session.completed]
   );
 }

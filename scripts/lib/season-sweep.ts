@@ -19,7 +19,8 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 export interface SweepDeps {
   fetchSeason: (league: League, season: number, options: { bypassCache: boolean }) => Promise<{ events?: any[] }>;
-  upsert: (league: League, ev: any) => Promise<void>;
+  // The result is ignored here; upsertEvent reports whether it created the row for IndexNow.
+  upsert: (league: League, ev: any) => Promise<unknown>;
   sleep: (ms: number) => Promise<void>;
 }
 const liveDeps: SweepDeps = { fetchSeason: fetchScoreboardBySeason, upsert: upsertEvent, sleep };

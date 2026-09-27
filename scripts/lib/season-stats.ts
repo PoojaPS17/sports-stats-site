@@ -91,7 +91,9 @@ async function upsertOneSeason(
        pts_avg = excluded.pts_avg, reb_avg = excluded.reb_avg, ast_avg = excluded.ast_avg,
        passing_yards = excluded.passing_yards, rushing_yards = excluded.rushing_yards,
        receiving_yards = excluded.receiving_yards, goals = excluded.goals, assists = excluded.assists,
-       games_played = excluded.games_played, updated_at = now()`,
+       games_played = excluded.games_played, updated_at = now()
+     where (player_season_stats.team_espn_id, player_season_stats.categories, player_season_stats.pts_avg, player_season_stats.reb_avg, player_season_stats.ast_avg, player_season_stats.passing_yards, player_season_stats.rushing_yards, player_season_stats.receiving_yards, player_season_stats.goals, player_season_stats.assists, player_season_stats.games_played)
+       is distinct from (excluded.team_espn_id, excluded.categories, excluded.pts_avg, excluded.reb_avg, excluded.ast_avg, excluded.passing_yards, excluded.rushing_yards, excluded.receiving_yards, excluded.goals, excluded.assists, excluded.games_played)`,
     [league, seasonYear, playerEspnId, teamEspnId, JSON.stringify(out), ptsAvg, rebAvg, astAvg, passingYards, rushingYards, receivingYards, goals, assists, gamesPlayed]
   );
   return true;

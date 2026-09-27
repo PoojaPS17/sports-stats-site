@@ -32,7 +32,14 @@ export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number
        -- a run whose feed has no circuit keeps the stored one rather than blanking the venue
        circuit_name = coalesce(excluded.circuit_name, f1_events.circuit_name),
        circuit_city = coalesce(excluded.circuit_city, f1_events.circuit_city),
-       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()`,
+       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()
+     where (f1_events.name, f1_events.short_name, f1_events.date, f1_events.end_date, f1_events.season_year,
+            f1_events.circuit_name, f1_events.circuit_city, f1_events.circuit_country)
+       is distinct from (excluded.name, coalesce(excluded.short_name, f1_events.short_name),
+            excluded.date, excluded.end_date, coalesce(excluded.season_year, f1_events.season_year),
+            coalesce(excluded.circuit_name, f1_events.circuit_name),
+            coalesce(excluded.circuit_city, f1_events.circuit_city),
+            coalesce(excluded.circuit_country, f1_events.circuit_country))`,
     [
       event.id,
       event.name,
@@ -55,7 +62,9 @@ export async function upsertF1Weekend(pool: Pool, event: any, seasonYear: number
        on conflict (espn_id) do update set
          session_type = excluded.session_type, date = excluded.date,
          status_state = excluded.status_state, status_detail = excluded.status_detail,
-         completed = excluded.completed, updated_at = now()`,
+         completed = excluded.completed, updated_at = now()
+     where (f1_sessions.session_type, f1_sessions.date, f1_sessions.status_state, f1_sessions.status_detail, f1_sessions.completed)
+       is distinct from (excluded.session_type, excluded.date, excluded.status_state, excluded.status_detail, excluded.completed)`,
       [
         comp.id,
         event.id,

@@ -7,6 +7,7 @@ import { pool } from "./lib/db";
 import { fetchCurrentSeasonYear, fetchTeamSchedule, isSoccerLeague, type League } from "./lib/espn";
 import { upsertEvent } from "./lib/games";
 import { scopedLeagues } from "./lib/scope";
+import { INDEXNOW_ORIGIN, submitToIndexNow } from "../src/lib/indexnow";
 
 const LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl", "nfl", "nba"];
 const REQUEST_DELAY_MS = 120;
@@ -33,6 +34,9 @@ async function main() {
     }
     const { rows: teams } = await pool.query(`select espn_id from teams where league = $1`, [league]);
     const seen = new Set<string>();
+    // Fixtures this run created. Only these are announced: re-announcing a page that
+    // already exists is what gets a site throttled, and buys nothing.
+    const fresh: string[] = [];
     let count = 0;
     for (const { espn_id: teamId } of teams) {
       for (const v of variants(league)) {
@@ -41,7 +45,8 @@ async function main() {
           for (const ev of data.events ?? []) {
             if (seen.has(ev.id)) continue;
             seen.add(ev.id);
-            await upsertEvent(league, ev);
+            const { inserted } = await upsertEvent(league, ev);
+            if (inserted) fresh.push(`${INDEXNOW_ORIGIN}/${league}/games/${ev.id}`);
             count++;
           }
         } catch (err) {
@@ -51,6 +56,10 @@ async function main() {
       }
     }
     console.log(`[fetch-fixtures] ${league} ${season}: upserted ${count} games across ${teams.length} teams`);
+    if (fresh.length) {
+      const { submitted, failed } = await submitToIndexNow(fresh);
+      console.log(`[fetch-fixtures] ${league}: ${submitted}/${fresh.length} new fixtures announced to IndexNow${failed ? `, ${failed} batch(es) refused` : ""}`);
+    }
   }
   await pool.end();
 }

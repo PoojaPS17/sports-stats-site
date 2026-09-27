@@ -103,7 +103,9 @@ export async function upsertRanking(
      values ($1, $2, $3, $4, $5, $6, $7::timestamptz, now())
      on conflict (tour, player_espn_id) do update set
        rank = excluded.rank, previous_rank = excluded.previous_rank, points = excluded.points,
-       ranking_week = excluded.ranking_week, espn_updated = excluded.espn_updated, updated_at = now()`,
+       ranking_week = excluded.ranking_week, espn_updated = excluded.espn_updated, updated_at = now()
+     where (tennis_rankings.rank, tennis_rankings.previous_rank, tennis_rankings.points, tennis_rankings.ranking_week, tennis_rankings.espn_updated)
+       is distinct from (excluded.rank, excluded.previous_rank, excluded.points, excluded.ranking_week, excluded.espn_updated)`,
     [tour, athleteId, rank.current, rank.previous ?? null, rank.points ?? null, meta.week, meta.lastUpdated]
   );
 }

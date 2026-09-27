@@ -58,7 +58,9 @@ export async function rebuildSeasonStatsFromBoxScores(league: League, season: nu
        values ${tuples.join(",")}
        on conflict (league, season, player_espn_id) do update set
          team_espn_id = excluded.team_espn_id, categories = excluded.categories,
-         goals = excluded.goals, assists = excluded.assists, updated_at = now()`,
+         goals = excluded.goals, assists = excluded.assists, updated_at = now()
+     where (player_season_stats.team_espn_id, player_season_stats.categories, player_season_stats.goals, player_season_stats.assists)
+       is distinct from (excluded.team_espn_id, excluded.categories, excluded.goals, excluded.assists)`,
       values
     );
     written += chunk.length;

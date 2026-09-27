@@ -75,7 +75,9 @@ async function processTour(tour: Tour) {
              on conflict (tour, espn_id) do update set
                score_display = excluded.score_display, winner_espn_id = excluded.winner_espn_id,
                completed = excluded.completed, status_state = excluded.status_state,
-               status_detail = excluded.status_detail, updated_at = now()`,
+               status_detail = excluded.status_detail, updated_at = now()
+     where (tennis_matches.score_display, tennis_matches.winner_espn_id, tennis_matches.completed, tennis_matches.status_state, tennis_matches.status_detail)
+       is distinct from (excluded.score_display, excluded.winner_espn_id, excluded.completed, excluded.status_state, excluded.status_detail)`,
             [
               tour,
               comp.id,

@@ -79,7 +79,9 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
        date = excluded.date, end_date = excluded.end_date,
        circuit_name = coalesce(excluded.circuit_name, f1_events.circuit_name),
        circuit_city = coalesce(excluded.circuit_city, f1_events.circuit_city),
-       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()`,
+       circuit_country = coalesce(excluded.circuit_country, f1_events.circuit_country), updated_at = now()
+     where (f1_events.date, f1_events.end_date, f1_events.circuit_name, f1_events.circuit_city, f1_events.circuit_country)
+       is distinct from (excluded.date, excluded.end_date, coalesce(excluded.circuit_name, f1_events.circuit_name), coalesce(excluded.circuit_city, f1_events.circuit_city), coalesce(excluded.circuit_country, f1_events.circuit_country))`,
     [event.id, event.name, event.shortName ?? null, event.date, event.endDate ?? null, seasonYear, circuit?.name ?? null, circuit?.city ?? null, circuit?.country ?? null]
   );
 

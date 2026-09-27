@@ -155,7 +155,9 @@ export async function storeGameStats(league: League, gameEspnId: string, perPlay
     `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
      values ${tuples.join(",")}
      on conflict (league, game_espn_id, player_espn_id) do update set
-       team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()`,
+       team_espn_id = excluded.team_espn_id, stats = excluded.stats, updated_at = now()
+     where (player_game_stats.team_espn_id, player_game_stats.stats)
+       is distinct from (excluded.team_espn_id, excluded.stats)`,
     values
   );
   return perPlayer.size;

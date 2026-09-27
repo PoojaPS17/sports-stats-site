@@ -126,7 +126,9 @@ export async function refreshMatchCards(db: Pick<Pool, "query">, league: string,
     `insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats, updated_at)
      select $1, $2, r.id, r.team, r.stats::jsonb, now()
      from unnest($3::text[], $4::text[], $5::text[]) as r(id, team, stats)
-     on conflict (league, game_espn_id, player_espn_id) do update set stats = excluded.stats, updated_at = now()`,
+     on conflict (league, game_espn_id, player_espn_id) do update set stats = excluded.stats, updated_at = now()
+     where (player_game_stats.stats)
+       is distinct from (excluded.stats)`,
     [
       league,
       gameId,

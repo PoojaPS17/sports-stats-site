@@ -181,7 +181,9 @@ export async function upsertMedalTally(editionYear: number, rows: ScrapedMedalRo
        values ($1, $2, $3, $4, $5, $6, $7, $8, now())
        on conflict (edition_year, nation_slug) do update set
          nation_name = excluded.nation_name, gold = excluded.gold, silver = excluded.silver,
-         bronze = excluded.bronze, rank = excluded.rank, source_url = excluded.source_url, updated_at = now()`,
+         bronze = excluded.bronze, rank = excluded.rank, source_url = excluded.source_url, updated_at = now()
+     where (medal_tally.nation_name, medal_tally.gold, medal_tally.silver, medal_tally.bronze, medal_tally.rank, medal_tally.source_url)
+       is distinct from (excluded.nation_name, excluded.gold, excluded.silver, excluded.bronze, excluded.rank, excluded.source_url)`,
       [editionYear, r.nation_slug, r.nation_name, r.gold, r.silver, r.bronze, ranks[i], sourceUrl]
     );
   }
