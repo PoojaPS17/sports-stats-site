@@ -32,6 +32,22 @@ test("upcoming games sharing the exact same kickoff instant land in one cluster"
   assert.deepEqual(clusters[0].map((g) => g.espn_id), ["1", "2", "3"]);
 });
 
+test("clusters just as well when date arrives as a Date object, not a string -- pool.query()'s real shape", () => {
+  // GameRow.date is typed as a string, but every row read straight from pool.query() (as the three
+  // real call sites do) carries a native Date for a timestamptz column -- gameDay.ts's `string | Date`
+  // parameters exist for exactly this reason. Two distinct Date instances for the same instant are
+  // never `===`; this only passes when the comparison goes through getTime() instead.
+  const sameInstant = new Date("2026-09-27T17:00:00Z");
+  const games = [
+    game({ espn_id: "1", date: new Date(sameInstant) as unknown as string }),
+    game({ espn_id: "2", date: new Date(sameInstant) as unknown as string }),
+    game({ espn_id: "3", date: new Date(sameInstant) as unknown as string }),
+  ];
+  const clusters = groupByKickoff(games);
+  assert.equal(clusters.length, 1);
+  assert.deepEqual(clusters[0].map((g) => g.espn_id), ["1", "2", "3"]);
+});
+
 test("games at different kickoff instants stay in their own clusters", () => {
   const games = [
     game({ espn_id: "1", date: "2026-09-27T17:00:00Z" }),

@@ -24,12 +24,18 @@ export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.st
  * sharing the exact same `date` (the raw UTC instant, so this needs no visitor timezone: two games with
  * the same instant always show the same local clock time in any zone). A completed or live game shows a
  * status pill, not a kickoff clock, so it never merges and always comes back as its own run of one.
+ *
+ * Compared by `getTime()`, not `===`: `GameRow.date` is typed as `string`, but a row read straight from
+ * `pool.query()` (as every page here does) carries it as a native `Date` object -- the same `string |
+ * Date` reality every other `date`-consuming helper in this file and gameDay.ts already accounts for.
+ * Two distinct `Date` instances for the same instant are never `===`, which silently produced zero
+ * clusters in production while every unit test (built on string literals) kept passing.
  */
 export function groupByKickoff<T extends StatusFields & Pick<GameRow, "date">>(games: readonly T[]): T[][] {
   const clusters: T[][] = [];
   for (const g of games) {
     const prev = clusters[clusters.length - 1]?.[0];
-    if (prev && isUpcomingGame(prev) && isUpcomingGame(g) && prev.date === g.date) {
+    if (prev && isUpcomingGame(prev) && isUpcomingGame(g) && new Date(prev.date).getTime() === new Date(g.date).getTime()) {
       clusters[clusters.length - 1].push(g);
     } else {
       clusters.push([g]);
