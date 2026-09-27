@@ -6,7 +6,7 @@ import { isLeague, isInternationalCricket, LEAGUE_LABEL, leagueNameWithArticle, 
 import { getCurrentSeasonTeams } from "@/lib/related";
 import { TeamLogo } from "@/components/TeamLogo";
 import { pageMeta } from "@/lib/metadata";
-import { GameCard } from "@/components/GameCard";
+import { GameGrid } from "@/components/GameGrid";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ImageActions } from "@/components/ImageActions";
@@ -124,11 +124,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
             >
               {day}
             </SectionHeader>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {dayGames.map((g) => (
-                <GameCard key={g.espn_id} league={league} game={g} />
-              ))}
-            </div>
+            <GameGrid league={league} games={dayGames} gridClassName="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" />
           </section>
         );
       })}

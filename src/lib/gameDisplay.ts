@@ -18,6 +18,27 @@ type StageFields = Pick<GameRow, "round" | "stage" | "competition_type" | "note"
 export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.status_state !== "in" && !isGameCalledOff(g);
 
 /**
+ * Groups a day's games into consecutive runs that kick off at the same instant, so a page can label a
+ * shared broadcast window (the NFL's 1pm ET slate, say) instead of repeating an identical clock time on
+ * every card with no explanation. Only upcoming games merge, and only with an adjacent upcoming game
+ * sharing the exact same `date` (the raw UTC instant, so this needs no visitor timezone: two games with
+ * the same instant always show the same local clock time in any zone). A completed or live game shows a
+ * status pill, not a kickoff clock, so it never merges and always comes back as its own run of one.
+ */
+export function groupByKickoff<T extends StatusFields & Pick<GameRow, "date">>(games: readonly T[]): T[][] {
+  const clusters: T[][] = [];
+  for (const g of games) {
+    const prev = clusters[clusters.length - 1]?.[0];
+    if (prev && isUpcomingGame(prev) && isUpcomingGame(g) && prev.date === g.date) {
+      clusters[clusters.length - 1].push(g);
+    } else {
+      clusters.push([g]);
+    }
+  }
+  return clusters;
+}
+
+/**
  * The date line of a schedule row: date and kickoff for an upcoming game, date and reason for a
  * called-off one, date alone otherwise. The date is the league's own calendar day (Eastern for the
  * NFL and NBA), and the kickoff is read in that same zone so the two agree rather than showing a UTC

@@ -20,7 +20,7 @@ import {
 import { formatGameDate, gameDayIso } from "@/lib/gameDay";
 import { AdSlot } from "./AdSlot";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { GameCard } from "./GameCard";
+import { GameGrid } from "./GameGrid";
 import { PageHeader } from "./PageHeader";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
@@ -209,11 +209,7 @@ export async function WeekHub({
               >
                 {day}
               </SectionHeader>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {games.map((g) => (
-                  <GameCard key={g.espn_id} league={league} game={g} />
-                ))}
-              </div>
+              <GameGrid league={league} games={games} gridClassName="grid gap-3 sm:grid-cols-2" />
             </section>
           ))}
 
