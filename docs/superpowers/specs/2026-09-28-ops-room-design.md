@@ -7,7 +7,7 @@
 
 One private page, the Ops Room, that shows the site owner every morning whether sports-db.live is healthy, what the data looks like, what needs attention, and what a set of named agents found overnight. The agents run unattended, report only, and never change the site. The owner decides what to act on and asks for the fix in chat.
 
-The model is a page a friend of the owner built for ps-store-db.live: a roster of named agents with one job each, scheduled jobs that leave one dated line per agent, an issue list, a rulebook, and a showcase. This design reproduces the working parts. The animated pixel showcase is explicitly out of scope for the first version.
+The model is a page a friend of the owner built for ps-store-db.live: a roster of named agents with one job each, scheduled jobs that leave one dated line per agent, an issue list, a rulebook, and a showcase. This design reproduces the working parts and the animated pixel showcase, drawn in code.
 
 ## 2. Decisions already taken
 
@@ -19,7 +19,7 @@ The model is a page a friend of the owner built for ps-store-db.live: a roster o
 | Cadence | Every agent daily, except the Steward weekly. |
 | Alerts | The dashboard only. The existing GitHub watchdog keeps emailing when scrapers stop. |
 | Search Console and Bing | The owner has given Claude in Chrome signed-in access. Those readings come from a local scheduled task on the owner's Mac, weekdays at 10:00 IST. |
-| Showcase | Later, after the crew works. |
+| Showcase | In scope: an animated pixel clubhouse, section 5.1. Built after the working tabs, in the same page. |
 
 ## 3. Architecture
 
@@ -171,6 +171,38 @@ A single HTML artifact with the site's identity: navy bands, Volt lime signature
 
 Live: the page subscribes once per collection and re-renders on change. It works with `db` unavailable by showing an empty-state message. No external libraries except a Markdown renderer from cdnjs.
 
+### 5.1 The Clubhouse, an animated pixel showcase
+
+A sixth tab, **Clubhouse**, drawn entirely in code on a `<canvas>` at 4x pixel scale, in the manner of the friend's office tower: a cross-section of a stand at the ground, one room per crew group, a character per agent, and a scripted walk through one day of the Ops Room. No image files, no official art; every sprite is a small array in the page source.
+
+**The building, top to bottom:**
+
+1. **Directors' box** at the top, glass front looking onto the pitch: the owner at a desk with the Today screen, and the main chat session as a second figure beside a whiteboard. A sign reads `SPORTS-DB.LIVE`.
+2. **Officials' room**: the Umpire at a desk with a printed report, the Editor at a lectern with the article draft. A door marked `PR QUEUE` with a number.
+3. **Backroom**: the Physio's treatment table with a heart monitor for site latency, the Kit Manager's rail of shirts with a tape measure, the Steward's locker with a torch, lit on Mondays.
+4. **Front office**: the Analyst at two monitors, the Scout with binoculars at a window, the Press Officer at a microphone desk, the Scorer updating a wall scoreboard that shows the real `daily/` numbers.
+5. **Basement**: the database as server racks with blinking lights driven by the real heartbeat ages, a backup vault whose door is open when a dump is fresh and shut with a red light when it is stale, and a conveyor carrying scrape ticks down from a pipe on the right.
+
+**The day, as steps.** A caption bar shows `Step n of 13` with one sentence, and each step moves or lights the figure concerned:
+
+1. 04:30 IST. The daily scrape starts; ticks roll down the conveyor into the racks.
+2. 06:00. The Physio pings the pitch: twenty pages light up green, or one turns red.
+3. 06:15. The Umpire collects the report from the basement and reads it.
+4. 06:30. The Kit Manager measures the shirts: layout scores.
+5. 06:45. The Analyst checks the sitemaps and the schema.
+6. 07:00. The article routine drops a draft into the PR queue.
+7. 07:15. The Scout scans the horizon: what is indexed.
+8. 07:30. The Editor reads the draft and holds up a verdict card.
+9. 07:45. The Press Officer drafts the day's posts.
+10. 08:00. The Scorer chalks the numbers on the board.
+11. 10:00, weekdays. A laptop in the directors' box opens Search Console.
+12. The owner reads Today, acknowledges what needs it, and says deploy. A purge sweeps the pitch once.
+13. Night. The lights dim; on Mondays the Steward patrols with the torch.
+
+**Controls:** Pause, Restart, Day and Night, and the caption bar's step. Clicking a figure opens its card beside the canvas in the friend's format: name, role, Job, Never, When, and Tonight, where Tonight is the agent's real `lastHeadline` from `crew/`. The room layout is static; only the figures, lights and captions move.
+
+**Behaviour:** the loop runs on `requestAnimationFrame` at a fixed 8 frames per second for the pixel look, pauses when the tab is hidden, and under `prefers-reduced-motion` shows the scene still with the step buttons only. The canvas scales to the column width with `image-rendering: pixelated` and stays sharp on phones. Everything the scene shows that is a number comes from the database; when `db` is unavailable the scene still plays with the figures alone.
+
 ## 6. Seeds
 
 On first publish the session seeds `crew/` from the nine files, `rules/` with:
@@ -191,7 +223,6 @@ On first publish the session seeds `crew/` from the nine files, `rules/` with:
 
 ## 8. Out of scope
 
-- The animated pixel showcase.
 - Agents that fix anything.
 - Search Console or Bing API credentials; the browser reading replaces them.
 - X follower metrics; the API is paid.
