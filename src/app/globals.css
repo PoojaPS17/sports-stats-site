@@ -6,54 +6,68 @@
    (system preference, then the explicit data-theme toggle which always wins).
 --------------------------------------------------------------------------- */
 :root {
-  --bg: #f4f6fa;
+  --bg: #f3f4f8;
   --surface: #ffffff;
-  --surface-muted: #f0f3f8;
-  --surface-hover: #f6f8fc;
-  --border: #e1e6ef;
-  --border-strong: #c9d2e0;
-  --text: #0f172a;
-  --text-muted: #5b6577;
-  --text-faint: #8a94a6;
+  --surface-muted: #eceef4;
+  --surface-hover: #f5f6fa;
+  --border: #dde1ea;
+  --border-strong: #c3cad8;
+  --text: #0b1324;
+  --text-muted: #5a6478;
+  --text-faint: #8b95a8;
 
-  --accent: #1d4ed8;
-  --accent-hover: #1e40af;
-  --accent-soft: #e6eeff;
-  --accent-foreground: #ffffff;
+  /* The signature colour (Volt) and its readable ink on light surfaces. */
+  --sig: #c6f135;
+  --sig-ink: #4d7c0f;
+  --sig-soft: #eef9c9;
+  --sig-on: #0b1324;
+
+  /* The dark bands: masthead, scores strip, hero, article header, footer. Same in both themes. */
+  --mast: #0b1324;
+  --mast-2: #121c33;
+  --mast-text: #eef1f7;
+  --mast-muted: #9aa5bd;
+
+  /* Legacy names, kept so every existing component inherits the identity. */
+  --accent: var(--sig-ink);
+  --accent-hover: #3f6a0a;
+  --accent-soft: var(--sig-soft);
+  --accent-foreground: var(--sig-on);
   --accent-2: #d97706;
 
   --win: #15803d;
   --loss: #b91c1c;
   --draw: #64748b;
-  --live: #dc2626;
+  --live: #ff3b5c;
 
-  --zone-1: #1d4ed8; /* Champions League / playoff line */
-  --zone-2: #d97706; /* Europa / play-in */
-  --zone-3: #dc2626; /* relegation */
-  --zone-4: #0f766e; /* Conference League */
+  --zone-1: #2563eb;
+  --zone-2: #d97706;
+  --zone-3: #dc2626;
+  --zone-4: #0f766e;
 
-  --header-bg: rgba(255, 255, 255, 0.92);
-  --header-text: #0f172a;
-  --header-text-muted: #475569;
-  --header-border: #e1e6ef;
-  --header-hover-bg: #f0f3f8;
+  --header-bg: var(--mast);
+  --header-text: var(--mast-text);
+  --header-text-muted: var(--mast-muted);
+  --header-border: #1b2640;
+  --header-hover-bg: rgba(255, 255, 255, 0.07);
 
-  --pill-live-bg: #fee2e2;
-  --pill-live-text: #b91c1c;
-  --pill-final-bg: #eef1f6;
-  --pill-final-text: #475569;
-  --pill-upcoming-bg: #e6eeff;
-  --pill-upcoming-text: #1e40af;
+  --pill-live-bg: var(--live);
+  --pill-live-text: #ffffff;
+  --pill-final-bg: #e8ebf2;
+  --pill-final-text: #46516a;
+  --pill-upcoming-bg: var(--sig-soft);
+  --pill-upcoming-text: var(--sig-ink);
   --pill-feature-bg: #dcfce7;
   --pill-feature-text: #166534;
 
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
 
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-pop: 0 10px 30px -10px rgba(15, 23, 42, 0.25), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 1px 2px rgba(11, 19, 36, 0.05), 0 8px 24px -12px rgba(11, 19, 36, 0.18);
+  --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
 
-  --header-h: 3.5rem;
+  --font-display: var(--font-barlow);
+  --header-h: 3.75rem;
 }
 
 @theme inline {
@@ -64,102 +78,101 @@
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-accent: var(--accent);
+  --color-sig: var(--sig);
+  --color-sig-ink: var(--sig-ink);
+  --color-sig-soft: var(--sig-soft);
+  --color-sig-on: var(--sig-on);
+  --color-mast: var(--mast);
+  --color-mast-2: var(--mast-2);
+  --color-mast-text: var(--mast-text);
+  --color-mast-muted: var(--mast-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1220;
-    --surface: #111a2b;
-    --surface-muted: #172238;
+    --bg: #0a0f1c;
+    --surface: #111a2c;
+    --surface-muted: #182238;
     --surface-hover: #1b2740;
-    --border: #233047;
-    --border-strong: #32415c;
-    --text: #e8edf6;
-    --text-muted: #9aa7bd;
-    --text-faint: #6b788f;
+    --border: #24304a;
+    --border-strong: #34425e;
+    --text: #e9edf6;
+    --text-muted: #9aa6bf;
+    --text-faint: #6b7890;
 
-    --accent: #6ea0ff;
-    --accent-hover: #8db3ff;
-    --accent-soft: #1a2a4d;
-    --accent-foreground: #0b1220;
+    --sig-ink: var(--sig);
+    --sig-soft: #23301a;
+
+    --accent: var(--sig);
+    --accent-hover: #d8f766;
+    --accent-soft: var(--sig-soft);
+    --accent-foreground: var(--sig-on);
     --accent-2: #f59e0b;
 
     --win: #4ade80;
     --loss: #f87171;
     --draw: #94a3b8;
-    --live: #f87171;
 
     --zone-1: #6ea0ff;
     --zone-2: #f59e0b;
     --zone-3: #f87171;
     --zone-4: #2dd4bf;
 
-    --header-bg: rgba(17, 26, 43, 0.92);
-    --header-text: #e8edf6;
-    --header-text-muted: #9aa7bd;
-    --header-border: #233047;
-    --header-hover-bg: #172238;
+    --header-border: #1b2640;
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
 
-    --pill-live-bg: #3b1520;
-    --pill-live-text: #fb7185;
     --pill-final-bg: #1b2740;
     --pill-final-text: #9aa7bd;
-    --pill-upcoming-bg: #1a2a4d;
-    --pill-upcoming-text: #9dbcff;
     --pill-feature-bg: #0f2f22;
     --pill-feature-text: #4ade80;
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+    --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0b1220;
-  --surface: #111a2b;
-  --surface-muted: #172238;
+  --bg: #0a0f1c;
+  --surface: #111a2c;
+  --surface-muted: #182238;
   --surface-hover: #1b2740;
-  --border: #233047;
-  --border-strong: #32415c;
-  --text: #e8edf6;
-  --text-muted: #9aa7bd;
-  --text-faint: #6b788f;
+  --border: #24304a;
+  --border-strong: #34425e;
+  --text: #e9edf6;
+  --text-muted: #9aa6bf;
+  --text-faint: #6b7890;
 
-  --accent: #6ea0ff;
-  --accent-hover: #8db3ff;
-  --accent-soft: #1a2a4d;
-  --accent-foreground: #0b1220;
+  --sig-ink: var(--sig);
+  --sig-soft: #23301a;
+
+  --accent: var(--sig);
+  --accent-hover: #d8f766;
+  --accent-soft: var(--sig-soft);
+  --accent-foreground: var(--sig-on);
   --accent-2: #f59e0b;
 
   --win: #4ade80;
   --loss: #f87171;
   --draw: #94a3b8;
-  --live: #f87171;
 
   --zone-1: #6ea0ff;
   --zone-2: #f59e0b;
   --zone-3: #f87171;
   --zone-4: #2dd4bf;
 
-  --header-bg: rgba(17, 26, 43, 0.92);
-  --header-text: #e8edf6;
-  --header-text-muted: #9aa7bd;
-  --header-border: #233047;
-  --header-hover-bg: #172238;
+  --header-border: #1b2640;
+  --header-hover-bg: rgba(255, 255, 255, 0.07);
 
-  --pill-live-bg: #3b1520;
-  --pill-live-text: #fb7185;
   --pill-final-bg: #1b2740;
   --pill-final-text: #9aa7bd;
-  --pill-upcoming-bg: #1a2a4d;
-  --pill-upcoming-text: #9dbcff;
   --pill-feature-bg: #0f2f22;
   --pill-feature-text: #4ade80;
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* ---------------------------------------------------------------------------
@@ -230,17 +243,65 @@ table {
 }
 
 .page-title {
-  font-size: 1.5rem;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
   color: var(--text);
+  text-wrap: balance;
 }
 
 @media (min-width: 640px) {
   .page-title {
-    font-size: 1.75rem;
+    font-size: 2.75rem;
   }
+}
+
+/* Headline face for any heading or big number. */
+.display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  line-height: 1;
+  font-weight: 800;
+}
+
+/* Small caps label above a title. Colour is set where it's used (Volt on a band, ink on a surface). */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* A full-bleed dark block: hero, section title bands, article header. Bleeds past the
+   container's side padding, so it needs a `.container-x` (or a `.wrap`) inside. */
+.band {
+  background: var(--mast);
+  color: var(--mast-text);
+}
+
+.band .eyebrow {
+  color: var(--sig);
+}
+
+/* The homepage hero: a faint Volt wash top-right. */
+.band-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.band-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sig) 18%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.band-hero > * {
+  position: relative;
 }
 
 /* ---------------------------------------------------------------------------
@@ -265,6 +326,7 @@ a.card:hover,
 .player-grid > a:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-pop);
+  transform: translateY(-2px);
 }
 
 /* The players index lists every player of a league (thousands of links), so a row carries no
@@ -397,7 +459,7 @@ a.card:hover,
 }
 
 .tab-active::after {
-  background: var(--accent);
+  background: var(--sig);
 }
 
 /* Small status pills on cards. */
@@ -440,6 +502,10 @@ a.card:hover,
   border-radius: 9999px;
   background: var(--pill-live-text);
   animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.pill-live .live-dot {
+  background: #ffffff;
 }
 
 /* Result letters (W / L / D) used in form strips and schedules. */
