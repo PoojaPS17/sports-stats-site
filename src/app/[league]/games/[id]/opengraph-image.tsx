@@ -5,6 +5,7 @@ import { gameCalledOffLabel } from "@/lib/gameStatus";
 import { finishedNoScoreNote, shareImageModel } from "@/lib/gameDisplay";
 import { formatGameDate } from "@/lib/gameDay";
 import { resolveTeamLogo } from "@/lib/teamLogos";
+import { verifyLogoUrl } from "@/lib/verifyImageUrl";
 
 export const alt = "Match page";
 export const size = { width: 1200, height: 630 };
@@ -49,13 +50,17 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const scorecard = isCricketLeague(game.league) && game.completed ? ((await getGameDetails(game.league, id))?.scorecard ?? null) : null;
   const { status, order } = shareImageModel(game, scorecard);
   const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, game.local_date);
-  // A stored logo_url can be a dead ESPN path (many cricket sides have none) that only gets
-  // corrected here, not in the database, so this route re-checks it instead of trusting the
-  // row: @vercel/og fetches <img src> server-side and throws rendering the page if it 404s,
-  // unlike TeamLogo's client-side <img onError> which just falls back to the initials disc.
+  // A stored logo_url can be a dead path (many cricket sides have none, but any league's could
+  // rot) that only gets corrected here, not in the database, so this route re-checks it instead
+  // of trusting the row: @vercel/og fetches <img src> server-side and throws rendering the page
+  // if it 404s, unlike TeamLogo's client-side <img onError> which just falls back to the
+  // initials disc. resolveTeamLogo applies cricket's curated substitutes first; verifyLogoUrl is
+  // the general safety net that catches anything still dead, cricket or not.
   const cricket = isCricketLeague(game.league);
-  const homeLogo = cricket ? resolveTeamLogo(game.home_team_espn_id, game.home_logo) : game.home_logo;
-  const awayLogo = cricket ? resolveTeamLogo(game.away_team_espn_id, game.away_logo) : game.away_logo;
+  const [homeLogo, awayLogo] = await Promise.all([
+    verifyLogoUrl(cricket ? resolveTeamLogo(game.home_team_espn_id, game.home_logo) : game.home_logo),
+    verifyLogoUrl(cricket ? resolveTeamLogo(game.away_team_espn_id, game.away_logo) : game.away_logo),
+  ]);
 
   const sides = {
     away: <Side name={game.away_name} logo={awayLogo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />,
