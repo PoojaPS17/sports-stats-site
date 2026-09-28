@@ -3,6 +3,7 @@ import { article as secondGoldAsianRecord } from "@/content/beyondTheScoreline/s
 import { article as russellBakuWinCutsTitleGap } from "@/content/beyondTheScoreline/russell-baku-win-cuts-title-gap";
 import { article as kabaddiGoldenSweepAsianGames } from "@/content/beyondTheScoreline/kabaddi-golden-sweep-asian-games";
 import { article as manCityGuiltyVerdict115Charges } from "@/content/beyondTheScoreline/man-city-guilty-verdict-115-charges";
+import { article as barcelonaRecordSevenMatchWinStreak } from "@/content/beyondTheScoreline/barcelona-record-seven-match-win-streak";
 
 export interface BeyondTheScorelineRelatedLink {
   label: string;
@@ -46,6 +47,7 @@ export const ARTICLES: BeyondTheScorelineArticle[] = [
   russellBakuWinCutsTitleGap,
   kabaddiGoldenSweepAsianGames,
   manCityGuiltyVerdict115Charges,
+  barcelonaRecordSevenMatchWinStreak,
 ];
 
 assertUniqueSlugs(ARTICLES);
