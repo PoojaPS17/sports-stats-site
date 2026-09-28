@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { JSDOM } from "jsdom";
 
 const html = readFileSync("ops/room/index.html", "utf8");
 
@@ -62,4 +63,75 @@ test("the clubhouse plays a 13-step day with the four controls and honours reduc
   for (const id of ["clubhouse-pause", "clubhouse-restart", "clubhouse-day", "clubhouse-night", "clubhouse-caption"]) assert.ok(scene.includes(`id="${id}"`), id);
   assert.ok(html.includes("prefers-reduced-motion"));
   assert.ok(html.includes("visibilitychange"));
+});
+
+// The sanitizer is the one place untrusted Markdown becomes elements, so it is exercised against a
+// real DOM rather than asserted as source text: the page's main inline script is evaluated inside a
+// JSDOM window with the two globals it expects (window.claude, and marked stubbed to hand its input
+// straight back, since the test feeds HTML in already).
+function opsRoomWindow() {
+  const scripts = [...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  const main = scripts.find((s) => s.includes("window.OpsRoom = OpsRoom"));
+  assert.ok(main, "the main script defines OpsRoom");
+  const dom = new JSDOM("<!doctype html><title>t</title><body></body>", { runScripts: "outside-only" });
+  const win = dom.window as unknown as {
+    OpsRoom: { markdownBlock(md: unknown): Element; sanitize(s: string): Node | null };
+    claude: unknown;
+    marked: unknown;
+    eval(code: string): unknown;
+  };
+  win.claude = { use: async () => null };
+  win.marked = { parse: (s: string) => s };
+  win.eval(main!);
+  return win;
+}
+
+test("the sanitizer drops what can run and keeps what Markdown needs", () => {
+  const ops = opsRoomWindow().OpsRoom;
+  const box = (md: string) => ops.markdownBlock(md);
+
+  const withImg = box('<img src="x" onerror="alert(1)">');
+  const img = withImg.querySelector("img");
+  assert.ok(img, "an image survives the walk");
+  assert.equal(img!.hasAttribute("onerror"), false, "its handler does not");
+
+  const jsLink = box('<a href="jav&#9;ascript:alert(1)">x</a>');
+  assert.equal(jsLink.querySelector("a")!.hasAttribute("href"), false, "a tab-broken javascript: url is removed");
+
+  assert.equal(box('<base href="https://evil.example/">').querySelector("base"), null, "base cannot move the page");
+  assert.equal(box('<p style="color:red">hi</p>').querySelector("p")!.hasAttribute("style"), false, "inline style is stripped");
+
+  const svg = box("<svg><script>1</script></svg>");
+  assert.equal(svg.querySelector("svg"), null, "svg is not something Markdown produces");
+  assert.equal(svg.querySelector("script"), null, "and its script is gone");
+
+  const blank = box('<a href="https://sports-db.live" target="_blank">x</a>');
+  assert.equal(blank.querySelector("a")!.getAttribute("rel"), "noopener noreferrer", "a new tab cannot reach back");
+
+  const unwrapped = box("<marquee>words <b>kept</b></marquee>");
+  assert.equal(unwrapped.querySelector("marquee"), null, "an element off the allowlist is unwrapped");
+  assert.ok(unwrapped.textContent!.includes("words kept"), "its words survive");
+
+  assert.ok(ops.sanitize("<p>hi</p>")!.nodeType === 1, "sanitize hands back nodes, never a string to re-parse");
+});
+
+test("a runaway details block is truncated instead of rendered whole", () => {
+  const ops = opsRoomWindow().OpsRoom;
+  const box = ops.markdownBlock("x".repeat(40_000));
+  const text = box.textContent ?? "";
+  assert.ok(text.length > 16_000 && text.length < 17_000, `truncated near 16k, got ${text.length}`);
+  assert.ok(text.includes("details truncated"), "and says so");
+});
+
+test("the page never assigns markup to a live element", () => {
+  assert.ok(!html.includes("innerHTML"), "no innerHTML anywhere in the page");
+});
+
+test("the Rulebook confirms a removal in the page, not in a modal", () => {
+  assert.ok(!/window\.confirm\s*\(/.test(html), "modals are not reliable inside the artifact sandbox");
+  assert.ok(html.includes("Confirm remove"), "the button asks for itself instead");
+});
+
+test("the Issues write buttons respect a read-only viewer", () => {
+  assert.ok(/if \(this\.db && this\.canWrite\) \{\n\s+const notice = /.test(html), "issue actions need canWrite, like the Rulebook");
 });

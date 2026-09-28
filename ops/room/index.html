@@ -302,6 +302,10 @@ if (!window.claude) window.claude = { use: async () => null };
 
 const GROUPS = [["dugout", "Dugout"], ["officials", "Match officials"], ["backroom", "Backroom staff"], ["front-office", "Front office"]];
 
+// Twice the 8 KB the protocol asks an agent for. Past this a run's details are
+// cut, so one runaway run cannot freeze the Runs tab.
+const DETAILS_LIMIT = 16000;
+
 // The dugout is the two of us. Neither has a routine, so neither is a crew
 // document: they are written here and never read from the database.
 const DUGOUT = [
@@ -668,7 +672,9 @@ const OpsRoom = {
     if (this.has(it.detail)) card.append(h("p", { class: "issue-text", text: it.detail }));
     if (this.has(it.fix)) card.append(h("div", { class: "issue-fix" },
       h("b", { text: "Fix" }), h("span", { class: "issue-text", text: it.fix })));
-    if (this.db) {
+    // Same test as the Rulebook: a read-only viewer is not offered buttons that
+    // can only ever answer "Could not save".
+    if (this.db && this.canWrite) {
       const notice = h("p", { class: "issue-notice", hidden: true });
       const actions = h("div", { class: "issue-actions" });
       if (status !== "acknowledged") actions.append(this.issueButton(key, "acknowledged", "Acknowledge", notice));
@@ -784,11 +790,20 @@ const OpsRoom = {
     return det;
   },
 
-  // The one place a run's Markdown enters the page as HTML. renderMarkdown has
-  // already parsed it and dropped the scripts, event handlers and script URLs.
+  // The one place a run's Markdown enters the page as elements. renderMarkdown
+  // has already parsed it and dropped the scripts, event handlers and script
+  // URLs; the cleaned nodes are imported as they are, never serialised back
+  // into markup. The protocol asks agents for at most 8 KB of details, so a
+  // block twice that size is a runaway run: it is cut rather than allowed to
+  // freeze the tab.
   markdownBlock(md) {
     const box = this.h("div", { class: "md" });
-    box.innerHTML = this.renderMarkdown(md);
+    const text = String(md === null || md === undefined ? "" : md);
+    const cut = text.length > DETAILS_LIMIT;
+    const body = this.renderMarkdown(cut ? text.slice(0, DETAILS_LIMIT) : text);
+    if (body) box.replaceChildren(...Array.from(body.childNodes).map((n) => document.importNode(n, true)));
+    else box.append(this.h("p", { class: "issue-text", text: text }));
+    if (cut) box.append(this.h("p", { class: "empty", text: "details truncated" }));
     return box;
   },
 
@@ -919,9 +934,28 @@ const OpsRoom = {
       if (writable) {
         const edit = h("button", { type: "button", class: "btn", text: "Edit" });
         const remove = h("button", { type: "button", class: "btn", text: "Remove" });
-        edit.addEventListener("click", () => open());
+        const cancel = h("button", { type: "button", class: "chip", text: "Cancel", hidden: true });
+        // A modal cannot be relied on here: inside a sandboxed artifact frame
+        // window.confirm answers false without ever asking, so the button would
+        // simply do nothing. It asks for itself instead, and forgets after eight
+        // seconds so a stray first click cannot be completed much later.
+        let armed = null;
+        const disarm = () => {
+          if (armed) { clearTimeout(armed); armed = null; }
+          remove.textContent = "Remove";
+          cancel.hidden = true;
+        };
+        edit.addEventListener("click", () => { disarm(); open(); });
+        cancel.addEventListener("click", () => disarm());
         remove.addEventListener("click", () => {
-          if (!window.confirm("Remove this rule?")) return;
+          if (!armed) {
+            clear();
+            remove.textContent = "Confirm remove";
+            cancel.hidden = false;
+            armed = setTimeout(disarm, 8000);
+            return;
+          }
+          disarm();
           clear();
           edit.disabled = true;
           remove.disabled = true;
@@ -931,7 +965,7 @@ const OpsRoom = {
             remove.disabled = false;
           });
         });
-        kids.push(h("div", { class: "issue-actions" }, edit, remove));
+        kids.push(h("div", { class: "issue-actions" }, edit, remove, cancel));
       }
       kids.push(notice);
       li.replaceChildren(...kids);
@@ -1028,7 +1062,6 @@ const OpsRoom = {
       if (v === null || v === undefined || v === false) continue;
       if (k === "class") el.className = String(v);
       else if (k === "text") el.textContent = String(v);
-      else if (k === "html") el.innerHTML = String(v);
       else if (k.slice(0, 2) === "on" && typeof v === "function") el.addEventListener(k.slice(2), v);
       else el.setAttribute(k, v === true ? "" : String(v));
     }
@@ -1102,19 +1135,30 @@ const OpsRoom = {
 
   // Run details are Markdown written by the agents, so the HTML marked returns
   // is untrusted. Parse it into an inert document, drop the elements and the
-  // attributes that can run code, move the page or paint over it, and serialise
-  // what is left. Working on the parsed tree is what closes the holes an
-  // attribute regex leaves open, such as an img tag written as src=x/onerror=1
-  // with no space before the handler.
+  // attributes that can run code, move the page or paint over it, unwrap
+  // anything Markdown never produces, and hand back that cleaned body. Nothing
+  // is serialised into a string on the way out: the nodes this walk inspected
+  // are the nodes the page shows, so there is no second parse that could read
+  // the markup differently from the first. Working on the parsed tree is also
+  // what closes the holes an attribute regex leaves open, such as an img tag
+  // written as src=x/onerror=1 with no space before the handler.
   sanitize(html) {
     let doc = null;
-    try { doc = new DOMParser().parseFromString(html, "text/html"); } catch (err) { doc = null; }
-    if (!doc || !doc.body) return this.esc(html);
+    try { doc = new DOMParser().parseFromString(String(html), "text/html"); } catch (err) { doc = null; }
+    if (!doc || !doc.body) return null;
     const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use"];
     const strip = ["style", "srcdoc", "formaction"];
+    // Everything Markdown can produce, and nothing else. An element outside this
+    // list is replaced by its own children rather than dropped, so its words
+    // survive even though the tag does not; the drop list above still wins, and
+    // takes its contents with it.
+    const keep = ["p", "br", "hr", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote",
+      "pre", "code", "em", "strong", "b", "i", "a", "img", "table", "thead", "tbody", "tr", "th", "td",
+      "del", "sup", "sub", "span"];
     for (const el of Array.from(doc.body.querySelectorAll("*"))) {
       const tag = String(el.localName || el.tagName).toLowerCase();
       if (drop.indexOf(tag) >= 0) { el.remove(); continue; }
+      if (keep.indexOf(tag) < 0) { el.replaceWith(...Array.from(el.childNodes)); continue; }
       // A link that opens a new tab must not hand this page to the new one.
       if (tag === "a" && el.hasAttribute("target")) el.setAttribute("rel", "noopener noreferrer");
       for (const attr of Array.from(el.attributes)) {
@@ -1127,7 +1171,7 @@ const OpsRoom = {
         if (/^(javascript:|data:text\/html)/.test(url)) el.removeAttribute(attr.name);
       }
     }
-    return doc.body.innerHTML;
+    return doc.body;
   },
 };
 
