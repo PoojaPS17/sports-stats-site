@@ -56,3 +56,28 @@ test("the race weekend page emits the event schema, not only its breadcrumb", ()
   const src = readFileSync("src/app/f1/events/[id]/page.tsx", "utf8");
   assert.match(src, /JsonLd data=\{f1EventSchema\(event\)\}/);
 });
+
+// Every fixture above hands the schema strings, which is how the row type describes these columns —
+// but f1.ts's EVENT_SELECT reads `e.date` and `e.end_date` raw, so pg hands the page Date objects and
+// `.slice()` threw on every one of the 241 weekend pages. The suite passed while production 500'd,
+// so these fixtures are deliberately shaped like the driver's real output.
+test("a weekend whose dates arrive from pg as Date objects still renders", () => {
+  const schema = f1EventSchema(weekend({
+    date: new Date("2026-12-04T09:30:00Z"),
+    end_date: new Date("2026-12-06T13:00:00Z"),
+  }));
+  assert.equal(schema["@type"], "SportsEvent");
+  assert.equal(schema.startDate, "2026-12-04T09:30:00.000Z");
+  assert.equal(schema.endDate, "2026-12-06T13:00:00.000Z");
+  assert.equal(schema.name, "2026 Abu Dhabi Grand Prix");
+});
+
+test("Date-typed dates on the one day are still read as a single day", () => {
+  const sameDay = f1EventSchema(weekend({
+    date: new Date("2026-12-04T09:30:00Z"),
+    end_date: new Date("2026-12-04T15:00:00Z"),
+  }));
+  assert.equal("endDate" in sameDay, false);
+  const noEnd = f1EventSchema(weekend({ date: new Date("2026-12-04T09:30:00Z"), end_date: null }));
+  assert.equal("endDate" in noEnd, false);
+});
