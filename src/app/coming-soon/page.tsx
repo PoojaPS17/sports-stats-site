@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
 
 // The holding page the site's own domain shows before launch (see src/proxy.ts).
+// Fully static pages otherwise advertise a one-year lifetime (s-maxage=31536000), and the edge cache
+// follows origin headers, so a redesign or a new article stayed invisible until someone purged the
+// URL by hand. Five minutes matches the article pages.
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: `${SITE_NAME}: coming soon`,
   robots: { index: false, follow: false },
