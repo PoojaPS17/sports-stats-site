@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LastUpdated } from "./LastUpdated";
-import type { TickerItem } from "@/lib/ticker";
+import type { TickerChip } from "@/lib/ticker";
 
 const REFRESH_MS = 120_000;
 
 // Fetched in the browser (see src/lib/ticker.ts for why). The bar keeps its height
 // while the first fetch is in flight, so nothing below it moves.
 export function Ticker() {
-  const [data, setData] = useState<{ items: TickerItem[]; updatedAt: string | null }>({ items: [], updatedAt: null });
+  const [data, setData] = useState<{ items: TickerChip[]; updatedAt: string | null }>({ items: [], updatedAt: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -32,33 +32,38 @@ export function Ticker() {
   }, []);
 
   const { items, updatedAt } = data;
-  const doubled = [...items, ...items];
 
   return (
-    <div className="border-b border-[var(--border)] bg-[var(--surface)] text-[var(--text)]">
-      <div className="container-x flex h-8 items-center gap-3">
-        <span className="hidden shrink-0 text-[10px] font-bold uppercase tracking-wider text-[var(--text-faint)] sm:inline">
-          Latest
-        </span>
-        <div className="min-w-0 flex-1 overflow-hidden" aria-label="Latest results">
-          {items.length > 0 && (
-            <div className="flex w-max animate-marquee gap-8 whitespace-nowrap text-xs font-medium">
-              {doubled.map((item, i) => (
-                <Link
-                  key={i}
-                  href={item.href}
-                  aria-hidden={i >= items.length}
-                  tabIndex={i >= items.length ? -1 : undefined}
-                  className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--accent)]"
-                >
-                  <span className="h-1 w-1 rounded-full bg-[var(--accent)]" />
-                  {item.label}
-                </Link>
+    <div className="border-b border-[var(--header-border)] bg-[var(--mast-2)] text-[var(--mast-text)]">
+      <div className="container-x flex h-[52px] items-stretch gap-0 px-0 sm:px-0">
+        <div className="strip-scroll flex min-w-0 flex-1 items-stretch overflow-x-auto" aria-label="Latest scores">
+          {items.map((chip, i) => (
+            <Link key={`${chip.href}-${i}`} href={chip.href} className="strip-chip">
+              <span className="strip-chip-top">
+                <span>{chip.league}</span>
+                <span className={chip.live ? "strip-live" : undefined}>
+                  {chip.live && <span className="live-dot" aria-hidden />}
+                  {chip.status}
+                </span>
+              </span>
+              {chip.sides.map((s) => (
+                <span key={s.name} className={`strip-chip-side ${s.won ? "strip-won" : ""}`}>
+                  <span className="truncate">{s.name}</span>
+                  {s.score !== null && <span className="tabular-nums">{s.score}</span>}
+                </span>
               ))}
-            </div>
-          )}
+            </Link>
+          ))}
+          {items.length === 0 && <span className="strip-chip strip-chip-empty" aria-hidden />}
         </div>
-        {updatedAt && <LastUpdated iso={updatedAt} />}
+        <Link href="/top-games" className="hidden shrink-0 items-center px-4 text-xs font-bold text-[var(--sig)] sm:flex">
+          All scores →
+        </Link>
+        {updatedAt && (
+          <span className="hidden shrink-0 items-center pr-4 text-[11px] text-[var(--mast-muted)] lg:flex">
+            <LastUpdated iso={updatedAt} />
+          </span>
+        )}
       </div>
     </div>
   );
