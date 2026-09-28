@@ -78,6 +78,8 @@ export default async function PerformancePage({ params }: { params: Promise<Para
         {data.row.team_score != null && data.row.opponent_score != null ? ` · ${data.row.team_score}-${data.row.opponent_score}` : ""}
         {gameRoundLabel(data.game) ? ` · ${gameRoundLabel(data.game)}` : ""}
       </p>
+      {/* The card route already renders this at its display size, so the image optimizer would only re-encode it. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/${data.league}/games/${id}/players/${slug}/card?format=og`}
         alt={`${data.player.name} performance card`}

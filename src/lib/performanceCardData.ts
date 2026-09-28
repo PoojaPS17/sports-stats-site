@@ -77,7 +77,7 @@ export function performancePagePath(league: "nba" | "nfl", gameId: string, slug:
 // The single place that maps loaded data onto PerformanceCard's props — the card route and the new
 // page's opengraph-image both call this, so there is exactly one render path, never two to drift.
 export function buildPerformanceCardElement(data: PerformanceCardData): ReactElement {
-  const { league, game, player, row, stats, teamColor, isHomeTeam } = data;
+  const { league, game, player, row, stats, teamColor } = data;
   return createElement(PerformanceCard, {
     league,
     playerName: player.name,

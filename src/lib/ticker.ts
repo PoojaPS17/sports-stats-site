@@ -61,8 +61,15 @@ export interface TickerChip extends TickerItem {
   sides: [TickerSide, TickerSide];
 }
 
+// A cricket innings arrives as "101/9 (15/15 ov)" or "59 (15 ov, target 102)"; the chip has room for
+// the runs and wickets only, and the margin in the status line already tells the story.
+function compactScore(display: string): string {
+  return display.replace(/\s*\(.*\)\s*$/, "");
+}
+
 function side(name: string, abbr: string | null, score: number | null, display: string | null, won: boolean, showScore: boolean): TickerSide {
-  return { name: abbr ?? teamDisplayName(name), score: showScore ? (display ?? (score !== null ? String(score) : null)) : null, won };
+  const shown = display !== null ? compactScore(display) : score !== null ? String(score) : null;
+  return { name: abbr ?? teamDisplayName(name), score: showScore ? shown : null, won };
 }
 
 export function tickerChip(g: TickerGame): TickerChip {

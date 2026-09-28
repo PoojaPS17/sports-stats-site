@@ -5,6 +5,11 @@ import { LegalPage } from "@/components/LegalPage";
 import { CookieSettingsButton } from "@/components/CookieSettingsButton";
 import { GA_ID } from "@/lib/consent";
 
+// Fully static pages otherwise advertise a one-year lifetime (s-maxage=31536000), and the edge cache
+// follows origin headers, so a redesign or a new article stayed invisible until someone purged the
+// URL by hand. Five minutes matches the article pages.
+export const revalidate = 300;
+
 export const metadata = pageMeta("Privacy Policy", `How ${SITE_NAME} handles visitor data: what is collected, why, how long it is kept, and your choices.`, "/privacy");
 
 const UPDATED = "September 19, 2026";

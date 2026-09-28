@@ -9,6 +9,11 @@ import { StoryCard } from "@/components/StoryCard";
 import { ArticleTopicFilter } from "@/components/ArticleTopicFilter";
 import { SectionHeader } from "@/components/SectionHeader";
 
+// Fully static pages otherwise advertise a one-year lifetime (s-maxage=31536000), and the edge cache
+// follows origin headers, so a redesign or a new article stayed invisible until someone purged the
+// URL by hand. Five minutes matches the article pages.
+export const revalidate = 300;
+
 export const metadata: Metadata = pageMeta(
   "Beyond the Scoreline",
   "Original long-form sports writing from the SportsDB desk: history, data and the stories behind the scoreline.",

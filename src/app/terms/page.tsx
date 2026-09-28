@@ -3,6 +3,11 @@ import { pageMeta } from "@/lib/metadata";
 import { CONTACT_EMAIL, SITE_NAME } from "@/lib/site";
 import { LegalPage } from "@/components/LegalPage";
 
+// Fully static pages otherwise advertise a one-year lifetime (s-maxage=31536000), and the edge cache
+// follows origin headers, so a redesign or a new article stayed invisible until someone purged the
+// URL by hand. Five minutes matches the article pages.
+export const revalidate = 300;
+
 export const metadata = pageMeta("Terms of Use", `The terms that apply to using ${SITE_NAME}: what the site is, what it is not, where its data comes from, and the limits of its accuracy.`, "/terms");
 
 const UPDATED = "September 17, 2026";
