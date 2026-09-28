@@ -198,3 +198,44 @@ test("viewsSection splits yesterday and today", async () => {
   assert.equal(s.data.yesterday.byCountry.IN, 2);
   assert.equal(s.data.yesterday.byPlatform.android, 1);
 });
+
+test("a failed section publishes a stable code, never the driver's own message", async () => {
+  const { integritySection, withSectionTimeout } = await import("../src/lib/opsReport");
+  const warned: string[] = [];
+  const realWarn = console.warn;
+  console.warn = (...args: unknown[]) => { warned.push(args.join(" ")); };
+  try {
+    const coded = Object.assign(new Error(`password authentication failed for user "sportsdb"`), { code: "28P01" });
+    const codedPool = { query: async () => { throw coded; } } as unknown as typeof db.pool;
+    const s = await integritySection(codedPool);
+    assert.equal(s.ok, false);
+    assert.equal(s.ok === false && s.error, "28P01", "pg's own code, not its sentence");
+    const plainPool = { query: async () => { throw new Error("connect ECONNREFUSED 10.0.0.1:5432"); } } as unknown as typeof db.pool;
+    const t = await integritySection(plainPool);
+    assert.equal(t.ok === false && t.error, "section failed", "no host, port or user leaks out");
+    await assert.rejects(withSectionTimeout(new Promise(() => {}), 10), /section exceeded 10 ms/);
+  } finally {
+    console.warn = realWarn;
+  }
+  assert.ok(warned.some((line) => line.includes("integrity") && line.includes("ECONNREFUSED")), "the real message is kept server-side");
+});
+
+test("teamsIdleThisSeason waits for a league to actually be playing", async () => {
+  const { integritySection } = await import("../src/lib/opsReport");
+  await db.pool.query(`delete from games`);
+  await db.pool.query(`delete from teams`);
+  // nba is mid-season: one completed game ten days ago between t1 and t2, and t3 has not played.
+  // nfl is pre-season: its only game in the window is a fixture five days away, and n3 has no game
+  // at all, so nfl qualifies as "playing" only if scheduled games are allowed to count.
+  await db.pool.query(`insert into teams (league, espn_id, name, slug) values
+    ('nba','t1','A','a'), ('nba','t2','B','b'), ('nba','t3','C','c'),
+    ('nfl','n1','D','d'), ('nfl','n2','E','e'), ('nfl','n3','F','f')`);
+  await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed) values
+    ('nba','p1', now() - interval '10 days', 'A v B', 't1', 't2', true),
+    ('nfl','f1', now() + interval '5 days', 'D v E', 'n1', 'n2', false)`);
+  const s = await integritySection(db.pool);
+  assert.ok(s.ok);
+  const idle = s.data.teamsIdleThisSeason.examples;
+  assert.deepEqual(idle, ["nba t3"], "only the team that has not played in a league that is playing");
+  assert.equal(s.data.teamsIdleThisSeason.count, 1, "the pre-season nfl fixture list does not make its teams idle");
+});

@@ -14,11 +14,46 @@ function ok<T>(data: T): Section<T> {
   return { ok: true, data };
 }
 
-async function guard<T>(fn: () => Promise<T>): Promise<Section<T>> {
+/** No section may hold a pool client longer than this. */
+export const SECTION_TIMEOUT_MS = 20_000;
+
+export class SectionTimeout extends Error {
+  constructor(ms: number) {
+    super(`section exceeded ${ms} ms`);
+    this.name = "SectionTimeout";
+  }
+}
+
+// `set local statement_timeout` needs a transaction, which the shared pool helper does not open,
+// and pg's query config ({ text, values, ... }) has no per-query timeout, so the cap is a race
+// against a timer instead: the section resolves as failed at 20 s while the query itself is left
+// to finish and be thrown away. That bounds how long the report holds pool clients, which is what
+// the cap is for; it does not cancel the query on the server.
+export function withSectionTimeout<T>(work: Promise<T>, ms: number = SECTION_TIMEOUT_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const alarm = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new SectionTimeout(ms)), ms);
+    const handle = timer as unknown as { unref?: () => void };
+    if (typeof handle.unref === "function") handle.unref();
+  });
+  return Promise.race([work, alarm]).finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
+// The endpoint is public, so the driver's own sentence never leaves the server: a pg message names
+// the database user, the internal host and port, or a column that does not exist. The Umpire only
+// needs to know which section broke, so it gets the error's code, or "timeout", or nothing at all.
+function sectionError(err: unknown): string {
+  if (err instanceof SectionTimeout) return "timeout";
+  const code = (err as { code?: unknown } | null | undefined)?.code;
+  return typeof code === "string" && code.length > 0 ? code : "section failed";
+}
+
+async function guard<T>(name: string, fn: () => Promise<T>): Promise<Section<T>> {
   try {
-    return ok(await fn());
+    return ok(await withSectionTimeout(fn()));
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.warn(`[opsReport] ${name} failed: ${err instanceof Error ? err.message : String(err)}`);
+    return { ok: false, error: sectionError(err) };
   }
 }
 
@@ -39,7 +74,7 @@ export interface Heartbeat {
 }
 
 export function heartbeatsSection(pool: Pool): Promise<Section<Heartbeat[]>> {
-  return guard(async () => {
+  return guard("heartbeats", async () => {
     const { rows } = await pool.query<{ scraper: string; age: string }>(
       `select scraper, extract(epoch from (now() - last_ok_at)) / 60 as age from scrape_runs`
     );
@@ -66,7 +101,7 @@ async function stampedTables(pool: Pool): Promise<{ table: string; column: strin
 }
 
 export function freshnessSection(pool: Pool) {
-  return guard(async () => {
+  return guard("freshness", async () => {
     const tables = [];
     for (const { table, column } of await stampedTables(pool)) {
       const { rows } = await pool.query<{ newest: Date | null }>(`select max(${column}) as newest from ${table}`);
@@ -93,7 +128,7 @@ export function freshnessSection(pool: Pool) {
 }
 
 export function volumeSection(pool: Pool) {
-  return guard(async () => {
+  return guard("volume", async () => {
     const out = [];
     for (const { table, column } of await stampedTables(pool)) {
       const { rows } = await pool.query<{ last24h: string; prev7d: string }>(
@@ -112,7 +147,7 @@ export function volumeSection(pool: Pool) {
 // The schema blocks exact duplicates by id, so these look for the semantic kind: the same real thing
 // stored under two ids, which is what a second scrape path or a hand-made player row produces.
 export function duplicatesSection(pool: Pool) {
-  return guard(async () => {
+  return guard("duplicates", async () => {
     async function group(sql: string, label: (r: Record<string, string>) => string) {
       const { rows } = await pool.query<Record<string, string>>(sql);
       return { count: rows.length, examples: rows.slice(0, EXAMPLES).map(label) };
@@ -159,7 +194,7 @@ type Finding = { count: number; examples: string[] };
 const NO_BOX_SCORE_LEAGUES = ["ucl"];
 
 export function scrapingSection(pool: Pool) {
-  return guard(async () => {
+  return guard("scraping", async () => {
     const { rows } = await pool.query<{ league: string; espn_id: string }>(
       `select league, espn_id from games
        where completed and date < now() - interval '48 hours' and updated_at > now() - interval '24 hours'
@@ -180,7 +215,7 @@ export function scrapingSection(pool: Pool) {
 }
 
 export function integritySection(pool: Pool) {
-  return guard(async () => {
+  return guard("integrity", async () => {
     async function finding(sql: string, label: (r: Record<string, string>) => string, params: unknown[] = []) {
       const { rows } = await pool.query<Record<string, string>>(sql, params);
       return { count: rows.length, examples: rows.slice(0, EXAMPLES).map(label) };
@@ -211,9 +246,12 @@ export function integritySection(pool: Pool) {
       `select league, team_espn_id as espn_id from standings
        where league in ('epl','laliga','bundesliga','seriea') and wins is not null and losses is not null
          and ((wins + losses + coalesce(draws, 0)) > 38 or (points is not null and points <> 3 * wins + coalesce(draws, 0)))`, g);
+    // Only a league that has actually played in the window counts as in season: a pre-season fixture
+    // list satisfies "a game dated in the last 30 days" on its own, and would report every team in a
+    // league whose season has not started.
     const teamsIdleThisSeason = await finding(
       `select t.league, t.espn_id from teams t
-       where t.league in (select league from games where date > now() - interval '30 days')
+       where t.league in (select league from games where completed and date > now() - interval '30 days')
          and not exists (select 1 from games g where g.league = t.league and (g.home_team_espn_id = t.espn_id or g.away_team_espn_id = t.espn_id) and g.date > now() - interval '60 days')`, g);
     const f1SessionsNoResult = await finding(
       `select 'f1' as league, s.espn_id from f1_sessions s left join f1_session_results r on r.session_espn_id = s.espn_id
@@ -241,12 +279,13 @@ export function backupSection(dir: string = BACKUP_DIR) {
       previousBytes: previous ? previous.bytes : null,
     });
   } catch (err) {
-    return { ok: false as const, error: err instanceof Error ? err.message : String(err) };
+    console.warn(`[opsReport] backup failed: ${err instanceof Error ? err.message : String(err)}`);
+    return { ok: false as const, error: sectionError(err) };
   }
 }
 
 export function dbHealthSection(pool: Pool) {
-  return guard(async () => {
+  return guard("dbHealth", async () => {
     const { rows: size } = await pool.query<{ bytes: string }>(`select pg_database_size(current_database()) as bytes`);
     const { rows: tables } = await pool.query<{ table: string; bytes: string }>(
       `select relname as table, pg_total_relation_size(c.oid) as bytes from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -265,7 +304,7 @@ export function dbHealthSection(pool: Pool) {
 }
 
 export function viewsSection(pool: Pool) {
-  return guard(async () => {
+  return guard("views", async () => {
     async function day(offset: 0 | 1) {
       const range = `viewed_at >= (date_trunc('day', now() at time zone 'utc') - ($1 || ' days')::interval) at time zone 'utc'
                  and viewed_at < (date_trunc('day', now() at time zone 'utc') - ($1 || ' days')::interval + interval '1 day') at time zone 'utc'`;
@@ -344,11 +383,19 @@ type DayViews = {
 
 export async function opsReport(pool: Pool): Promise<OpsReport> {
   const entries = await Promise.all(
-    Object.entries(SECTIONS).map(async ([name, fn]) => [name, await guard(async () => {
-      const s = await fn(pool);
-      if (!s.ok) throw new Error(s.error);
-      return s.data;
-    })] as const)
+    Object.entries(SECTIONS).map(async ([name, fn]) => {
+      // Each section guards itself, and its own guard is what turns an error into a code; this
+      // catch is for a section function that throws before its guard runs, so one bad section
+      // still cannot fail the whole report.
+      let section: Section<unknown>;
+      try {
+        section = await fn(pool);
+      } catch (err) {
+        console.warn(`[opsReport] ${name} failed: ${err instanceof Error ? err.message : String(err)}`);
+        section = { ok: false, error: sectionError(err) };
+      }
+      return [name, section] as const;
+    })
   );
   // Built dynamically from SECTIONS, so its shape cannot be checked structurally against
   // OpsReport; the cast is safe because every key in SECTIONS names a field on OpsReport.
