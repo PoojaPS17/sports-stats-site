@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -21,6 +21,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// The headline face: condensed, heavy, set uppercase. Scores and big numbers use it too.
+const barlow = Barlow_Condensed({
+  variable: "--font-barlow",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
 });
 
 export const SITE_NAME = "SportsDB";
@@ -48,7 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${barlow.variable} h-full antialiased`}
       // The theme-init script below intentionally sets data-theme on this element
       // before React hydrates (reading localStorage to avoid a flash of the wrong
       // theme), so the server-rendered markup and the pre-hydration DOM legitimately

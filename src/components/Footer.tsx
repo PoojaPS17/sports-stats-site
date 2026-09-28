@@ -13,11 +13,11 @@ const LEAGUE_SECTIONS: { label: string; suffix: string }[] = [
 function Column({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <h3 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{title}</h3>
+      <h3 className="text-[11px] font-bold uppercase tracking-wider text-[var(--sig)]">{title}</h3>
       <ul className="flex flex-col gap-1.5">
         {links.map((l) => (
           <li key={l.href}>
-            <Link href={l.href} className="text-sm text-[var(--text-muted)] transition hover:text-[var(--accent)]">
+            <Link href={l.href} className="text-sm text-[var(--mast-muted)] transition hover:text-[var(--mast-text)]">
               {l.label}
             </Link>
           </li>
@@ -33,14 +33,14 @@ function leagueLinks(league: League) {
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-[var(--border)] bg-[var(--surface)]">
+    <footer className="mt-auto border-t border-[var(--header-border)] bg-[var(--mast)] text-[var(--mast-muted)]">
       <div className="container-x flex flex-col gap-8 py-10">
         <div className="flex flex-col gap-3">
-          <Link href="/" className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight">
+          <Link href="/" className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight text-[var(--mast-text)]">
             <LogoMark size={26} />
             SportsDB
           </Link>
-          <p className="max-w-lg text-sm leading-relaxed text-[var(--text-muted)]">
+          <p className="max-w-lg text-sm leading-relaxed text-[var(--mast-muted)]">
             Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with season-by-season history for every
             team and player.
           </p>
@@ -97,22 +97,22 @@ export function Footer() {
           />
         </div>
       </div>
-      <div className="border-t border-[var(--border)]">
-        <div className="container-x flex flex-col gap-2 py-4 text-xs text-[var(--text-faint)]">
+      <div className="border-t border-[var(--mast-line)]">
+        <div className="container-x flex flex-col gap-2 py-4 text-xs text-[var(--mast-muted)]">
           <p>
             © {new Date().getFullYear()} SportsDB. An independent site, not affiliated with or endorsed by any league, club, player, broadcaster, betting
             operator or data provider. Team names, crests and logos are the property of their respective owners and appear for identification only.
           </p>
           <p>
             Data is compiled from public sources and refreshed automatically; it may contain errors and is not an official record. Projections are
-            statistical estimates, not forecasts, and nothing here is betting advice. <Link href="/privacy" className="hover:text-[var(--accent)]">Privacy</Link> ·{" "}
-            <Link href="/terms" className="hover:text-[var(--accent)]">Terms</Link> ·{" "}
-            <Link href="/contact" className="hover:text-[var(--accent)]">Contact</Link>
+            statistical estimates, not forecasts, and nothing here is betting advice. <Link href="/privacy" className="hover:text-[var(--mast-text)]">Privacy</Link> ·{" "}
+            <Link href="/terms" className="hover:text-[var(--mast-text)]">Terms</Link> ·{" "}
+            <Link href="/contact" className="hover:text-[var(--mast-text)]">Contact</Link>
           </p>
           <p>
             ODI and T20 international results and scorecards are derived from ball-by-ball data published by{" "}
-            <a href="https://cricsheet.org" className="hover:text-[var(--accent)]" rel="noopener">Cricsheet</a>, used under its attribution licence. Some player photographs come from{" "}
-            <a href="https://commons.wikimedia.org" className="hover:text-[var(--accent)]" rel="noopener">Wikimedia Commons</a> under Creative Commons licences; each player page credits the photographer.
+            <a href="https://cricsheet.org" className="hover:text-[var(--mast-text)]" rel="noopener">Cricsheet</a>, used under its attribution licence. Some player photographs come from{" "}
+            <a href="https://commons.wikimedia.org" className="hover:text-[var(--mast-text)]" rel="noopener">Wikimedia Commons</a> under Creative Commons licences; each player page credits the photographer.
           </p>
         </div>
       </div>

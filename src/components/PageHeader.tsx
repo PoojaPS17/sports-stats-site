@@ -12,7 +12,7 @@ export function PageHeader({
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         <h1 className="page-title">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-[var(--text-muted)]">{subtitle}</p>}
+        {subtitle && <p className="mt-1.5 text-sm text-[var(--text-muted)]">{subtitle}</p>}
       </div>
       {children && <div className="flex max-w-full flex-wrap items-center gap-2">{children}</div>}
     </div>

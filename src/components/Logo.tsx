@@ -53,7 +53,7 @@ export function PixelBall({ size, fill, live, background, backgroundRadius = 0.2
   );
 }
 
-/** The mark in the page's own colours: accent cells, live-red cell, no backdrop. */
+/** The mark in the page's own colours: cells in the surrounding text colour, the live cell in Volt. */
 export function LogoMark({ size = 30 }: { size?: number }) {
-  return <PixelBall size={size} fill="var(--accent)" live="var(--live)" />;
+  return <PixelBall size={size} fill="currentColor" live="var(--sig)" />;
 }

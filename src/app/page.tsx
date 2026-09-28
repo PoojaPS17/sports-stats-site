@@ -9,7 +9,8 @@ import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
 import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
 import { MyFollows } from "@/components/MyFollows";
-import { ArticleTeaserCard } from "@/components/ArticleTeaserCard";
+import { StoryCard } from "@/components/StoryCard";
+import { LeagueSnapshot } from "@/components/LeagueSnapshot";
 import { getHomeData, type HomeSection } from "@/lib/homeData";
 import { listArticles } from "@/lib/beyondTheScoreline";
 import { absoluteUrl } from "@/lib/site";
@@ -35,32 +36,34 @@ const QUICK_LINKS: { label: string; href: string }[] = [
 ];
 
 function LeagueBlock({ section }: { section: HomeSection }) {
-  const { league, games, liveCount } = section;
+  const { league, games, liveCount, snapshot } = section;
   return (
-    <section>
+    <section className="sm:col-span-2">
       <SectionHeader
         action={{ label: "All fixtures", href: `/${league}` }}
+        badge={liveCount > 0 ? `${liveCount} live` : snapshot?.seasonLabel}
         description={liveCount > 0 ? `${liveCount} in play, listed under Live now above` : "Latest results and next fixtures"}
       >
         {LEAGUE_LABEL[league]}
       </SectionHeader>
-      <div className="flex flex-col gap-3">
-        {games.length === 0 ? (
-          <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">Everything this week is listed above.</p>
-        ) : (
-          games.map((g) => <GameCard key={g.espn_id} league={league} game={g} />)
-        )}
-      </div>
+      {games.length === 0 ? (
+        <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">Everything this week is listed above.</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {games.slice(0, 3).map((g) => (
+            <GameCard key={g.espn_id} league={league} game={g} />
+          ))}
+        </div>
+      )}
+      {snapshot && (
+        <div className="mt-5">
+          <LeagueSnapshot league={league} data={snapshot} />
+        </div>
+      )}
       <div className="mt-3 flex gap-4 text-sm font-semibold">
-        <Link href={`/${league}/standings`} className="text-[var(--accent)] hover:underline">
-          Standings
-        </Link>
-        <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">
-          Leaders
-        </Link>
-        <Link href={`/${league}/teams`} className="text-[var(--accent)] hover:underline">
-          Teams
-        </Link>
+        <Link href={`/${league}/standings`} className="text-[var(--accent)] hover:underline">Standings</Link>
+        <Link href={`/${league}/leaders`} className="text-[var(--accent)] hover:underline">Leaders</Link>
+        <Link href={`/${league}/teams`} className="text-[var(--accent)] hover:underline">Teams</Link>
       </div>
     </section>
   );
@@ -70,6 +73,7 @@ export default async function HomePage() {
   const home = await getHomeData();
   const spotlight = pickSpotlight(home.featured);
   const beyondTheScorelineArticles = listArticles().slice(0, 3);
+  const liveTotal = home.liveGames.length + home.liveCricket.length + home.liveTennis.length;
 
   // League blocks most active first; the cricket block ranks by its own live count
   // (a full day of internationals outranks a league with nothing on). Leagues
@@ -81,36 +85,46 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <section className="grid gap-6 lg:grid-cols-5 lg:items-center">
-        <div className="flex flex-col gap-5 lg:col-span-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Football · Cricket · NFL · NBA · Tennis · F1</p>
-            <h1 className="mt-2 max-w-2xl text-3xl font-bold leading-[1.1] tracking-tight text-[var(--text)] sm:text-4xl lg:text-[2.75rem]">
-              Live scores, with the full record behind them
-            </h1>
-            <p className="mt-3 max-w-xl text-[var(--text-muted)]">
-              Open any match for the scorecard or box score, any player for their game log, any team for every season back to
-              2015. Cricket goes back further: the IPL from its first season in 2008, World Cups to 1975.
-            </p>
+      <section className="band band-hero bleed -mt-6 py-9 sm:py-11">
+        <div className="grid gap-8 lg:grid-cols-5 lg:items-center">
+          <div className="flex flex-col gap-5 lg:col-span-3">
+            <div>
+              <p className="eyebrow">Football · Cricket · NFL · NBA · Tennis · F1</p>
+              <h1 className="display mt-2 max-w-3xl text-[44px] leading-[0.95] sm:text-[64px] lg:text-[80px]">
+                Live scores. <span className="text-[var(--sig)]">The full record</span> behind them.
+              </h1>
+              <p className="mt-4 max-w-xl text-[16px] text-[var(--mast-muted)]">
+                Open any match for the scorecard or box score, any player for their game log, any team for every season back to
+                2015. Cricket goes back further: the IPL from its first season in 2008, World Cups to 1975.
+              </p>
+            </div>
+            <ul className="flex flex-wrap gap-2" aria-label="Browse by competition">
+              {liveTotal > 0 && (
+                <li>
+                  <a href="#live" className="inline-flex items-center gap-2 rounded-full bg-[var(--sig)] px-3.5 py-1.5 text-sm font-bold text-[var(--sig-on)]">
+                    <span className="live-dot bg-[var(--sig-on)]!" aria-hidden />
+                    {liveTotal} live now
+                  </a>
+                </li>
+              )}
+              {QUICK_LINKS.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="inline-flex items-center rounded-full border border-[var(--mast-line)] px-3.5 py-1.5 text-sm font-semibold text-[var(--mast-text)] transition hover:border-[var(--sig)] hover:text-[var(--sig)]"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="flex flex-wrap gap-2" aria-label="Browse by competition">
-            {QUICK_LINKS.map((l) => (
-              <li key={l.href}>
-                <Link
-                  href={l.href}
-                  className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-                >
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {spotlight && (
+            <div className="lg:col-span-2">
+              <SpotlightCard game={spotlight} />
+            </div>
+          )}
         </div>
-        {spotlight && (
-          <div className="lg:col-span-2">
-            <SpotlightCard game={spotlight} />
-          </div>
-        )}
       </section>
 
       <HomeLive data={home} />
@@ -152,22 +166,34 @@ export default async function HomePage() {
 
         {(home.news.length > 0 || beyondTheScorelineArticles.length > 0) && (
           <div className="lg:col-span-1 flex flex-col gap-10">
+            {beyondTheScorelineArticles.length > 0 && (
+              <aside>
+                <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
+                <div className="flex flex-col gap-2">
+                  {beyondTheScorelineArticles.map((a) => (
+                    <StoryCard key={a.slug} article={a} variant="row" />
+                  ))}
+                </div>
+                <div className="mt-4 rounded-xl border border-[color-mix(in_srgb,var(--sig)_40%,transparent)] bg-[var(--sig-soft)] p-4">
+                  <p className="display text-[22px] text-[var(--text)]">Follow the desk</p>
+                  <p className="mt-1 text-[13px] text-[var(--text-muted)]">Every result and every record, posted the same day.</p>
+                  <a
+                    href="https://x.com/sportsdblive"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-block rounded-lg bg-[var(--mast)] px-3.5 py-2 text-[13px] font-bold text-[var(--mast-text)]"
+                  >
+                    @sportsdblive on X
+                  </a>
+                </div>
+              </aside>
+            )}
             {home.news.length > 0 && (
               <aside>
                 <SectionHeader>Latest news</SectionHeader>
                 <div className="flex flex-col gap-2">
                   {home.news.map((a) => (
                     <NewsCard key={a.article_id} article={a} compact />
-                  ))}
-                </div>
-              </aside>
-            )}
-            {beyondTheScorelineArticles.length > 0 && (
-              <aside>
-                <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
-                <div className="flex flex-col gap-2">
-                  {beyondTheScorelineArticles.map((a) => (
-                    <ArticleTeaserCard key={a.slug} article={a} />
                   ))}
                 </div>
               </aside>

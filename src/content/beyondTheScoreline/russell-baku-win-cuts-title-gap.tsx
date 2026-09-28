@@ -8,6 +8,7 @@ export const article: BeyondTheScorelineArticle = {
   publishedAt: "2026-09-27",
   readingMinutes: 3,
   tags: ["f1", "mercedes", "russell"],
+  art: { number: "66", caption: "points between Antonelli and Russell after Baku, down from 81", palette: "f1" },
   relatedLinks: [
     {
       label: "F1 drivers' standings 2026",

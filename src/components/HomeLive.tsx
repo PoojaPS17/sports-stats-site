@@ -36,7 +36,7 @@ export function HomeLive({ data }: { data: HomeData }) {
   return (
     <>
       <LiveRefresh active={anyLive} />
-      <section>
+      <section id="live" className="scroll-mt-[calc(var(--header-h)+3.5rem)]">
         <SectionHeader description={anyLive ? `${liveCount} in play · scores refresh every 10 seconds` : "Across football, the NFL, NBA, cricket and tennis"}>
           <span className="flex items-center gap-2">
             {anyLive && <span className="live-dot" />}

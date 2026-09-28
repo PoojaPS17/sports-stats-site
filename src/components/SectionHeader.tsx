@@ -4,9 +4,12 @@ export function SectionHeader({
   children,
   action,
   description,
+  badge,
   tools,
 }: {
   children: React.ReactNode;
+  /** Small tinted chip after the title: the matchweek, the season, or a live count. */
+  badge?: React.ReactNode;
   /** Optional link rendered at the right edge ("Full schedule", "View all"). */
   action?: { label: string; href: string };
   description?: React.ReactNode;
@@ -17,12 +20,20 @@ export function SectionHeader({
     <div className="mb-3">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-bold tracking-tight text-[var(--text)] sm:text-lg">{children}</h2>
+          <h2 className="display flex items-center gap-3 text-[26px] text-[var(--text)] sm:text-[30px]">
+            <span aria-hidden className="h-[22px] w-1.5 shrink-0 rounded-sm bg-[var(--sig)]" />
+            <span>{children}</span>
+            {badge && (
+              <span className="font-sans rounded-md bg-[var(--sig-soft)] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[var(--sig-ink)]">
+                {badge}
+              </span>
+            )}
+          </h2>
           {description && <p className="mt-0.5 text-xs text-[var(--text-muted)]">{description}</p>}
         </div>
         {action && (
-          <Link href={action.href} className="shrink-0 text-sm font-semibold text-[var(--accent)] hover:underline">
-            {action.label}
+          <Link href={action.href} className="shrink-0 text-[13px] font-bold text-[var(--sig-ink)] hover:underline">
+            {action.label} →
           </Link>
         )}
       </div>

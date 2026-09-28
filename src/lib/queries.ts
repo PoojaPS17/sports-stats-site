@@ -425,17 +425,20 @@ export interface TickerGame {
   espn_id: string;
   home_name: string;
   home_slug: string;
+  home_abbr: string | null;
   home_score: number | null;
   home_score_display: string | null;
   home_winner: boolean | null;
   away_name: string;
   away_slug: string;
+  away_abbr: string | null;
   away_score: number | null;
   away_score_display: string | null;
   away_winner: boolean | null;
   completed: boolean;
   status_summary: string | null;
   status_state: string | null;
+  status_detail: string | null;
   date: string;
   /** Cricket only: the match's local day, YYYY-MM-DD. */
   local_date?: string | null;
@@ -444,10 +447,11 @@ export interface TickerGame {
 export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
   const { rows } = await pool.query(
     `select g.league, g.espn_id, g.date, g.local_date::text as local_date, g.completed, g.status_state, g.status_summary,
+            g.status_detail,
             g.home_score, g.home_score_display, g.home_winner,
             g.away_score, g.away_score_display, g.away_winner,
-            ht.name as home_name, ht.slug as home_slug,
-            at.name as away_name, at.slug as away_slug
+            ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr,
+            at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr
      from games g
      join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
      join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id

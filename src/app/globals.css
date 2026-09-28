@@ -6,54 +6,69 @@
    (system preference, then the explicit data-theme toggle which always wins).
 --------------------------------------------------------------------------- */
 :root {
-  --bg: #f4f6fa;
+  --bg: #f3f4f8;
   --surface: #ffffff;
-  --surface-muted: #f0f3f8;
-  --surface-hover: #f6f8fc;
-  --border: #e1e6ef;
-  --border-strong: #c9d2e0;
-  --text: #0f172a;
-  --text-muted: #5b6577;
-  --text-faint: #8a94a6;
+  --surface-muted: #eceef4;
+  --surface-hover: #f5f6fa;
+  --border: #dde1ea;
+  --border-strong: #c3cad8;
+  --text: #0b1324;
+  --text-muted: #5a6478;
+  --text-faint: #8b95a8;
 
-  --accent: #1d4ed8;
-  --accent-hover: #1e40af;
-  --accent-soft: #e6eeff;
-  --accent-foreground: #ffffff;
+  /* The signature colour (Volt) and its readable ink on light surfaces. */
+  --sig: #c6f135;
+  --sig-ink: #4d7c0f;
+  --sig-soft: #eef9c9;
+  --sig-on: #0b1324;
+
+  /* The dark bands: masthead, scores strip, hero, article header, footer. Same in both themes. */
+  --mast: #0b1324;
+  --mast-2: #121c33;
+  --mast-text: #eef1f7;
+  --mast-muted: #9aa5bd;
+  --mast-line: rgba(255, 255, 255, 0.08);
+
+  /* Legacy names, kept so every existing component inherits the identity. */
+  --accent: var(--sig-ink);
+  --accent-hover: #3f6a0a;
+  --accent-soft: var(--sig-soft);
+  --accent-foreground: var(--sig-on);
   --accent-2: #d97706;
 
   --win: #15803d;
   --loss: #b91c1c;
   --draw: #64748b;
-  --live: #dc2626;
+  --live: #ff3b5c;
 
-  --zone-1: #1d4ed8; /* Champions League / playoff line */
-  --zone-2: #d97706; /* Europa / play-in */
-  --zone-3: #dc2626; /* relegation */
-  --zone-4: #0f766e; /* Conference League */
+  --zone-1: #2563eb;
+  --zone-2: #d97706;
+  --zone-3: #dc2626;
+  --zone-4: #0f766e;
 
-  --header-bg: rgba(255, 255, 255, 0.92);
-  --header-text: #0f172a;
-  --header-text-muted: #475569;
-  --header-border: #e1e6ef;
-  --header-hover-bg: #f0f3f8;
+  --header-bg: var(--mast);
+  --header-text: var(--mast-text);
+  --header-text-muted: var(--mast-muted);
+  --header-border: #1b2640;
+  --header-hover-bg: rgba(255, 255, 255, 0.07);
 
-  --pill-live-bg: #fee2e2;
-  --pill-live-text: #b91c1c;
-  --pill-final-bg: #eef1f6;
-  --pill-final-text: #475569;
-  --pill-upcoming-bg: #e6eeff;
-  --pill-upcoming-text: #1e40af;
+  --pill-live-bg: #e11d48; /* deeper than --live so 0.68rem white text clears AA */
+  --pill-live-text: #ffffff;
+  --pill-final-bg: #e8ebf2;
+  --pill-final-text: #46516a;
+  --pill-upcoming-bg: var(--sig-soft);
+  --pill-upcoming-text: var(--sig-ink);
   --pill-feature-bg: #dcfce7;
   --pill-feature-text: #166534;
 
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
 
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-pop: 0 10px 30px -10px rgba(15, 23, 42, 0.25), 0 2px 6px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 1px 2px rgba(11, 19, 36, 0.05), 0 8px 24px -12px rgba(11, 19, 36, 0.18);
+  --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
 
-  --header-h: 3.5rem;
+  --font-display: var(--font-barlow);
+  --header-h: 3.75rem;
 }
 
 @theme inline {
@@ -64,102 +79,101 @@
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-accent: var(--accent);
+  --color-sig: var(--sig);
+  --color-sig-ink: var(--sig-ink);
+  --color-sig-soft: var(--sig-soft);
+  --color-sig-on: var(--sig-on);
+  --color-mast: var(--mast);
+  --color-mast-2: var(--mast-2);
+  --color-mast-text: var(--mast-text);
+  --color-mast-muted: var(--mast-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1220;
-    --surface: #111a2b;
-    --surface-muted: #172238;
+    --bg: #0a0f1c;
+    --surface: #111a2c;
+    --surface-muted: #182238;
     --surface-hover: #1b2740;
-    --border: #233047;
-    --border-strong: #32415c;
-    --text: #e8edf6;
-    --text-muted: #9aa7bd;
-    --text-faint: #6b788f;
+    --border: #24304a;
+    --border-strong: #34425e;
+    --text: #e9edf6;
+    --text-muted: #9aa6bf;
+    --text-faint: #6b7890;
 
-    --accent: #6ea0ff;
-    --accent-hover: #8db3ff;
-    --accent-soft: #1a2a4d;
-    --accent-foreground: #0b1220;
+    --sig-ink: var(--sig);
+    --sig-soft: #23301a;
+
+    --accent: var(--sig);
+    --accent-hover: #d8f766;
+    --accent-soft: var(--sig-soft);
+    --accent-foreground: var(--sig-on);
     --accent-2: #f59e0b;
 
     --win: #4ade80;
     --loss: #f87171;
     --draw: #94a3b8;
-    --live: #f87171;
 
     --zone-1: #6ea0ff;
     --zone-2: #f59e0b;
     --zone-3: #f87171;
     --zone-4: #2dd4bf;
 
-    --header-bg: rgba(17, 26, 43, 0.92);
-    --header-text: #e8edf6;
-    --header-text-muted: #9aa7bd;
-    --header-border: #233047;
-    --header-hover-bg: #172238;
+    --header-border: #1b2640;
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
 
-    --pill-live-bg: #3b1520;
-    --pill-live-text: #fb7185;
     --pill-final-bg: #1b2740;
     --pill-final-text: #9aa7bd;
-    --pill-upcoming-bg: #1a2a4d;
-    --pill-upcoming-text: #9dbcff;
     --pill-feature-bg: #0f2f22;
     --pill-feature-text: #4ade80;
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+    --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0b1220;
-  --surface: #111a2b;
-  --surface-muted: #172238;
+  --bg: #0a0f1c;
+  --surface: #111a2c;
+  --surface-muted: #182238;
   --surface-hover: #1b2740;
-  --border: #233047;
-  --border-strong: #32415c;
-  --text: #e8edf6;
-  --text-muted: #9aa7bd;
-  --text-faint: #6b788f;
+  --border: #24304a;
+  --border-strong: #34425e;
+  --text: #e9edf6;
+  --text-muted: #9aa6bf;
+  --text-faint: #6b7890;
 
-  --accent: #6ea0ff;
-  --accent-hover: #8db3ff;
-  --accent-soft: #1a2a4d;
-  --accent-foreground: #0b1220;
+  --sig-ink: var(--sig);
+  --sig-soft: #23301a;
+
+  --accent: var(--sig);
+  --accent-hover: #d8f766;
+  --accent-soft: var(--sig-soft);
+  --accent-foreground: var(--sig-on);
   --accent-2: #f59e0b;
 
   --win: #4ade80;
   --loss: #f87171;
   --draw: #94a3b8;
-  --live: #f87171;
 
   --zone-1: #6ea0ff;
   --zone-2: #f59e0b;
   --zone-3: #f87171;
   --zone-4: #2dd4bf;
 
-  --header-bg: rgba(17, 26, 43, 0.92);
-  --header-text: #e8edf6;
-  --header-text-muted: #9aa7bd;
-  --header-border: #233047;
-  --header-hover-bg: #172238;
+  --header-border: #1b2640;
+  --header-hover-bg: rgba(255, 255, 255, 0.07);
 
-  --pill-live-bg: #3b1520;
-  --pill-live-text: #fb7185;
   --pill-final-bg: #1b2740;
   --pill-final-text: #9aa7bd;
-  --pill-upcoming-bg: #1a2a4d;
-  --pill-upcoming-text: #9dbcff;
   --pill-feature-bg: #0f2f22;
   --pill-feature-text: #4ade80;
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-pop: 0 12px 32px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* ---------------------------------------------------------------------------
@@ -187,6 +201,10 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* A classic (non-overlay) scrollbar can turn the .bleed helper's 50vw math into a
+     few pixels of sideways scroll; `clip` (not `hidden`) stops that without making
+     body a scroll container, which would break the sticky header. */
+  overflow-x: clip;
 }
 
 table {
@@ -230,17 +248,92 @@ table {
 }
 
 .page-title {
-  font-size: 1.5rem;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
   color: var(--text);
+  text-wrap: balance;
 }
 
 @media (min-width: 640px) {
   .page-title {
-    font-size: 1.75rem;
+    font-size: 2.75rem;
   }
+}
+
+/* Headline face for any heading or big number. */
+.display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  line-height: 1;
+  font-weight: 800;
+}
+
+/* Small caps label above a title. Colour is set where it's used (Volt on a band, ink on a surface). */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* A full-bleed dark block: hero, section title bands, article header. Bleeds past the
+   container's side padding, so it needs a `.container-x` (or a `.wrap`) inside. */
+.band {
+  background: var(--mast);
+  color: var(--mast-text);
+}
+
+.band .eyebrow {
+  color: var(--sig);
+}
+
+/* The homepage hero: a faint Volt wash top-right. */
+.band-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.band-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sig) 18%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.band-hero > * {
+  position: relative;
+}
+
+/* Full-bleed inside the centred container: stretches to the viewport edges while its
+   content stays aligned with the container. Used by the dark bands. */
+.bleed {
+  margin-inline: calc(50% - 50vw);
+  padding-inline: calc(50vw - 50%);
+}
+
+/* Long-form article body. Paragraphs space themselves; charts, pull-stats and any other
+   block an article embeds get room above and below so they never sit flush on the prose. */
+.prose-bts > p {
+  margin: 0 0 1.25rem;
+}
+
+.prose-bts > :not(p) {
+  margin-block: 1.75rem;
+}
+
+.prose-bts > p:first-of-type::first-letter {
+  font-family: var(--font-display);
+  font-size: 4.25rem;
+  font-weight: 800;
+  line-height: 0.8;
+  float: left;
+  margin: 0.35rem 0.6rem 0 0;
+  color: var(--sig-ink);
 }
 
 /* ---------------------------------------------------------------------------
@@ -265,6 +358,40 @@ a.card:hover,
 .player-grid > a:hover {
   border-color: var(--border-strong);
   box-shadow: var(--shadow-pop);
+  transform: translateY(-2px);
+}
+
+/* A match card: a two-tone team-colour stripe down the left edge, scores in the display face. */
+.match {
+  position: relative;
+  overflow: hidden;
+  padding-left: 1.25rem;
+}
+
+.match::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(to bottom, var(--c1, var(--border)) 50%, var(--c2, var(--border)) 50%);
+}
+
+.match-live::before {
+  width: 6px;
+}
+
+.match-live {
+  box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--live) 45%, transparent);
+}
+
+.score-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
 /* The players index lists every player of a league (thousands of links), so a row carries no
@@ -325,7 +452,7 @@ a.card:hover,
 }
 
 .nav-pill:hover {
-  background: var(--header-hover-bg);
+  background: var(--surface-hover);
   color: var(--text);
 }
 
@@ -337,29 +464,29 @@ a.card:hover,
 
 /* Top-level header links. */
 .nav-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  border-radius: 0.5rem;
-  padding: 0.45rem 0.7rem;
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.6rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--header-text-muted);
+  color: var(--mast-muted);
   white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .nav-link:hover {
   background: var(--header-hover-bg);
-  color: var(--header-text);
+  color: var(--mast-text);
 }
 
-.nav-link-active {
-  color: var(--accent);
-}
-
+.nav-link-active,
 .nav-link-active:hover {
-  color: var(--accent);
+  color: var(--mast-text);
+  box-shadow: inset 0 -3px 0 var(--sig);
+  border-radius: 0.4rem 0.4rem 0 0;
 }
 
 /* Underlined section tabs (league sub-navigation). */
@@ -397,7 +524,7 @@ a.card:hover,
 }
 
 .tab-active::after {
-  background: var(--accent);
+  background: var(--sig);
 }
 
 /* Small status pills on cards. */
@@ -438,8 +565,12 @@ a.card:hover,
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 9999px;
-  background: var(--pill-live-text);
+  background: var(--live);
   animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.pill-live .live-dot {
+  background: var(--pill-live-text);
 }
 
 /* Result letters (W / L / D) used in form strips and schedules. */
@@ -497,24 +628,126 @@ a.card:hover,
   50% { opacity: 0.35; }
 }
 
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-.animate-marquee {
-  animation: marquee 45s linear infinite;
-}
-
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee {
-    animation: none;
-  }
   .live-dot {
     animation: none;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Scores strip under the masthead
+--------------------------------------------------------------------------- */
+.strip-scroll {
+  scrollbar-width: none;
+  padding-left: 1rem;
+}
+
+.strip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.strip-chip {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 9.5rem;
+  padding: 0 1rem;
+  border-right: 1px solid var(--mast-line);
+  font-size: 12px;
+  color: var(--mast-text);
+}
+
+.strip-chip:hover {
+  background: var(--header-hover-bg);
+}
+
+.strip-chip-empty {
+  border-right: 0;
+}
+
+.strip-chip-top {
+  display: flex;
+  white-space: nowrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--mast-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.strip-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--live);
+}
+
+.strip-chip-side {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-weight: 500;
+  color: var(--mast-muted);
+}
+
+.strip-won {
+  font-weight: 800;
+  color: var(--mast-text);
+}
+
+/* ---------------------------------------------------------------------------
+   Article art: the sport-coloured panel behind an article's key number.
+--------------------------------------------------------------------------- */
+.art {
+  position: relative;
+  overflow: hidden;
+  color: var(--mast-text);
+  container-type: inline-size;
+}
+
+/* Navy scrim rising from the bottom edge so the number and caption stay legible over the
+   lighter palette stops (orange, sky blue, lime). */
+.art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, color-mix(in srgb, var(--mast) 62%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.art::after {
+  content: "";
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 28px solid color-mix(in srgb, var(--mast-text) 12%, transparent);
+  pointer-events: none;
+}
+
+.art-football { background: linear-gradient(120deg, #6cabdd, #1c2c5b 90%); }
+.art-cricket { background: linear-gradient(120deg, #1d9a6c, #0b3d2e 90%); }
+.art-f1 { background: linear-gradient(120deg, #101010, #2a2a2a 60%, #e10600 160%); }
+.art-asian-games { background: linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 140%); }
+.art-nfl { background: linear-gradient(120deg, #013369, #d50a0a 140%); }
+.art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
+.art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); }
+.art-neutral { background: linear-gradient(120deg, var(--mast-2), var(--mast) 90%); }
+
+/* Index cards carry data-topic-card; the topic chosen on <html> hides every other card. */
+:root[data-topic="football"] [data-topic-card]:not([data-topic-card="football"]),
+:root[data-topic="cricket"] [data-topic-card]:not([data-topic-card="cricket"]),
+:root[data-topic="f1"] [data-topic-card]:not([data-topic-card="f1"]),
+:root[data-topic="asian-games"] [data-topic-card]:not([data-topic-card="asian-games"]),
+:root[data-topic="nfl"] [data-topic-card]:not([data-topic-card="nfl"]),
+:root[data-topic="nba"] [data-topic-card]:not([data-topic-card="nba"]),
+:root[data-topic="tennis"] [data-topic-card]:not([data-topic-card="tennis"]),
+:root[data-topic="neutral"] [data-topic-card]:not([data-topic-card="neutral"]) {
+  display: none;
 }

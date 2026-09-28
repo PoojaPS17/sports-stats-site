@@ -59,10 +59,10 @@ export function MobileMenu() {
       {open && (
         <div
           id="mobile-menu"
-          // Positioned against the sticky header itself (not the viewport): the header's
-          // backdrop-blur makes it the containing block for fixed descendants, so a
-          // `fixed` drawer would collapse to zero height.
-          className="absolute inset-x-0 top-full z-40 h-[calc(100dvh-var(--header-h))] overflow-y-auto border-t border-[var(--header-border)] bg-[var(--bg)] lg:hidden"
+          // Positioned against the sticky header itself (not the viewport): the drawer is
+          // `absolute` inside the header, so the header (itself `sticky`, a positioned
+          // element) is its containing block, not the viewport.
+          className="absolute inset-x-0 top-full z-40 h-[calc(100dvh-var(--header-h))] overflow-y-auto border-t border-[var(--header-border)] bg-[var(--mast)] text-[var(--mast-text)] lg:hidden"
         >
           <div className="container-x flex flex-col gap-6 py-5">
             <SearchBar />
@@ -75,7 +75,7 @@ export function MobileMenu() {
                       key={item.label}
                       href={item.href}
                       className={`col-span-2 rounded-lg px-1 py-1 text-base font-semibold ${
-                        groupActive ? "text-[var(--accent)]" : "text-[var(--text)]"
+                        groupActive ? "text-[var(--sig)]" : "text-[var(--mast-text)]"
                       }`}
                     >
                       {item.label}
@@ -84,7 +84,7 @@ export function MobileMenu() {
                 }
                 return (
                   <div key={item.label} className="col-span-2 flex flex-col gap-1">
-                    <p className="px-1 text-xs font-bold uppercase tracking-wider text-[var(--text-faint)]">{item.label}</p>
+                    <p className="px-1 text-xs font-bold uppercase tracking-wider text-[var(--mast-muted)]">{item.label}</p>
                     {item.picker === "cricket-series" && (
                       <div className="px-1 pb-1">
                         <CricketSeriesPicker />
@@ -98,7 +98,7 @@ export function MobileMenu() {
                             <Link
                               href={c.href}
                               className={`block rounded-lg px-1 py-1.5 text-base font-semibold ${
-                                active ? "text-[var(--accent)]" : "text-[var(--text)]"
+                                active ? "text-[var(--sig)]" : "text-[var(--mast-text)]"
                               }`}
                             >
                               {c.label}

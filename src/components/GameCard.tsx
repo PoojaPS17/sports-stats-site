@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
+import { stripeStyle } from "@/lib/teamColor";
 import type { GameRow, League } from "@/lib/queries";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
@@ -48,7 +49,7 @@ function TeamRow({
           </span>
         </span>
         {showScore && !isLongScore && score !== null && (
-          <span className={`shrink-0 text-base tabular-nums ${won ? "font-bold text-[var(--text)]" : "font-medium text-[var(--text-muted)]"}`}>
+          <span className={`score-display shrink-0 tabular-nums ${won ? "text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
             {score}
           </span>
         )}
@@ -104,7 +105,8 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
     <Link
       href={`/${league}/games/${game.espn_id}`}
       aria-label={gameAccessibleLabel(league, game)}
-      className={`card block px-4 py-3 ${live ? "border-[var(--live)]/40" : ""}`}
+      className={`card match block py-3 pr-4 ${live ? "match-live" : ""}`}
+      style={stripeStyle(order[0] === "home" ? game.home_color : game.away_color, order[0] === "home" ? game.away_color : game.home_color)}
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <StatusPill

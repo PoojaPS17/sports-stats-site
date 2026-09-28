@@ -1,19 +1,11 @@
 import Link from "next/link";
 import type { OffseasonRecap as Recap } from "@/lib/offseason";
-import { leagueNameWithArticle, isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
+import { leagueNameWithArticle, type League } from "@/lib/leagues";
 import { formatGameDate } from "@/lib/gameDay";
-import { formatLeaderValue } from "@/lib/leaders";
-import { formatWinLossTie } from "@/lib/teamSummary";
-import { cricketRecord } from "@/lib/cricketStandings";
+import { snapshotFromRecap } from "@/lib/leagueSnapshot";
 import { GameCard } from "./GameCard";
 import { SectionHeader } from "./SectionHeader";
-import { TeamLogo } from "./TeamLogo";
-
-function record(league: League, r: Recap["table"][number]): string {
-  if (isSoccerLeague(league)) return `${r.wins}-${r.draws ?? 0}-${r.losses}`;
-  if (isCricketLeague(league)) return cricketRecord(r);
-  return formatWinLossTie(r.wins, r.losses, r.draws);
-}
+import { LeagueSnapshot } from "./LeagueSnapshot";
 
 // The league hub between seasons: instead of an empty window, the season just
 // played — how it ended, the final table and the leading players — with links on
@@ -69,70 +61,7 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
         </section>
       )}
 
-      {(recap.table.length > 0 || recap.leaders.length > 0) && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {recap.table.length > 0 && (
-            <section>
-              <SectionHeader action={{ label: `All ${recap.tableSize} teams`, href: `/${league}/standings/${recap.season}` }}>
-                {inSeason ? "Table" : "Final table"}, {recap.seasonLabel}
-              </SectionHeader>
-              <ol className="card overflow-hidden">
-                {recap.table.map((r, i) => (
-                  <li key={r.team_espn_id} className="table-row first:border-t-0">
-                    <Link href={`/${league}/teams/${r.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
-                      <span className="flex min-w-0 items-center gap-2.5">
-                        <span className={`w-5 text-right text-xs tabular-nums ${i === 0 ? "font-bold text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>{i + 1}</span>
-                        <TeamLogo name={r.name} logoUrl={r.logo_url} color={r.color} size={24} />
-                        <span className="truncate font-semibold">{r.name}</span>
-                      </span>
-                      <span className="flex shrink-0 items-baseline gap-3 tabular-nums">
-                        <span className="text-xs text-[var(--text-muted)]">{record(league, r)}</span>
-                        {r.points !== null && (
-                          <span className="text-base font-bold">
-                            {r.points} <span className="text-[11px] font-semibold uppercase text-[var(--text-faint)]">pts</span>
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          {recap.leaders.length > 0 && (
-            <section>
-              <SectionHeader action={{ label: "All leaders", href: `/${league}/leaders` }}>Season leaders, {recap.seasonLabel}</SectionHeader>
-              <div className="card divide-y divide-[var(--border)]">
-                {recap.leaders.map((board) => (
-                  <div key={board.label} className="px-4 py-3">
-                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{board.label}</h3>
-                    <ol className="mt-1.5 flex flex-col gap-1.5">
-                      {board.rows.map((row, rank) => (
-                        <li key={row.player_espn_id}>
-                          <Link href={`/${league}/players/${row.slug}`} className="flex items-center justify-between gap-2 text-sm">
-                            <span className="flex min-w-0 items-center gap-2.5">
-                              <span className={`w-4 text-right text-xs tabular-nums ${(row.rank ?? rank + 1) === 1 ? "font-bold text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>{row.rank ?? rank + 1}</span>
-                              <TeamLogo name={row.name} logoUrl={row.headshot_url} size={24} />
-                              <span className="min-w-0 truncate">
-                                <span className="font-semibold">{row.name}</span>
-                                {row.team_name && <span className="ml-1.5 text-xs text-[var(--text-muted)]">{row.team_name}</span>}
-                              </span>
-                            </span>
-                            <span className="shrink-0 font-bold tabular-nums">
-                              {formatLeaderValue(row.value, board.unit)} <span className="text-[11px] font-semibold uppercase text-[var(--text-faint)]">{board.unit}</span>
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+      <LeagueSnapshot league={league} data={snapshotFromRecap(recap)} />
     </>
   );
 }

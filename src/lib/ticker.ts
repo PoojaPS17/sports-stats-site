@@ -2,7 +2,7 @@
 // /api/ticker rather than rendered into the root layout: a layout that queries the
 // database makes every page on the site re-render whenever a score changes, and that
 // is what burned through the host's page-regeneration allowance.
-import { getTickerGames, getLastUpdated, LEAGUE_LABEL, isCricketLeague } from "./queries";
+import { getTickerGames, getLastUpdated, LEAGUE_LABEL, isCricketLeague, type TickerGame } from "./queries";
 import { gameSides } from "./gamePage";
 import { formatGameDate } from "./gameDay";
 import { teamDisplayName } from "./teamName";
@@ -45,7 +45,48 @@ function tickerLabel(g: Awaited<ReturnType<typeof getTickerGames>>[number]): Tic
   };
 }
 
-export async function getTicker(): Promise<{ items: TickerItem[]; updatedAt: string | null }> {
+export interface TickerSide {
+  name: string;
+  score: string | null;
+  won: boolean;
+}
+
+export interface TickerChip extends TickerItem {
+  league: string;
+  live: boolean;
+  upcoming: boolean;
+  /** "Final", the clock ("Q3 4:12", "67'"), a cricket margin, or the kickoff date. */
+  status: string;
+  /** In display order: visitors first for the NBA and NFL, home first elsewhere; cricket by batting order. */
+  sides: [TickerSide, TickerSide];
+}
+
+function side(name: string, abbr: string | null, score: number | null, display: string | null, won: boolean, showScore: boolean): TickerSide {
+  return { name: abbr ?? teamDisplayName(name), score: showScore ? (display ?? (score !== null ? String(score) : null)) : null, won };
+}
+
+export function tickerChip(g: TickerGame): TickerChip {
+  const { href, label } = tickerLabel(g);
+  const live = g.status_state === "in";
+  const upcoming = !g.completed && !live;
+  const cricket = isCricketLeague(g.league);
+  const homeWon = g.completed && (g.home_winner ?? (!cricket && (g.home_score ?? 0) > (g.away_score ?? 0)));
+  const awayWon = g.completed && (g.away_winner ?? (!cricket && (g.away_score ?? 0) > (g.home_score ?? 0)));
+  const home = side(g.home_name, g.home_abbr, g.home_score, g.home_score_display, homeWon, !upcoming);
+  const away = side(g.away_name, g.away_abbr, g.away_score, g.away_score_display, awayWon, !upcoming);
+  const { awayFirst } = gameSides(g.league, g);
+  const sides: [TickerSide, TickerSide] = awayFirst ? [away, home] : [home, away];
+
+  let status: string;
+  if (live) status = g.status_detail ?? "Live";
+  else if (upcoming) status = formatGameDate(g.date, g.league, { month: "short", day: "numeric" }, g.local_date);
+  else if (cricket) status = g.status_summary?.match(/\bwon by (.+?)(?: \(.*\))?$/i)?.[0] ?? g.status_summary ?? "Result";
+  else status = g.status_detail && /^final/i.test(g.status_detail) ? g.status_detail : "Final";
+
+  return { href, label, league: LEAGUE_LABEL[g.league], live, upcoming, status, sides };
+}
+
+export async function getTicker(): Promise<{ items: TickerChip[]; updatedAt: string | null }> {
   const [games, updatedAt] = await Promise.all([getTickerGames(10), getLastUpdated()]);
-  return { items: games.map(tickerLabel), updatedAt };
+  return { items: games.map(tickerChip), updatedAt };
 }

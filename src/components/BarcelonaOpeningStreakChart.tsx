@@ -34,7 +34,7 @@ export function BarcelonaOpeningStreakChart({ data }: { data: BarcelonaStreakGam
         ))}
       </div>
       <p className="mt-2 text-xs text-[var(--text-muted)]">
-        Blue bars are La Liga, grey is the Champions League opener. Live table:{" "}
+        Highlight-colour bars are La Liga, grey is the Champions League opener. Live table:{" "}
         <Link href="/laliga/standings" className="text-[var(--accent)] underline">
           /laliga/standings
         </Link>

@@ -5,6 +5,15 @@ import { article as kabaddiGoldenSweepAsianGames } from "@/content/beyondTheScor
 import { article as manCityGuiltyVerdict115Charges } from "@/content/beyondTheScoreline/man-city-guilty-verdict-115-charges";
 import { article as barcelonaRecordSevenMatchWinStreak } from "@/content/beyondTheScoreline/barcelona-record-seven-match-win-streak";
 
+export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "tennis" | "neutral";
+
+/** The generated "picture" of an article: its key number on a sport-coloured panel. */
+export interface ArticleArt {
+  number: string;
+  caption?: string;
+  palette: ArtPalette;
+}
+
 export interface BeyondTheScorelineRelatedLink {
   label: string;
   href: string;
@@ -24,6 +33,8 @@ export interface BeyondTheScorelineArticle {
   relatedLinks: [BeyondTheScorelineRelatedLink, ...BeyondTheScorelineRelatedLink[]];
   /** License-required data credit only (e.g. a Wikipedia/CC BY-SA line) — never a "sources cross-checked" note. */
   dataAttribution?: string;
+  /** Optional: the auto-draft routine writes none; the card then shows the sport name. */
+  art?: ArticleArt;
   body: () => ReactNode;
 }
 

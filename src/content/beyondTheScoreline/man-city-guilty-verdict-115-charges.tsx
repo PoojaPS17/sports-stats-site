@@ -7,6 +7,7 @@ export const article: BeyondTheScorelineArticle = {
   publishedAt: "2026-09-27",
   readingMinutes: 3,
   tags: ["epl", "manchester-city", "premier-league"],
+  art: { number: "114/115", caption: "charges proven against Manchester City", palette: "football" },
   relatedLinks: [
     {
       label: "Manchester City",

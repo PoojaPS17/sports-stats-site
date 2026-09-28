@@ -8,6 +8,7 @@ export const article: BeyondTheScorelineArticle = {
   publishedAt: "2026-09-27",
   readingMinutes: 3,
   tags: ["asian-games", "kabaddi", "india"],
+  art: { number: "9", caption: "men's kabaddi golds since the sport joined in 1990", palette: "asian-games" },
   relatedLinks: [
     {
       label: "Asian Games medal tally, 2026 and every edition back to 1951",

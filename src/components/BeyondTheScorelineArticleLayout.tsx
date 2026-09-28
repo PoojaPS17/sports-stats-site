@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ShareButton } from "./ShareButton";
-import type { BeyondTheScorelineArticle } from "@/lib/beyondTheScoreline";
+import { articleArt } from "@/lib/articleArt";
+import { listArticles, type BeyondTheScorelineArticle } from "@/lib/beyondTheScoreline";
 
 const DESK_BYLINE = "Beyond the Scoreline Desk";
 
@@ -10,45 +11,69 @@ function formatPublished(iso: string): string {
 }
 
 export function BeyondTheScorelineArticleLayout({ article }: { article: BeyondTheScorelineArticle }) {
+  const art = articleArt(article);
+  const moreFromTheDesk = listArticles()
+    .filter((a) => a.slug !== article.slug)
+    .slice(0, 3);
   return (
-    <div className="flex flex-col gap-6">
-      <Breadcrumbs items={[{ label: "Beyond the Scoreline", href: "/beyond-the-scoreline" }, { label: article.title }]} />
-      <article className="card mx-auto max-w-3xl px-6 py-8 sm:px-10">
-        <div className="flex items-start justify-between gap-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">Beyond the Scoreline</p>
-          <ShareButton path={`/beyond-the-scoreline/${article.slug}`} title={article.title} text={article.dek} />
+    <div className="flex flex-col">
+      <header className="band bleed -mt-6 py-9 sm:py-11">
+        <div className="mx-auto max-w-4xl">
+          <Breadcrumbs items={[{ label: "Beyond the Scoreline", href: "/beyond-the-scoreline" }, { label: article.title }]} tone="band" />
+          <p className="eyebrow mt-5">Beyond the Scoreline · {art.sport}</p>
+          <h1 className="display mt-2 max-w-[18ch] text-[clamp(40px,5.6vw,72px)]">{article.title}</h1>
+          <p className="mt-4 max-w-[58ch] text-[19px] leading-[1.45] text-[var(--mast-muted)]">{article.dek}</p>
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-[13px] text-[var(--mast-muted)]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--sig)] text-[11px] font-extrabold text-[var(--sig-on)]" aria-hidden>
+              BS
+            </span>
+            <span>
+              <span className="font-bold text-[var(--mast-text)]">{DESK_BYLINE}</span> · {formatPublished(article.publishedAt)} · {article.readingMinutes} min read
+            </span>
+            <span className="ml-auto">
+              <ShareButton path={`/beyond-the-scoreline/${article.slug}`} title={article.title} text={article.dek} tone="band" />
+            </span>
+          </div>
         </div>
-        <h1 className="page-title mt-2">{article.title}</h1>
-        <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-[var(--text-muted)]">{article.dek}</p>
+      </header>
 
-        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[var(--border)] pb-5 text-xs text-[var(--text-faint)]">
-          <span className="font-semibold text-[var(--text-muted)]">{DESK_BYLINE}</span>
-          <span aria-hidden>&middot;</span>
-          <span>{formatPublished(article.publishedAt)}</span>
-          <span aria-hidden>&middot;</span>
-          <span>{article.readingMinutes} min read</span>
-        </div>
-
-        <div className="mt-6 flex max-w-[62ch] flex-col gap-4 text-[15px] leading-relaxed text-[var(--text)] [&_a]:text-[var(--accent)] [&_a]:underline [&_strong]:font-semibold">
+      <div className="mx-auto grid w-full max-w-4xl gap-10 pt-8 lg:grid-cols-[minmax(0,1fr)_200px]">
+        <article className="prose-bts max-w-[64ch] text-[17px] leading-[1.65] text-[var(--text)] [&_a]:text-[var(--sig-ink)] [&_a]:underline [&_strong]:font-semibold">
           {article.body()}
-        </div>
+          {article.dataAttribution && <p className="mt-8 text-xs text-[var(--text-faint)]">{article.dataAttribution}</p>}
+        </article>
 
-        <div className="mt-8 border-t border-[var(--border)] pt-6">
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">Related on SportsDB</p>
-          <ul className="mt-3 flex flex-col gap-2">
+        <aside className="text-[13px] lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start">
+          <h2 className="eyebrow text-[var(--text-faint)]">Related on SportsDB</h2>
+          <ul className="mt-2 divide-y divide-[var(--border)]">
             {article.relatedLinks.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className="text-sm font-semibold text-[var(--accent)] hover:underline">
+              <li key={link.href} className="py-2.5">
+                <Link href={link.href} className="block font-bold text-[var(--sig-ink)] hover:underline">
                   {link.label}
                 </Link>
                 {link.description && <p className="text-xs text-[var(--text-faint)]">{link.description}</p>}
               </li>
             ))}
           </ul>
-        </div>
-
-        {article.dataAttribution && <p className="mt-6 text-xs text-[var(--text-faint)]">{article.dataAttribution}</p>}
-      </article>
+          {moreFromTheDesk.length > 0 && (
+            <>
+              <h2 className="eyebrow mt-6 text-[var(--text-faint)]">More from the desk</h2>
+              <ul className="mt-2 divide-y divide-[var(--border)]">
+                {moreFromTheDesk.map((a) => (
+                  <li key={a.slug} className="py-2.5">
+                    <Link href={`/beyond-the-scoreline/${a.slug}`} className="block font-bold hover:text-[var(--sig-ink)]">
+                      {a.title}
+                    </Link>
+                    <p className="text-xs text-[var(--text-faint)]">
+                      {articleArt(a).sport} · {a.readingMinutes} min
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

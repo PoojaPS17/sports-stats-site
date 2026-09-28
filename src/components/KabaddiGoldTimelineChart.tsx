@@ -18,7 +18,7 @@ export function KabaddiGoldTimelineChart({ data }: { data: KabaddiEditionResult[
   return (
     <div className="card px-4 py-3">
       <p className="text-xs font-semibold text-[var(--text)]">India&rsquo;s kabaddi results by Asian Games edition</p>
-      <p className="text-[11px] text-[var(--text-faint)]">Women&rsquo;s event began in 2010. Gold in blue, runner-up in grey.</p>
+      <p className="text-[11px] text-[var(--text-faint)]">Women&rsquo;s event began in 2010. Gold in the highlight colour, runner-up in grey.</p>
       <div className="mt-3 flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <span className="w-14 shrink-0 text-xs font-medium text-[var(--text-muted)]">Men</span>
