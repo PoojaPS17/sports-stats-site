@@ -399,29 +399,29 @@ a.card:hover,
 
 /* Top-level header links. */
 .nav-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  border-radius: 0.5rem;
-  padding: 0.45rem 0.7rem;
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.6rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--header-text-muted);
+  color: var(--mast-muted);
   white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .nav-link:hover {
   background: var(--header-hover-bg);
-  color: var(--header-text);
+  color: var(--mast-text);
 }
 
-.nav-link-active {
-  color: var(--accent);
-}
-
+.nav-link-active,
 .nav-link-active:hover {
-  color: var(--accent);
+  color: var(--mast-text);
+  box-shadow: inset 0 -3px 0 var(--sig);
+  border-radius: 0.4rem 0.4rem 0 0;
 }
 
 /* Underlined section tabs (league sub-navigation). */
