@@ -9,7 +9,7 @@ import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
 import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
 import { MyFollows } from "@/components/MyFollows";
-import { ArticleTeaserCard } from "@/components/ArticleTeaserCard";
+import { StoryCard } from "@/components/StoryCard";
 import { LeagueSnapshot } from "@/components/LeagueSnapshot";
 import { getHomeData, type HomeSection } from "@/lib/homeData";
 import { listArticles } from "@/lib/beyondTheScoreline";
@@ -171,7 +171,7 @@ export default async function HomePage() {
                 <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
                 <div className="flex flex-col gap-2">
                   {beyondTheScorelineArticles.map((a) => (
-                    <ArticleTeaserCard key={a.slug} article={a} />
+                    <StoryCard key={a.slug} article={a} variant="row" />
                   ))}
                 </div>
                 <div className="mt-4 rounded-xl border border-[color-mix(in_srgb,var(--sig)_40%,transparent)] bg-[var(--sig-soft)] p-4">

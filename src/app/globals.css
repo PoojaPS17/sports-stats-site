@@ -722,3 +722,15 @@ a.card:hover,
 .art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
 .art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); }
 .art-neutral { background: linear-gradient(120deg, var(--mast-2), var(--mast) 90%); }
+
+/* Index cards carry data-topic-card; the topic chosen on <html> hides every other card. */
+:root[data-topic="football"] [data-topic-card]:not([data-topic-card="football"]),
+:root[data-topic="cricket"] [data-topic-card]:not([data-topic-card="cricket"]),
+:root[data-topic="f1"] [data-topic-card]:not([data-topic-card="f1"]),
+:root[data-topic="asian-games"] [data-topic-card]:not([data-topic-card="asian-games"]),
+:root[data-topic="nfl"] [data-topic-card]:not([data-topic-card="nfl"]),
+:root[data-topic="nba"] [data-topic-card]:not([data-topic-card="nba"]),
+:root[data-topic="tennis"] [data-topic-card]:not([data-topic-card="tennis"]),
+:root[data-topic="neutral"] [data-topic-card]:not([data-topic-card="neutral"]) {
+  display: none;
+}
