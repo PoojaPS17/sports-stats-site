@@ -4,6 +4,7 @@ import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetail
 import { gameCalledOffLabel } from "@/lib/gameStatus";
 import { finishedNoScoreNote, shareImageModel } from "@/lib/gameDisplay";
 import { formatGameDate } from "@/lib/gameDay";
+import { resolveTeamLogo } from "@/lib/teamLogos";
 
 export const alt = "Match page";
 export const size = { width: 1200, height: 630 };
@@ -48,10 +49,17 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const scorecard = isCricketLeague(game.league) && game.completed ? ((await getGameDetails(game.league, id))?.scorecard ?? null) : null;
   const { status, order } = shareImageModel(game, scorecard);
   const when = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, game.local_date);
+  // A stored logo_url can be a dead ESPN path (many cricket sides have none) that only gets
+  // corrected here, not in the database, so this route re-checks it instead of trusting the
+  // row: @vercel/og fetches <img src> server-side and throws rendering the page if it 404s,
+  // unlike TeamLogo's client-side <img onError> which just falls back to the initials disc.
+  const cricket = isCricketLeague(game.league);
+  const homeLogo = cricket ? resolveTeamLogo(game.home_team_espn_id, game.home_logo) : game.home_logo;
+  const awayLogo = cricket ? resolveTeamLogo(game.away_team_espn_id, game.away_logo) : game.away_logo;
 
   const sides = {
-    away: <Side name={game.away_name} logo={game.away_logo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />,
-    home: <Side name={game.home_name} logo={game.home_logo} score={played ? String(game.home_score_display ?? game.home_score) : null} muted={played && !homeWon} />,
+    away: <Side name={game.away_name} logo={awayLogo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />,
+    home: <Side name={game.home_name} logo={homeLogo} score={played ? String(game.home_score_display ?? game.home_score) : null} muted={played && !homeWon} />,
   };
 
   return new ImageResponse(

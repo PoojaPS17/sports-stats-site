@@ -1,10 +1,13 @@
-// ESPN team-logo paths that return 404 (checked 2026-09-18): mostly women's sides,
-// whose card and table rows otherwise render the browser's broken-image glyph before
-// the client-side fallback in TeamLogo can take over. Where the nation or franchise
-// has a men's side with a logo, that logo stands in (the same crest or flag); the
-// rest are blanked so the initials disc renders straight from the server. Applied
-// wherever a logo URL is stored or read from an ESPN feed (team upserts, the series
-// scraper and the live cricket overlay). Teams ESPN adds later fall back client-side.
+// ESPN team-logo paths that return 404 (checked 2026-09-18, most recently added to
+// 2026-09-28): mostly women's sides, whose card and table rows otherwise render the
+// browser's broken-image glyph before the client-side fallback in TeamLogo can take
+// over. Where the nation or franchise has a men's side with a logo, that logo stands
+// in (the same crest or flag); the rest are blanked so the initials disc renders
+// straight from the server. Applied wherever a logo URL is stored or read from an
+// ESPN feed (team upserts, the series scraper, the live cricket overlay) and at the
+// share-image (opengraph-image) routes, which fetch the URL server-side and crash
+// (@vercel/og "Unsupported image type: unknown") rather than degrade gracefully like
+// TeamLogo's client-side <img onError> does. Teams ESPN adds later fall back client-side.
 const STAND_IN: Record<string, string> = {
   "774": "https://a.espncdn.com/i/teamlogos/cricket/500/13.png",
   "2234": "https://a.espncdn.com/i/teamlogos/cricket/500/29.png",
@@ -57,7 +60,7 @@ const STAND_IN: Record<string, string> = {
   "1528310": "https://a.espncdn.com/i/teamlogos/cricket/500/48.png",
 };
 
-const MISSING = new Set<string>(["206", "217", "418", "476", "532", "571", "600", "630", "907", "930", "1032", "1061", "1072", "1122", "1136", "1196", "1339", "1369", "1379", "1433", "1473", "1813", "2467", "2480", "2488", "2522", "2530", "2546", "2576", "2586", "2608", "3162", "3226", "3281", "3367", "239715", "297077", "315817", "386877", "386905", "510260", "560851", "594743", "594744", "638243", "938823", "1228924", "1235197", "1235198", "1244936", "1244937", "1244938", "1244940", "1244942", "1244943", "1244982", "1275089", "1302514", "1302515", "1302516", "1302517", "1323139", "1323140", "1323141", "1333987", "1333988", "1333989", "1333991", "1334886", "1334887", "1334890", "1338476", "1353663", "1354064", "1358722", "1358724", "1379667", "1399051", "1416774", "1422552", "1460988", "1468736", "1506241", "1506242", "1534721", "1540212"]);
+const MISSING = new Set<string>(["145", "206", "217", "418", "476", "532", "571", "600", "630", "907", "930", "1032", "1061", "1072", "1122", "1136", "1196", "1339", "1369", "1379", "1433", "1473", "1813", "2467", "2480", "2488", "2522", "2530", "2546", "2576", "2586", "2608", "3162", "3226", "3281", "3367", "239715", "297077", "315817", "386877", "386905", "510260", "560851", "594743", "594744", "638243", "938823", "1228924", "1235197", "1235198", "1244936", "1244937", "1244938", "1244940", "1244942", "1244943", "1244982", "1275089", "1302514", "1302515", "1302516", "1302517", "1323139", "1323140", "1323141", "1333987", "1333988", "1333989", "1333991", "1334886", "1334887", "1334890", "1338476", "1353663", "1354064", "1358722", "1358724", "1379667", "1399051", "1416774", "1422552", "1459373", "1460988", "1468736", "1506241", "1506242", "1534721", "1540212"]);
 
 export function resolveTeamLogo(teamId: string | number | null | undefined, logo: string | null | undefined): string | null {
   const id = teamId == null ? "" : String(teamId);

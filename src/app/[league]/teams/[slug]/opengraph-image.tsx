@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { PixelBall } from "@/components/Logo";
-import { isLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
+import { isLeague, isCricketLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
+import { resolveTeamLogo } from "@/lib/teamLogos";
 
 export const alt = "Team page";
 export const size = { width: 1200, height: 630 };
@@ -22,6 +23,9 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const name = team?.name ?? "SportsDB";
   const label = isLeague(league) ? LEAGUE_LABEL[league] : "";
   const color = team?.color ? `#${team.color.replace(/^#/, "")}` : "#6ea0ff";
+  // See the games opengraph-image route: a stored logo_url can be a dead ESPN path that this
+  // route re-checks rather than trusting, since @vercel/og crashes fetching a 404 server-side.
+  const logo = team && isLeague(league) && isCricketLeague(league) ? resolveTeamLogo(team.espn_id, team.logo_url) : (team?.logo_url ?? null);
 
   return new ImageResponse(
     (
@@ -39,8 +43,8 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           borderLeft: `28px solid ${color}`,
         }}
       >
-        {team?.logo_url ? (
-          <img src={team.logo_url} width={260} height={260} alt="" style={{ objectFit: "contain" }} />
+        {logo ? (
+          <img src={logo} width={260} height={260} alt="" style={{ objectFit: "contain" }} />
         ) : (
           <div style={{ width: 260, height: 260, borderRadius: 130, background: color }} />
         )}
