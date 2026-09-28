@@ -177,6 +177,38 @@ p.issue-text { margin: 9px 0 0; }
 .md :is(img, table) { max-width: 100%; }
 .md table { border-collapse: collapse; }
 .md :is(td, th) { border: 1px solid var(--border); padding: 3px 7px; text-align: left; }
+
+/* Crew tab */
+.crew-head { margin: 20px 0 9px; }
+.crew-head:first-child { margin-top: 0; }
+.crew-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 12px; margin: 0 0 4px; }
+.crew-card { margin: 0; }
+.crew-card.is-click { cursor: pointer; }
+.crew-card.is-click:hover { border-color: var(--sig-ink); }
+.crew-top { display: flex; align-items: center; gap: 11px; }
+.avatar { width: 40px; height: 40px; flex: none; border-radius: 7px; image-rendering: pixelated; background: var(--surface-muted); }
+.crew-card-name { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.1;
+  letter-spacing: .02em; overflow-wrap: anywhere; }
+.crew-card-role { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text-muted); }
+.crew-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 10px; margin: 11px 0 0; }
+.crew-facts dt { font-family: var(--display); font-weight: 800; font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-muted); padding-top: 3px; }
+.crew-facts dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.crew-last { display: flex; align-items: baseline; gap: 3px 7px; flex-wrap: wrap; }
+.crew-last .dot { align-self: center; }
+.crew-ago { color: var(--text-faint); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Rulebook tab */
+.rules { margin: 0; padding-left: 28px; }
+.rules > li::marker { font-family: var(--display); font-weight: 800; color: var(--sig-ink); }
+.rule-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rule-input { display: block; width: 100%; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--surface-muted); border: 1px solid var(--border-strong); border-radius: 7px;
+  padding: 8px 10px; resize: vertical; }
+.rule-label { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); margin: 9px 0 4px; }
+.rule-add { margin-top: 16px; }
 </style>
 
 <div class="mast" role="banner">
@@ -210,9 +242,67 @@ p.issue-text { margin: 9px 0 0; }
 <script>
 if (!window.claude) window.claude = { use: async () => null };
 
+const GROUPS = [["dugout", "Dugout"], ["officials", "Match officials"], ["backroom", "Backroom staff"], ["front-office", "Front office"]];
+
+// The dugout is the two of us. Neither has a routine, so neither is a crew
+// document: they are written here and never read from the database.
+const DUGOUT = [
+  {
+    id: "owner", name: "Owner", role: "says deploy",
+    job: "Asks for the work, reads Today each morning, acknowledges what needs it, and is the only one who can say deploy.",
+    never: "Deploys between 04:30 and 07:30 IST, or without purging the edge cache afterwards.",
+    when: "Every morning.",
+  },
+  {
+    id: "main-session", name: "Main session", role: "the chat",
+    job: "Does the work the owner asks for: fixes, features, the deploy checklist.",
+    never: "Merges or deploys without the owner's word.",
+    when: "When the owner opens a chat.",
+  },
+];
+
+// Six squares taken from the page tokens, each with ink that reads on it.
+const AVATAR_COLOURS = [
+  { bg: "#c6f135", ink: "#0b1324" }, { bg: "#4d7c0f", ink: "#eef9c9" },
+  { bg: "#15803d", ink: "#eef1f7" }, { bg: "#d97706", ink: "#0b1324" },
+  { bg: "#b91c1c", ink: "#eef1f7" }, { bg: "#34426a", ink: "#eef1f7" },
+];
+
+function avatarLetter(id) {
+  const room = window.OpsRoom;
+  const crew = room && room.state ? room.state.crew[id] : null;
+  const card = crew || DUGOUT.filter((d) => d.id === id)[0];
+  const name = String((card && card.name) || id || "?").trim();
+  return (name.slice(0, 1) || "?").toUpperCase();
+}
+
+// A placeholder face: a colour from the id with the initial on it. Task 10
+// swaps this body for the 12x16 sprites and keeps the signature.
+function drawAvatar(canvas, id) {
+  const ctx = canvas && typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
+  if (!ctx) return;
+  const key = String(id || "");
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) hash = (hash * 31 + key.charCodeAt(i)) % 100003;
+  const paint = AVATAR_COLOURS[hash % AVATAR_COLOURS.length];
+  const size = 40;
+  const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
+  canvas.width = Math.round(size * dpr);
+  canvas.height = Math.round(size * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = paint.bg;
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = paint.ink;
+  ctx.font = '800 25px "Barlow Condensed", "Arial Narrow", sans-serif';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(avatarLetter(id), size / 2, size / 2 + 1);
+}
+
 const OpsRoom = {
   state: { crew: {}, issues: {}, runs: {}, status: null, daily: {}, rules: {}, dbReady: null },
   db: null,
+  canWrite: true,
   active: "today",
   filters: { runsAgent: null },
   tabs: [],
@@ -224,6 +314,11 @@ const OpsRoom = {
     try { db = await claude.use("db"); } catch (err) { db = null; }
     this.db = db;
     this.state.dbReady = db !== null;
+    let user = null;
+    try { user = await claude.use("user"); } catch (err) { user = null; }
+    // can() needs no capability declaration, and it answers null when the page
+    // is opened as a plain file, which is read as "this viewer may write".
+    this.canWrite = user && typeof user.can === "function" ? (user.can("data.write") ?? true) : true;
     if (db) this.subscribe();
     this.render();
   },
@@ -676,6 +771,226 @@ const OpsRoom = {
     if (!card) return;
     card.focus();
     card.scrollIntoView({ block: "center" });
+  },
+
+  // ---- Crew tab ----
+
+  renderCrew(root) {
+    const h = this.h;
+    const byGroup = {};
+    for (const key of Object.keys(this.state.crew)) {
+      const c = this.state.crew[key];
+      // The dugout is not in the database, and a group nobody recognises would
+      // otherwise drop an agent off the page, so both land in the backroom.
+      const g = String(c.group || "");
+      const known = g === "officials" || g === "backroom" || g === "front-office";
+      const into = known ? g : "backroom";
+      (byGroup[into] = byGroup[into] || []).push(c);
+    }
+    const kids = [];
+    for (const pair of GROUPS) {
+      const key = pair[0];
+      const list = key === "dugout" ? DUGOUT.slice() : (byGroup[key] || []);
+      if (key !== "dugout") {
+        list.sort((a, b) => {
+          const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
+          return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
+        });
+      }
+      kids.push(h("h2", { class: "sect crew-head" }, pair[1],
+        h("span", { class: "sect-note", text: this.num(list.length) })));
+      if (!list.length) {
+        kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No crew list" : "Waiting for the crew list" }));
+        continue;
+      }
+      const grid = h("div", { class: "crew-grid" });
+      for (const c of list) grid.append(this.crewCard(c, key === "dugout"));
+      kids.push(grid);
+    }
+    root.replaceChildren(...kids);
+  },
+
+  crewCard(c, isStatic) {
+    const h = this.h;
+    const id = String(c.id || "");
+    const name = String(c.name || id);
+    const status = String(c.lastStatus || "none");
+    const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+    const canvas = h("canvas", { class: "avatar", width: "40", height: "40", "aria-hidden": "true" });
+    try { drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
+    const facts = h("dl", { class: "crew-facts" });
+    facts.append(
+      h("dt", { text: "Job" }), h("dd", { text: this.has(c.job) ? c.job : "Not recorded" }),
+      h("dt", { text: "Never" }), h("dd", { text: this.has(c.never) ? c.never : "Not recorded" }),
+      h("dt", { text: "When" }), h("dd", { text: this.has(c.when) ? c.when : "Not recorded" }));
+    const last = h("dd", { class: "crew-last" });
+    if (isStatic || !this.has(c.lastHeadline)) {
+      last.append(h("span", { text: "not yet" }));
+    } else {
+      last.append(
+        h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
+        h("span", { text: c.lastHeadline }),
+        this.ago(c.lastRunAt) ? h("span", { class: "crew-ago", text: this.ago(c.lastRunAt) }) : null);
+    }
+    facts.append(h("dt", { text: "Last run" }), last);
+    const card = h("section", { class: "card crew-card" + (isStatic ? "" : " is-click") },
+      h("div", { class: "crew-top" }, canvas,
+        h("div", {},
+          h("div", { class: "crew-card-name", text: name }),
+          h("div", { class: "crew-card-role", text: c.role || "" }))),
+      facts);
+    if (isStatic) return card;
+    const open = () => { this.filters.runsAgent = id; this.setActive("runs"); };
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("aria-label", "Runs for " + name);
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
+      ev.preventDefault();
+      open();
+    });
+    return card;
+  },
+
+  // ---- Rulebook tab ----
+
+  renderRules(root) {
+    const h = this.h;
+    const list = Object.keys(this.state.rules).map((k) => this.state.rules[k]);
+    list.sort((a, b) => {
+      const d = (Number(a.order) || 0) - (Number(b.order) || 0);
+      return d !== 0 ? d : String(a.id || "").localeCompare(String(b.id || ""));
+    });
+    const kids = [h("h2", { class: "sect" }, "House rules",
+      h("span", { class: "sect-note", text: this.num(list.length) + " rules" }))];
+    if (!list.length) {
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No rulebook" : "No rules yet." }));
+    } else {
+      const ol = h("ol", { class: "rules" });
+      for (const r of list) ol.append(this.ruleRow(r));
+      kids.push(ol);
+    }
+    if (this.db && this.canWrite) kids.push(this.addRuleBox());
+    root.replaceChildren(...kids);
+  },
+
+  ruleRow(r) {
+    const h = this.h;
+    const id = String(r.id || "");
+    const li = h("li", { class: "card rule-row" });
+    const notice = h("p", { class: "issue-notice", hidden: true });
+    const say = (err) => {
+      notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
+      notice.hidden = false;
+    };
+    const clear = () => { notice.textContent = ""; notice.hidden = true; };
+    const writable = !!(this.db && this.canWrite);
+    const show = () => {
+      clear();
+      const kids = [h("p", { class: "rule-text", text: this.has(r.text) ? r.text : "(empty rule)" })];
+      if (writable) {
+        const edit = h("button", { type: "button", class: "btn", text: "Edit" });
+        const remove = h("button", { type: "button", class: "btn", text: "Remove" });
+        edit.addEventListener("click", () => open());
+        remove.addEventListener("click", () => {
+          if (!window.confirm("Remove this rule?")) return;
+          clear();
+          edit.disabled = true;
+          remove.disabled = true;
+          Promise.resolve().then(() => this.removeRule(id)).catch((err) => {
+            say(err);
+            edit.disabled = false;
+            remove.disabled = false;
+          });
+        });
+        kids.push(h("div", { class: "issue-actions" }, edit, remove));
+      }
+      kids.push(notice);
+      li.replaceChildren(...kids);
+    };
+    const open = () => {
+      clear();
+      const area = h("textarea", { class: "rule-input", rows: "4", "aria-label": "Rule text" });
+      area.value = String(r.text || "");
+      const save = h("button", { type: "button", class: "btn", text: "Save" });
+      const cancel = h("button", { type: "button", class: "btn", text: "Cancel" });
+      cancel.addEventListener("click", () => show());
+      save.addEventListener("click", () => {
+        const text = area.value.trim();
+        if (!text) { area.focus(); return; }
+        clear();
+        save.disabled = true;
+        cancel.disabled = true;
+        Promise.resolve().then(() => this.saveRule(id, text)).catch((err) => {
+          say(err);
+          save.disabled = false;
+          cancel.disabled = false;
+        });
+      });
+      li.replaceChildren(area, h("div", { class: "issue-actions" }, save, cancel), notice);
+      area.focus();
+    };
+    show();
+    return li;
+  },
+
+  addRuleBox() {
+    const h = this.h;
+    const notice = h("p", { class: "issue-notice", hidden: true });
+    const area = h("textarea", { class: "rule-input", rows: "3", id: "rule-new" });
+    const add = h("button", { type: "button", class: "btn", text: "Add rule" });
+    add.addEventListener("click", () => {
+      const text = area.value.trim();
+      if (!text) { area.focus(); return; }
+      notice.textContent = "";
+      notice.hidden = true;
+      add.disabled = true;
+      Promise.resolve().then(() => this.addRule(text)).then(() => {
+        area.value = "";
+        add.disabled = false;
+      }).catch((err) => {
+        notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        add.disabled = false;
+      });
+    });
+    return h("section", { class: "card rule-add" },
+      h("h2", { class: "sect" }, "Add a rule"),
+      h("label", { class: "rule-label", for: "rule-new", text: "The rule, in one sentence" }),
+      area,
+      h("div", { class: "issue-actions" }, add),
+      notice);
+  },
+
+  saveRule(id, text) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("rules/" + id).update({ text: text });
+  },
+
+  removeRule(id) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("rules/" + id).delete();
+  },
+
+  addRule(text) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    let max = 0;
+    for (const k of Object.keys(this.state.rules)) {
+      const n = Number(this.state.rules[k].order);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    return db.collection("rules").add({ text: text, order: max + 1, addedAt: this.today(), addedBy: "owner" });
+  },
+
+  // The viewer's own day, so a rule added this evening is not dated tomorrow.
+  today() {
+    const d = new Date();
+    const pad = (n) => (n < 10 ? "0" + n : String(n));
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   },
 
   h(tag, attrs, ...kids) {

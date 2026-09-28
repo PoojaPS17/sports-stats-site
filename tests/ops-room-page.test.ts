@@ -43,3 +43,9 @@ test("the Markdown stripper works on a parsed document, not on attribute regexes
   assert.ok(html.includes('const strip = ["style", "srcdoc", "formaction"];'),
     "style, srcdoc and formaction attributes are removed");
 });
+
+test("crew and rulebook renderers exist and rules are written as whole documents with an order", () => {
+  assert.ok(/renderCrew\s*\(/.test(html) && /renderRules\s*\(/.test(html));
+  assert.ok(html.includes('"Match officials"') && html.includes('"Front office"'));
+  assert.ok(/collection\("rules"\)\.add\(/.test(html) || /doc\("rules\/" \+ [a-zA-Z]+\)\.set\(/.test(html));
+});
