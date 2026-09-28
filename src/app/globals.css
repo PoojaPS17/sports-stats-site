@@ -201,6 +201,10 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* A classic (non-overlay) scrollbar can turn the .bleed helper's 50vw math into a
+     few pixels of sideways scroll; `clip` (not `hidden`) stops that without making
+     body a scroll container, which would break the sticky header. */
+  overflow-x: clip;
 }
 
 table {
@@ -303,6 +307,13 @@ table {
 
 .band-hero > * {
   position: relative;
+}
+
+/* Full-bleed inside the centred container: stretches to the viewport edges while its
+   content stays aligned with the container. Used by the dark bands. */
+.bleed {
+  margin-inline: calc(50% - 50vw);
+  padding-inline: calc(50vw - 50%);
 }
 
 /* ---------------------------------------------------------------------------
