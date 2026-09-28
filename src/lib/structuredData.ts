@@ -121,6 +121,48 @@ function finishedDescription(league: League, game: GameRow, scorecard?: CricketT
   return `Result: ${game.status_summary ? `${game.status_summary}. ` : ""}${line[first]}, ${line[second]}.`;
 }
 
+/**
+ * Where a match was played, with a street-level address only when we can prove the address belongs
+ * to that venue: the ground we are naming has to be the home club's own, and the match must not have
+ * been moved to neutral ground. A club's city is a fact about the club, not about every fixture it
+ * plays, so a Mexico City or Wembley game gets the venue's name and nothing else.
+ */
+function eventLocation(game: GameRow, venue: string) {
+  const sameGround = (a?: string | null, b?: string | null) =>
+    !!a && !!b && a.trim().toLowerCase().replace(/\s+/g, " ") === b.trim().toLowerCase().replace(/\s+/g, " ");
+  const atHomeGround = game.neutral_site !== true && sameGround(game.home_venue_name, venue);
+  const address = atHomeGround && game.home_venue_city
+    ? {
+        "@type": "PostalAddress",
+        addressLocality: game.home_venue_city,
+        ...(game.home_venue_state ? { addressRegion: game.home_venue_state } : {}),
+        ...(game.home_venue_country ? { addressCountry: game.home_venue_country } : {}),
+      }
+    : null;
+  return { "@type": "Place", name: venue, ...(address ? { address } : {}) };
+}
+
+/**
+ * What a match that is not a finished result can say about itself: the fixture, where it is being
+ * played, and the feed's own word on its state ("Postponed", "Stumps - Day 2"). Google asks every
+ * Event for a description; a fixture that has not been played has no score to give it one.
+ */
+function fixtureDescription(league: League, matchup: string, venue: string | null | undefined, game: GameRow): string {
+  const summary = game.status_summary ? ` ${game.status_summary}.` : "";
+  return `${LEAGUE_LABEL[league]}: ${matchup}${venue ? `, ${venue}` : ""}.${summary}`;
+}
+
+/**
+ * The last day of a match that ran past its first — a Test, or any cricket match spread over days
+ * (games.end_date, parsed at ingest). Every other sport is played and finished inside a day and
+ * stores no end at all, so nothing is claimed for it: a kickoff plus a guessed duration would be
+ * a false claim, the same reason a fixture with no known time carries only its day.
+ */
+function eventEndDate(game: GameRow, startDate: string): string | null {
+  if (!game.end_date) return null;
+  return game.end_date === (game.local_date ?? startDate.slice(0, 10)) ? null : game.end_date;
+}
+
 export function gameSchema(league: League, game: GameRow, venue?: string | null, scorecard?: CricketTeamScorecard[] | null) {
   const status = schemaEventStatus(game);
   const team = (name: string, slug: string, logo: string | null) => ({
@@ -129,25 +171,37 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null,
     url: absoluteUrl(`/${league}/teams/${slug}`),
     ...(logo ? { logo } : {}),
   });
+  // American sports say "Away at Home"; football and cricket list the home side first.
+  const matchup = league === "nfl" || league === "nba" ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`;
+  // A fixture with no kickoff time yet carries its day only; a placeholder clock time would be a false claim.
+  const startDate = isTimeTbd(game) ? gameDayIso(game.date, league) : gameStartDateIso(game.date, league);
+  const endDate = eventEndDate(game, startDate);
+  const sides = [team(game.home_name, game.home_slug, game.home_logo), team(game.away_name, game.away_slug, game.away_logo)];
   return {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
-    // American sports say "Away at Home"; football and cricket list the home side first.
-    name: league === "nfl" || league === "nba" ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`,
+    name: matchup,
     sport: sportName(league),
-    // A fixture with no kickoff time yet carries its day only; a placeholder clock time would be a false claim.
-    startDate: isTimeTbd(game) ? gameDayIso(game.date, league) : gameStartDateIso(game.date, league),
+    startDate,
+    ...(endDate ? { endDate } : {}),
     eventStatus: status,
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url: absoluteUrl(`/${league}/games/${game.espn_id}`),
-    homeTeam: team(game.home_name, game.home_slug, game.home_logo),
-    awayTeam: team(game.away_name, game.away_slug, game.away_logo),
-    competitor: [team(game.home_name, game.home_slug, game.home_logo), team(game.away_name, game.away_slug, game.away_logo)],
-    organizer: { "@type": "SportsOrganization", name: LEAGUE_LABEL[league] },
-    ...(venue ? { location: { "@type": "Place", name: venue } } : {}),
-    ...(game.completed && game.home_score != null && game.away_score != null
-      ? { description: finishedDescription(league, game, scorecard) }
-      : {}),
+    // The page's own share card: the two badges, the score and the status, drawn for this match.
+    image: absoluteUrl(`/${league}/games/${game.espn_id}/opengraph-image`),
+    homeTeam: sides[0],
+    awayTeam: sides[1],
+    competitor: sides,
+    // The two sides are both the competitors and, in Google's Event vocabulary, the performers.
+    performer: sides,
+    organizer: { "@type": "SportsOrganization", name: LEAGUE_LABEL[league], url: absoluteUrl(`/${league}`) },
+    ...(venue ? { location: eventLocation(game, venue) } : {}),
+    description: game.completed && game.home_score != null && game.away_score != null
+      ? finishedDescription(league, game, scorecard)
+      : fixtureDescription(league, matchup, venue, game),
+    // No `offers`. Search Console asks for one because its Event type is built for ticketed
+    // entertainment; we sell no tickets and hold no ticket URLs, so any value here would be
+    // invented. The warning stays open on purpose — see tests/structured-data.test.ts.
   };
 }
 
@@ -163,6 +217,7 @@ export function cricketSeriesMatchSchema(m: {
   espn_id: string;
   name: string;
   date: string;
+  series_espn_id: string;
   series_name: string;
   status_summary: string | null;
   status_state: string | null;
@@ -170,6 +225,7 @@ export function cricketSeriesMatchSchema(m: {
   away: { name: string; logo: string | null } | null;
 }, venue?: string | null) {
   const team = (t: { name: string; logo: string | null } | null) => (t ? { "@type": "SportsTeam", name: t.name, ...(t.logo ? { logo: t.logo } : {}) } : undefined);
+  const sides = [team(m.home), team(m.away)].filter(Boolean);
   return {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
@@ -181,9 +237,14 @@ export function cricketSeriesMatchSchema(m: {
     url: absoluteUrl(`/cricket/matches/${m.espn_id}`),
     ...(m.home ? { homeTeam: team(m.home) } : {}),
     ...(m.away ? { awayTeam: team(m.away) } : {}),
-    competitor: [team(m.home), team(m.away)].filter(Boolean),
-    organizer: { "@type": "SportsOrganization", name: m.series_name },
+    competitor: sides,
+    performer: sides,
+    organizer: { "@type": "SportsOrganization", name: m.series_name, url: absoluteUrl(`/cricket/series/${m.series_espn_id}`) },
+    // No address: a series match names the ground from the live summary, and cricket's team
+    // endpoints carry no venue of their own, so there is no city to attach to it. No image
+    // either — this route has no share card to point at. And no `offers`, for the same reason
+    // a game page has none: we sell no tickets.
     ...(venue ? { location: { "@type": "Place", name: venue } } : {}),
-    ...(m.status_state === "post" && m.status_summary ? { description: m.status_summary } : {}),
+    description: m.status_state === "post" && m.status_summary ? m.status_summary : `${m.series_name}: ${m.name}.`,
   };
 }

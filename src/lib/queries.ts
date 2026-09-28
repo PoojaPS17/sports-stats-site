@@ -59,6 +59,13 @@ export interface GameRow {
   home_abbr: string | null;
   home_logo: string | null;
   home_color: string | null;
+  // The home club's own ground and where it is (teams.venue_*). Only selected by getGameByEspnId,
+  // which is the one query whose page claims an address in its structured data; null for cricket,
+  // whose team endpoints carry no venue (see db/schema.sql).
+  home_venue_name?: string | null;
+  home_venue_city?: string | null;
+  home_venue_state?: string | null;
+  home_venue_country?: string | null;
   away_name: string;
   away_slug: string;
   away_abbr: string | null;
@@ -103,6 +110,7 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
        g.odds_details, g.odds_spread, g.odds_over_under, g.odds_provider,
        g.broadcast_network, g.weather_display, g.weather_temperature,
        ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
+       ht.venue_name as home_venue_name, ht.venue_city as home_venue_city, ht.venue_state as home_venue_state, ht.venue_country as home_venue_country,
        at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
      from games g
      join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
