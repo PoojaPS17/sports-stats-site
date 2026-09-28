@@ -27,6 +27,7 @@
   --mast-2: #121c33;
   --mast-text: #eef1f7;
   --mast-muted: #9aa5bd;
+  --mast-line: rgba(255, 255, 255, 0.08);
 
   /* Legacy names, kept so every existing component inherits the identity. */
   --accent: var(--sig-ink);
@@ -589,13 +590,13 @@ a.card:hover,
   gap: 2px;
   min-width: 9.5rem;
   padding: 0 1rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--mast-line);
   font-size: 12px;
   color: var(--mast-text);
 }
 
 .strip-chip:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--header-hover-bg);
 }
 
 .strip-chip-empty {
@@ -604,6 +605,7 @@ a.card:hover,
 
 .strip-chip-top {
   display: flex;
+  white-space: nowrap;
   justify-content: space-between;
   gap: 0.75rem;
   color: var(--mast-muted);

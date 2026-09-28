@@ -42,7 +42,12 @@ export function Ticker() {
               <span className="strip-chip-top">
                 <span>{chip.league}</span>
                 <span className={chip.live ? "strip-live" : undefined}>
-                  {chip.live && <span className="live-dot" aria-hidden />}
+                  {chip.live && (
+                    <>
+                      <span className="live-dot" aria-hidden />
+                      <span className="sr-only">Live: </span>
+                    </>
+                  )}
                   {chip.status}
                 </span>
               </span>
