@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { blogPostingSchema, breadcrumbSchema, cricketSeriesMatchSchema, gameSchema, organizationSchema, tennisPlayerSchema } from "../src/lib/structuredData";
+import { blogPostingSchema, breadcrumbSchema, cricketSeriesMatchSchema, gameSchema, organizationSchema, teamSchema, tennisPlayerSchema } from "../src/lib/structuredData";
 import type { GameRow } from "../src/lib/queries";
 import { SITE_URL } from "../src/lib/site";
 
@@ -46,7 +46,7 @@ test("a BlogPosting names the desk as author, reuses the Organization publisher,
   assert.equal(schema.description, "D");
   assert.equal(schema.datePublished, "2026-09-25");
   assert.equal(schema.url, `${SITE_URL}/beyond-the-scoreline/second-gold-asian-record`);
-  assert.deepEqual(schema.publisher, organizationSchema());
+  assert.equal(schema.publisher.name, organizationSchema().name);
   assert.deepEqual(schema.author, { "@type": "Organization", name: "Beyond the Scoreline Desk", url: `${SITE_URL}/beyond-the-scoreline` });
 });
 
@@ -147,4 +147,38 @@ test("the image a game event points at is a share-card route that exists", () =>
   const image = gameSchema("nba", row(), null).image;
   const route = image.slice(`${SITE_URL}/`.length).replace("nba/games/401585", "[league]/games/[id]");
   assert.ok(existsSync(new URL(`../src/app/${route}.tsx`, import.meta.url)), `${route}.tsx must exist`);
+});
+
+test("a team's ground carries a structured address, not a bare city string", () => {
+  // It said address: "New York" — valid Text, but it threw away the region and country the
+  // database already holds, and gave a consumer nothing it could parse.
+  const knicks = teamSchema("nba", {
+    name: "New York Knicks", slug: "new-york-knicks", logo_url: null,
+    venue_name: "Madison Square Garden", venue_city: "New York", venue_state: "NY", venue_country: "USA",
+  });
+  assert.deepEqual(knicks.location, {
+    "@type": "Place",
+    name: "Madison Square Garden",
+    address: { "@type": "PostalAddress", addressLocality: "New York", addressRegion: "NY", addressCountry: "USA" },
+  });
+  // a ground we know by name only says only its name
+  const bare = teamSchema("ipl", { name: "Chennai", slug: "chennai", logo_url: null, venue_name: "Chepauk" });
+  assert.deepEqual(bare.location, { "@type": "Place", name: "Chepauk" });
+});
+
+test("an article's publisher is a nested node, not a second document with its own @context", () => {
+  // organizationSchema() is written to stand alone at the top level; embedding it whole put a
+  // redundant @context inside the BlogPosting, which is the one place it means nothing.
+  const publisher = blogPostingSchema({ slug: "s", title: "T", dek: "D", publishedAt: "2026-09-25" }).publisher;
+  assert.equal("@context" in publisher, false);
+  assert.equal(publisher["@type"], "Organization");
+  assert.equal(publisher.logo, organizationSchema().logo, "and it is still the same organisation");
+});
+
+test("an article carries the image it already shares", () => {
+  // Articles are typeset, not photographed: their art is a palette and a numeral drawn in CSS, so
+  // there is no per-article picture to point at. This is the card the page's own og:image serves.
+  const schema = blogPostingSchema({ slug: "s", title: "T", dek: "D", publishedAt: "2026-09-25" });
+  assert.equal(schema.image, `${SITE_URL}/opengraph-image`);
+  assert.equal("dateModified" in schema, false, "nothing records when an article was last edited");
 });

@@ -2,7 +2,6 @@
 import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import { fitTitle, pageMeta } from "@/lib/metadata";
 import { absoluteUrl } from "@/lib/site";
 import { AdSlot } from "@/components/AdSlot";
@@ -22,6 +21,7 @@ import { fetchCricketSummaryLive } from "@/lib/cricketLive";
 import { resolveTeamLogo } from "@/lib/teamLogos";
 import { JsonLd } from "@/components/JsonLd";
 import { cricketSeriesMatchSchema } from "@/lib/structuredData";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { normalizeStage } from "@/lib/stage";
 import { venueWithCity } from "@/components/MatchFacts";
 import { classifyCricketMatch, cricketMatchDescription } from "@/lib/cricketMatchStatus";
@@ -98,20 +98,13 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
     <div className="flex flex-col gap-6">
       <LiveRefresh active={live} />
       {stored && <JsonLd data={cricketSeriesMatchSchema({ ...stored, status_state: state, status_summary: summaryText }, details?.venue ?? null)} />}
-      <nav className="text-xs text-[var(--text-muted)]">
-        <Link href="/cricket/series" className="hover:underline">
-          Cricket series
-        </Link>
-        {stored && (
-          <>
-            {" "}
-            ›{" "}
-            <Link href={`/cricket/series/${stored.series_espn_id}`} className="hover:underline">
-              {stored.series_name}
-            </Link>
-          </>
-        )}
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Cricket series", href: "/cricket/series" },
+          ...(stored ? [{ label: stored.series_name, href: `/cricket/series/${stored.series_espn_id}` }] : []),
+          ...(matchName ? [{ label: matchName }] : []),
+        ]}
+      />
 
       <section className="card flex flex-col gap-3 px-5 py-5">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">

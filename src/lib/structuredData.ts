@@ -34,6 +34,13 @@ export function organizationSchema() {
   };
 }
 
+/** A top-level schema reused as a property of another: the same node, minus the @context only the outermost one carries. */
+function nested<T extends { "@context": string }>(schema: T): Omit<T, "@context"> {
+  const rest: Partial<T> = { ...schema };
+  delete rest["@context"];
+  return rest as Omit<T, "@context">;
+}
+
 export function breadcrumbSchema(items: { label: string; href?: string }[]) {
   return {
     "@context": "https://schema.org",
@@ -47,7 +54,26 @@ export function breadcrumbSchema(items: { label: string; href?: string }[]) {
   };
 }
 
-export function teamSchema(league: League, team: { name: string; slug: string; logo_url: string | null; venue_name?: string | null; venue_city?: string | null }) {
+/**
+ * A ground, with an address only when one is passed. Text would be valid for schema.org, but a
+ * PostalAddress is what a consumer can actually parse, and it carries the region and country the
+ * database holds alongside the city.
+ */
+function place(name: string, address: ReturnType<typeof postalAddress>) {
+  return { "@type": "Place", name, ...(address ? { address } : {}) };
+}
+
+function postalAddress(v: { venue_city?: string | null; venue_state?: string | null; venue_country?: string | null }) {
+  if (!v.venue_city) return null;
+  return {
+    "@type": "PostalAddress",
+    addressLocality: v.venue_city,
+    ...(v.venue_state ? { addressRegion: v.venue_state } : {}),
+    ...(v.venue_country ? { addressCountry: v.venue_country } : {}),
+  };
+}
+
+export function teamSchema(league: League, team: { name: string; slug: string; logo_url: string | null; venue_name?: string | null; venue_city?: string | null; venue_state?: string | null; venue_country?: string | null }) {
   return {
     "@context": "https://schema.org",
     "@type": "SportsTeam",
@@ -56,7 +82,7 @@ export function teamSchema(league: League, team: { name: string; slug: string; l
     memberOf: { "@type": "SportsOrganization", name: LEAGUE_LABEL[league] },
     url: absoluteUrl(`/${league}/teams/${team.slug}`),
     ...(team.logo_url ? { logo: team.logo_url } : {}),
-    ...(team.venue_name ? { location: { "@type": "Place", name: team.venue_name, ...(team.venue_city ? { address: team.venue_city } : {}) } } : {}),
+    ...(team.venue_name ? { location: place(team.venue_name, postalAddress(team)) } : {}),
   };
 }
 
@@ -103,8 +129,14 @@ export function blogPostingSchema(article: { slug: string; title: string; dek: s
     datePublished: article.publishedAt,
     url,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    // The site's own share card. An article's art is a palette and a numeral drawn in CSS, not a
+    // photograph, so there is no per-article picture; this is the image its og:image already serves.
+    image: absoluteUrl("/opengraph-image"),
+    // No dateModified: nothing records when an article was last edited, and datePublished would
+    // be a lie dressed as an update.
     author: { "@type": "Organization", name: "Beyond the Scoreline Desk", url: absoluteUrl("/beyond-the-scoreline") },
-    publisher: organizationSchema(),
+    // Nested, so without the @context that only the outermost node needs.
+    publisher: nested(organizationSchema()),
   };
 }
 
@@ -131,15 +163,7 @@ function eventLocation(game: GameRow, venue: string) {
   const sameGround = (a?: string | null, b?: string | null) =>
     !!a && !!b && a.trim().toLowerCase().replace(/\s+/g, " ") === b.trim().toLowerCase().replace(/\s+/g, " ");
   const atHomeGround = game.neutral_site !== true && sameGround(game.home_venue_name, venue);
-  const address = atHomeGround && game.home_venue_city
-    ? {
-        "@type": "PostalAddress",
-        addressLocality: game.home_venue_city,
-        ...(game.home_venue_state ? { addressRegion: game.home_venue_state } : {}),
-        ...(game.home_venue_country ? { addressCountry: game.home_venue_country } : {}),
-      }
-    : null;
-  return { "@type": "Place", name: venue, ...(address ? { address } : {}) };
+  return place(venue, atHomeGround ? postalAddress({ venue_city: game.home_venue_city, venue_state: game.home_venue_state, venue_country: game.home_venue_country }) : null);
 }
 
 /**
