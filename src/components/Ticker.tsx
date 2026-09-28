@@ -35,8 +35,8 @@ export function Ticker() {
 
   return (
     <div className="border-b border-[var(--header-border)] bg-[var(--mast-2)] text-[var(--mast-text)]">
-      <div className="container-x flex h-[52px] items-stretch gap-0 px-0 sm:px-0">
-        <div className="strip-scroll flex min-w-0 flex-1 items-stretch overflow-x-auto" aria-label="Latest scores">
+      <div className="container-x flex h-[52px] items-stretch gap-0 px-0! sm:px-0!">
+        <div className="strip-scroll flex min-w-0 flex-1 items-stretch overflow-x-auto" role="region" aria-label="Latest scores">
           {items.map((chip, i) => (
             <Link key={`${chip.href}-${i}`} href={chip.href} className="strip-chip">
               <span className="strip-chip-top">
@@ -51,7 +51,7 @@ export function Ticker() {
                   {chip.status}
                 </span>
               </span>
-              {chip.sides.map((s) => (
+              {(chip.sides ?? []).map((s) => (
                 <span key={s.name} className={`strip-chip-side ${s.won ? "strip-won" : ""}`}>
                   <span className="truncate">{s.name}</span>
                   {s.score !== null && <span className="tabular-nums">{s.score}</span>}

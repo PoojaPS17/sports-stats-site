@@ -52,7 +52,7 @@
   --header-border: #1b2640;
   --header-hover-bg: rgba(255, 255, 255, 0.07);
 
-  --pill-live-bg: var(--live);
+  --pill-live-bg: #e11d48; /* deeper than --live so 0.68rem white text clears AA */
   --pill-live-text: #ffffff;
   --pill-final-bg: #e8ebf2;
   --pill-final-text: #46516a;
@@ -452,7 +452,7 @@ a.card:hover,
 }
 
 .nav-pill:hover {
-  background: var(--header-hover-bg);
+  background: var(--surface-hover);
   color: var(--text);
 }
 
@@ -565,12 +565,12 @@ a.card:hover,
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 9999px;
-  background: var(--pill-live-text);
+  background: var(--live);
   animation: pulse-dot 1.4s ease-in-out infinite;
 }
 
 .pill-live .live-dot {
-  background: #ffffff;
+  background: var(--pill-live-text);
 }
 
 /* Result letters (W / L / D) used in form strips and schedules. */
@@ -686,10 +686,6 @@ a.card:hover,
   color: var(--live);
 }
 
-.strip-live .live-dot {
-  background: var(--live);
-}
-
 .strip-chip-side {
   display: flex;
   justify-content: space-between;
@@ -710,6 +706,7 @@ a.card:hover,
   position: relative;
   overflow: hidden;
   color: var(--mast-text);
+  container-type: inline-size;
 }
 
 /* Navy scrim rising from the bottom edge so the number and caption stay legible over the
