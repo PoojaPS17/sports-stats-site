@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { isCalledOff } from "@/lib/gameStatus";
+import { teamHex } from "@/lib/teamColor";
 import type { GameRow, League } from "@/lib/queries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { TeamLogo } from "./TeamLogo";
@@ -27,14 +28,14 @@ function Team({ name, logo, color, score, scoreDisplay, completed, won }: { name
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="flex min-w-0 items-center gap-3">
-        <TeamLogo name={name} logoUrl={logo} color={color} size={40} />
+        <TeamLogo name={name} logoUrl={logo} color={color} size={44} />
         <span className="min-w-0">
-          <span className={`block truncate text-lg ${completed && !won ? "font-medium text-[var(--text-muted)]" : "font-bold text-[var(--text)]"}`}>{name}</span>
-          {completed && scoreDisplay && <span className="block text-xs tabular-nums text-[var(--text-muted)]">{scoreDisplay}</span>}
+          <span className={`block truncate text-xl ${completed && !won ? "font-medium text-[var(--mast-muted)]" : "font-bold text-[var(--mast-text)]"}`}>{name}</span>
+          {completed && scoreDisplay && <span className="block text-xs tabular-nums text-[var(--mast-muted)]">{scoreDisplay}</span>}
         </span>
       </span>
       {completed && !scoreDisplay && score !== null && (
-        <span className={`shrink-0 text-2xl tabular-nums ${won ? "font-bold text-[var(--text)]" : "font-medium text-[var(--text-muted)]"}`}>{score}</span>
+        <span className={`display shrink-0 tabular-nums text-[52px] ${won ? "text-[var(--mast-text)]" : "text-[var(--mast-muted)]"}`}>{score}</span>
       )}
     </div>
   );
@@ -54,10 +55,16 @@ export function SpotlightCard({ game }: { game: GameRow }) {
     home: <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />,
   };
 
+  const c1 = teamHex(order[0] === "home" ? game.home_color : game.away_color, "#1e3a8a");
+  const c2 = teamHex(order[0] === "home" ? game.away_color : game.home_color, "#7c2d12");
   return (
-    <Link href={`/${league}/games/${game.espn_id}`} className={`card block px-5 py-4 ${live ? "border-[var(--live)]/40" : ""}`}>
+    <Link
+      href={`/${league}/games/${game.espn_id}`}
+      className="card block rounded-2xl border-white/10 px-5 py-4 text-[var(--mast-text)] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)]"
+      style={{ background: `linear-gradient(135deg, ${c1} 0%, var(--mast) 55%, ${c2} 140%)` }}
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--sig)]">
           {label} · {LEAGUE_LABEL[league]}
         </span>
         <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} note={game.note} league={league} clock={false} />
@@ -66,11 +73,11 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         {teams[order[0]]}
         {teams[order[1]]}
       </div>
-      <p className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-2.5 text-xs font-medium text-[var(--text-muted)]">
+      <p className="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5 text-xs font-medium text-[var(--mast-muted)]">
         <span>
           {game.completed ? (game.status_summary ?? "Full time") : live ? (game.status_detail ?? "In progress") : <Kickoff league={league} game={game} format="datetime" />}
         </span>
-        <span className="font-semibold text-[var(--accent)]">Match centre →</span>
+        <span className="font-semibold text-[var(--sig)]">Match centre →</span>
       </p>
     </Link>
   );

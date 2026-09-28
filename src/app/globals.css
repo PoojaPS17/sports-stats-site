@@ -330,6 +330,39 @@ a.card:hover,
   transform: translateY(-2px);
 }
 
+/* A match card: a two-tone team-colour stripe down the left edge, scores in the display face. */
+.match {
+  position: relative;
+  overflow: hidden;
+  padding-left: 1.25rem;
+}
+
+.match::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(to bottom, var(--c1, var(--border)) 50%, var(--c2, var(--border)) 50%);
+}
+
+.match-live::before {
+  width: 6px;
+}
+
+.match-live {
+  box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--live) 45%, transparent);
+}
+
+.score-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
 /* The players index lists every player of a league (thousands of links), so a row carries no
    class attributes of its own: it is a card link, the player's name, and the team on a second line. */
 .player-grid > a {
