@@ -138,7 +138,7 @@ export function duplicatesSection(pool: Pool) {
     const cricketScoreMismatch = await group(
       `select m.espn_id as id, g.league, coalesce(g.home_score_display, g.home_score::text, '') as gh, m.home->>'score' as mh,
               coalesce(g.away_score_display, g.away_score::text, '') as ga, m.away->>'score' as ma
-       from cricket_series_matches m join games g on g.espn_id = m.espn_id
+       from cricket_series_matches m join games g on g.espn_id = m.espn_id and g.league = any(m.league_candidates)
        where g.completed and m.status_state = 'post' is not false
          and (split_part(coalesce(g.home_score_display, g.home_score::text, ''), ' ', 1) <> split_part(coalesce(m.home->>'score', ''), ' ', 1)
            or split_part(coalesce(g.away_score_display, g.away_score::text, ''), ' ', 1) <> split_part(coalesce(m.away->>'score', ''), ' ', 1))`,

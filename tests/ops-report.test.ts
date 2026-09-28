@@ -86,13 +86,18 @@ test("duplicatesSection finds the same fixture, player, tennis match and article
   await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed, home_score, away_score) values
     ('nba','d1', '2026-09-20T02:00:00Z', 'A v B', '1', '2', true, 100, 90),
     ('nba','d2', '2026-09-20T02:00:00Z', 'A v B', '1', '2', true, 100, 90),
-    ('ipl','c1', '2026-05-01T14:00:00Z', 'X v Y', '10', '11', true, 180, 170)`);
+    ('ipl','c1', '2026-05-01T14:00:00Z', 'X v Y', '10', '11', true, 180, 170),
+    ('nba','c2', '2026-05-01T14:00:00Z', 'X v Y', '10', '11', true, 90, 80)`);
   await db.pool.query(`insert into players (league, espn_id, team_espn_id, name, slug) values
     ('ipl','p1','10','Rohit Sharma','rohit-sharma'), ('ipl','p2','10','rohit sharma','rohit-sharma-2'), ('ipl','p3','11','Rohit Sharma','rohit-sharma-3')`);
   await db.pool.query(`insert into tennis_matches (tour, espn_id, tournament_name, round, date, player1_espn_id, player2_espn_id, tournament_espn_id) values
     ('atp','t1','Open','R16','2026-09-01T10:00:00Z','a','b','189-2026'), ('atp','t2','Open','R16','2026-09-01T10:00:00Z','a','b','189-2026')`);
-  await db.pool.query(`insert into cricket_series_matches (espn_id, series_espn_id, date, name, home, away) values
-    ('c1','s1','2026-05-01T14:00:00Z','X v Y','{"id":"10","score":"181/5"}','{"id":"11","score":"170"}')`);
+  // league_candidates scopes the join to games rows in the same sport; c1 (ipl) matches its games row,
+  // c2 shares its espn_id with an nba games row purely by coincidence (a football/basketball id landing
+  // on the same string as a cricket one) and must NOT be compared against it.
+  await db.pool.query(`insert into cricket_series_matches (espn_id, series_espn_id, date, name, home, away, league_candidates) values
+    ('c1','s1','2026-05-01T14:00:00Z','X v Y','{"id":"10","score":"181/5"}','{"id":"11","score":"170"}','{ipl}'),
+    ('c2','s1','2026-05-01T14:00:00Z','X v Y','{"id":"10","score":"181/5"}','{"id":"11","score":"170"}','{bbl}')`);
   await db.pool.query(`insert into news_articles (league, article_id, headline, link) values
     ('nba','n1','H','https://e/x'), ('nba','n2','H2','https://e/x')`);
   const s = await duplicatesSection(db.pool);
@@ -100,7 +105,7 @@ test("duplicatesSection finds the same fixture, player, tennis match and article
   assert.equal(s.data.games.count, 1);
   assert.equal(s.data.players.count, 1, "same name on the same team only; the other team's Rohit is a different player");
   assert.equal(s.data.tennisMatches.count, 1);
-  assert.equal(s.data.cricketScoreMismatch.count, 1);
+  assert.equal(s.data.cricketScoreMismatch.count, 1, "c2's league_candidates (bbl) does not include the nba games row it happens to share an id with, so it is not compared");
   assert.equal(s.data.newsArticles.count, 1);
   assert.ok(s.data.games.examples[0].includes("d1"));
 });
