@@ -49,3 +49,9 @@ test("crew and rulebook renderers exist and rules are written as whole documents
   assert.ok(html.includes('"Match officials"') && html.includes('"Front office"'));
   assert.ok(/collection\("rules"\)\.add\(/.test(html) || /doc\("rules\/" \+ [a-zA-Z]+\)\.set\(/.test(html));
 });
+
+test("the clubhouse has a sprite for every crew member and draws in code only", () => {
+  for (const id of ["physio","umpire","kit-manager","analyst","scout","editor","press-officer","scorer","steward","owner","session"]) assert.ok(new RegExp(`"${id}":\\s*\\[`).test(html), id + " sprite");
+  assert.ok(!/<img/.test(html.split('id="panel-clubhouse"')[1] ?? ""), "no image files in the clubhouse");
+  assert.ok(html.includes("image-rendering: pixelated"));
+});

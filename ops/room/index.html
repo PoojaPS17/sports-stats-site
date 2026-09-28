@@ -186,7 +186,7 @@ p.issue-text { margin: 9px 0 0; }
 .crew-card.is-click { cursor: pointer; }
 .crew-card.is-click:hover { border-color: var(--sig-ink); }
 .crew-top { display: flex; align-items: center; gap: 11px; }
-.avatar { width: 40px; height: 40px; flex: none; border-radius: 7px; image-rendering: pixelated; background: var(--surface-muted); }
+.avatar { width: 36px; height: 48px; flex: none; image-rendering: pixelated; background: none; }
 .crew-card-name { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.1;
   letter-spacing: .02em; overflow-wrap: anywhere; }
 .crew-card-role { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em;
@@ -209,6 +209,14 @@ p.issue-text { margin: 9px 0 0; }
 .rule-label { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text-muted); margin: 9px 0 4px; }
 .rule-add { margin-top: 16px; }
+
+/* Clubhouse tab */
+.clubhouse { display: grid; gap: 12px; }
+.clubhouse-stage { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--card-shadow); padding: 8px; display: flex; justify-content: center; }
+#clubhouse-canvas { image-rendering: pixelated; width: 100%; max-width: 480px; height: auto; display: block; }
+.clubhouse-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+.clubhouse-note { margin: 0; color: var(--text-faint); font-size: 12px; }
 </style>
 
 <div class="mast" role="banner">
@@ -261,42 +269,11 @@ const DUGOUT = [
   },
 ];
 
-// Six squares taken from the page tokens, each with ink that reads on it.
-const AVATAR_COLOURS = [
-  { bg: "#c6f135", ink: "#0b1324" }, { bg: "#4d7c0f", ink: "#eef9c9" },
-  { bg: "#15803d", ink: "#eef1f7" }, { bg: "#d97706", ink: "#0b1324" },
-  { bg: "#b91c1c", ink: "#eef1f7" }, { bg: "#34426a", ink: "#eef1f7" },
-];
-
-function avatarLetter(id) {
-  const room = window.OpsRoom;
-  const crew = room && room.state ? room.state.crew[id] : null;
-  const card = crew || DUGOUT.filter((d) => d.id === id)[0];
-  const name = String((card && card.name) || id || "?").trim();
-  return (name.slice(0, 1) || "?").toUpperCase();
-}
-
-// A placeholder face: a colour from the id with the initial on it. Task 10
-// swaps this body for the 12x16 sprites and keeps the signature.
+// The Crew tab's face. The sprite sheet lives in the Clubhouse block below, so
+// this asks for it at draw time rather than at parse time.
 function drawAvatar(canvas, id) {
-  const ctx = canvas && typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
-  if (!ctx) return;
-  const key = String(id || "");
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) hash = (hash * 31 + key.charCodeAt(i)) % 100003;
-  const paint = AVATAR_COLOURS[hash % AVATAR_COLOURS.length];
-  const size = 40;
-  const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 3);
-  canvas.width = Math.round(size * dpr);
-  canvas.height = Math.round(size * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = paint.bg;
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = paint.ink;
-  ctx.font = '800 25px "Barlow Condensed", "Arial Narrow", sans-serif';
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(avatarLetter(id), size / 2, size / 2 + 1);
+  const club = window.Clubhouse;
+  if (club && typeof club.drawAvatar === "function") club.drawAvatar(canvas, id);
 }
 
 const OpsRoom = {
@@ -816,7 +793,7 @@ const OpsRoom = {
     const name = String(c.name || id);
     const status = String(c.lastStatus || "none");
     const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
-    const canvas = h("canvas", { class: "avatar", width: "40", height: "40", "aria-hidden": "true" });
+    const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
     try { drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
     const facts = h("dl", { class: "crew-facts" });
     facts.append(
@@ -1077,8 +1054,8 @@ const OpsRoom = {
   // is untrusted. Parse it into an inert document, drop the elements and the
   // attributes that can run code, move the page or paint over it, and serialise
   // what is left. Working on the parsed tree is what closes the holes an
-  // attribute regex leaves open, such as <img src=x/onerror=...> with no space
-  // before the handler.
+  // attribute regex leaves open, such as an img tag written as src=x/onerror=1
+  // with no space before the handler.
   sanitize(html) {
     let doc = null;
     try { doc = new DOMParser().parseFromString(html, "text/html"); } catch (err) { doc = null; }
@@ -1105,5 +1082,876 @@ const OpsRoom = {
 };
 
 window.OpsRoom = OpsRoom;
+</script>
+
+<script>
+// ---- The Clubhouse ----
+// A cross-section of the stand drawn pixel by pixel on one canvas, 160 by 232
+// logical pixels blown up by an integer SCALE. Nothing here loads a file: every
+// figure is an array of sixteen strings, one character per pixel, and every
+// number the scene shows is read from OpsRoom.state.
+
+const Clubhouse = {
+  W: 160,
+  H: 232,
+  SCALE: 3,
+  t: 0,
+  canvas: null,
+  ctx: null,
+  root: null,
+  buttons: null,
+  resizeBound: false,
+
+  PAL: { k: "#0b1324", w: "#eef1f7", s: "#f1c9a5", d: "#c98e63", h: "#3b2a1a", b: "#2563eb", r: "#dc2626", g: "#15803d", y: "#eab308", l: "#c6f135", n: "#121c33", m: "#9aa5bd", o: "#d97706", p: "#7c3aed", t: "#0f766e" },
+
+  // A 3 by 5 pixel font: the digits, the letters the room labels and the roof
+  // sign need, and the three marks that hold them together.
+  FONT: {
+    "0": ["###", "#.#", "#.#", "#.#", "###"],
+    "1": [".#.", "##.", ".#.", ".#.", "###"],
+    "2": ["###", "..#", "###", "#..", "###"],
+    "3": ["###", "..#", ".##", "..#", "###"],
+    "4": ["#.#", "#.#", "###", "..#", "..#"],
+    "5": ["###", "#..", "###", "..#", "###"],
+    "6": ["###", "#..", "###", "#.#", "###"],
+    "7": ["###", "..#", "..#", "..#", "..#"],
+    "8": ["###", "#.#", "###", "#.#", "###"],
+    "9": ["###", "#.#", "###", "..#", "###"],
+    A: ["###", "#.#", "###", "#.#", "#.#"],
+    B: ["##.", "#.#", "##.", "#.#", "##."],
+    C: ["###", "#..", "#..", "#..", "###"],
+    D: ["##.", "#.#", "#.#", "#.#", "##."],
+    E: ["###", "#..", "##.", "#..", "###"],
+    F: ["###", "#..", "##.", "#..", "#.."],
+    I: ["###", ".#.", ".#.", ".#.", "###"],
+    K: ["#.#", "#.#", "##.", "#.#", "#.#"],
+    L: ["#..", "#..", "#..", "#..", "###"],
+    M: ["#.#", "###", "###", "#.#", "#.#"],
+    N: ["#.#", "###", "#.#", "#.#", "#.#"],
+    O: ["###", "#.#", "#.#", "#.#", "###"],
+    P: ["###", "#.#", "###", "#..", "#.."],
+    R: ["###", "#.#", "##.", "#.#", "#.#"],
+    S: ["###", "#..", "###", "..#", "###"],
+    T: ["###", ".#.", ".#.", ".#.", ".#."],
+    V: ["#.#", "#.#", "#.#", "#.#", ".#."],
+    X: ["#.#", "#.#", ".#.", "#.#", "#.#"],
+    "'": [".#.", "...", "...", "...", "..."],
+    "-": ["...", "...", "###", "...", "..."],
+    ".": ["...", "...", "...", "...", ".#."],
+    " ": ["...", "...", "...", "...", "..."],
+  },
+
+  // Twelve by sixteen. Frame 1 swaps rows 13 and 14, so the legs change step.
+  SPRITES: {
+    "physio": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..mwwwwwwm..",
+      ".mwwwwwwwwm.",
+      ".mwwwwrwwwm.",
+      ".swwwrrrwws.",
+      "..mwwwrwwm..",
+      "..mwwwwwwm..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "umpire": [
+      "...wwwwww...",
+      ".wwwwwwwwww.",
+      "...dddddd...",
+      "...dkddkd...",
+      "...ddssdd...",
+      "....dddd....",
+      "..kkkkkkkk..",
+      ".kkkkkkkkkk.",
+      ".kkkkwwkkkk.",
+      ".dkkkwwkkkd.",
+      "..kkkkkkkk..",
+      "..kkkkkkkk..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "kit-manager": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..ybbbbbby..",
+      ".bbbbbbbbbb.",
+      ".bbbbbbbbbb.",
+      "msbbbbbbbbs.",
+      "mmbbbbbbbb..",
+      "rrbbbbbbbb..",
+      "rrnnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "analyst": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hddddddh..",
+      "..hdkddkdh..",
+      "..hddssddh..",
+      "....dddd....",
+      "..tttttttt..",
+      ".tttttttttt.",
+      ".tttttttttt.",
+      ".dttttttttd.",
+      "..tmllllmt..",
+      "..twwwwwwt..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "scout": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..kkwkkwkk..",
+      "..sssddsss..",
+      "....ssss....",
+      "..gggggggg..",
+      ".gggggggggg.",
+      ".gggggggggg.",
+      ".sggggggggs.",
+      "..gggggggg..",
+      "..gggggggg..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "editor": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..pppppppp..",
+      ".ppppppppppy",
+      ".ppppppppppy",
+      ".sppppppppsy",
+      "..pwwwwwwp..",
+      "..pwkkkkwp..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "press-officer": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hddddddh..",
+      "..hdkddkdh..",
+      "..hddssddh..",
+      "....dddd....",
+      "..rrrrrrrr.m",
+      ".rrrrrrrrrrm",
+      ".rrrrrrrrrrk",
+      ".drrrrrrrrdk",
+      "..rrrrrrrr..",
+      "..rrrrrrrr..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "scorer": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..yyyyyyyy..",
+      ".yyyyyyyyyy.",
+      ".yywwwwwwyyw",
+      ".sywkkkkwysw",
+      "..ywwwwwwy..",
+      "..yyyyyyyy..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "steward": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hddddddh..",
+      "..hdkddkdh..",
+      "..hddssddh..",
+      "....dddd....",
+      "..oooooooo..",
+      ".oooooooooo.",
+      ".oowwwwwwoo.",
+      ".doooooooodk",
+      "..oooooooo.y",
+      "..ooooooooyy",
+      "..nnnnnnnnyy",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "owner": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..llllllll..",
+      ".nlnnnnnnnn.",
+      ".nlnnnnnnnn.",
+      ".snnnnnnnns.",
+      "..nnnnnnnn..",
+      "..nnnnnnnn..",
+      "..mmmmmmmm..",
+      "..mmm..mmm..",
+      "..mm....mm..",
+      "..kkk..kkk..",
+    ],
+    "session": [
+      "...hhhhhh.ww",
+      "..hhhhhhh.wk",
+      "..hssssssh.w",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..mmmmmmmm..",
+      ".mmmmmmmmmm.",
+      ".mmmmmmmmmm.",
+      ".smmmmmmmms.",
+      "..mmmmmmmm..",
+      "..mmmmmmmm..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+  },
+
+  ROOMS: [
+    { id: "box", y: 12, label: "DIRECTORS' BOX", members: ["owner", "session"] },
+    { id: "officials", y: 54, label: "OFFICIALS", members: ["umpire", "editor"] },
+    { id: "backroom", y: 96, label: "BACKROOM", members: ["physio", "kit-manager", "steward"] },
+    { id: "front", y: 138, label: "FRONT OFFICE", members: ["analyst", "scout", "press-officer", "scorer"] },
+    { id: "basement", y: 180, label: "DB", members: [] },
+  ],
+
+  // Where each figure stands when nothing is happening. Task 11 walks them off
+  // these marks and back again.
+  HOME_X: {
+    owner: 54, session: 98,
+    umpire: 46, editor: 88,
+    physio: 54, "kit-manager": 70, steward: 104,
+    analyst: 24, scout: 64, "press-officer": 90, scorer: 118,
+  },
+
+  FIGURES: [],
+
+  // One rack per scraper the Umpire watches, and a spare the site has not
+  // filled yet.
+  RACKS: ["scrape-tick", "fetch-injuries", "fetch-f1-scores", "fetch-f1-standings", "fetch-asian-games-medals", "spare"],
+
+  STARS: [[6, 16], [14, 32], [4, 50], [12, 66], [7, 88], [15, 106], [3, 124], [11, 146], [148, 72], [154, 94], [146, 116], [152, 140]],
+
+  // The scene follows the page: dark theme, or the reader's own preference when
+  // no stamp has been set.
+  night: (function () {
+    try {
+      const stamped = document.documentElement.dataset.theme;
+      if (stamped === "dark") return true;
+      if (stamped) return false;
+      return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    } catch (err) {
+      return false;
+    }
+  })(),
+
+  // ---- the panel ----
+
+  mount(root) {
+    if (this.canvas && this.root === root && root.contains(this.canvas)) return;
+    const h = OpsRoom.h;
+    const canvas = h("canvas", {
+      id: "clubhouse-canvas", role: "img",
+      "aria-label": "A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew.",
+    });
+    const day = h("button", { type: "button", class: "chip", id: "clubhouse-day", onclick: () => this.setNight(false) }, "Day");
+    const night = h("button", { type: "button", class: "chip", id: "clubhouse-night", onclick: () => this.setNight(true) }, "Night");
+    this.buttons = { day: day, night: night };
+    root.replaceChildren(h("div", { class: "clubhouse" },
+      h("div", { class: "clubhouse-stage" }, canvas),
+      h("div", { class: "clubhouse-controls", role: "group", "aria-label": "Clubhouse view" }, day, night),
+      h("p", { class: "clubhouse-note", text: "Characters are drawn in code for this private page. No official art is used." })));
+    this.root = root;
+    this.canvas = canvas;
+    this.ctx = typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
+    if (!this.resizeBound) {
+      this.resizeBound = true;
+      window.addEventListener("resize", () => { if (this.canvas) this.redraw(); });
+    }
+  },
+
+  setNight(on) {
+    this.night = !!on;
+    this.redraw();
+  },
+
+  // An integer scale keeps the pixels square. The element is capped at 480 CSS
+  // pixels, so there is nothing to gain above three.
+  scaleFor() {
+    const el = this.root || this.canvas;
+    const wide = el && el.clientWidth ? el.clientWidth : 480;
+    return Math.max(2, Math.min(5, Math.floor(Math.min(wide, 480) / 160)));
+  },
+
+  redraw() {
+    if (!this.canvas || !this.ctx) return;
+    this.SCALE = this.scaleFor();
+    const w = this.W * this.SCALE;
+    const tall = this.H * this.SCALE;
+    if (this.canvas.width !== w) this.canvas.width = w;
+    if (this.canvas.height !== tall) this.canvas.height = tall;
+    if (this.buttons) {
+      this.buttons.day.setAttribute("aria-pressed", this.night ? "false" : "true");
+      this.buttons.night.setAttribute("aria-pressed", this.night ? "true" : "false");
+    }
+    this.draw(this.ctx, this.t);
+  },
+
+  // ---- the numbers, all of them from the page's own state ----
+
+  state() {
+    const room = window.OpsRoom;
+    return (room && room.state) || { crew: {}, issues: {}, daily: {}, status: null };
+  },
+
+  openIssues() {
+    const issues = this.state().issues || {};
+    const out = [];
+    for (const key of Object.keys(issues)) {
+      const it = issues[key] || {};
+      if (it.status !== "open" && it.status !== "reopened") continue;
+      out.push({ key: key, issue: it });
+    }
+    return out;
+  },
+
+  severityCounts() {
+    const counts = { critical: 0, high: 0, medium: 0 };
+    for (const row of this.openIssues()) {
+      const sev = String(row.issue.severity || "").toLowerCase();
+      if (counts[sev] !== undefined) counts[sev] += 1;
+    }
+    return counts;
+  },
+
+  prNumber() {
+    const crew = this.state().crew || {};
+    const ed = crew.editor;
+    const m = ed && ed.lastHeadline ? String(ed.lastHeadline).match(/#(\d+)/) : null;
+    return m ? m[1].slice(0, 4) : "";
+  },
+
+  // The heart line is flat until the Physio has a latency to report.
+  heartAmp() {
+    const s = this.state().status;
+    const ms = Number(s ? s.latencyMs : NaN);
+    if (!Number.isFinite(ms)) return 0;
+    return Math.max(1, Math.min(4, 1 + Math.floor(ms / 300)));
+  },
+
+  gameViews() {
+    const daily = this.state().daily || {};
+    let best = null;
+    for (const key of Object.keys(daily)) {
+      const d = daily[key] || {};
+      const stamp = String(d.date || d.id || key);
+      if (!best || stamp > String(best.date || best.id || "")) best = d;
+    }
+    const n = Number(best ? best.gameViews : NaN);
+    if (!Number.isFinite(n)) return "----";
+    const clamped = Math.max(0, Math.min(9999, Math.round(n)));
+    let out = String(clamped);
+    while (out.length < 4) out = "0" + out;
+    return out;
+  },
+
+  // A rack is red when the Umpire has an open finding that names its scraper,
+  // green when it does not, and grey until the Umpire has run at all.
+  rackState(name) {
+    if (name === "spare") return "spare";
+    const crew = this.state().crew || {};
+    const ump = crew.umpire;
+    if (!ump || !OpsRoom.has(ump.lastRunAt)) return "none";
+    const needle = String(name).toLowerCase();
+    for (const row of this.openIssues()) {
+      if (String(row.issue.agent || "") !== "umpire") continue;
+      const hay = (String(row.issue.id || row.key) + " " + String(row.issue.title || "")).toLowerCase();
+      if (hay.indexOf(needle) >= 0) return "bad";
+    }
+    return "ok";
+  },
+
+  // The vault stands open only when the Umpire's own headline says a backup
+  // exists and is less than a day and a bit old.
+  vaultState() {
+    const crew = this.state().crew || {};
+    const ump = crew.umpire;
+    if (!ump || !OpsRoom.has(ump.lastRunAt)) return "none";
+    const line = String(ump.lastHeadline || "").toLowerCase();
+    if (line.indexOf("backup") < 0 || line.indexOf("no backup") >= 0) return "stale";
+    const m = line.match(/(\d+)\s*h old/);
+    if (!m) return "stale";
+    return Number(m[1]) < 26 ? "fresh" : "stale";
+  },
+
+  // ---- painting ----
+
+  tone() {
+    return this.night
+      ? { sky0: "#060c1a", sky1: "#121c33", room: "#1e2a4a", wall: "#0f1830", floor: "#34426a", line: "#050a16", ink: "#7f8bab", glass: "#24406e", pitch: "#123a22", pitchLine: "#4d7c0f", earth: "#140f08", screen: "#0b1324", board: "#5b6480" }
+      : { sky0: "#bfdbfe", sky1: "#ffffff", room: "#eef1f7", wall: "#c3cad8", floor: "#9aa5bd", line: "#0b1324", ink: "#5a6478", glass: "#a9d3ff", pitch: "#2f8f4e", pitchLine: "#eef1f7", earth: "#3b2a1a", screen: "#182342", board: "#eef1f7" };
+  },
+
+  disc(ctx, cx, cy, r) {
+    for (let j = -r; j <= r; j += 1) {
+      for (let i = -r; i <= r; i += 1) {
+        if (i * i + j * j <= r * r) ctx.fillRect(cx + i, cy + j, 1, 1);
+      }
+    }
+  },
+
+  drawText(ctx, text, x, y, colour) {
+    const str = String(text === null || text === undefined ? "" : text).toUpperCase();
+    ctx.fillStyle = colour;
+    for (let i = 0; i < str.length; i += 1) {
+      const glyph = this.FONT[str.charAt(i)];
+      if (glyph) {
+        for (let r = 0; r < glyph.length; r += 1) {
+          const row = glyph[r];
+          for (let c = 0; c < row.length; c += 1) {
+            if (row.charAt(c) === "#") ctx.fillRect(x + i * 4 + c, y + r, 1, 1);
+          }
+        }
+      }
+    }
+    return this.textWidth(str);
+  },
+
+  textWidth(text) {
+    const n = String(text === null || text === undefined ? "" : text).length;
+    return n > 0 ? n * 4 - 1 : 0;
+  },
+
+  drawSprite(ctx, id, x, y, frame) {
+    const rows = this.SPRITES[id] || this.SPRITES.session;
+    for (let j = 0; j < rows.length; j += 1) {
+      let from = j;
+      if (frame === 1) {
+        if (j === 13) from = 14;
+        else if (j === 14) from = 13;
+      }
+      const row = rows[from];
+      for (let i = 0; i < row.length; i += 1) {
+        const colour = this.PAL[row.charAt(i)];
+        if (!colour) continue;
+        ctx.fillStyle = colour;
+        ctx.fillRect(x + i, y + j, 1, 1);
+      }
+    }
+  },
+
+  // The Crew tab's face: the same sprite at three times the size, on nothing.
+  drawAvatar(canvas, id) {
+    const ctx = canvas && typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
+    if (!ctx) return;
+    canvas.width = 36;
+    canvas.height = 48;
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 12, 16);
+    this.drawSprite(ctx, this.SPRITES[id] ? id : "session", 0, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  },
+
+  draw(ctx, t) {
+    const scale = this.SCALE;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, this.W * scale, this.H * scale);
+    ctx.scale(scale, scale);
+    this.drawSky(ctx, t);
+    this.drawBuilding(ctx, t);
+    this.drawBox(ctx, t);
+    this.drawOfficials(ctx, t);
+    this.drawBackroom(ctx, t);
+    this.drawFront(ctx, t);
+    this.drawBasement(ctx, t);
+    this.drawFigures(ctx, t);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  },
+
+  drawSky(ctx, t) {
+    const c = this.tone();
+    const grad = ctx.createLinearGradient(0, 0, 0, 178);
+    grad.addColorStop(0, c.sky0);
+    grad.addColorStop(1, c.sky1);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 160, 178);
+    if (this.night) {
+      const phase = Math.floor(t / 8) % 2 === 0;
+      for (let i = 0; i < this.STARS.length; i += 1) {
+        const star = this.STARS[i];
+        const bright = (i % 2 === 0) === phase;
+        ctx.fillStyle = bright ? "#eef1f7" : "#48557a";
+        ctx.fillRect(star[0], star[1], 1, 1);
+        if (!bright) continue;
+        ctx.fillRect(star[0] - 1, star[1], 1, 1);
+        ctx.fillRect(star[0] + 1, star[1], 1, 1);
+        ctx.fillRect(star[0], star[1] - 1, 1, 1);
+        ctx.fillRect(star[0], star[1] + 1, 1, 1);
+      }
+    } else {
+      ctx.fillStyle = this.PAL.l;
+      this.disc(ctx, 9, 28, 6);
+      ctx.fillStyle = "#e6ffa1";
+      this.disc(ctx, 9, 28, 3);
+    }
+    ctx.fillStyle = c.earth;
+    ctx.fillRect(0, 178, 160, 54);
+    ctx.fillStyle = c.pitch;
+    ctx.fillRect(0, 178, 160, 3);
+  },
+
+  drawBuilding(ctx, t) {
+    const c = this.tone();
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(16, 8, 128, 4);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(16, 8, 128, 1);
+    ctx.fillStyle = c.wall;
+    ctx.fillRect(18, 12, 124, 210);
+    for (const room of this.ROOMS) {
+      ctx.fillStyle = c.room;
+      ctx.fillRect(22, room.y, 116, 40);
+      ctx.fillStyle = c.floor;
+      ctx.fillRect(22, room.y + 40, 116, 2);
+      if (this.night) {
+        ctx.fillStyle = this.PAL.y;
+        ctx.fillRect(79, room.y + 1, 3, 1);
+      }
+      this.drawText(ctx, room.label, 24, room.y + 3, c.ink);
+    }
+    ctx.fillStyle = c.line;
+    ctx.fillRect(18, 12, 1, 210);
+    ctx.fillRect(141, 12, 1, 210);
+    ctx.fillRect(18, 221, 124, 1);
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(14, 222, 132, 4);
+    this.drawSign(ctx, t);
+    this.drawPitch(ctx);
+  },
+
+  drawSign(ctx) {
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(50, 0, 60, 8);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(50, 7, 60, 1);
+    this.drawText(ctx, "SPORTS-DB.LIVE", 52, 1, this.PAL.l);
+  },
+
+  // The strip the directors' box looks onto.
+  drawPitch(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.pitch;
+    ctx.fillRect(142, 12, 18, 40);
+    ctx.fillStyle = c.pitchLine;
+    ctx.fillRect(144, 15, 14, 1);
+    ctx.fillRect(144, 48, 14, 1);
+    ctx.fillRect(144, 15, 1, 34);
+    ctx.fillRect(157, 15, 1, 34);
+    ctx.fillRect(144, 31, 14, 1);
+    ctx.fillRect(149, 28, 4, 1);
+    ctx.fillRect(149, 34, 4, 1);
+    ctx.fillRect(148, 29, 1, 5);
+    ctx.fillRect(153, 29, 1, 5);
+  },
+
+  // The directors' box: a wall screen carrying the open-issue counts, the
+  // owner's desk, a whiteboard for the session and the glass onto the pitch.
+  drawBox(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.glass;
+    ctx.fillRect(116, 14, 22, 38);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(116, 14, 1, 38);
+    ctx.fillRect(116, 26, 22, 1);
+    ctx.fillRect(116, 38, 22, 1);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(26, 22, 26, 16);
+    ctx.fillStyle = c.screen;
+    ctx.fillRect(27, 23, 24, 14);
+    const counts = this.severityCounts();
+    const bars = [["critical", "r"], ["high", "o"], ["medium", "y"]];
+    for (let i = 0; i < bars.length; i += 1) {
+      const n = counts[bars[i][0]];
+      const tall = n > 0 ? Math.min(12, n * 2) : 1;
+      ctx.fillStyle = n > 0 ? this.PAL[bars[i][1]] : this.PAL.m;
+      ctx.fillRect(30 + i * 7, 36 - tall, 4, tall);
+    }
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(94, 22, 22, 13);
+    ctx.fillStyle = this.PAL.w;
+    ctx.fillRect(95, 23, 20, 11);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(97, 26, 14, 1);
+    ctx.fillRect(97, 29, 10, 1);
+    ctx.fillRect(97, 32, 12, 1);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(68, 36, 14, 9);
+    ctx.fillStyle = c.screen;
+    ctx.fillRect(69, 37, 12, 7);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(70, 39, 7, 1);
+    ctx.fillRect(70, 41, 10, 1);
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(64, 45, 24, 2);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(65, 47, 2, 5);
+    ctx.fillRect(85, 47, 2, 5);
+  },
+
+  // The officials' room: two desks with a paper on each, and the door to the
+  // pull request queue with the Editor's number on it.
+  drawOfficials(ctx) {
+    const c = this.tone();
+    for (const dx of [24, 66]) {
+      ctx.fillStyle = this.PAL.w;
+      ctx.fillRect(dx + 4, 78, 11, 8);
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(dx + 6, 80, 7, 1);
+      ctx.fillRect(dx + 6, 82, 5, 1);
+      ctx.fillRect(dx + 6, 84, 7, 1);
+      ctx.fillStyle = c.floor;
+      ctx.fillRect(dx, 86, 20, 2);
+      ctx.fillStyle = c.line;
+      ctx.fillRect(dx + 1, 88, 2, 6);
+      ctx.fillRect(dx + 17, 88, 2, 6);
+    }
+    ctx.fillStyle = c.line;
+    ctx.fillRect(110, 64, 22, 30);
+    ctx.fillStyle = this.PAL.h;
+    ctx.fillRect(111, 65, 20, 29);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(111, 74, 20, 1);
+    const label = "PR";
+    this.drawText(ctx, label, 111 + Math.floor((20 - this.textWidth(label)) / 2), 68, this.PAL.l);
+    const pr = this.prNumber();
+    if (pr) this.drawText(ctx, pr, 111 + Math.floor((20 - this.textWidth(pr)) / 2), 79, this.PAL.w);
+    ctx.fillStyle = this.PAL.y;
+    ctx.fillRect(128, 87, 2, 2);
+  },
+
+  // The backroom: the Physio's table under a heart line that follows the site's
+  // latency, the Kit Manager's rail of five shirts, the Steward's locker.
+  drawBackroom(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.line;
+    ctx.fillRect(24, 106, 24, 16);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(25, 107, 22, 14);
+    const amp = this.heartAmp();
+    const shape = [0, 0, 0, 0, 1, -1, 4, -3, 1, 0, 0, 0];
+    ctx.fillStyle = amp > 0 ? this.PAL.g : this.PAL.m;
+    let prev = null;
+    for (let i = 0; i < 12; i += 1) {
+      const py = 114 - Math.round((shape[i] * amp) / 4);
+      if (prev === null) ctx.fillRect(28 + i, py, 1, 1);
+      else {
+        const top = Math.min(prev, py);
+        ctx.fillRect(28 + i, top, 1, Math.abs(py - prev) + 1);
+      }
+      prev = py;
+    }
+
+    ctx.fillStyle = this.PAL.w;
+    ctx.fillRect(24, 126, 8, 2);
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(24, 128, 30, 3);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(26, 131, 2, 5);
+    ctx.fillRect(50, 131, 2, 5);
+
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(68, 108, 38, 1);
+    const kit = ["b", "r", "y", "g", "p"];
+    for (let i = 0; i < kit.length; i += 1) {
+      const sx = 69 + i * 7;
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(sx + 2, 109, 2, 2);
+      ctx.fillStyle = this.PAL[kit[i]];
+      ctx.fillRect(sx, 111, 6, 8);
+      ctx.fillStyle = c.room;
+      ctx.fillRect(sx + 2, 111, 2, 1);
+    }
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(120, 106, 14, 30);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(121, 107, 12, 28);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(127, 107, 1, 28);
+    ctx.fillRect(121, 113, 12, 1);
+    ctx.fillStyle = this.PAL.y;
+    ctx.fillRect(125, 120, 1, 3);
+    ctx.fillRect(129, 120, 1, 3);
+  },
+
+  // The front office: the Analyst's two monitors, the Scout's window, the Press
+  // Officer's microphone and the Scorer's board with yesterday's game views.
+  drawFront(ctx) {
+    const c = this.tone();
+    for (let i = 0; i < 2; i += 1) {
+      const mx = 24 + i * 16;
+      ctx.fillStyle = c.line;
+      ctx.fillRect(mx, 146, 14, 11);
+      ctx.fillStyle = c.screen;
+      ctx.fillRect(mx + 1, 147, 12, 9);
+      ctx.fillStyle = i === 0 ? this.PAL.l : this.PAL.b;
+      ctx.fillRect(mx + 3, 149, 8, 1);
+      ctx.fillRect(mx + 3, 151, 6, 1);
+      ctx.fillRect(mx + 3, 153, 9, 1);
+    }
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(22, 157, 36, 2);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(62, 146, 22, 14);
+    ctx.fillStyle = c.glass;
+    ctx.fillRect(63, 147, 20, 12);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(72, 147, 1, 12);
+    ctx.fillRect(63, 152, 20, 1);
+
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(88, 157, 24, 2);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(99, 150, 1, 7);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(97, 147, 5, 4);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(114, 144, 24, 16);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(115, 145, 22, 14);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(116, 147, 20, 1);
+    this.drawText(ctx, this.gameViews(), 119, 151, this.PAL.l);
+  },
+
+  // The basement: one rack per scraper with three lights, the backup vault, the
+  // pipe through the wall and the belt the scrape ticks ride in on.
+  drawBasement(ctx, t) {
+    const c = this.tone();
+    const blink = Math.floor(t / 8) % 2 === 0;
+    for (let i = 0; i < this.RACKS.length; i += 1) {
+      const rx = 24 + i * 14;
+      ctx.fillStyle = c.line;
+      ctx.fillRect(rx, 188, 12, 24);
+      ctx.fillStyle = "#182342";
+      ctx.fillRect(rx + 1, 189, 10, 22);
+      ctx.fillStyle = "#2b3a63";
+      ctx.fillRect(rx + 1, 195, 10, 1);
+      ctx.fillRect(rx + 1, 201, 10, 1);
+      ctx.fillRect(rx + 1, 207, 10, 1);
+      const state = this.rackState(this.RACKS[i]);
+      const lamp = state === "none" ? this.PAL.m : state === "bad" ? this.PAL.r : state === "spare" ? this.PAL.t : this.PAL.g;
+      for (let j = 0; j < 3; j += 1) {
+        ctx.fillStyle = j === 1 && !blink ? this.PAL.k : lamp;
+        ctx.fillRect(rx + 3, 191 + j * 6, 6, 2);
+      }
+    }
+
+    const vault = this.vaultState();
+    ctx.fillStyle = c.line;
+    ctx.fillRect(110, 188, 22, 24);
+    ctx.fillStyle = "#34426a";
+    ctx.fillRect(111, 189, 20, 22);
+    if (vault === "fresh") {
+      ctx.fillStyle = this.PAL.k;
+      ctx.fillRect(112, 190, 13, 20);
+      ctx.fillStyle = this.PAL.g;
+      ctx.fillRect(114, 194, 9, 13);
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(126, 190, 4, 20);
+    } else {
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(112, 190, 18, 20);
+      ctx.fillStyle = c.line;
+      ctx.fillRect(121, 190, 1, 20);
+      this.disc(ctx, 121, 200, 3);
+      ctx.fillStyle = this.PAL.m;
+      this.disc(ctx, 121, 200, 1);
+    }
+    ctx.fillStyle = vault === "fresh" ? this.PAL.g : vault === "none" ? this.PAL.m : this.PAL.r;
+    ctx.fillRect(119, 184, 4, 2);
+
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(134, 192, 8, 5);
+    ctx.fillRect(134, 192, 4, 22);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(134, 192, 8, 1);
+    ctx.fillRect(134, 197, 4, 1);
+
+    ctx.fillStyle = "#34426a";
+    ctx.fillRect(22, 214, 116, 4);
+    ctx.fillStyle = this.PAL.k;
+    for (let x = 24; x < 138; x += 6) ctx.fillRect(x, 216, 2, 1);
+    ctx.fillStyle = this.PAL.l;
+    for (let i = 0; i < 4; i += 1) {
+      ctx.fillRect(26 + ((i * 28 + Math.floor(t / 2)) % 108), 211, 3, 3);
+    }
+  },
+
+  drawFigures(ctx, t) {
+    const frame = Math.floor(t / 16) % 2;
+    for (const fig of this.FIGURES) this.drawSprite(ctx, fig.id, fig.home.x, fig.home.y, frame);
+  },
+};
+
+// Every figure stands on its room's floor, twenty four pixels below the ceiling.
+for (const room of Clubhouse.ROOMS) {
+  for (const id of room.members) {
+    Clubhouse.FIGURES.push({ id: id, room: room.id, home: { x: Clubhouse.HOME_X[id], y: room.y + 24 } });
+  }
+}
+
+OpsRoom.renderClubhouse = function (root) {
+  Clubhouse.mount(root);
+  Clubhouse.redraw();
+};
+
+window.Clubhouse = Clubhouse;
+</script>
+
+<script>
 window.addEventListener("DOMContentLoaded", () => OpsRoom.init());
 </script>
