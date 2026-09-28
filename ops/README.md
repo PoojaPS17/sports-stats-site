@@ -18,6 +18,10 @@ deploys or changes a setting.
   apply the issue rules (open, reopened, fixed, auto-resolved) after
   checking, how to write the run record and the crew card, how to prune old
   runs, and the final `RESULT:` line.
+- `ops/crew/_chrome-readings.md` is the prompt for the local scheduled task
+  on the owner's Mac (weekdays 10:00 IST, Claude in Chrome): Search Console,
+  Bing Webmaster and GA4 readings merged into `daily/<yesterday>`. It is not
+  a cloud routine; the cloud cannot use the owner's signed-in browser.
 - `ops/room/seed.json` seeds the dashboard's database: a `crew` document per
   agent (copied from that agent's front matter) and a `rules` document, the
   owner's standing rules shown on the page.
