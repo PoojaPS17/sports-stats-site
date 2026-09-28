@@ -17,6 +17,8 @@ export interface NavItem {
   children?: NavChild[];
   /** A search box at the top of the group: the cricket series picker (every competition in the database, not only the links below). */
   picker?: "cricket-series";
+  /** Folded into the desktop header's "More" menu instead of getting its own top-level slot; the mobile drawer still lists it inline. */
+  overflow?: true;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -40,9 +42,9 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "F1", href: "/f1" },
-  { label: "Asian Games", href: "/asian-games" },
+  { label: "Asian Games", href: "/asian-games", overflow: true },
   { label: "Beyond the Scoreline", href: "/beyond-the-scoreline" },
-  { label: "Top Games", href: "/top-games" },
+  { label: "Top Games", href: "/top-games", overflow: true },
 ];
 
 /** True when `pathname` is inside the section rooted at `href` (exact or a sub-path). */
