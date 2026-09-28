@@ -239,6 +239,15 @@ function sportName(league: League): string {
 }
 
 /**
+ * `f1_events.date` and `.end_date` come back from pg as Date objects: f1.ts's EVENT_SELECT reads those
+ * columns raw, where the game queries cast theirs (`g.end_date::text`). The row type says `string`, so
+ * nothing at the call site warns about it, and `.slice()` on a Date throws. Accept either shape.
+ */
+function isoInstant(value: string | Date): string {
+  return typeof value === "string" ? value : value.toISOString();
+}
+
+/**
  * A Formula 1 race weekend. Not a single race: the page covers every session, so the event runs from
  * the first practice to the chequered flag, and `end_date` says so honestly instead of a guess. The
  * circuit is a fixed address, which is why this one always carries its city and country.
@@ -249,14 +258,16 @@ export function f1EventSchema(event: F1EventRow) {
   const year = event.season_year ?? new Date(event.date).getUTCFullYear();
   const where = event.circuit_name ? ` at ${event.circuit_name}` : "";
   const status = f1EventStatus(event);
-  const sameDay = !event.end_date || event.end_date.slice(0, 10) === event.date.slice(0, 10);
+  const startDate = isoInstant(event.date);
+  const endDate = event.end_date == null ? null : isoInstant(event.end_date);
+  const sameDay = !endDate || endDate.slice(0, 10) === startDate.slice(0, 10);
   return {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
     name: `${year} ${event.name}`,
     sport: "Formula 1",
-    startDate: event.date,
-    ...(sameDay ? {} : { endDate: event.end_date }),
+    startDate,
+    ...(sameDay ? {} : { endDate }),
     eventStatus: schemaStatusForLabel(status.kind === "called-off" ? status.label : null),
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url: absoluteUrl(`/f1/events/${event.espn_id}`),

@@ -12,8 +12,9 @@ export interface F1EventRow {
   espn_id: string;
   name: string;
   short_name: string | null;
-  date: string;
-  end_date: string | null;
+  /** pg returns these raw (EVENT_SELECT does not cast them), so a Date, not the text the other queries produce. */
+  date: string | Date;
+  end_date: string | Date | null;
   /** The Race session's start (f1Dates.ts f1RaceInstant), null with no Race session on file. */
   race_date: string | Date | null;
   season_year: number | null;
