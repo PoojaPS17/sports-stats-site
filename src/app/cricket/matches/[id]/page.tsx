@@ -19,6 +19,7 @@ import { CARD } from "@/lib/exportTheme";
 import { extractGameDetails } from "@/lib/matchDetail";
 import { getCricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
 import { fetchCricketSummaryLive } from "@/lib/cricketLive";
+import { resolveTeamLogo } from "@/lib/teamLogos";
 import { JsonLd } from "@/components/JsonLd";
 import { cricketSeriesMatchSchema } from "@/lib/structuredData";
 import { normalizeStage } from "@/lib/stage";
@@ -80,7 +81,7 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
     name: teamDisplayName(c?.team?.displayName ?? c?.team?.name ?? fallback?.name ?? ""),
     score: typeof c?.score === "string" && c.score ? c.score : fallback?.score ?? "",
     winner: c ? c.winner === true : fallback?.winner === true,
-    logo: (c?.team?.logo ?? fallback?.logo ?? (c?.team?.id ? `https://a.espncdn.com/i/teamlogos/cricket/500/${c.team.id}.png` : null)) as string | null,
+    logo: resolveTeamLogo(c?.team?.id ?? fallback?.id, c?.team?.logo ?? fallback?.logo ?? (c?.team?.id ? `https://a.espncdn.com/i/teamlogos/cricket/500/${c.team.id}.png` : null)),
   });
   const sides = [sideData(home, stored?.home ?? null), sideData(away, stored?.away ?? null)];
   const sideRow = ({ name, score, winner, logo }: (typeof sides)[number]) => {
