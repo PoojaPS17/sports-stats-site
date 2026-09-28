@@ -316,6 +316,21 @@ table {
   padding-inline: calc(50vw - 50%);
 }
 
+/* Long-form article body. */
+.prose-bts > p {
+  margin: 0 0 1.25rem;
+}
+
+.prose-bts > p:first-of-type::first-letter {
+  font-family: var(--font-display);
+  font-size: 4.25rem;
+  font-weight: 800;
+  line-height: 0.8;
+  float: left;
+  margin: 0.35rem 0.6rem 0 0;
+  color: var(--sig-ink);
+}
+
 /* ---------------------------------------------------------------------------
    Surfaces
 --------------------------------------------------------------------------- */

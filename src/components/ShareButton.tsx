@@ -6,7 +6,20 @@ import { absoluteUrl } from "@/lib/site";
 // Share this page: the native share sheet where available (most mobile browsers),
 // falling back to a small menu of social links + copy-link everywhere else (desktop
 // browsers largely don't implement navigator.share).
-export function ShareButton({ path, title, text, compact = false }: { path: string; title: string; text?: string; compact?: boolean }) {
+export function ShareButton({
+  path,
+  title,
+  text,
+  compact = false,
+  tone,
+}: {
+  path: string;
+  title: string;
+  text?: string;
+  compact?: boolean;
+  /** "band": for use on a navy `.band` section instead of a light surface. */
+  tone?: "band";
+}) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
@@ -59,6 +72,10 @@ export function ShareButton({ path, title, text, compact = false }: { path: stri
   }
 
   const item = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-[var(--text)] transition hover:bg-[var(--surface-muted)]";
+  const onBand = tone === "band";
+  const buttonClass = onBand
+    ? "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--mast-line)] px-3 py-1.5 text-sm font-semibold text-[var(--mast-text)] transition hover:bg-[var(--header-hover-bg)]"
+    : "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]";
 
   return (
     <div ref={rootRef} className="relative">
@@ -69,7 +86,7 @@ export function ShareButton({ path, title, text, compact = false }: { path: stri
         aria-haspopup={canNativeShare ? undefined : "menu"}
         aria-controls={canNativeShare ? undefined : menuId}
         title="Share"
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        className={buttonClass}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="18" cy="5" r="3" />
