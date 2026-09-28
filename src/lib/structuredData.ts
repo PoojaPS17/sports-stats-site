@@ -1,7 +1,9 @@
 import { gameDayIso, gameStartDateIso } from "./gameDay";
 import { isCricketLeague, isSoccerLeague } from "./leagues";
 import type { CricketTeamScorecard } from "./matchDetail";
-import { isTimeTbd, schemaEventStatus } from "./gameStatus";
+import { isTimeTbd, schemaEventStatus, schemaStatusForLabel } from "./gameStatus";
+import { f1EventDescription, f1EventStatus } from "./f1Status";
+import type { F1EventRow } from "./f1";
 import { scoreLineSides } from "./gamePage";
 import { cricketSchemaStatus } from "./cricketMatchStatus";
 // schema.org builders for the structured data blocks on key pages.
@@ -234,6 +236,36 @@ function sportName(league: League): string {
   if (league === "nba") return "Basketball";
   if (isSoccerLeague(league)) return "Soccer";
   return "Cricket";
+}
+
+/**
+ * A Formula 1 race weekend. Not a single race: the page covers every session, so the event runs from
+ * the first practice to the chequered flag, and `end_date` says so honestly instead of a guess. The
+ * circuit is a fixed address, which is why this one always carries its city and country.
+ * No competitors: a Grand Prix has twenty of them, and the classification on the page is the place
+ * to read them, not a list repeated in the head of every weekend's markup.
+ */
+export function f1EventSchema(event: F1EventRow) {
+  const year = event.season_year ?? new Date(event.date).getUTCFullYear();
+  const where = event.circuit_name ? ` at ${event.circuit_name}` : "";
+  const status = f1EventStatus(event);
+  const sameDay = !event.end_date || event.end_date.slice(0, 10) === event.date.slice(0, 10);
+  return {
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    name: `${year} ${event.name}`,
+    sport: "Formula 1",
+    startDate: event.date,
+    ...(sameDay ? {} : { endDate: event.end_date }),
+    eventStatus: schemaStatusForLabel(status.kind === "called-off" ? status.label : null),
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    url: absoluteUrl(`/f1/events/${event.espn_id}`),
+    ...(event.circuit_name
+      ? { location: place(event.circuit_name, postalAddress({ venue_city: event.circuit_city, venue_country: event.circuit_country })) }
+      : {}),
+    organizer: { "@type": "SportsOrganization", name: "Formula 1", url: absoluteUrl("/f1") },
+    description: f1EventDescription(event, year, where),
+  };
 }
 
 /** A cricket match from the series listing (no SportsDB team pages to link). */
