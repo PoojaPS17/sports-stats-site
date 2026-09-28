@@ -86,6 +86,17 @@ Applies to every draft, checked before the review step in the workflow above:
 - **Byline**: unsigned, "Beyond the Scoreline Desk," per the user's earlier decision — not a named persona.
 - **Footer attribution**: only a license-required data credit (e.g. the same Wikipedia/CC BY-SA line the medal-tally page already carries, verbatim, when an article uses that data), never a "sources cross-checked against X, Y, Z" line — that reads as an internal QA note, not something a bylined article would publish. Research sources back the fact-check; they don't appear in the piece unless a specific outlet's own reporting or an official statement is being credited inline.
 
+### 7. Depth and detail bar (added 2026-09-28, site owner feedback: go deeper than the minimum)
+
+The first few published articles (e.g. `russell-baku-win-cuts-title-gap`, `barcelona-record-seven-match-win-streak`) were competently reported but read closer to the minimum bar than a genuine feature. Every article going forward should clear a higher bar:
+
+- **Length and depth**: 5-7 substantive paragraphs, 4-6 minutes reading time. That extra length has to be real background and context, not padding: how the story fits the season/tournament narrative so far, relevant history or precedent (prior meetings, previous records, past seasons), the stakes, and what comes next. Write it like a beat writer's feature, not a summary of one moment.
+- **More facts, more angles**: bring in multiple distinct stats angles rather than one headline number, for example the headline number plus a historical comparison, a related record or streak, a rival's contrasting numbers, or a schedule/what's-next detail. Each additional fact still needs a real, independently checkable source; going deeper means more research (more searches, more cross-checking), never more guessing. Applies the same date/season verification discipline as above: the more numbers an article carries, the more of them a careless search summary can misdate.
+- **More visuals**: treat one chart as the floor, not the target. When the story supports it, add a second complementary visual, for example one chart for the headline number or streak plus a small table or second chart for historical comparison or a related angle. Keep following the existing component style (§4) for each one.
+- **More related links**: 2-3 `relatedLinks` where genuinely relevant pages exist (the team, a rival, the standings, a specific player), rather than stopping at the type's one-link minimum.
+
+This section amends, not replaces, the house style above: no em dashes, no AI tells, active voice by default, and the same fact-checking discipline still apply at the greater length.
+
 ## Explicitly out of scope
 
 - Any database table, admin UI, or publish/draft flag mechanism — file-based + git is the whole workflow (see §1).
