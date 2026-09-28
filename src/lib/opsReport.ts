@@ -1,4 +1,6 @@
 import type { Pool } from "pg";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { MAX_AGE_MINUTES } from "../../scripts/lib/heartbeat";
 
 // Read-only checks the Ops Room's Umpire and Physio read over HTTPS, because the database only
@@ -220,6 +222,68 @@ export function integritySection(pool: Pool) {
   });
 }
 
+export const BACKUP_DIR = "/var/backups/sportsdb";
+
+// Backups are a nightly pg_dump on the VM (docs/superpowers/specs/2026-09-20-coverage-and-backup-design.md).
+// "present: false" is itself a finding: the Umpire reports that no backup exists.
+export function backupSection(dir: string = BACKUP_DIR) {
+  try {
+    if (!existsSync(dir)) return ok({ present: false, newest: null, previousBytes: null });
+    const dumps = readdirSync(dir)
+      .filter((f) => f.endsWith(".dump"))
+      .map((name) => { const st = statSync(join(dir, name)); return { name, bytes: st.size, mtime: st.mtimeMs }; })
+      .sort((a, b) => b.mtime - a.mtime);
+    if (dumps.length === 0) return ok({ present: false, newest: null, previousBytes: null });
+    const [newest, previous] = dumps;
+    return ok({
+      present: true,
+      newest: { name: newest.name, ageHours: Math.round(((Date.now() - newest.mtime) / 3_600_000) * 10) / 10, bytes: newest.bytes },
+      previousBytes: previous ? previous.bytes : null,
+    });
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export function dbHealthSection(pool: Pool) {
+  return guard(async () => {
+    const { rows: size } = await pool.query<{ bytes: string }>(`select pg_database_size(current_database()) as bytes`);
+    const { rows: tables } = await pool.query<{ table: string; bytes: string }>(
+      `select relname as table, pg_total_relation_size(c.oid) as bytes from pg_class c join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public' and c.relkind = 'r' order by 2 desc limit 5`);
+    const { rows: dead } = await pool.query<{ table: string; live: string; dead: string }>(
+      `select relname as table, n_live_tup as live, n_dead_tup as dead from pg_stat_user_tables where n_live_tup + n_dead_tup > 1000 order by n_dead_tup desc limit 10`);
+    const { rows: conn } = await pool.query<{ used: string; max: string }>(
+      `select (select count(*) from pg_stat_activity) as used, current_setting('max_connections')::int as max`);
+    return {
+      sizeBytes: Number(size[0].bytes),
+      largestTables: tables.map((t) => ({ table: t.table, bytes: Number(t.bytes) })),
+      deadRowRatio: dead.map((d) => ({ table: d.table, live: Number(d.live), dead: Number(d.dead), ratio: Math.round((Number(d.dead) / Math.max(1, Number(d.live) + Number(d.dead))) * 1000) / 1000 })),
+      connections: { used: Number(conn[0].used), max: Number(conn[0].max) },
+    };
+  });
+}
+
+export function viewsSection(pool: Pool) {
+  return guard(async () => {
+    async function day(offset: 0 | 1) {
+      const range = `viewed_at >= (date_trunc('day', now() at time zone 'utc') - ($1 || ' days')::interval) at time zone 'utc'
+                 and viewed_at < (date_trunc('day', now() at time zone 'utc') - ($1 || ' days')::interval + interval '1 day') at time zone 'utc'`;
+      const { rows: date } = await pool.query<{ d: string }>(`select ((date_trunc('day', now() at time zone 'utc') - ($1 || ' days')::interval)::date)::text as d`, [offset]);
+      const { rows: total } = await pool.query<{ n: string }>(`select count(*) as n from game_views where ${range}`, [offset]);
+      const { rows: top } = await pool.query<{ league: string; id: string; name: string | null; n: string }>(
+        `select v.league, v.game_espn_id as id, g.short_name as name, count(*) as n from game_views v
+         left join games g on g.league = v.league and g.espn_id = v.game_espn_id
+         where ${range} group by 1, 2, 3 order by 4 desc limit 5`, [offset]);
+      const { rows: country } = await pool.query<{ k: string | null; n: string }>(`select country as k, count(*) as n from game_views where ${range} group by 1`, [offset]);
+      const { rows: platform } = await pool.query<{ k: string | null; n: string }>(`select platform as k, count(*) as n from game_views where ${range} group by 1`, [offset]);
+      const tally = (rows: { k: string | null; n: string }[]) => Object.fromEntries(rows.map((r) => [r.k ?? "unknown", Number(r.n)]));
+      return { date: date[0].d, total: Number(total[0].n), topGames: top.map((t) => ({ league: t.league, id: t.id, name: t.name, views: Number(t.n) })), byCountry: tally(country), byPlatform: tally(platform) };
+    }
+    return { yesterday: await day(1), today: await day(0) };
+  });
+}
+
 const SECTIONS: Record<string, (pool: Pool) => Promise<Section<unknown>> | Section<unknown>> = {
   build: () => buildSection(),
   heartbeats: heartbeatsSection,
@@ -228,6 +292,9 @@ const SECTIONS: Record<string, (pool: Pool) => Promise<Section<unknown>> | Secti
   duplicates: duplicatesSection,
   scraping: scrapingSection,
   integrity: integritySection,
+  backup: () => backupSection(),
+  dbHealth: dbHealthSection,
+  views: viewsSection,
 };
 
 // A named interface, not `Record<string, Section<unknown>> & { generatedAt: string }`: that
@@ -257,7 +324,23 @@ export interface OpsReport {
     teamsIdleThisSeason: Finding;
     f1SessionsNoResult: Finding;
   }>;
+  backup: Section<{ present: boolean; newest: { name: string; ageHours: number; bytes: number } | null; previousBytes: number | null }>;
+  dbHealth: Section<{
+    sizeBytes: number;
+    largestTables: { table: string; bytes: number }[];
+    deadRowRatio: { table: string; live: number; dead: number; ratio: number }[];
+    connections: { used: number; max: number };
+  }>;
+  views: Section<{ yesterday: DayViews; today: DayViews }>;
 }
+
+type DayViews = {
+  date: string;
+  total: number;
+  topGames: { league: string; id: string; name: string | null; views: number }[];
+  byCountry: Record<string, number>;
+  byPlatform: Record<string, number>;
+};
 
 export async function opsReport(pool: Pool): Promise<OpsReport> {
   const entries = await Promise.all(

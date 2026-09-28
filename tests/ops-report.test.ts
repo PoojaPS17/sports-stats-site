@@ -150,3 +150,46 @@ test("integritySection finds the classes of broken row the site has been bitten 
   assert.equal(s.data.standingsSumMismatch.count, 1);
   assert.equal(s.data.f1SessionsNoResult.count, 1);
 });
+
+test("backupSection reports absence honestly and reads a dump directory", async () => {
+  const { backupSection } = await import("../src/lib/opsReport");
+  const { mkdtempSync, writeFileSync, utimesSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  assert.deepEqual(backupSection("/definitely/not/here"), { ok: true, data: { present: false, newest: null, previousBytes: null } });
+  const dir = mkdtempSync(join(tmpdir(), "dumps-"));
+  writeFileSync(join(dir, "sportsdb-20260927.dump"), "x".repeat(100));
+  writeFileSync(join(dir, "sportsdb-20260928.dump"), "x".repeat(120));
+  const old = new Date(Date.now() - 26 * 3_600_000);
+  utimesSync(join(dir, "sportsdb-20260927.dump"), old, old);
+  const s = backupSection(dir);
+  assert.ok(s.ok && s.data.present && s.data.newest);
+  assert.equal(s.data.newest.name, "sportsdb-20260928.dump");
+  assert.equal(s.data.newest.bytes, 120);
+  assert.equal(s.data.previousBytes, 100);
+});
+
+test("dbHealthSection reads sizes, dead rows and connections", async () => {
+  const { dbHealthSection } = await import("../src/lib/opsReport");
+  const s = await dbHealthSection(db.pool);
+  assert.ok(s.ok);
+  assert.ok(s.data.sizeBytes > 0);
+  assert.ok(s.data.largestTables.length > 0 && s.data.largestTables.length <= 5);
+  assert.ok(s.data.connections.max > 0);
+});
+
+test("viewsSection splits yesterday and today", async () => {
+  const { viewsSection } = await import("../src/lib/opsReport");
+  await db.pool.query(`delete from game_views`);
+  await db.pool.query(`insert into game_views (league, game_espn_id, viewed_at, country, platform) values
+    ('nba','g1', (date_trunc('day', now() at time zone 'utc') - interval '2 hours') at time zone 'utc', 'IN', 'ios'),
+    ('nba','g1', (date_trunc('day', now() at time zone 'utc') - interval '3 hours') at time zone 'utc', 'IN', 'desktop'),
+    ('nba','g2', (date_trunc('day', now() at time zone 'utc') - interval '4 hours') at time zone 'utc', 'US', 'android')`);
+  const s = await viewsSection(db.pool);
+  assert.ok(s.ok);
+  assert.equal(s.data.yesterday.total, 3);
+  assert.equal(s.data.yesterday.topGames[0].id, "g1");
+  assert.equal(s.data.yesterday.topGames[0].views, 2);
+  assert.equal(s.data.yesterday.byCountry.IN, 2);
+  assert.equal(s.data.yesterday.byPlatform.android, 1);
+});
