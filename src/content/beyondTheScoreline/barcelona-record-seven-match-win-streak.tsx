@@ -9,6 +9,7 @@ export const article: BeyondTheScorelineArticle = {
   publishedAt: "2026-09-28",
   readingMinutes: 5,
   tags: ["laliga", "barcelona", "hansi-flick"],
+  art: { number: "8", caption: "straight wins to open the season, the best start in the club's history" },
   relatedLinks: [
     {
       label: "La Liga standings",

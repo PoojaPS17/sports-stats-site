@@ -7,11 +7,17 @@ import { article as barcelonaRecordSevenMatchWinStreak } from "@/content/beyondT
 
 export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "tennis" | "neutral";
 
-/** The generated "picture" of an article: its key number on a sport-coloured panel. */
+/**
+ * The generated "picture" of an article: its key number on a sport-coloured panel. This is the
+ * article's whole visual presence, on the index cards and in every shared link, so it is required.
+ */
 export interface ArticleArt {
+  /** The story's headline figure, exactly as it should read on the panel: "8", "66", "114/115". */
   number: string;
-  caption?: string;
-  palette: ArtPalette;
+  /** Lower-case phrase finishing the number's sentence: "points between Antonelli and Russell after Baku". */
+  caption: string;
+  /** Leave it out and the palette comes from `tags`; set it only to override that. */
+  palette?: ArtPalette;
 }
 
 export interface BeyondTheScorelineRelatedLink {
@@ -33,8 +39,8 @@ export interface BeyondTheScorelineArticle {
   relatedLinks: [BeyondTheScorelineRelatedLink, ...BeyondTheScorelineRelatedLink[]];
   /** License-required data credit only (e.g. a Wikipedia/CC BY-SA line) — never a "sources cross-checked" note. */
   dataAttribution?: string;
-  /** Optional: the auto-draft routine writes none; the card then shows the sport name. */
-  art?: ArticleArt;
+  /** Required. Drafts used to omit it, and their cards printed the sport's name where a number belongs. */
+  art: ArticleArt;
   body: () => ReactNode;
 }
 

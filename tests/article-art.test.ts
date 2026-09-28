@@ -9,16 +9,19 @@ test("a declared art block is used as is", () => {
   assert.deepEqual(a, { number: "9", caption: "men's golds since 1990", palette: "asian-games", sport: "Asian Games" });
 });
 
-test("without art, the palette and sport come from the first recognised tag", () => {
+test("art that names no palette takes it, and the sport label, from the first recognised tag", () => {
   assert.equal(paletteForTags(["premier-league", "man-city"]), "football");
   assert.equal(paletteForTags(["formula-1"]), "f1");
   assert.equal(paletteForTags(["f1"]), "f1");
   assert.equal(paletteForTags(["ipl", "cricket"]), "cricket");
   assert.equal(paletteForTags(["something-else"]), "neutral");
-  const a = articleArt({ tags: ["nba"] });
-  assert.equal(a.number, null);
-  assert.equal(a.palette, "nba");
-  assert.equal(a.sport, "NBA");
+  // The palette is the one thing an article's tags already answer, so it is the one part of the
+  // art block a draft may leave out. Number and caption it has to write.
+  const a = articleArt({ art: { number: "8", caption: "straight wins" }, tags: ["laliga", "barcelona"] });
+  assert.equal(a.number, "8");
+  assert.equal(a.caption, "straight wins");
+  assert.equal(a.palette, "football");
+  assert.equal(a.sport, "Football");
 });
 
 test("every palette has a CSS class in globals.css", async () => {

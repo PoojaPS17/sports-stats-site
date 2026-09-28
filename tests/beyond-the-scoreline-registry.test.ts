@@ -32,10 +32,21 @@ test("every article's title fits the site-wide title budget", () => {
   }
 });
 
-test("an article that declares art gives a non-empty number and a known palette", () => {
+// Satori neither shrinks the number to fit the share card's 430px panel nor wraps the caption
+// away, and the index cards give the caption 30ch. The caps are generous against today's longest
+// ("114/115", and 61 characters of caption) but stop a draft that puts a sentence where a figure
+// goes. The emptiness checks are the real point: a blank number used to be legal, and shipped.
+const ART_NUMBER_MAX = 8;
+const ART_CAPTION_MAX = 80;
+
+test("every article's art carries a number and caption that fit the panel, and any palette it names is known", () => {
   for (const a of listArticles()) {
-    if (!a.art) continue;
-    assert.ok(a.art.number.trim().length > 0, `${a.slug}: art.number is empty`);
-    assert.ok((ART_PALETTES as readonly string[]).includes(a.art.palette), `${a.slug}: unknown palette ${a.art.palette}`);
+    const n = a.art.number.trim();
+    const caption = a.art.caption.trim();
+    assert.ok(n.length > 0, `${a.slug}: art.number is empty`);
+    assert.ok(n.length <= ART_NUMBER_MAX, `${a.slug}: art.number "${n}" is ${n.length} chars, over the ${ART_NUMBER_MAX} the panel holds`);
+    assert.ok(caption.length > 0, `${a.slug}: art.caption is empty`);
+    assert.ok(caption.length <= ART_CAPTION_MAX, `${a.slug}: art.caption is ${caption.length} chars, over the ${ART_CAPTION_MAX} the panel holds`);
+    if (a.art.palette) assert.ok((ART_PALETTES as readonly string[]).includes(a.art.palette), `${a.slug}: unknown palette ${a.art.palette}`);
   }
 });
