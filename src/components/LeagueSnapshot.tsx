@@ -3,6 +3,7 @@ import { isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
 import { formatLeaderValue } from "@/lib/leaders";
 import { formatWinLossTie } from "@/lib/teamSummary";
 import { cricketRecord } from "@/lib/cricketStandings";
+import { zoneRules } from "@/lib/standingsZones";
 import type { LeagueSnapshotData } from "@/lib/leagueSnapshot";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
@@ -17,6 +18,9 @@ function record(league: League, r: LeagueSnapshotData["table"][number]): string 
 // The league hub shows the whole recap; the homepage passes a trimmed snapshot.
 export function LeagueSnapshot({ league, data }: { league: League; data: LeagueSnapshotData }) {
   if (data.table.length === 0 && data.leaders.length === 0) return null;
+  // Qualification / relegation bands by position, the same rule the full standings table uses;
+  // null for leagues (or table sizes) with no defined zones, e.g. the NBA and NFL.
+  const zoneAt = zoneRules(league, data.tableSize);
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {data.table.length > 0 && (
@@ -25,25 +29,31 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
             {data.inSeason ? "Table" : "Final table"}, {data.seasonLabel}
           </SectionHeader>
           <ol className="card overflow-hidden">
-            {data.table.map((r, i) => (
-              <li key={r.team_espn_id} className="table-row first:border-t-0">
-                <Link href={`/${league}/teams/${r.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <span className={`display w-5 text-right text-lg ${i === 0 ? "text-[var(--sig-ink)]" : "text-[var(--text-faint)]"}`}>{i + 1}</span>
-                    <TeamLogo name={r.name} logoUrl={r.logo_url} color={r.color} size={24} />
-                    <span className="truncate font-semibold">{r.name}</span>
-                  </span>
-                  <span className="flex shrink-0 items-baseline gap-3 tabular-nums">
-                    <span className="text-xs text-[var(--text-muted)]">{record(league, r)}</span>
-                    {r.points !== null && (
-                      <span className="display text-xl">
-                        {r.points} <span className="font-sans text-[10px] font-bold uppercase tracking-wider text-[var(--text-faint)]">pts</span>
+            {data.table.map((r, i) => {
+              const zone = zoneAt ? zoneAt(i + 1) : null;
+              return (
+                <li key={r.team_espn_id} className="table-row first:border-t-0">
+                  <Link href={`/${league}/teams/${r.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`zone-marker ${zone?.cls ?? ""}`} title={zone?.label} />
+                        <span className={`display w-5 text-right text-lg ${i === 0 ? "text-[var(--sig-ink)]" : "text-[var(--text-faint)]"}`}>{i + 1}</span>
                       </span>
-                    )}
-                  </span>
-                </Link>
-              </li>
-            ))}
+                      <TeamLogo name={r.name} logoUrl={r.logo_url} color={r.color} size={24} />
+                      <span className="truncate font-semibold">{r.name}</span>
+                    </span>
+                    <span className="flex shrink-0 items-baseline gap-3 tabular-nums">
+                      <span className="text-xs text-[var(--text-muted)]">{record(league, r)}</span>
+                      {r.points !== null && (
+                        <span className="display text-xl">
+                          {r.points} <span className="font-sans text-[10px] font-bold uppercase tracking-wider text-[var(--text-faint)]">pts</span>
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ol>
         </section>
       )}
