@@ -1,4 +1,4 @@
-import { cell, formatStat, type Line, type PlayerLogRow, type PlayerProfile, type PlayerSport, type StatSpec } from "./playerProfile";
+import { formatStat, type Line, type PlayerLogRow, type PlayerProfile, type PlayerSport, type StatSpec } from "./playerProfile";
 
 export interface PerformanceStat {
   key: string;
