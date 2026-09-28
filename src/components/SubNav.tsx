@@ -18,9 +18,9 @@ export function SubNav({ title, titleHref, tabs }: { title: string; titleHref: s
   const pathname = usePathname();
 
   return (
-    <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-6 border-b border-[var(--border)] bg-[var(--bg)]/95 backdrop-blur sm:-mx-6">
+    <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-6 border-b border-[var(--border)] bg-[var(--bg)]/95 border-[var(--border)] backdrop-blur sm:-mx-6">
       <div className="flex items-center gap-4 px-4 sm:px-6">
-        <Link href={titleHref} className="hidden shrink-0 text-sm font-bold tracking-tight text-[var(--text)] sm:block">
+        <Link href={titleHref} className="display hidden shrink-0 text-[15px] text-[var(--text)] sm:block">
           {title}
         </Link>
         <span className="hidden h-5 w-px bg-[var(--border)] sm:block" />
