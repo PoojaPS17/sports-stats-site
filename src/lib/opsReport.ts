@@ -107,11 +107,56 @@ export function volumeSection(pool: Pool) {
   });
 }
 
+// The schema blocks exact duplicates by id, so these look for the semantic kind: the same real thing
+// stored under two ids, which is what a second scrape path or a hand-made player row produces.
+export function duplicatesSection(pool: Pool) {
+  return guard(async () => {
+    async function group(sql: string, label: (r: Record<string, string>) => string) {
+      const { rows } = await pool.query<Record<string, string>>(sql);
+      return { count: rows.length, examples: rows.slice(0, EXAMPLES).map(label) };
+    }
+    const games = await group(
+      `select league, (date at time zone 'utc')::date::text as day, home_team_espn_id as h, away_team_espn_id as a, string_agg(espn_id, ', ' order by espn_id) as ids
+       from games group by 1, 2, 3, 4 having count(*) > 1`,
+      (r) => `${r.league} ${r.day} ${r.h} v ${r.a}: ${r.ids}`
+    );
+    const players = await group(
+      `select league, team_espn_id as team, lower(name) as name, string_agg(espn_id, ', ' order by espn_id) as ids
+       from players where team_espn_id is not null and espn_id not like '-%'
+       group by 1, 2, 3 having count(*) > 1`,
+      (r) => `${r.league} ${r.name} (team ${r.team}): ${r.ids}`
+    );
+    const tennisMatches = await group(
+      `select tour, coalesce(tournament_espn_id, tournament_name) as t, coalesce(round, '') as round,
+              least(player1_espn_id, player2_espn_id) as p1, greatest(player1_espn_id, player2_espn_id) as p2,
+              string_agg(espn_id, ', ' order by espn_id) as ids
+       from tennis_matches group by 1, 2, 3, 4, 5 having count(*) > 1`,
+      (r) => `${r.tour} ${r.t} ${r.round} ${r.p1} v ${r.p2}: ${r.ids}`
+    );
+    const cricketScoreMismatch = await group(
+      `select m.espn_id as id, g.league, coalesce(g.home_score_display, g.home_score::text, '') as gh, m.home->>'score' as mh,
+              coalesce(g.away_score_display, g.away_score::text, '') as ga, m.away->>'score' as ma
+       from cricket_series_matches m join games g on g.espn_id = m.espn_id
+       where g.completed and m.status_state = 'post' is not false
+         and (split_part(coalesce(g.home_score_display, g.home_score::text, ''), ' ', 1) <> split_part(coalesce(m.home->>'score', ''), ' ', 1)
+           or split_part(coalesce(g.away_score_display, g.away_score::text, ''), ' ', 1) <> split_part(coalesce(m.away->>'score', ''), ' ', 1))`,
+      (r) => `${r.league} ${r.id}: games ${r.gh}/${r.ga} vs series ${r.mh}/${r.ma}`
+    );
+    const newsArticles = await group(
+      `select league, link, string_agg(article_id, ', ' order by article_id) as ids
+       from news_articles where link is not null group by 1, 2 having count(*) > 1`,
+      (r) => `${r.league} ${r.link}: ${r.ids}`
+    );
+    return { games, players, tennisMatches, cricketScoreMismatch, newsArticles };
+  });
+}
+
 const SECTIONS: Record<string, (pool: Pool) => Promise<Section<unknown>> | Section<unknown>> = {
   build: () => buildSection(),
   heartbeats: heartbeatsSection,
   freshness: freshnessSection,
   volume: volumeSection,
+  duplicates: duplicatesSection,
 };
 
 // A named interface, not `Record<string, Section<unknown>> & { generatedAt: string }`: that
@@ -127,6 +172,9 @@ export interface OpsReport {
     leagues: { league: string; newestCompleted: string | null; newestScheduled: string | null; completedLast7Days: number }[];
   }>;
   volume: Section<{ table: string; column: string; last24h: number; dailyMean7d: number; ratio: number | null }[]>;
+  duplicates: Section<
+    Record<"games" | "players" | "tennisMatches" | "cricketScoreMismatch" | "newsArticles", { count: number; examples: string[] }>
+  >;
 }
 
 export async function opsReport(pool: Pool): Promise<OpsReport> {
