@@ -20,7 +20,7 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
   if (data.table.length === 0 && data.leaders.length === 0) return null;
   // Qualification / relegation bands by position, the same rule the full standings table uses;
   // null for leagues (or table sizes) with no defined zones, e.g. the NBA and NFL.
-  const zoneAt = zoneRules(league, data.tableSize);
+  const zoneAt = zoneRules(league, data.tableSize, !data.inSeason);
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {data.table.length > 0 && (
@@ -45,7 +45,7 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
                     <span className="flex shrink-0 items-baseline gap-3 tabular-nums">
                       <span className="text-xs text-[var(--text-muted)]">{record(league, r)}</span>
                       {r.points !== null && (
-                        <span className="display text-xl">
+                        <span className="text-base font-bold">
                           {r.points} <span className="font-sans text-[10px] font-bold uppercase tracking-wider text-[var(--text-faint)]">pts</span>
                         </span>
                       )}
