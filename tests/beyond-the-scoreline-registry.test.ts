@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { assertUniqueSlugs, getArticle, listArticles, sortByPublishedDesc } from "../src/lib/beyondTheScoreline";
 import { TITLE_BUDGET } from "../src/lib/metadata";
+import { ART_PALETTES } from "../src/lib/articleArt";
 
 test("listArticles returns at least the seed article, and never throws", () => {
   assert.ok(listArticles().length >= 1);
@@ -28,5 +29,13 @@ test("listArticles sorts newest publishedAt first", () => {
 test("every article's title fits the site-wide title budget", () => {
   for (const a of listArticles()) {
     assert.ok(a.title.length <= TITLE_BUDGET, `${a.slug}: title is ${a.title.length} chars, budget is ${TITLE_BUDGET}`);
+  }
+});
+
+test("an article that declares art gives a non-empty number and a known palette", () => {
+  for (const a of listArticles()) {
+    if (!a.art) continue;
+    assert.ok(a.art.number.trim().length > 0, `${a.slug}: art.number is empty`);
+    assert.ok((ART_PALETTES as readonly string[]).includes(a.art.palette), `${a.slug}: unknown palette ${a.art.palette}`);
   }
 });

@@ -682,3 +682,33 @@ a.card:hover,
   font-weight: 800;
   color: var(--mast-text);
 }
+
+/* ---------------------------------------------------------------------------
+   Article art: the sport-coloured panel behind an article's key number.
+--------------------------------------------------------------------------- */
+.art {
+  position: relative;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+.art::after {
+  content: "";
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 28px solid rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.art-football { background: linear-gradient(120deg, #6cabdd, #1c2c5b 90%); }
+.art-cricket { background: linear-gradient(120deg, #1d9a6c, #0b3d2e 90%); }
+.art-f1 { background: linear-gradient(120deg, #101010, #2a2a2a 60%, #e10600 160%); }
+.art-asian-games { background: linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 140%); }
+.art-nfl { background: linear-gradient(120deg, #013369, #d50a0a 140%); }
+.art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
+.art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); color: #0b1324; }
+.art-neutral { background: linear-gradient(120deg, #121c33, #0b1324 90%); }

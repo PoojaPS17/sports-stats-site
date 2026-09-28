@@ -9,6 +9,7 @@ export const article: BeyondTheScorelineArticle = {
   publishedAt: "2026-09-25",
   readingMinutes: 2,
   tags: ["asian-games", "shooting", "india"],
+  art: { number: "10", caption: "of India's 23 medals at these Games have come from shooting", palette: "asian-games" },
   relatedLinks: [
     {
       label: "Asian Games medal tally, 2026 and every edition back to 1951",
