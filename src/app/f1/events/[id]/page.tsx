@@ -6,7 +6,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { ImageActions } from "@/components/ImageActions";
 import { F1SessionExportCard } from "@/components/F1ExportCards";
 import { JsonLd } from "@/components/JsonLd";
-import { breadcrumbSchema } from "@/lib/structuredData";
+import { breadcrumbSchema, f1EventSchema } from "@/lib/structuredData";
 import { pageMeta } from "@/lib/metadata";
 import { f1EventDescription, f1EventStatus } from "@/lib/f1Status";
 import { f1SessionLabel, sortF1Sessions } from "@/lib/f1Sessions";
@@ -53,6 +53,7 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex flex-col gap-6">
+      <JsonLd data={f1EventSchema(event)} />
       <JsonLd data={breadcrumbSchema([{ label: "Formula 1", href: "/f1" }, { label: event.name }])} />
       <div>
         <Link href="/f1" className="text-sm text-[var(--text-muted)] hover:underline">

@@ -14,3 +14,16 @@ test("each legal page emits exactly one BreadcrumbList", () => {
     assert.equal(html.match(/"@type":"BreadcrumbList"/g)?.length ?? 0, 1, `/${name}`);
   }
 });
+
+// The cricket match page drew its own "Cricket series › <series>" trail out of a bare <nav>, so 645
+// match pages showed a trail to readers and none to Google. Breadcrumbs is the one component that
+// renders the trail and emits the BreadcrumbList beside it, so a hand-rolled separator is the tell.
+test("no page draws its own breadcrumb trail, which would leave it unmarked for Google", async () => {
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? walk(`${dir}/${e.name}`) : e.name === "page.tsx" ? [`${dir}/${e.name}`] : []
+    );
+  const handRolled = walk("src/app").filter((f) => readFileSync(f, "utf8").includes("›"));
+  assert.deepEqual(handRolled, [], "these pages must use <Breadcrumbs /> instead");
+});
