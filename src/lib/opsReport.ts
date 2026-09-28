@@ -151,12 +151,83 @@ export function duplicatesSection(pool: Pool) {
   });
 }
 
+type Finding = { count: number; examples: string[] };
+
+// Leagues ESPN never provides a box score for, so "completed with no player_game_stats" is normal there.
+const NO_BOX_SCORE_LEAGUES = ["ucl"];
+
+export function scrapingSection(pool: Pool) {
+  return guard(async () => {
+    const { rows } = await pool.query<{ league: string; espn_id: string }>(
+      `select league, espn_id from games
+       where completed and date < now() - interval '48 hours' and updated_at > now() - interval '24 hours'
+       order by updated_at desc`
+    );
+    const { rows: tick } = await pool.query<{ age: string | null }>(
+      `select extract(epoch from (now() - last_ok_at)) / 60 as age from scrape_runs where scraper = 'scrape-tick'`
+    );
+    const { rows: totals } = await pool.query<{ n: string }>(
+      `select count(*) as n from player_season_stats where updated_at > now() - interval '24 hours'`
+    );
+    return {
+      refetchedFinished: { count: rows.length, examples: rows.slice(0, EXAMPLES).map((r) => `${r.league} ${r.espn_id}`) },
+      tickAgeMinutes: tick[0]?.age === null || tick[0]?.age === undefined ? null : Math.round(Number(tick[0].age)),
+      seasonTotalsRewrittenToday: Number(totals[0].n),
+    };
+  });
+}
+
+export function integritySection(pool: Pool) {
+  return guard(async () => {
+    async function finding(sql: string, label: (r: Record<string, string>) => string, params: unknown[] = []) {
+      const { rows } = await pool.query<Record<string, string>>(sql, params);
+      return { count: rows.length, examples: rows.slice(0, EXAMPLES).map(label) };
+    }
+    const g = (r: Record<string, string>) => `${r.league} ${r.espn_id}`;
+    const completedNoScore = await finding(
+      `select league, espn_id from games where completed and (home_score is null or away_score is null) and home_score_display is null order by date desc`, g);
+    const { rows: noBox } = await pool.query<{ league: string; n: string; ids: string }>(
+      `select g.league, count(*) as n, string_agg(g.espn_id, ', ' order by g.date desc) filter (where true) as ids
+       from games g left join player_game_stats s on s.league = g.league and s.game_espn_id = g.espn_id
+       where g.completed and g.date < now() - interval '48 hours' and g.date > now() - interval '30 days'
+         and s.game_espn_id is null and g.league <> all($1::text[])
+       group by g.league order by g.league`, [NO_BOX_SCORE_LEAGUES]);
+    const completedNoBoxScore = noBox.map((r) => ({ league: r.league, count: Number(r.n), examples: r.ids.split(", ").slice(0, EXAMPLES) }));
+    // Any game more than 400 days in the future, or dated before 2000 (the null-date class of bug);
+    // not `* 30` on the far side, which would wrongly flag every historical season the site covers.
+    const gamesFarFromToday = await finding(
+      `select league, espn_id from games where date > now() + interval '400 days' or date < '2000-01-01' order by date`, g);
+    const orphanGameStats = await finding(
+      `select s.league, s.game_espn_id as espn_id from player_game_stats s left join games g on g.league = s.league and g.espn_id = s.game_espn_id
+       where g.espn_id is null group by 1, 2`, g);
+    const orphanSeasonStats = await finding(
+      `select s.league, s.player_espn_id as espn_id from player_season_stats s left join players p on p.league = s.league and p.espn_id = s.player_espn_id
+       where p.espn_id is null`, g);
+    // For the four football leagues: wins + losses + draws may not exceed a 38-match season, and a row
+    // with points set must have points equal to 3 * wins + draws.
+    const standingsSumMismatch = await finding(
+      `select league, team_espn_id as espn_id from standings
+       where league in ('epl','laliga','bundesliga','seriea') and wins is not null and losses is not null
+         and ((wins + losses + coalesce(draws, 0)) > 38 or (points is not null and points <> 3 * wins + coalesce(draws, 0)))`, g);
+    const teamsIdleThisSeason = await finding(
+      `select t.league, t.espn_id from teams t
+       where t.league in (select league from games where date > now() - interval '30 days')
+         and not exists (select 1 from games g where g.league = t.league and (g.home_team_espn_id = t.espn_id or g.away_team_espn_id = t.espn_id) and g.date > now() - interval '60 days')`, g);
+    const f1SessionsNoResult = await finding(
+      `select 'f1' as league, s.espn_id from f1_sessions s left join f1_session_results r on r.session_espn_id = s.espn_id
+       where s.date < now() - interval '1 day' and s.session_type in ('Race','Qual','Sprint') group by s.espn_id having count(r.driver_espn_id) = 0`, g);
+    return { completedNoScore, completedNoBoxScore, gamesFarFromToday, orphanGameStats, orphanSeasonStats, standingsSumMismatch, teamsIdleThisSeason, f1SessionsNoResult };
+  });
+}
+
 const SECTIONS: Record<string, (pool: Pool) => Promise<Section<unknown>> | Section<unknown>> = {
   build: () => buildSection(),
   heartbeats: heartbeatsSection,
   freshness: freshnessSection,
   volume: volumeSection,
   duplicates: duplicatesSection,
+  scraping: scrapingSection,
+  integrity: integritySection,
 };
 
 // A named interface, not `Record<string, Section<unknown>> & { generatedAt: string }`: that
@@ -175,6 +246,17 @@ export interface OpsReport {
   duplicates: Section<
     Record<"games" | "players" | "tennisMatches" | "cricketScoreMismatch" | "newsArticles", { count: number; examples: string[] }>
   >;
+  scraping: Section<{ refetchedFinished: { count: number; examples: string[] }; tickAgeMinutes: number | null; seasonTotalsRewrittenToday: number }>;
+  integrity: Section<{
+    completedNoScore: Finding;
+    completedNoBoxScore: (Finding & { league: string })[];
+    gamesFarFromToday: Finding;
+    orphanGameStats: Finding;
+    orphanSeasonStats: Finding;
+    standingsSumMismatch: Finding;
+    teamsIdleThisSeason: Finding;
+    f1SessionsNoResult: Finding;
+  }>;
 }
 
 export async function opsReport(pool: Pool): Promise<OpsReport> {

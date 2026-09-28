@@ -104,3 +104,49 @@ test("duplicatesSection finds the same fixture, player, tennis match and article
   assert.equal(s.data.newsArticles.count, 1);
   assert.ok(s.data.games.examples[0].includes("d1"));
 });
+
+test("scrapingSection counts finished games rewritten long after they finished", async () => {
+  const { scrapingSection } = await import("../src/lib/opsReport");
+  // scrapingSection and integritySection scan the whole games table with no per-test scoping (that's
+  // the point: they're meant to see every row). This test file shares one long-lived db across all
+  // tests in it, so earlier tests' fixtures (freshnessSection's g1, duplicatesSection's d1/d2/c1) are
+  // still sitting in the table and would otherwise be picked up by this section's broad predicates.
+  // Clear it so each test here starts from a clean table, same as if it had run alone.
+  await db.pool.query(`delete from games`);
+  await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed, updated_at) values
+    ('nfl','r1', now() - interval '10 days', 'Old', '1', '2', true, now() - interval '1 hour'),
+    ('nfl','r2', now() - interval '10 days', 'Old settled', '1', '2', true, now() - interval '9 days'),
+    ('nfl','r3', now() - interval '1 day', 'Fresh', '1', '2', true, now() - interval '1 hour')`);
+  const s = await scrapingSection(db.pool);
+  assert.ok(s.ok);
+  assert.equal(s.data.refetchedFinished.count, 1);
+  assert.ok(s.data.refetchedFinished.examples[0].includes("r1"));
+  assert.equal(typeof s.data.tickAgeMinutes, "number");
+});
+
+test("integritySection finds the classes of broken row the site has been bitten by", async () => {
+  const { integritySection } = await import("../src/lib/opsReport");
+  // Same shared-db reasoning as scrapingSection's test above: clear games first so this section's
+  // whole-table predicates (completedNoScore etc.) see only this test's own fixtures, not the
+  // scrapingSection test's r1/r2/r3 left behind in the table.
+  await db.pool.query(`delete from games`);
+  await db.pool.query(`insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, completed, home_score, away_score, season_year) values
+    ('epl','i1', now() - interval '3 days', 'No score', '1', '2', true, null, null, 2026),
+    ('epl','i2', now() - interval '3 days', 'No box', '1', '2', true, 2, 1, 2026),
+    ('epl','i3', '2031-01-01T00:00:00Z', 'Far future', '1', '2', false, null, null, 2031)`);
+  await db.pool.query(`insert into player_game_stats (league, game_espn_id, player_espn_id) values ('epl','missing-game','p9')`);
+  await db.pool.query(`insert into player_season_stats (league, season, player_espn_id) values ('epl', 2026, 'nobody')`);
+  await db.pool.query(`insert into standings (league, season, team_espn_id, wins, losses, draws, points) values ('epl', 2026, '1', 3, 1, 1, 10)`);
+  await db.pool.query(`insert into standings (league, season, team_espn_id, wins, losses, draws, points, games_behind) values ('epl', 2026, '2', 2, 2, 2, 9, '6')`);
+  await db.pool.query(`insert into f1_events (espn_id, name, date) values ('e1','GP', now() - interval '5 days')`);
+  await db.pool.query(`insert into f1_sessions (espn_id, event_espn_id, session_type, date, completed) values ('s1','e1','Race', now() - interval '5 days', true)`);
+  const s = await integritySection(db.pool);
+  assert.ok(s.ok);
+  assert.equal(s.data.completedNoScore.count, 1);
+  assert.equal(s.data.completedNoBoxScore.find((l) => l.league === "epl")?.count, 2, "i1 and i2 finished 3 days ago with no box score");
+  assert.equal(s.data.gamesFarFromToday.count, 1);
+  assert.equal(s.data.orphanGameStats.count, 1);
+  assert.equal(s.data.orphanSeasonStats.count, 1);
+  assert.equal(s.data.standingsSumMismatch.count, 1);
+  assert.equal(s.data.f1SessionsNoResult.count, 1);
+});
