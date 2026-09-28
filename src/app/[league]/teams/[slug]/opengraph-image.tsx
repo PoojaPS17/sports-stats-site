@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { PixelBall } from "@/components/Logo";
 import { isLeague, isCricketLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
 import { resolveTeamLogo } from "@/lib/teamLogos";
+import { verifyLogoUrl } from "@/lib/verifyImageUrl";
 
 export const alt = "Team page";
 export const size = { width: 1200, height: 630 };
@@ -23,9 +24,12 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const name = team?.name ?? "SportsDB";
   const label = isLeague(league) ? LEAGUE_LABEL[league] : "";
   const color = team?.color ? `#${team.color.replace(/^#/, "")}` : "#6ea0ff";
-  // See the games opengraph-image route: a stored logo_url can be a dead ESPN path that this
-  // route re-checks rather than trusting, since @vercel/og crashes fetching a 404 server-side.
-  const logo = team && isLeague(league) && isCricketLeague(league) ? resolveTeamLogo(team.espn_id, team.logo_url) : (team?.logo_url ?? null);
+  // A stored logo_url can be a dead path (cricket sides most often, but any league's could
+  // rot) that this route re-checks rather than trusting, since @vercel/og crashes fetching
+  // a 404 server-side. resolveTeamLogo applies cricket's curated substitutes first; verifyLogoUrl
+  // is the general safety net that catches anything still dead, cricket or not.
+  const candidate = team && isLeague(league) && isCricketLeague(league) ? resolveTeamLogo(team.espn_id, team.logo_url) : (team?.logo_url ?? null);
+  const logo = await verifyLogoUrl(candidate);
 
   return new ImageResponse(
     (
