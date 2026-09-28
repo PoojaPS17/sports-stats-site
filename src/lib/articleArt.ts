@@ -55,6 +55,11 @@ const TAG_PALETTE: [RegExp, ArtPalette][] = [
   [/^(football|soccer|premier-league|la-liga|laliga|bundesliga|serie-a|seriea|champions-league|ucl|epl|man-city|arsenal|liverpool|barcelona|real-madrid)/, "football"],
 ];
 
+/** The display name of a palette, for the eyebrow above a headline and the card's sport line. */
+export function sportLabel(palette: ArtPalette): string {
+  return SPORT_LABEL[palette];
+}
+
 export function paletteForTags(tags: string[]): ArtPalette {
   for (const tag of tags) {
     const hit = TAG_PALETTE.find(([re]) => re.test(tag.toLowerCase()));
@@ -63,7 +68,7 @@ export function paletteForTags(tags: string[]): ArtPalette {
   return "neutral";
 }
 
-export function articleArt(article: Pick<BeyondTheScorelineArticle, "art" | "tags">): { number: string | null; caption: string | null; palette: ArtPalette; sport: string } {
-  const palette = article.art?.palette ?? paletteForTags(article.tags);
-  return { number: article.art?.number ?? null, caption: article.art?.caption ?? null, palette, sport: SPORT_LABEL[palette] };
+export function articleArt(article: Pick<BeyondTheScorelineArticle, "art" | "tags">): { number: string; caption: string; palette: ArtPalette; sport: string } {
+  const palette = article.art.palette ?? paletteForTags(article.tags);
+  return { number: article.art.number, caption: article.art.caption, palette, sport: SPORT_LABEL[palette] };
 }

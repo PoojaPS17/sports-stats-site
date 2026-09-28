@@ -54,8 +54,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               too light to carry white type on their own, and the numeral sits at the bottom. */}
           <div style={{ position: "absolute", top: 0, left: 0, width: PANEL, height: size.height, background: "linear-gradient(to top, rgba(11, 19, 36, 0.62), rgba(11, 19, 36, 0) 70%)" }} />
           <div style={{ position: "relative", display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: art?.number ? 150 : 64, fontWeight: 800, lineHeight: 0.85, letterSpacing: -4 }}>{art?.number ?? art?.sport ?? "SportsDB"}</div>
-            {art?.caption ? <div style={{ fontSize: 24, fontWeight: 600, marginTop: 20, opacity: 0.85 }}>{art.caption}</div> : null}
+            <div style={{ fontSize: art ? 150 : 64, fontWeight: 800, lineHeight: 0.85, letterSpacing: -4 }}>{art?.number ?? "SportsDB"}</div>
+            {art ? <div style={{ fontSize: 24, fontWeight: 600, marginTop: 20, opacity: 0.85 }}>{art.caption}</div> : null}
           </div>
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "56px 60px", gap: 20 }}>

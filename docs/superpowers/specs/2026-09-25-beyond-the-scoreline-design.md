@@ -36,6 +36,7 @@ export const article: BeyondTheScorelineArticle = {
   publishedAt: "2026-09-25",
   readingMinutes: 6,        // computed at write time from word count, stored not derived at runtime
   tags: ["asian-games", "india"],
+  art: { number: "23", caption: "medals for India so far, nine of them gold" }, // the card's headline figure, required; see §8
   relatedLinks: [{ label: "...", href: "/asian-games/medal-tally" }], // internal-linking requirement, enforced by type (min 1 entry)
   body: () => <>...JSX...</>,
 };
@@ -96,6 +97,20 @@ The first few published articles (e.g. `russell-baku-win-cuts-title-gap`, `barce
 - **More related links**: 2-3 `relatedLinks` where genuinely relevant pages exist (the team, a rival, the standings, a specific player), rather than stopping at the type's one-link minimum.
 
 This section amends, not replaces, the house style above: no em dashes, no AI tells, active voice by default, and the same fact-checking discipline still apply at the greater length.
+
+### 8. Share-card art block (added 2026-09-28, after an auto-drafted article shipped without one)
+
+Every article declares `art`, and the type now requires it. It is not decoration: it is the panel on the index cards, on the homepage stack, and on the 1200x630 image that *is* the article anywhere the link is shared. `barcelona-record-seven-match-win-streak` was drafted without one and its card printed the word "Football" where every other article printed a figure.
+
+```ts
+art: { number: "8", caption: "straight wins to open the season, the best start in the club's history" },
+```
+
+- **`number`** (required): the one figure the piece is built on, written exactly as it should read on the panel. Short, at most 8 characters, a figure rather than a sentence: `"8"`, `"66"`, `"114/115"`, `"9.58"`. It is almost always the number the dek already leads with. If no single number carries the story, that is a sign the angle needs sharpening before the drafting step, not a reason to leave the field out.
+- **`caption`** (required): the lower-case phrase that finishes the number's sentence, at most 80 characters, no closing period. `"points between Antonelli and Russell after Baku, down from 81"`. Read it as "*66* points between Antonelli and Russell": it has to say what the figure counts, because the number alone means nothing on a shared link.
+- **`palette`** (optional, and normally omitted): derived from the article's first recognised tag by `paletteForTags()` in `src/lib/articleArt.ts`, which already maps `laliga`, `f1`, `ipl`, `kabaddi` and the rest onto the eight panel colours. Set it by hand only to override that, and only to one of the eight palettes that file lists.
+
+`tests/beyond-the-scoreline-registry.test.ts` holds every registered article to this, and CI typechecks each PR, so a draft that omits the block or writes a paragraph into `number` fails before review rather than after publication.
 
 ## Explicitly out of scope
 
