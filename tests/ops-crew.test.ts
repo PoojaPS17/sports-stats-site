@@ -51,3 +51,9 @@ test("seed.json mirrors the crew files", () => {
   assert.ok(Object.keys(seed.rules).length >= 6);
   for (const r of Object.values(seed.rules) as { text: string; order: number }[]) assert.ok(r.text && typeof r.order === "number");
 });
+
+test("the Chrome task carries the current protocol, not a drifted copy of it", () => {
+  const protocol = readFileSync(join(DIR, "_protocol.md"), "utf8").trim();
+  const chrome = readFileSync(join(DIR, "_chrome-readings.md"), "utf8").trim();
+  assert.ok(chrome.endsWith(protocol), "_chrome-readings.md must end with _protocol.md verbatim");
+});

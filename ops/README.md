@@ -25,6 +25,9 @@ deploys or changes a setting.
 - `ops/room/seed.json` seeds the dashboard's database: a `crew` document per
   agent (copied from that agent's front matter) and a `rules` document, the
   owner's standing rules shown on the page.
+- The report endpoint is `GET /api/ops/report`, cached at the edge for fifteen
+  minutes. The route memoises the report for 15 minutes in-process, whatever the
+  query string, so cache-busting cannot make the origin recompute.
 - `tests/ops-crew.test.ts` checks the shape of all of the above: every crew
   file has the required front matter keys, a `## Never` section, the
   `{{OPS_ROOM_URL}}` placeholder, no em-dashes, and none of the actions an

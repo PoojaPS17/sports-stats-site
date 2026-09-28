@@ -92,7 +92,7 @@ All documents are JSON objects. The store holds at most 5,000 documents, so runs
 **`daily/<YYYY-MM-DD>`**, one per day, merged by the Scorer (cloud) and the local Chrome task.
 
 ```
-{ date, views, gameViews, topGames: [{league, id, name, views}],
+{ date, gameViews, topGames: [{league, id, name, views}],
   byCountry: {IN: n, ...}, byPlatform: {ios, android, desktop},
   ga4Users, ga4Views, gscClicks, gscImpressions, gscIndexed, gscNotIndexed,
   bingIndexed, bingCrawlErrors, readAt: {scorer, chrome} }
@@ -111,7 +111,7 @@ Access: the default `db: {}` rules. The artifact is organization-internal and th
 - **`freshness`**: newest `updated_at` or `fetched_at` per table (the logic of `scripts/audit-freshness.ts`), and per league the date of the newest completed game and the newest scheduled game.
 - **`duplicates`**: counts and up to five examples for each of: games with the same league, UTC day, home and away team under different ids; players with the same league, lower-cased name and team under different ids; tennis matches with the same tour, tournament, round and players under different ids; cricket series matches whose scores disagree with the `games` row for the same ESPN id; news articles with the same league and URL under different ids.
 - **`scraping`**: completed games older than 48 hours whose `updated_at` moved in the last 24 hours (refetching finished fixtures); tick runs in the last 24 hours if a run log exists, otherwise the age of the tick heartbeat.
-- **`integrity`**: completed games with a null score; completed games older than 48 hours with no `player_game_stats` row, per league, excluding leagues ESPN provides no box score for; games dated more than 400 days from today; `player_game_stats` and `player_season_stats` rows whose player or game is missing; standings rows where played is not the sum of won, lost and drawn; teams with no game in the current season; F1 sessions in the past with no result row.
+- **`integrity`**: completed games with a null score; completed games older than 48 hours with no `player_game_stats` row, per league, excluding leagues ESPN provides no box score for; games dated more than 400 days from today; `player_game_stats` and `player_season_stats` rows whose player or game is missing; standings rows where `points <> 3 * wins + draws`, or `played <> 38` at season end (the plan's corrected SQL, which replaced the spec's earlier "played is the sum of won, lost and drawn" sketch); teams with no game in 60 days in a league that has completed a game in the last 30 days; F1 sessions in the past with no result row.
 - **`volume`**: rows per table with a timestamp column inserted in the last 24 hours against the mean of the previous seven days.
 - **`backup`**: newest file in `/var/backups/sportsdb`, its age in hours and size, and the size of the one before it. `null` when the directory does not exist.
 - **`dbHealth`**: database size, the five largest tables, dead-row ratio per table from `pg_stat_user_tables`, and current connections against `max_connections`.
@@ -181,7 +181,7 @@ A sixth tab, **Clubhouse**, drawn entirely in code on a `<canvas>` at 4x pixel s
 2. **Officials' room**: the Umpire at a desk with a printed report, the Editor at a lectern with the article draft. A door marked `PR QUEUE` with a number.
 3. **Backroom**: the Physio's treatment table with a heart monitor for site latency, the Kit Manager's rail of shirts with a tape measure, the Steward's locker with a torch, lit on Mondays.
 4. **Front office**: the Analyst at two monitors, the Scout with binoculars at a window, the Press Officer at a microphone desk, the Scorer updating a wall scoreboard that shows the real `daily/` numbers.
-5. **Basement**: the database as server racks with blinking lights driven by the real heartbeat ages, a backup vault whose door is open when a dump is fresh and shut with a red light when it is stale, and a conveyor carrying scrape ticks down from a pipe on the right.
+5. **Basement**: the database as server racks with blinking lights derived from the open Umpire issues that name a scraper (the page cannot fetch the report, so it cannot read heartbeat ages directly), a backup vault whose door is open when a dump is fresh and shut with a red light when it is stale, and a conveyor carrying scrape ticks down from a pipe on the right.
 
 **The day, as steps.** A caption bar shows `Step n of 13` with one sentence, and each step moves or lights the figure concerned:
 
@@ -218,7 +218,8 @@ On first publish the session seeds `crew/` from the nine files, `rules/` with:
 
 - `tests/ops-report.test.ts`: each section of `src/lib/opsReport.ts` against the throwaway Postgres, seeded with rows that trigger each finding and rows that must not.
 - `tests/ops-crew.test.ts`: every file under `ops/crew/` has the required front matter, a `Never` section, a valid UTC cron, and the artifact URL placeholder; the ids match the table above.
-- `tests/page-cache-lifetime.test.ts` already covers new route files.
+- `tests/ops-report-route.test.ts`: the route's own test, for the `Cache-Control` value, the ten section keys and the in-process memo. `tests/page-cache-lifetime.test.ts` globs `page.tsx` only, so it does not cover route files.
+- `tests/ops-room-page.test.ts`: the artifact contract of `ops/room/index.html`, plus the Markdown sanitizer exercised against a real DOM in JSDOM.
 - Each routine is run once by hand after creation and its `runs/` document checked on the page before it is left on its schedule.
 
 ## 8. Out of scope
