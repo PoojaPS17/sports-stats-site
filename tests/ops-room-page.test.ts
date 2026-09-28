@@ -55,3 +55,11 @@ test("the clubhouse has a sprite for every crew member and draws in code only", 
   assert.ok(!/<img/.test(html.split('id="panel-clubhouse"')[1] ?? ""), "no image files in the clubhouse");
   assert.ok(html.includes("image-rendering: pixelated"));
 });
+
+test("the clubhouse plays a 13-step day with the four controls and honours reduced motion", () => {
+  const scene = html.split('id="panel-clubhouse"')[1] ?? "";
+  assert.equal((html.match(/\{\s*at:\s*"\d\d:\d\d"/g) ?? []).length, 13, "13 steps");
+  for (const id of ["clubhouse-pause", "clubhouse-restart", "clubhouse-day", "clubhouse-night", "clubhouse-caption"]) assert.ok(scene.includes(`id="${id}"`), id);
+  assert.ok(html.includes("prefers-reduced-motion"));
+  assert.ok(html.includes("visibilitychange"));
+});

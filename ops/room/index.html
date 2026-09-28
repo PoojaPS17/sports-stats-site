@@ -212,11 +212,28 @@ p.issue-text { margin: 9px 0 0; }
 
 /* Clubhouse tab */
 .clubhouse { display: grid; gap: 12px; }
+.clubhouse-main { display: grid; gap: 12px; align-items: start; }
+.clubhouse-left { display: grid; gap: 10px; min-width: 0; }
 .clubhouse-stage { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   box-shadow: var(--card-shadow); padding: 8px; display: flex; justify-content: center; }
-#clubhouse-canvas { image-rendering: pixelated; width: 100%; max-width: 480px; height: auto; display: block; }
+#clubhouse-canvas { image-rendering: pixelated; width: 100%; max-width: 480px; height: auto; display: block; cursor: pointer; }
 .clubhouse-controls { display: flex; gap: 6px; flex-wrap: wrap; }
 .clubhouse-note { margin: 0; color: var(--text-faint); font-size: 12px; }
+.clubhouse-caption { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; min-height: 22px; }
+.clubhouse-caption .pill { flex: none; color: var(--sig-ink); }
+.clubhouse-at { flex: none; font-family: var(--display); font-weight: 800; font-size: 15px;
+  letter-spacing: .04em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.clubhouse-step { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.clubhouse-figures { display: flex; gap: 5px; flex-wrap: wrap; }
+.clubhouse-figures .chip { font-size: 13px; padding: 4px 10px; }
+.clubhouse-figures .chip[aria-pressed="true"] { background: var(--sig-soft); border-color: var(--sig-ink); color: var(--sig-ink); }
+.clubhouse-legend { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-faint); align-self: center; margin-right: 2px; }
+#clubhouse-card:empty { display: none; }
+#clubhouse-card .card { margin: 0; }
+@media (min-width: 720px) {
+  .clubhouse-main { grid-template-columns: minmax(0, 1fr) minmax(0, 290px); }
+}
 </style>
 
 <div class="mast" role="banner">
@@ -243,7 +260,40 @@ p.issue-text { margin: 9px 0 0; }
   <section role="tabpanel" id="panel-runs" aria-labelledby="tab-runs" tabindex="0" hidden><p class="empty">Runs</p></section>
   <section role="tabpanel" id="panel-crew" aria-labelledby="tab-crew" tabindex="0" hidden><p class="empty">Crew</p></section>
   <section role="tabpanel" id="panel-rules" aria-labelledby="tab-rules" tabindex="0" hidden><p class="empty">Rulebook</p></section>
-  <section role="tabpanel" id="panel-clubhouse" aria-labelledby="tab-clubhouse" tabindex="0" hidden><p class="empty">Clubhouse under construction</p></section>
+  <section role="tabpanel" id="panel-clubhouse" aria-labelledby="tab-clubhouse" tabindex="0" hidden>
+    <div class="clubhouse">
+      <div class="clubhouse-main">
+        <div class="clubhouse-left">
+          <div class="clubhouse-stage">
+            <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
+          </div>
+          <div class="clubhouse-caption" id="clubhouse-caption"></div>
+          <div class="clubhouse-controls" role="group" aria-label="Clubhouse playback">
+            <button type="button" class="chip" id="clubhouse-pause">Pause</button>
+            <button type="button" class="chip" id="clubhouse-restart">Restart</button>
+            <button type="button" class="chip" id="clubhouse-day">Day</button>
+            <button type="button" class="chip" id="clubhouse-night">Night</button>
+          </div>
+          <div class="clubhouse-figures" id="clubhouse-figures" role="group" aria-label="Choose a figure">
+            <span class="clubhouse-legend">Who</span>
+            <button type="button" class="chip" data-figure="owner">Owner</button>
+            <button type="button" class="chip" data-figure="session">Main session</button>
+            <button type="button" class="chip" data-figure="umpire">Umpire</button>
+            <button type="button" class="chip" data-figure="editor">Editor</button>
+            <button type="button" class="chip" data-figure="physio">Physio</button>
+            <button type="button" class="chip" data-figure="kit-manager">Kit Manager</button>
+            <button type="button" class="chip" data-figure="steward">Steward</button>
+            <button type="button" class="chip" data-figure="analyst">Analyst</button>
+            <button type="button" class="chip" data-figure="scout">Scout</button>
+            <button type="button" class="chip" data-figure="press-officer">Press Officer</button>
+            <button type="button" class="chip" data-figure="scorer">Scorer</button>
+          </div>
+        </div>
+        <div id="clubhouse-card"></div>
+      </div>
+      <p class="clubhouse-note">Characters are drawn in code for this private page. No official art is used. Pick a figure on the scene or from the list to read their card.</p>
+    </div>
+  </section>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
@@ -1099,8 +1149,30 @@ const Clubhouse = {
   canvas: null,
   ctx: null,
   root: null,
+  stage: null,
   buttons: null,
-  resizeBound: false,
+  captionEl: null,
+  cardEl: null,
+  figureButtons: [],
+  bound: false,
+
+  // The day runs one step at a time. Every step is 48 frames at 8 frames a
+  // second, so six seconds each, and the night after the last step holds for
+  // another four before the loop starts again.
+  STEP_FRAMES: 48,
+  HOLD_FRAMES: 32,
+  FRAME_MS: 125,
+  step: 0,
+  stepT: 0,
+  playing: false,
+  userPaused: false,
+  raf: null,
+  last: 0,
+  shownStep: -1,
+  selected: null,
+  prBump: 0,
+  pos: {},
+  moving: {},
 
   PAL: { k: "#0b1324", w: "#eef1f7", s: "#f1c9a5", d: "#c98e63", h: "#3b2a1a", b: "#2563eb", r: "#dc2626", g: "#15803d", y: "#eab308", l: "#c6f135", n: "#121c33", m: "#9aa5bd", o: "#d97706", p: "#7c3aed", t: "#0f766e" },
 
@@ -1135,6 +1207,7 @@ const Clubhouse = {
     T: ["###", ".#.", ".#.", ".#.", ".#."],
     V: ["#.#", "#.#", "#.#", "#.#", ".#."],
     X: ["#.#", "#.#", ".#.", "#.#", "#.#"],
+    "?": ["###", "..#", ".##", "...", ".#."],
     "'": [".#.", "...", "...", "...", "..."],
     "-": ["...", "...", "###", "...", "..."],
     ".": ["...", "...", "...", "...", ".#."],
@@ -1381,56 +1454,297 @@ const Clubhouse = {
     }
   })(),
 
+  // The owner's own day or night choice. The night step overrides it while it
+  // runs and hands it back when the loop moves on.
+  nightPref: false,
+
+  // A reader who has asked for less movement gets the same day, one still
+  // frame at a time, with Prev and Next in the caption bar.
+  reduced: (function () {
+    try {
+      return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch (err) {
+      return false;
+    }
+  })(),
+
   // ---- the panel ----
 
+  // The stage, the controls, the caption and the figure list are written into
+  // the page as markup, so this binds to what is already there rather than
+  // building it. Every state snapshot re-renders the tab, and tearing the
+  // canvas down on each one would restart the day, so this runs once.
   mount(root) {
-    if (this.canvas && this.root === root && root.contains(this.canvas)) return;
-    const h = OpsRoom.h;
-    const canvas = h("canvas", {
-      id: "clubhouse-canvas", role: "img",
-      "aria-label": "A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew.",
-    });
-    const day = h("button", { type: "button", class: "chip", id: "clubhouse-day", onclick: () => this.setNight(false) }, "Day");
-    const night = h("button", { type: "button", class: "chip", id: "clubhouse-night", onclick: () => this.setNight(true) }, "Night");
-    this.buttons = { day: day, night: night };
-    root.replaceChildren(h("div", { class: "clubhouse" },
-      h("div", { class: "clubhouse-stage" }, canvas),
-      h("div", { class: "clubhouse-controls", role: "group", "aria-label": "Clubhouse view" }, day, night),
-      h("p", { class: "clubhouse-note", text: "Characters are drawn in code for this private page. No official art is used." })));
     this.root = root;
+    if (this.bound) return;
+    const byId = (id) => document.getElementById(id);
+    const canvas = byId("clubhouse-canvas");
+    if (!canvas) return;
+    this.bound = true;
     this.canvas = canvas;
+    this.stage = canvas.parentNode;
     this.ctx = typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
-    if (!this.resizeBound) {
-      this.resizeBound = true;
-      window.addEventListener("resize", () => { if (this.canvas) this.redraw(); });
+    this.captionEl = byId("clubhouse-caption");
+    this.cardEl = byId("clubhouse-card");
+    this.buttons = {
+      pause: byId("clubhouse-pause"), restart: byId("clubhouse-restart"),
+      day: byId("clubhouse-day"), night: byId("clubhouse-night"),
+    };
+    this.nightPref = this.night;
+    if (this.buttons.pause) this.buttons.pause.addEventListener("click", () => this.toggle());
+    if (this.buttons.restart) this.buttons.restart.addEventListener("click", () => this.restart());
+    if (this.buttons.day) this.buttons.day.addEventListener("click", () => this.setNight(false));
+    if (this.buttons.night) this.buttons.night.addEventListener("click", () => this.setNight(true));
+    if (this.reduced && this.captionEl) this.captionEl.setAttribute("aria-live", "polite");
+
+    const list = byId("clubhouse-figures");
+    this.figureButtons = list ? Array.prototype.slice.call(list.querySelectorAll("[data-figure]")) : [];
+    for (const btn of this.figureButtons) {
+      const id = btn.getAttribute("data-figure");
+      btn.addEventListener("click", () => this.select(id));
+      btn.addEventListener("focus", () => this.select(id));
     }
+
+    canvas.addEventListener("click", (ev) => this.pick(ev));
+    window.addEventListener("resize", () => { if (this.canvas && this.visible()) this.redraw(); });
+    // A hidden page must not burn a frame budget, and the loop picks up again
+    // from where it stopped once the page comes back.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) this.stopLoop();
+      else { this.last = 0; this.schedule(); }
+    });
+    if (this.reduced) this.stepT = this.STEP_FRAMES - 1;
   },
 
   setNight(on) {
-    this.night = !!on;
+    this.nightPref = !!on;
     this.redraw();
+  },
+
+  // Step 13 turns the lights out whatever the buttons say, and the preference
+  // comes back when the loop leaves it.
+  applyNight() {
+    this.night = this.step === 12 ? true : this.nightPref;
   },
 
   // An integer scale keeps the pixels square. The element is capped at 480 CSS
   // pixels, so there is nothing to gain above three.
   scaleFor() {
-    const el = this.root || this.canvas;
+    const el = this.stage || this.root || this.canvas;
     const wide = el && el.clientWidth ? el.clientWidth : 480;
     return Math.max(2, Math.min(5, Math.floor(Math.min(wide, 480) / 160)));
   },
 
   redraw() {
     if (!this.canvas || !this.ctx) return;
+    this.applyNight();
     this.SCALE = this.scaleFor();
     const w = this.W * this.SCALE;
     const tall = this.H * this.SCALE;
     if (this.canvas.width !== w) this.canvas.width = w;
     if (this.canvas.height !== tall) this.canvas.height = tall;
-    if (this.buttons) {
-      this.buttons.day.setAttribute("aria-pressed", this.night ? "false" : "true");
-      this.buttons.night.setAttribute("aria-pressed", this.night ? "true" : "false");
+    if (this.buttons && this.buttons.day) {
+      this.buttons.day.setAttribute("aria-pressed", this.nightPref ? "false" : "true");
+      this.buttons.night.setAttribute("aria-pressed", this.nightPref ? "true" : "false");
     }
+    this.syncControls();
+    this.syncCaption();
     this.draw(this.ctx, this.t);
+  },
+
+  // ---- the loop ----
+
+  visible() {
+    const room = window.OpsRoom;
+    if (room && room.active !== "clubhouse") return false;
+    const panel = document.getElementById("panel-clubhouse");
+    return !!panel && !panel.hidden;
+  },
+
+  schedule() {
+    if (this.raf !== null || !this.playing || this.reduced) return;
+    if (typeof requestAnimationFrame !== "function") return;
+    if (document.hidden || !this.visible()) return;
+    this.raf = requestAnimationFrame(() => this.tick());
+  },
+
+  stopLoop() {
+    if (this.raf === null) return;
+    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.raf);
+    this.raf = null;
+  },
+
+  tick() {
+    this.raf = null;
+    if (!this.playing || this.reduced) return;
+    if (document.hidden || !this.visible()) return;
+    const now = typeof performance === "object" && performance && typeof performance.now === "function" ? performance.now() : Date.now();
+    if (!this.last) this.last = now;
+    // A tab left in the background can come back hours late, so the catch-up
+    // is capped at a handful of frames rather than replaying the whole day.
+    let frames = Math.floor((now - this.last) / this.FRAME_MS);
+    if (frames > 8) { frames = 8; this.last = now; }
+    else if (frames > 0) this.last += frames * this.FRAME_MS;
+    for (let i = 0; i < frames; i += 1) this.advance();
+    if (frames > 0) this.redraw();
+    this.schedule();
+  },
+
+  advance() {
+    this.t += 1;
+    this.stepT += 1;
+    const last = this.STEPS.length - 1;
+    const limit = this.step === last ? this.STEP_FRAMES + this.HOLD_FRAMES : this.STEP_FRAMES;
+    if (this.stepT < limit) return;
+    this.stepT = 0;
+    this.step = this.step === last ? 0 : this.step + 1;
+    this.applyNight();
+  },
+
+  play() {
+    if (this.reduced) return;
+    this.userPaused = false;
+    this.playing = true;
+    this.last = 0;
+    this.syncControls();
+    this.schedule();
+  },
+
+  pause() {
+    this.userPaused = true;
+    this.playing = false;
+    this.stopLoop();
+    this.syncControls();
+  },
+
+  toggle() {
+    if (this.playing) this.pause();
+    else this.play();
+  },
+
+  restart() { this.goto(1); },
+
+  goto(n) {
+    const total = this.STEPS.length;
+    let i = Math.round(Number(n));
+    if (!Number.isFinite(i)) i = 1;
+    i = (i - 1) % total;
+    if (i < 0) i += total;
+    this.step = i;
+    this.stepT = this.reduced ? this.STEP_FRAMES - 1 : 0;
+    this.last = 0;
+    this.applyNight();
+    this.redraw();
+    this.schedule();
+  },
+
+  // Called on every render of the tab, so a manual pause survives a database
+  // snapshot and the day starts itself when the tab is opened.
+  autoPlay() {
+    if (this.reduced || this.userPaused) return;
+    if (!this.playing) this.play();
+    else this.schedule();
+  },
+
+  syncControls() {
+    const b = this.buttons;
+    if (!b || !b.pause) return;
+    b.pause.textContent = this.reduced ? "Paused" : this.playing ? "Pause" : "Play";
+    b.pause.disabled = this.reduced;
+  },
+
+  syncCaption() {
+    const el = this.captionEl;
+    if (!el) return;
+    if (this.shownStep === this.step && el.firstChild) return;
+    this.shownStep = this.step;
+    const h = OpsRoom.h;
+    const s = this.STEPS[this.step];
+    const kids = [
+      h("span", { class: "pill", text: "Step " + (this.step + 1) + " of " + this.STEPS.length }),
+      h("span", { class: "clubhouse-at", text: s.at }),
+      h("span", { class: "clubhouse-step", text: s.text }),
+    ];
+    if (this.reduced) {
+      kids.push(h("button", { type: "button", class: "chip", onclick: () => this.goto(this.step) }, "Prev"));
+      kids.push(h("button", { type: "button", class: "chip", onclick: () => this.goto(this.step + 2) }, "Next"));
+    }
+    el.replaceChildren(...kids);
+  },
+
+  // ---- the cards ----
+
+  // A tap lands in CSS pixels on an element that is scaled up from the 160 by
+  // 232 scene, so it is mapped back before the figures are tested.
+  pick(ev) {
+    if (!this.canvas || typeof this.canvas.getBoundingClientRect !== "function") return;
+    const rect = this.canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = (ev.clientX - rect.left) * (this.W / rect.width);
+    const y = (ev.clientY - rect.top) * (this.H / rect.height);
+    for (const fig of this.FIGURES) {
+      const p = this.pos[fig.id] || fig.home;
+      if (x >= p.x && x < p.x + 12 && y >= p.y && y < p.y + 16) { this.select(fig.id); return; }
+    }
+  },
+
+  select(id) {
+    if (!this.SPRITES[id]) return;
+    this.selected = id;
+    for (const btn of this.figureButtons) {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-figure") === id ? "true" : "false");
+    }
+    this.renderClubhouseCard(id);
+    this.redraw();
+  },
+
+  // Name, role and the three standing facts, then what the crew member did
+  // tonight. The two of us in the dugout are not crew documents, so the Crew
+  // tab's static entries answer for them.
+  cardData(id) {
+    const crew = this.state().crew || {};
+    const statics = typeof DUGOUT === "undefined" ? [] : DUGOUT;
+    const staticKey = id === "session" ? "main-session" : id;
+    for (const d of statics) {
+      if (d.id !== staticKey) continue;
+      return { name: d.name, role: d.role, job: d.job, never: d.never, when: d.when, tonight: "Read Today; nothing to deploy." };
+    }
+    const c = crew[id] || {};
+    const has = (v) => OpsRoom.has(v);
+    // Before the first run there is no crew document, so the figure list's own
+    // label stands in for the name rather than the bare id.
+    let label = id;
+    for (const btn of this.figureButtons) {
+      if (btn.getAttribute("data-figure") === id) label = btn.textContent || id;
+    }
+    return {
+      name: has(c.name) ? c.name : label,
+      role: has(c.role) ? c.role : "",
+      job: has(c.job) ? c.job : "Not recorded",
+      never: has(c.never) ? c.never : "Not recorded",
+      when: has(c.when) ? c.when : "Not recorded",
+      tonight: has(c.lastHeadline) ? c.lastHeadline : "No run yet.",
+    };
+  },
+
+  renderClubhouseCard(id) {
+    const box = this.cardEl;
+    if (!box) return;
+    const h = OpsRoom.h;
+    const d = this.cardData(id);
+    const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
+    try { this.drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
+    const facts = h("dl", { class: "crew-facts" },
+      h("dt", { text: "Job" }), h("dd", { text: d.job }),
+      h("dt", { text: "Never" }), h("dd", { text: d.never }),
+      h("dt", { text: "When" }), h("dd", { text: d.when }),
+      h("dt", { text: "Tonight" }), h("dd", { text: d.tonight }));
+    box.replaceChildren(h("section", { class: "card" },
+      h("div", { class: "crew-top" }, canvas,
+        h("div", {},
+          h("div", { class: "crew-card-name", text: d.name }),
+          h("div", { class: "crew-card-role", text: d.role }))),
+      facts));
   },
 
   // ---- the numbers, all of them from the page's own state ----
@@ -1589,12 +1903,19 @@ const Clubhouse = {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   },
 
+  // The one entry point. Every figure starts the frame on its home mark, the
+  // step of the day moves the ones it needs and paints its own props, and the
+  // figures go on last so nothing is drawn over a face.
   draw(ctx, t) {
     const scale = this.SCALE;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, this.W * scale, this.H * scale);
     ctx.scale(scale, scale);
+    this.resetPositions();
+    const step = this.STEPS[this.step] || null;
+    const st = this.stepT;
+    this.prBump = this.step > 5 || (this.step === 5 && st >= 32) ? 1 : 0;
     this.drawSky(ctx, t);
     this.drawBuilding(ctx, t);
     this.drawBox(ctx, t);
@@ -1602,6 +1923,7 @@ const Clubhouse = {
     this.drawBackroom(ctx, t);
     this.drawFront(ctx, t);
     this.drawBasement(ctx, t);
+    if (step && typeof step.run === "function") step.run.call(this, st, ctx);
     this.drawFigures(ctx, t);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   },
@@ -1764,7 +2086,7 @@ const Clubhouse = {
     ctx.fillRect(111, 74, 20, 1);
     const label = "PR";
     this.drawText(ctx, label, 111 + Math.floor((20 - this.textWidth(label)) / 2), 68, this.PAL.l);
-    const pr = this.prNumber();
+    const pr = this.prShown();
     if (pr) this.drawText(ctx, pr, 111 + Math.floor((20 - this.textWidth(pr)) / 2), 79, this.PAL.w);
     ctx.fillStyle = this.PAL.y;
     ctx.fillRect(128, 87, 2, 2);
@@ -1932,9 +2254,367 @@ const Clubhouse = {
   },
 
   drawFigures(ctx, t) {
-    const frame = Math.floor(t / 16) % 2;
-    for (const fig of this.FIGURES) this.drawSprite(ctx, fig.id, fig.home.x, fig.home.y, frame);
+    const idle = Math.floor(t / 16) % 2;
+    const walk = Math.floor(t / 2) % 2;
+    for (const fig of this.FIGURES) {
+      const p = this.pos[fig.id] || fig.home;
+      this.drawSprite(ctx, fig.id, p.x, p.y, this.moving[fig.id] ? walk : idle);
+      if (fig.id !== this.selected) continue;
+      ctx.fillStyle = this.PAL.l;
+      ctx.fillRect(p.x + 3, p.y - 6, 6, 1);
+      ctx.fillRect(p.x + 4, p.y - 5, 4, 1);
+      ctx.fillRect(p.x + 5, p.y - 4, 2, 1);
+    }
   },
+
+  // ---- the day ----
+
+  resetPositions() {
+    const pos = {};
+    for (const fig of this.FIGURES) pos[fig.id] = { x: fig.home.x, y: fig.home.y };
+    this.pos = pos;
+    this.moving = {};
+  },
+
+  homeOf(id) {
+    for (const fig of this.FIGURES) if (fig.id === id) return fig.home;
+    return { x: 60, y: 120 };
+  },
+
+  // 0 before a, 1 after b, and the fraction in between.
+  phase(t, a, b) {
+    if (b <= a) return t >= b ? 1 : 0;
+    return Math.max(0, Math.min(1, (t - a) / (b - a)));
+  },
+
+  place(id, x, y) {
+    const p = this.pos[id];
+    if (!p) return;
+    if (Math.round(x) !== p.x || Math.round(y) !== p.y) this.moving[id] = true;
+    p.x = Math.round(x);
+    p.y = Math.round(y);
+  },
+
+  // Walk sideways to a mark and back to the home mark inside one step.
+  visit(id, toX, t, out, back) {
+    const home = this.homeOf(id);
+    const go = this.phase(t, 0, out);
+    const ret = this.phase(t, back, this.STEP_FRAMES);
+    const u = go - ret;
+    this.place(id, home.x + (toX - home.x) * u, home.y);
+    if (t < out || t > back) this.moving[id] = true;
+  },
+
+  line(ctx, x0, y0, x1, y1) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const n = Math.max(1, Math.round(Math.max(Math.abs(dx), Math.abs(dy))));
+    for (let i = 0; i <= n; i += 1) {
+      ctx.fillRect(Math.round(x0 + (dx * i) / n), Math.round(y0 + (dy * i) / n), 1, 1);
+    }
+  },
+
+  sheet(ctx, x, y) {
+    ctx.fillStyle = this.PAL.w;
+    ctx.fillRect(x, y, 5, 6);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(x + 1, y + 1, 3, 1);
+    ctx.fillRect(x + 1, y + 3, 3, 1);
+  },
+
+  // The shaft the basement report rides up in. Two rails and a ten pixel car.
+  liftShaft(ctx, carY) {
+    const c = this.tone();
+    ctx.fillStyle = c.line;
+    ctx.fillRect(135, 14, 1, 206);
+    ctx.fillRect(140, 14, 1, 206);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(136, Math.round(carY), 4, 10);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(136, Math.round(carY), 4, 1);
+  },
+
+  // The Editor's verdict, read off the headline the article routine left.
+  verdict() {
+    const crew = this.state().crew || {};
+    const line = String((crew.editor && crew.editor.lastHeadline) || "").toLowerCase();
+    if (line.indexOf("merge with edits") >= 0) return { text: "EDIT", colour: this.PAL.o };
+    if (line.indexOf("merge") >= 0) return { text: "OK", colour: this.PAL.g };
+    if (line.indexOf("skip") >= 0) return { text: "SKIP", colour: this.PAL.r };
+    return { text: "?", colour: this.PAL.m };
+  },
+
+  // The door's number goes up by one once the routine has dropped its draft in,
+  // and stays up until the day starts again.
+  prShown() {
+    const pr = this.prNumber();
+    if (!pr || !this.prBump) return pr;
+    const n = Number(pr) + this.prBump;
+    return Number.isFinite(n) ? String(n).slice(0, 4) : pr;
+  },
+
+  // The crew keeps IST office hours, so the weekday is the one in Kolkata and
+  // not the one in the reader's own timezone.
+  istWeekday() {
+    try {
+      return new Date().toLocaleDateString("en-US", { timeZone: "Asia/Kolkata", weekday: "long" });
+    } catch (err) {
+      return "";
+    }
+  },
+
+  STEPS: [
+    {
+      at: "04:30",
+      text: "The daily scrape starts. Ticks roll down the pipe into the racks.",
+      run(t, ctx) {
+        const targets = [100, 72, 44];
+        for (let i = 0; i < targets.length; i += 1) {
+          const u = this.phase(t, 2 + i * 6, 32 + i * 6);
+          if (u <= 0) continue;
+          let x = 136;
+          let y = 194;
+          if (u < 0.35) y = 194 + (212 - 194) * (u / 0.35);
+          else { y = 212; x = 136 - (136 - targets[i]) * ((u - 0.35) / 0.65); }
+          ctx.fillStyle = this.PAL.l;
+          ctx.fillRect(Math.round(x), Math.round(y), 3, 3);
+        }
+        // The racks answer the belt: every lamp on, in turn, down the row.
+        const on = Math.floor(t / 3) % this.RACKS.length;
+        for (let i = 0; i < this.RACKS.length; i += 1) {
+          if (i !== on) continue;
+          ctx.fillStyle = this.PAL.l;
+          for (let j = 0; j < 3; j += 1) ctx.fillRect(24 + i * 14 + 3, 191 + j * 6, 6, 2);
+        }
+      },
+    },
+    {
+      at: "06:00",
+      text: "The Physio pings the pitch: twenty pages light up green, or one turns red.",
+      run(t, ctx) {
+        const home = this.homeOf("physio");
+        const alongOut = this.phase(t, 0, 8);
+        const alongBack = this.phase(t, 42, 48);
+        const upOut = this.phase(t, 8, 16);
+        const upBack = this.phase(t, 36, 42);
+        const x = home.x + (120 - home.x) * (alongOut - alongBack);
+        const y = home.y + (36 - home.y) * (upOut - upBack);
+        this.place("physio", x, y);
+        if (t < 8 || t > 42) this.moving.physio = true;
+        if (y < home.y - 1) {
+          const c = this.tone();
+          ctx.fillStyle = c.floor;
+          ctx.fillRect(Math.round(x) - 1, Math.round(y) + 16, 14, 2);
+          ctx.fillStyle = c.line;
+          this.line(ctx, Math.round(x) + 6, 14, Math.round(x) + 6, Math.round(y) + 15);
+        }
+        const status = this.state().status;
+        const down = !!(status && status.up === false);
+        const lit = Math.round(this.phase(t, 16, 38) * 20);
+        for (let i = 0; i < lit; i += 1) {
+          ctx.fillStyle = down && i === 7 ? this.PAL.r : this.PAL.l;
+          ctx.fillRect(144 + (i % 4) * 4, 16 + Math.floor(i / 4) * 7, 3, 3);
+        }
+      },
+    },
+    {
+      at: "06:15",
+      text: "The Umpire collects the report from the basement and reads it.",
+      run(t, ctx) {
+        const down = this.phase(t, 10, 20);
+        const up = this.phase(t, 26, 36);
+        const carY = 70 + (196 - 70) * (down - up);
+        this.liftShaft(ctx, carY);
+        if (t >= 20) this.sheet(ctx, 136, Math.round(carY) + 2);
+        this.visit("umpire", 122, t, 10, 36);
+        if (t >= 26) {
+          const p = this.pos.umpire;
+          this.sheet(ctx, p.x + 11, p.y + 6);
+        }
+      },
+    },
+    {
+      at: "06:30",
+      text: "The Kit Manager measures the shirts.",
+      run(t, ctx) {
+        this.visit("kit-manager", 100, t, 22, 34);
+        const p = this.pos["kit-manager"];
+        const from = this.homeOf("kit-manager").x + 6;
+        ctx.fillStyle = this.PAL.y;
+        ctx.fillRect(from, 122, Math.max(1, p.x + 6 - from), 1);
+        ctx.fillRect(from, 120, 1, 4);
+        ctx.fillRect(p.x + 6, 120, 1, 4);
+        for (let x = from; x < p.x + 6; x += 4) ctx.fillRect(x, 121, 1, 1);
+      },
+    },
+    {
+      at: "06:45",
+      text: "The Analyst checks the sitemaps and the schema.",
+      run(t, ctx) {
+        const flash = (t >= 6 && t < 12) || (t >= 18 && t < 24) || (t >= 30 && t < 36);
+        if (!flash) return;
+        for (let i = 0; i < 2; i += 1) {
+          const mx = 24 + i * 16;
+          ctx.fillStyle = this.PAL.w;
+          ctx.fillRect(mx + 4, 148, 6, 8);
+          ctx.fillStyle = this.PAL.k;
+          ctx.fillRect(mx + 5, 150, 4, 1);
+          ctx.fillRect(mx + 5, 152, 3, 1);
+          ctx.fillRect(mx + 5, 154, 4, 1);
+        }
+      },
+    },
+    {
+      at: "07:00",
+      text: "The article routine drops a draft into the PR queue.",
+      run(t, ctx) {
+        if (t >= 32) return;
+        const u = this.phase(t, 6, 32);
+        this.sheet(ctx, Math.round(70 + (116 - 70) * u), 76);
+      },
+    },
+    {
+      at: "07:15",
+      text: "The Scout scans the horizon.",
+      run(t, ctx) {
+        const p = this.pos.scout;
+        const sweep = Math.sin((t / this.STEP_FRAMES) * Math.PI * 2);
+        ctx.fillStyle = this.PAL.k;
+        ctx.fillRect(p.x + 1, p.y + 3, 10, 2);
+        ctx.fillStyle = this.PAL.l;
+        for (let k = -1; k <= 1; k += 1) {
+          this.line(ctx, p.x + 11, p.y + 4, 83, 152 + sweep * 5 + k);
+        }
+        ctx.fillStyle = this.PAL.w;
+        ctx.fillRect(82, Math.round(152 + sweep * 5) - 1, 2, 3);
+      },
+    },
+    {
+      at: "07:30",
+      text: "The Editor reads the draft and holds up a verdict card.",
+      run(t, ctx) {
+        // Back to the desk before the card goes up, so it does not cover the
+        // door's number.
+        const home = this.homeOf("editor");
+        const out = this.phase(t, 0, 10);
+        const back = this.phase(t, 14, 24);
+        this.place("editor", home.x + (104 - home.x) * (out - back), home.y);
+        if (t < 10 || (t > 14 && t < 24)) this.moving.editor = true;
+        const p = this.pos.editor;
+        if (t >= 12) this.sheet(ctx, p.x + 11, p.y + 6);
+        if (t < 24) return;
+        const v = this.verdict();
+        const wide = this.textWidth(v.text) + 4;
+        const cx = p.x + 6 - Math.floor(wide / 2);
+        ctx.fillStyle = this.PAL.k;
+        ctx.fillRect(cx - 1, p.y - 14, wide + 2, 11);
+        ctx.fillStyle = v.colour;
+        ctx.fillRect(cx, p.y - 13, wide, 9);
+        this.drawText(ctx, v.text, cx + 2, p.y - 11, this.PAL.k);
+      },
+    },
+    {
+      at: "07:45",
+      text: "The Press Officer drafts the day's posts.",
+      run(t, ctx) {
+        const glow = Math.floor(t / 3) % 2 === 0;
+        ctx.fillStyle = glow ? this.PAL.l : this.PAL.y;
+        ctx.fillRect(96, 146, 7, 1);
+        ctx.fillRect(96, 146, 1, 6);
+        ctx.fillRect(102, 146, 1, 6);
+        const p = this.pos["press-officer"];
+        for (let i = 0; i < 3; i += 1) {
+          const age = t - (8 + i * 11);
+          if (age < 0 || age > 14) continue;
+          const bx = p.x + 13;
+          const by = p.y - 1 - Math.round(age) - i * 2;
+          ctx.fillStyle = this.PAL.k;
+          ctx.fillRect(bx, by - 1, 11, 9);
+          ctx.fillStyle = this.PAL.w;
+          ctx.fillRect(bx + 1, by, 9, 7);
+          ctx.fillStyle = this.PAL.m;
+          ctx.fillRect(bx + 3, by + 2, 5, 1);
+          ctx.fillRect(bx + 3, by + 4, 3, 1);
+        }
+      },
+    },
+    {
+      at: "08:00",
+      text: "The Scorer chalks the numbers on the board.",
+      run(t, ctx) {
+        this.visit("scorer", 126, t, 8, 40);
+        const target = this.gameViews();
+        let shown = "";
+        for (let i = 0; i < 4; i += 1) {
+          const settled = t >= 10 + i * 7;
+          shown += settled ? target.charAt(i) : String((t * 3 + i * 5) % 10);
+        }
+        ctx.fillStyle = this.PAL.k;
+        ctx.fillRect(118, 150, 20, 6);
+        this.drawText(ctx, shown, 119, 151, this.PAL.l);
+      },
+    },
+    {
+      at: "10:00",
+      text: "Weekdays: a laptop in the directors' box opens Search Console.",
+      run(t, ctx) {
+        const day = this.istWeekday();
+        if (day === "Saturday" || day === "Sunday") return;
+        this.place("session", 84, this.homeOf("session").y);
+        const c = this.tone();
+        ctx.fillStyle = c.line;
+        ctx.fillRect(100, 45, 14, 2);
+        const lid = Math.round(this.phase(t, 4, 14) * 9);
+        if (lid < 1) return;
+        ctx.fillStyle = c.line;
+        ctx.fillRect(101, 45 - lid, 12, lid);
+        ctx.fillStyle = c.screen;
+        ctx.fillRect(102, 46 - lid, 10, Math.max(0, lid - 1));
+        if (lid < 9) return;
+        const bars = [3, 5, 4, 7, 6];
+        const grown = this.phase(t, 16, 40);
+        for (let i = 0; i < bars.length; i += 1) {
+          const tall = Math.max(1, Math.round(bars[i] * grown));
+          ctx.fillStyle = this.PAL.l;
+          ctx.fillRect(103 + i * 2, 44 - tall, 1, tall);
+        }
+      },
+    },
+    {
+      at: "10:30",
+      text: "The owner reads Today, acknowledges what needs it, and says deploy. A purge sweeps the pitch once.",
+      run(t, ctx) {
+        this.visit("owner", 66, t, 12, 44);
+        const u = this.phase(t, 20, 44);
+        if (u <= 0 || u >= 1) return;
+        const x = Math.round(142 + u * 18);
+        ctx.fillStyle = this.PAL.l;
+        ctx.fillRect(x, 12, 2, 40);
+        ctx.fillStyle = "#8fbf1f";
+        if (x > 143) ctx.fillRect(x - 2, 12, 2, 40);
+        ctx.fillStyle = this.PAL.w;
+        ctx.fillRect(x, 12, 2, 2);
+      },
+    },
+    {
+      at: "22:00",
+      text: "Night. The lights dim. On Mondays the Steward patrols with the torch.",
+      run(t, ctx) {
+        if (this.istWeekday() !== "Monday") return;
+        const span = this.STEP_FRAMES + this.HOLD_FRAMES;
+        const u = this.phase(t, 4, span - 4);
+        const x = Math.round(24 + u * 92);
+        this.place("steward", x, 204);
+        this.moving.steward = true;
+        ctx.fillStyle = this.PAL.y;
+        ctx.fillRect(x + 12, 210, 1, 2);
+        for (let k = 0; k < 9; k += 1) {
+          ctx.fillStyle = k % 2 === 0 ? "#7a6a1e" : "#5d5117";
+          this.line(ctx, x + 13, 211, Math.min(138, x + 13 + k * 2), 205 + k);
+        }
+      },
+    },
+  ],
 };
 
 // Every figure stands on its room's floor, twenty four pixels below the ceiling.
@@ -1944,9 +2624,16 @@ for (const room of Clubhouse.ROOMS) {
   }
 }
 
+Clubhouse.nightPref = Clubhouse.night;
+Clubhouse.resetPositions();
+
+// Called again on every database snapshot, so it binds once, keeps the frame
+// the day is on, and only refreshes what the new numbers changed.
 OpsRoom.renderClubhouse = function (root) {
   Clubhouse.mount(root);
   Clubhouse.redraw();
+  if (Clubhouse.selected) Clubhouse.renderClubhouseCard(Clubhouse.selected);
+  Clubhouse.autoPlay();
 };
 
 window.Clubhouse = Clubhouse;
