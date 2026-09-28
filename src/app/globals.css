@@ -689,7 +689,17 @@ a.card:hover,
 .art {
   position: relative;
   overflow: hidden;
-  color: #ffffff;
+  color: var(--mast-text);
+}
+
+/* Navy scrim rising from the bottom edge so the number and caption stay legible over the
+   lighter palette stops (orange, sky blue, lime). */
+.art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, color-mix(in srgb, var(--mast) 62%, transparent), transparent 70%);
+  pointer-events: none;
 }
 
 .art::after {
@@ -700,7 +710,7 @@ a.card:hover,
   width: 220px;
   height: 220px;
   border-radius: 50%;
-  border: 28px solid rgba(255, 255, 255, 0.12);
+  border: 28px solid color-mix(in srgb, var(--mast-text) 12%, transparent);
   pointer-events: none;
 }
 
@@ -710,5 +720,5 @@ a.card:hover,
 .art-asian-games { background: linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 140%); }
 .art-nfl { background: linear-gradient(120deg, #013369, #d50a0a 140%); }
 .art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
-.art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); color: #0b1324; }
-.art-neutral { background: linear-gradient(120deg, #121c33, #0b1324 90%); }
+.art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); }
+.art-neutral { background: linear-gradient(120deg, var(--mast-2), var(--mast) 90%); }
