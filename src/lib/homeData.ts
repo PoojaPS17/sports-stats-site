@@ -2,6 +2,8 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { LEAGUES, type League, getRecentAndUpcoming, getFeaturedGames, getNews, getMostRecentPlayedSeason, type GameRow, type NewsArticle } from "@/lib/queries";
 import { getLiveGames, getUpcomingGames, getNextF1Event } from "@/lib/homeFeed";
+import { getOffseasonRecap } from "@/lib/offseason";
+import { snapshotFromRecap, type LeagueSnapshotData } from "@/lib/leagueSnapshot";
 import { byPriority, getLiveCricketMatches, getUpcomingCricketMatches, type CricketSeriesMatch } from "@/lib/cricketSeries";
 import { getTennisDay, type TennisMatch } from "@/lib/tennis";
 import { easternDay } from "@/lib/tennisFeed";
@@ -59,6 +61,22 @@ const readFixtures = unstable_cache(
   { revalidate: TIER.FIXTURES }
 );
 
+// The top of each league's table and its first leaders board, for the homepage league
+// blocks. Same tier as the fixtures: a table moves only when a game ends.
+const readSnapshots = unstable_cache(
+  async () =>
+    Object.fromEntries(
+      await Promise.all(
+        SECTION_LEAGUES.map(async (league) => {
+          const recap = await getOffseasonRecap(league).catch(() => null);
+          return [league, recap ? snapshotFromRecap(recap, { tableRows: 5, boards: 1, leaderRows: 3 }) : null] as const;
+        })
+      )
+    ) as Partial<Record<League, LeagueSnapshotData | null>>,
+  ["home-snapshots"],
+  { revalidate: TIER.FIXTURES }
+);
+
 const readNews = unstable_cache(
   async () =>
     (await Promise.all(LEAGUES.map((l) => getNews(l, 4))))
@@ -113,6 +131,8 @@ export interface HomeSection {
   liveCount: number;
   /** Games in the section's window before de-duplication: zero means between seasons. */
   windowCount: number;
+  /** Top five of the table and the leading players, or null when the league has no season data. */
+  snapshot: LeagueSnapshotData | null;
 }
 
 export interface HomeData {
@@ -141,7 +161,14 @@ const HOURS = 3600 * 1000;
 
 export const getHomeData = cache(async (): Promise<HomeData> => {
   const today = easternDay(new Date().toISOString());
-  const [liveLists, tennisRows, fixtures, news, facts] = await Promise.all([readLiveLists(), readTennisDay(today), readFixtures(), readNews(), readSeasonFacts()]);
+  const [liveLists, tennisRows, fixtures, news, facts, snapshots] = await Promise.all([
+    readLiveLists(),
+    readTennisDay(today),
+    readFixtures(),
+    readNews(),
+    readSeasonFacts(),
+    readSnapshots(),
+  ]);
 
   // One ESPN pass for every league game that could be in play, whichever block shows it.
   const byId = new Map<string, GameRow>();
@@ -187,7 +214,7 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
     }
     const liveCount = games.filter((g) => g.status_state === "in").length;
     const rest = games.filter((g) => !shownGameIds.has(`${g.league}-${g.espn_id}`)).slice(0, 4);
-    sections.push({ league: s.league, games: rest, liveCount, windowCount: games.length });
+    sections.push({ league: s.league, games: rest, liveCount, windowCount: games.length, snapshot: snapshots[s.league] ?? null });
   }
   // Most active first: anything in play, then whoever plays soonest.
   const soonest = (s: HomeSection) => {
