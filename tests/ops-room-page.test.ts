@@ -36,4 +36,10 @@ test("issues and runs renderers exist and issue writes go through update, never 
 test("the Markdown stripper works on a parsed document, not on attribute regexes", () => {
   assert.match(html, /new DOMParser\(\)\.parseFromString\(/, "hostile Markdown is parsed before it is cleaned");
   assert.ok(!/\\son\[a-z-\]\+/.test(html), "no whitespace-anchored on* attribute regex survives");
+  // node has no DOM, so the lists are asserted as literals here and the behaviour
+  // is proven in the browser: base, link, meta and style="" must not survive.
+  assert.ok(html.includes('const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use"];'),
+    "base, link, meta and svg use are dropped with the script elements");
+  assert.ok(html.includes('const strip = ["style", "srcdoc", "formaction"];'),
+    "style, srcdoc and formaction attributes are removed");
 });

@@ -760,19 +760,24 @@ const OpsRoom = {
 
   // Run details are Markdown written by the agents, so the HTML marked returns
   // is untrusted. Parse it into an inert document, drop the elements and the
-  // attributes that can run code, and serialise what is left. Working on the
-  // parsed tree is what closes the holes an attribute regex leaves open, such
-  // as <img src=x/onerror=...> with no space before the handler.
+  // attributes that can run code, move the page or paint over it, and serialise
+  // what is left. Working on the parsed tree is what closes the holes an
+  // attribute regex leaves open, such as <img src=x/onerror=...> with no space
+  // before the handler.
   sanitize(html) {
     let doc = null;
     try { doc = new DOMParser().parseFromString(html, "text/html"); } catch (err) { doc = null; }
     if (!doc || !doc.body) return this.esc(html);
-    const drop = ["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "FORM"];
+    const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use"];
+    const strip = ["style", "srcdoc", "formaction"];
     for (const el of Array.from(doc.body.querySelectorAll("*"))) {
-      if (drop.indexOf(el.tagName) >= 0) { el.remove(); continue; }
+      const tag = String(el.localName || el.tagName).toLowerCase();
+      if (drop.indexOf(tag) >= 0) { el.remove(); continue; }
+      // A link that opens a new tab must not hand this page to the new one.
+      if (tag === "a" && el.hasAttribute("target")) el.setAttribute("rel", "noopener noreferrer");
       for (const attr of Array.from(el.attributes)) {
         const name = String(attr.name).toLowerCase();
-        if (name.slice(0, 2) === "on") { el.removeAttribute(attr.name); continue; }
+        if (name.slice(0, 2) === "on" || strip.indexOf(name) >= 0) { el.removeAttribute(attr.name); continue; }
         if (name !== "href" && name !== "src" && name !== "xlink:href") continue;
         // Browsers ignore whitespace and control characters inside a scheme, so
         // "jav\tascript:alert(1)" runs. Take them out before the prefix check.
