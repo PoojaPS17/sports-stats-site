@@ -26,3 +26,14 @@ test("every inline script parses", () => {
   assert.ok(scripts.length >= 1);
   for (const s of scripts) new vm.Script(s);
 });
+
+test("issues and runs renderers exist and issue writes go through update, never set", () => {
+  assert.ok(/renderIssues\s*\(/.test(html) && /renderRuns\s*\(/.test(html));
+  assert.ok(/doc\("issues\/" \+ [a-zA-Z]+\)\.update\(/.test(html), "issue status changes merge");
+  assert.ok(!/doc\("issues\/[^)]*\)\.set\(/.test(html), "the page never replaces an issue document");
+});
+
+test("the Markdown stripper works on a parsed document, not on attribute regexes", () => {
+  assert.match(html, /new DOMParser\(\)\.parseFromString\(/, "hostile Markdown is parsed before it is cleaned");
+  assert.ok(!/\\son\[a-z-\]\+/.test(html), "no whitespace-anchored on* attribute regex survives");
+});
