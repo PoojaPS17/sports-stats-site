@@ -42,7 +42,7 @@ export default function BeyondTheScorelineIndexPage() {
             <aside className="lg:col-span-2">
               <h2 className="display text-[22px]">Most recent</h2>
               <ol className="mt-2 divide-y divide-[var(--border)]">
-                {articles.slice(0, 5).map((a, i) => (
+                {rest.slice(0, 5).map((a, i) => (
                   <li key={a.slug} className="py-3">
                     <Link href={`/beyond-the-scoreline/${a.slug}`} className="flex items-baseline gap-3">
                       <span className="display w-7 shrink-0 text-[26px] text-[var(--sig-ink)]">{i + 1}</span>
