@@ -12,13 +12,16 @@ function formatPublished(iso: string): string {
 
 export function BeyondTheScorelineArticleLayout({ article }: { article: BeyondTheScorelineArticle }) {
   const art = articleArt(article);
+  const moreFromTheDesk = listArticles()
+    .filter((a) => a.slug !== article.slug)
+    .slice(0, 3);
   return (
     <div className="flex flex-col">
       <header className="band bleed -mt-6 py-9 sm:py-11">
         <div className="mx-auto max-w-4xl">
           <Breadcrumbs items={[{ label: "Beyond the Scoreline", href: "/beyond-the-scoreline" }, { label: article.title }]} tone="band" />
           <p className="eyebrow mt-5">Beyond the Scoreline · {art.sport}</p>
-          <h1 className="display mt-2 max-w-[18ch] text-[40px] sm:text-[56px] lg:text-[72px]">{article.title}</h1>
+          <h1 className="display mt-2 max-w-[18ch] text-[clamp(40px,5.6vw,72px)]">{article.title}</h1>
           <p className="mt-4 max-w-[58ch] text-[19px] leading-[1.45] text-[var(--mast-muted)]">{article.dek}</p>
           <div className="mt-6 flex flex-wrap items-center gap-3 text-[13px] text-[var(--mast-muted)]">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--sig)] text-[11px] font-extrabold text-[var(--sig-on)]" aria-hidden>
@@ -52,22 +55,23 @@ export function BeyondTheScorelineArticleLayout({ article }: { article: BeyondTh
               </li>
             ))}
           </ul>
-          <h2 className="eyebrow mt-6 text-[var(--text-faint)]">More from the desk</h2>
-          <ul className="mt-2 divide-y divide-[var(--border)]">
-            {listArticles()
-              .filter((a) => a.slug !== article.slug)
-              .slice(0, 3)
-              .map((a) => (
-                <li key={a.slug} className="py-2.5">
-                  <Link href={`/beyond-the-scoreline/${a.slug}`} className="block font-bold hover:text-[var(--sig-ink)]">
-                    {a.title}
-                  </Link>
-                  <p className="text-xs text-[var(--text-faint)]">
-                    {articleArt(a).sport} · {a.readingMinutes} min
-                  </p>
-                </li>
-              ))}
-          </ul>
+          {moreFromTheDesk.length > 0 && (
+            <>
+              <h2 className="eyebrow mt-6 text-[var(--text-faint)]">More from the desk</h2>
+              <ul className="mt-2 divide-y divide-[var(--border)]">
+                {moreFromTheDesk.map((a) => (
+                  <li key={a.slug} className="py-2.5">
+                    <Link href={`/beyond-the-scoreline/${a.slug}`} className="block font-bold hover:text-[var(--sig-ink)]">
+                      {a.title}
+                    </Link>
+                    <p className="text-xs text-[var(--text-faint)]">
+                      {articleArt(a).sport} · {a.readingMinutes} min
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </aside>
       </div>
     </div>

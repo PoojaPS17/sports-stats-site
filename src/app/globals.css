@@ -316,9 +316,14 @@ table {
   padding-inline: calc(50vw - 50%);
 }
 
-/* Long-form article body. */
+/* Long-form article body. Paragraphs space themselves; charts, pull-stats and any other
+   block an article embeds get room above and below so they never sit flush on the prose. */
 .prose-bts > p {
   margin: 0 0 1.25rem;
+}
+
+.prose-bts > :not(p) {
+  margin-block: 1.75rem;
 }
 
 .prose-bts > p:first-of-type::first-letter {
