@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { blogPostingSchema, breadcrumbSchema, cricketSeriesMatchSchema, gameSchema, organizationSchema, teamSchema, tennisPlayerSchema } from "../src/lib/structuredData";
+import { athleteHeight, athleteSchema, athleteWeight, blogPostingSchema, breadcrumbSchema, cricketSeriesMatchSchema, gameSchema, organizationSchema, teamSchema, tennisPlayerSchema } from "../src/lib/structuredData";
 import type { GameRow } from "../src/lib/queries";
 import { SITE_URL } from "../src/lib/site";
 
@@ -176,9 +176,42 @@ test("an article's publisher is a nested node, not a second document with its ow
 });
 
 test("an article carries the image it already shares", () => {
-  // Articles are typeset, not photographed: their art is a palette and a numeral drawn in CSS, so
-  // there is no per-article picture to point at. This is the card the page's own og:image serves.
+  // Articles are typeset, not photographed, but the art is still the article's own: its key number
+  // on the sport-coloured panel, drawn by the opengraph-image route beside the page. Every article
+  // used to point here at the site's generic card, so five pieces shared one picture.
   const schema = blogPostingSchema({ slug: "s", title: "T", dek: "D", publishedAt: "2026-09-25" });
-  assert.equal(schema.image, `${SITE_URL}/opengraph-image`);
+  assert.equal(schema.image, `${SITE_URL}/beyond-the-scoreline/s/opengraph-image`);
   assert.equal("dateModified" in schema, false, "nothing records when an article was last edited");
+});
+
+// ESPN gives a roster row its height and weight as display text, and the schema passed that text
+// straight out: `"height": "6' 9\""` is a string where schema.org wants a Distance, so a reader
+// gets a caption rather than a measurement. The two shapes below are the only ones the feed
+// produces - checked against the live NBA, NFL and Premier League rosters, which are all imperial.
+test("a player's height and weight are measurements, not captions", () => {
+  assert.deepEqual(athleteHeight(`6' 9"`), { "@type": "QuantitativeValue", value: 81, unitCode: "INH" });
+  assert.deepEqual(athleteHeight(`5' 10"`), { "@type": "QuantitativeValue", value: 70, unitCode: "INH" });
+  assert.deepEqual(athleteHeight(`6' 0"`), { "@type": "QuantitativeValue", value: 72, unitCode: "INH" }, "a round number of feet is still inches");
+  assert.deepEqual(athleteWeight("250 lbs"), { "@type": "QuantitativeValue", value: 250, unitCode: "LBR" });
+  assert.deepEqual(athleteWeight("159 lbs"), { "@type": "QuantitativeValue", value: 159, unitCode: "LBR" });
+});
+
+test("a measurement in a shape the feed has never sent keeps its text rather than vanishing", () => {
+  // Worse than a QuantitativeValue, no worse than what shipped before: the page shows the figure
+  // either way, and dropping it would lose a fact to gain tidiness.
+  for (const odd of ["188 cm", "6ft 9in", "", "unknown"]) assert.equal(athleteHeight(odd), odd);
+  for (const odd of ["85 kg", "250", "n/a"]) assert.equal(athleteWeight(odd), odd);
+});
+
+test("the Person block carries the measurements and omits what the roster has no figure for", () => {
+  const player = { name: "A Player", slug: "a-player", headshot_url: null, team_name: "Los Angeles Lakers", team_slug: "los-angeles-lakers" };
+  const full = athleteSchema("nba", { ...player, height: `6' 9"`, weight: "250 lbs" });
+  assert.equal(full["@type"], "Person");
+  assert.deepEqual(full.height, { "@type": "QuantitativeValue", value: 81, unitCode: "INH" });
+  assert.deepEqual(full.weight, { "@type": "QuantitativeValue", value: 250, unitCode: "LBR" });
+
+  // Cricket rosters carry no heights or weights at all, so the keys stay off rather than going out empty.
+  const bare = athleteSchema("ipl", { ...player, height: null, weight: null });
+  assert.equal("height" in bare, false);
+  assert.equal("weight" in bare, false);
 });

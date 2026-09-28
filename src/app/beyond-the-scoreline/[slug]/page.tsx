@@ -18,7 +18,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!article) {
     return pageMeta("Beyond the Scoreline", "Original long-form sports writing from the SportsDB desk.", undefined, { noindex: true });
   }
-  return pageMeta(fitTitle(article.title), article.dek, `/beyond-the-scoreline/${article.slug}`);
+  // ownImage: the opengraph-image file beside this one draws the article's own card, and images
+  // named here would replace it (see pageMeta). The not-found branch above keeps the generic one.
+  return pageMeta(fitTitle(article.title), article.dek, `/beyond-the-scoreline/${article.slug}`, { ownImage: true });
 }
 
 export default async function BeyondTheScorelineArticlePage({ params }: { params: Promise<{ slug: string }> }) {

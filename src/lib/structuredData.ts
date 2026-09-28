@@ -88,6 +88,30 @@ export function teamSchema(league: League, team: { name: string; slug: string; l
   };
 }
 
+/**
+ * ESPN stores a player's height and weight as the display text a roster row shows ("6' 9\"",
+ * "250 lbs"), and the schema shipped that text straight through: `height: "6' 9\""` is a bare
+ * string where schema.org wants a Distance or a QuantitativeValue, so nothing reading the markup
+ * can get the number out of it. These turn the two shapes the feed actually produces into
+ * UN/CEFACT-coded values (INH inch, LBR pound). Anything else keeps its text: a fact the page
+ * already shows is better said imprecisely than dropped.
+ */
+function quantitativeValue(value: number, unitCode: string) {
+  return { "@type": "QuantitativeValue", value, unitCode };
+}
+
+/** `6' 9"` -> 81 inches. */
+export function athleteHeight(text: string): { "@type": string; value: number; unitCode: string } | string {
+  const m = /^(\d+)'\s*(\d+)"$/.exec(text.trim());
+  return m ? quantitativeValue(Number(m[1]) * 12 + Number(m[2]), "INH") : text;
+}
+
+/** `250 lbs` -> 250 pounds. */
+export function athleteWeight(text: string): { "@type": string; value: number; unitCode: string } | string {
+  const m = /^(\d+)\s*lbs?$/i.exec(text.trim());
+  return m ? quantitativeValue(Number(m[1]), "LBR") : text;
+}
+
 export function athleteSchema(
   league: League,
   player: { name: string; slug: string; headshot_url: string | null; team_name: string | null; team_slug: string | null; height?: string | null; weight?: string | null },
@@ -100,8 +124,8 @@ export function athleteSchema(
     url: absoluteUrl(`/${league}/players/${player.slug}`),
     ...(options.description ? { description: options.description } : {}),
     ...(options.position ? { jobTitle: options.position } : {}),
-    ...(player.height ? { height: player.height } : {}),
-    ...(player.weight ? { weight: player.weight } : {}),
+    ...(player.height ? { height: athleteHeight(player.height) } : {}),
+    ...(player.weight ? { weight: athleteWeight(player.weight) } : {}),
     ...(player.headshot_url ? { image: player.headshot_url } : {}),
     ...(player.team_name
       ? { memberOf: { "@type": "SportsTeam", name: player.team_name, ...(player.team_slug ? { url: absoluteUrl(`/${league}/teams/${player.team_slug}`) } : {}) } }
@@ -131,9 +155,10 @@ export function blogPostingSchema(article: { slug: string; title: string; dek: s
     datePublished: article.publishedAt,
     url,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    // The site's own share card. An article's art is a palette and a numeral drawn in CSS, not a
-    // photograph, so there is no per-article picture; this is the image its og:image already serves.
-    image: absoluteUrl("/opengraph-image"),
+    // The article's own share card, the same 1200x630 its og:image serves: its key number on the
+    // sport-coloured panel, beside the headline. There is still no photograph — the art is drawn,
+    // not shot — but it is this article's art and not the site's generic one.
+    image: absoluteUrl(`/beyond-the-scoreline/${article.slug}/opengraph-image`),
     // No dateModified: nothing records when an article was last edited, and datePublished would
     // be a lie dressed as an update.
     author: { "@type": "Organization", name: "Beyond the Scoreline Desk", url: absoluteUrl("/beyond-the-scoreline") },

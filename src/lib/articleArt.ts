@@ -13,6 +13,37 @@ const SPORT_LABEL: Record<ArtPalette, string> = {
   neutral: "Beyond the Scoreline",
 };
 
+/**
+ * The same panel backgrounds as the `.art-*` rules in globals.css, as plain CSS a share-card
+ * renderer can draw: satori resolves neither custom properties nor gradient stops past 100%, so
+ * `neutral` carries the literal masthead tokens and the stops are clamped. article-art.test.ts
+ * holds this map and the stylesheet to the same colours, so a repaint cannot change one alone.
+ */
+export const ART_GRADIENT: Record<ArtPalette, string> = {
+  football: "linear-gradient(120deg, #6cabdd, #1c2c5b 90%)",
+  cricket: "linear-gradient(120deg, #1d9a6c, #0b3d2e 90%)",
+  f1: "linear-gradient(120deg, #101010, #2a2a2a 60%, #e10600 100%)",
+  "asian-games": "linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 100%)",
+  nfl: "linear-gradient(120deg, #013369, #d50a0a 100%)",
+  nba: "linear-gradient(120deg, #c9082a, #17408b 100%)",
+  tennis: "linear-gradient(120deg, #c8f135, #1f6f3a 100%)",
+  neutral: "linear-gradient(120deg, #121c33, #0b1324 90%)",
+};
+
+/**
+ * How large a headline is set on the share card. Satori neither shrinks text to fit nor scrolls it
+ * away, so a long one has to be asked for in advance: the steps hold today's five articles (40-58
+ * characters) at three lines or fewer, and the bottom step is headroom for whatever the daily draft
+ * routine writes next, since nothing caps an article's title. Here rather than in the route module,
+ * so it can be read by a test without adding an export Next does not expect on an image route.
+ */
+export function shareTitleSize(title: string): number {
+  if (title.length > 104) return 36;
+  if (title.length > 78) return 44;
+  if (title.length > 54) return 52;
+  return 62;
+}
+
 // First match wins; tags are the article's own, lower-case, hyphenated.
 const TAG_PALETTE: [RegExp, ArtPalette][] = [
   [/^(asian-games|kabaddi|hockey|shooting|athletics|medal)/, "asian-games"],
