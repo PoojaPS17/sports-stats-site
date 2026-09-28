@@ -72,7 +72,29 @@ test("a cricket result shows the margin, not a scoreline, and the side that batt
   });
   assert.equal(chip.status, "won by 8 runs");
   assert.equal(chip.sides.find((s) => s.name === "IND")?.won, true);
-  assert.equal(chip.sides.find((s) => s.name === "IND")?.score, "282/6 (50 ov)");
+  assert.equal(chip.sides.find((s) => s.name === "IND")?.score, "282/6");
+  assert.equal(chip.sides.find((s) => s.name === "WI")?.score, "274");
+});
+
+test("a cricket chase drops the overs and target so the chip stays the width of a scoreline", () => {
+  const chip = tickerChip({
+    ...base,
+    league: "t20i",
+    home_name: "Cayman Islands",
+    home_abbr: "CAY",
+    away_name: "Bermuda",
+    away_abbr: "BER",
+    home_score: null,
+    away_score: null,
+    home_score_display: "59 (15 ov, target 102)",
+    away_score_display: "101/9 (15/15 ov)",
+    home_winner: false,
+    away_winner: true,
+    status_summary: "Bermuda won by 42 runs",
+  });
+  assert.equal(chip.status, "won by 42 runs");
+  assert.equal(chip.sides.find((s) => s.name === "BER")?.score, "101/9");
+  assert.equal(chip.sides.find((s) => s.name === "CAY")?.score, "59");
 });
 
 test("a side without an abbreviation falls back to its display name", () => {
