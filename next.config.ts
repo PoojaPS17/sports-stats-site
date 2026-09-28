@@ -1,6 +1,21 @@
 import type { NextConfig } from "next";
+import { execSync } from "node:child_process";
+
+// The Ops Room compares the commit production is serving with main on GitHub, so the build stamps
+// itself. A checkout without git (a tarball build) reports "unknown" rather than failing the build.
+function buildCommit(): string {
+  try {
+    return execSync("git rev-parse --short=12 HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BUILD_COMMIT: buildCommit(),
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
   // A hard five-minute cap on the age of anything a visitor is served. `revalidate` alone is only
   // a refresh trigger: past it Next hands the first visitor the old copy and refreshes behind them,
   // and with the default expire (one year) that copy can be any age at all — measured at 150s old

@@ -1,0 +1,2688 @@
+<title>Ops Room</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #f3f4f8; --surface: #ffffff; --surface-muted: #eceef4; --border: #dde1ea; --border-strong: #c3cad8;
+  --text: #0b1324; --text-muted: #5a6478; --text-faint: #8b95a8;
+  --sig: #c6f135; --sig-ink: #4d7c0f; --sig-soft: #eef9c9; --sig-on: #0b1324;
+  --mast: #0b1324; --mast-2: #121c33; --mast-text: #eef1f7; --mast-muted: #9aa5bd; --mast-line: rgba(255,255,255,.08);
+  --ok: #15803d; --warn: #d97706; --fail: #b91c1c; --live: #ff3b5c;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif; --body: "Barlow", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0b1324; --surface: #121c33; --surface-muted: #182342; --border: #24304f; --border-strong: #34426a; --text: #eef1f7; --text-muted: #9aa5bd; --text-faint: #6f7b96; --sig-ink: #c6f135; --sig-soft: #1d2a12; } }
+:root[data-theme="dark"] { --bg: #0b1324; --surface: #121c33; --surface-muted: #182342; --border: #24304f; --border-strong: #34426a; --text: #eef1f7; --text-muted: #9aa5bd; --text-faint: #6f7b96; --sig-ink: #c6f135; --sig-soft: #1d2a12; }
+body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--body); margin: 0; padding-block: 0 32px; padding-inline: 16px; }
+
+/* Tokens added on top of the site set: readable ink for the state colours in both themes. */
+:root { --ok-ink: #15803d; --warn-ink: #a35709; --fail-ink: #b91c1c; --radius: 10px; --card-shadow: 0 1px 2px rgba(11,19,36,.06); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ok-ink: #5fd88a; --warn-ink: #f2b43c; --fail-ink: #ff8d8d; --card-shadow: 0 1px 2px rgba(0,0,0,.45); } }
+:root[data-theme="dark"] { --ok-ink: #5fd88a; --warn-ink: #f2b43c; --fail-ink: #ff8d8d; --card-shadow: 0 1px 2px rgba(0,0,0,.45); }
+
+*, *::before, *::after { box-sizing: border-box; }
+:focus-visible { outline: 2px solid var(--sig-ink); outline-offset: 2px; }
+.mast :focus-visible { outline-color: var(--sig); }
+
+.mast { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; margin-inline: -16px; padding-inline: 16px;
+  background: var(--mast); background-image: linear-gradient(180deg, var(--mast-2), var(--mast));
+  color: var(--mast-text); border-bottom: 2px solid var(--sig); }
+.mast-in { max-width: 1080px; margin: 0 auto; display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; padding: 10px 0 6px; }
+.wordmark { font-family: var(--display); font-weight: 800; font-size: 27px; line-height: 1; letter-spacing: .05em; text-transform: uppercase; }
+.wordmark::after { content: ""; display: inline-block; width: 9px; height: 9px; background: var(--sig); margin-left: 8px; vertical-align: 2px; }
+.site { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--mast-muted); }
+.mast-status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mast .dot-ok { background: var(--sig); }
+.mast .dot-fail { background: var(--live); }
+.mast .dot-none { background: var(--mast-muted); }
+
+.tabs-scroll { max-width: 1080px; margin: 0 auto; overflow-x: auto; scrollbar-width: none; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tabs { display: flex; gap: 2px; min-width: max-content; }
+.tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--mast-muted);
+  font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  padding: 9px 12px 7px; cursor: pointer; white-space: nowrap; }
+.tab:hover { color: var(--mast-text); }
+.tab[aria-selected="true"] { color: var(--mast-text); border-bottom-color: var(--sig); }
+@media (prefers-reduced-motion: no-preference) { .tab { transition: color .15s ease, border-color .15s ease; } .chev { transition: background .15s ease, border-color .15s ease; } }
+
+main { max-width: 1080px; margin: 0 auto; }
+[role="tabpanel"] { padding-top: 16px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 13px 14px; margin: 0 0 14px; }
+.card-rows { padding-bottom: 0; }
+.card.alert { border-color: var(--fail); border-left: 4px solid var(--fail); }
+.sect { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 14px;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); margin: 0; }
+.sect::before { content: ""; width: 9px; height: 15px; background: var(--sig); flex: none; }
+.sect .sect-note { margin-left: auto; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.empty { color: var(--text-muted); margin: 8px 0 0; }
+
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint); display: inline-block; flex: none; }
+.dot-ok { background: var(--ok-ink); }
+.dot-warn { background: var(--warn-ink); }
+.dot-fail { background: var(--fail-ink); }
+.dot-none { background: var(--border-strong); }
+.dot-lg { width: 13px; height: 13px; }
+
+.banner { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; margin-top: 8px; }
+.banner-state { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; letter-spacing: .02em; }
+.is-ok { color: var(--ok-ink); }
+.is-fail { color: var(--fail-ink); }
+.banner-meta { color: var(--text-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--surface-muted);
+  border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; color: var(--text-muted); }
+.banner-time { margin-left: auto; color: var(--text-faint); font-size: 12px; }
+.pill { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em; text-transform: uppercase;
+  padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
+.pill-warn { color: var(--warn-ink); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 8px; margin-top: 10px; }
+.tile { background: var(--surface-muted); border-radius: 0 8px 8px 0; border-left: 4px solid var(--border-strong); padding: 8px 10px; }
+.tile-n { display: block; font-family: var(--display); font-weight: 800; font-size: 27px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tile-l { display: block; margin-top: 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.tile-critical { border-left-color: var(--fail); } .tile-critical .tile-n { color: var(--fail-ink); }
+.tile-high { border-left-color: var(--warn); } .tile-high .tile-n { color: var(--warn-ink); }
+.tile-medium { border-left-color: var(--sig); }
+.tile-low { border-left-color: var(--border-strong); } .tile-low .tile-n { color: var(--text-muted); }
+.tile.is-zero .tile-n { color: var(--text-faint); }
+
+.crew-row { display: grid; align-items: center; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--border);
+  grid-template-columns: 10px minmax(0, 1fr) auto 28px; grid-template-areas: "dot who when chev" "pad line line line"; }
+.crew-row .dot { grid-area: dot; }
+.crew-who { grid-area: who; min-width: 0; }
+.crew-line { grid-area: line; min-width: 0; color: var(--text-muted); font-size: 14px; overflow-wrap: anywhere; }
+.crew-when { grid-area: when; color: var(--text-faint); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chev { grid-area: chev; appearance: none; background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-muted); width: 28px; height: 28px; line-height: 1; font-size: 17px; cursor: pointer; }
+.chev:hover { background: var(--surface-muted); border-color: var(--border-strong); color: var(--text); }
+.crew-name { font-weight: 600; }
+.crew-role { color: var(--text-muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; font-family: var(--display); }
+@media (min-width: 720px) {
+  .crew-row { grid-template-columns: 10px minmax(150px, 20%) minmax(0, 1fr) auto 28px; grid-template-areas: "dot who line when chev"; }
+}
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 14px; margin-top: 10px; }
+.stat-l { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.stat-v { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat-sub { font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.rule { border: 0; border-top: 1px solid var(--border); margin: 12px 0 0; }
+.md :is(h1, h2, h3) { font-family: var(--display); letter-spacing: .02em; }
+.md pre { overflow-x: auto; background: var(--surface-muted); padding: 10px; border-radius: 8px; }
+
+/* Issues tab */
+.sev-head { margin: 18px 0 8px; }
+.sev-head:first-child { margin-top: 0; }
+.sev-head .sect-note { letter-spacing: .04em; }
+.sev-head.is-critical::before, .sev-head.is-high::before { background: var(--fail); }
+.sev-head.is-medium::before { background: var(--warn); }
+.sev-head.is-low::before { background: var(--border-strong); }
+.issue { border-left: 4px solid var(--border-strong); }
+.issue.is-critical, .issue.is-high { border-left-color: var(--fail); }
+.issue.is-medium { border-left-color: var(--warn); }
+.issue.is-low { border-left-color: var(--border-strong); }
+.issue-head { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; }
+.issue-title { font-weight: 600; overflow-wrap: anywhere; }
+.issue-meta { display: flex; align-items: baseline; gap: 2px 8px; flex-wrap: wrap; margin-top: 3px;
+  color: var(--text-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.issue-agent { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-muted); }
+.issue-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+p.issue-text { margin: 9px 0 0; }
+.issue-fix { margin: 9px 0 0; }
+.issue-fix b { display: block; font-family: var(--display); font-weight: 800; font-size: 13px;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.issue-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
+.btn { appearance: none; background: var(--surface-muted); border: 1px solid var(--border-strong); border-radius: 7px;
+  color: var(--text); font: inherit; font-size: 14px; padding: 6px 12px; cursor: pointer; }
+.btn:hover:not(:disabled) { border-color: var(--sig-ink); color: var(--sig-ink); }
+.btn:disabled { opacity: .55; cursor: default; }
+.issue-notice { margin: 8px 0 0; color: var(--fail-ink); font-size: 13px; }
+.pill-fail { color: var(--fail-ink); }
+.pill-muted { color: var(--text-faint); }
+.fixed7-count { color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.fixed7 { margin-top: 18px; color: var(--text-muted); }
+.fixed7 > summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 15px;
+  letter-spacing: .06em; text-transform: uppercase; }
+.fixed-row { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; padding: 7px 0;
+  border-top: 1px solid var(--border); font-size: 14px; }
+.fixed-row:first-of-type { margin-top: 6px; }
+.fixed-title { color: var(--text); overflow-wrap: anywhere; }
+.fixed-agent, .fixed-when { color: var(--text-faint); font-size: 12px; }
+.fixed-when { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Runs tab */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+.chip { appearance: none; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px;
+  color: var(--text-muted); font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .06em;
+  text-transform: uppercase; padding: 5px 12px; cursor: pointer; }
+.chip:hover { color: var(--text); border-color: var(--text-faint); }
+.chip[aria-pressed="true"] { background: var(--sig-soft); border-color: var(--sig-ink); color: var(--sig-ink); }
+.run { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--card-shadow); padding: 10px 12px; margin: 0 0 10px; }
+.run > summary { cursor: pointer; }
+.run-sum { display: inline-flex; align-items: baseline; gap: 4px 9px; flex-wrap: wrap;
+  max-width: calc(100% - 22px); vertical-align: top; }
+.run-sum .dot { align-self: center; }
+.run-date { color: var(--text-faint); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.run-agent { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
+.run-headline { color: var(--text-muted); overflow-wrap: anywhere; }
+.run-body { margin-top: 9px; border-top: 1px solid var(--border); padding-top: 4px; }
+.run-issues { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.run-issues-label { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-muted); }
+.chip-issue { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 0;
+  text-transform: none; padding: 3px 10px; overflow-wrap: anywhere; }
+.md { overflow-wrap: anywhere; }
+.md :is(p, ul, ol, blockquote) { margin: 7px 0; }
+.md :is(h1, h2, h3, h4) { margin: 12px 0 6px; font-size: 16px; }
+.md :is(img, table) { max-width: 100%; }
+.md table { border-collapse: collapse; }
+.md :is(td, th) { border: 1px solid var(--border); padding: 3px 7px; text-align: left; }
+
+/* Crew tab */
+.crew-head { margin: 20px 0 9px; }
+.crew-head:first-child { margin-top: 0; }
+.crew-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 12px; margin: 0 0 4px; }
+.crew-card { margin: 0; }
+.crew-card.is-click { cursor: pointer; }
+.crew-card.is-click:hover { border-color: var(--sig-ink); }
+.crew-top { display: flex; align-items: center; gap: 11px; }
+.avatar { width: 36px; height: 48px; flex: none; image-rendering: pixelated; background: none; }
+.crew-card-name { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.1;
+  letter-spacing: .02em; overflow-wrap: anywhere; }
+.crew-card-role { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text-muted); }
+.crew-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 10px; margin: 11px 0 0; }
+.crew-facts dt { font-family: var(--display); font-weight: 800; font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-muted); padding-top: 3px; }
+.crew-facts dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.crew-last { display: flex; align-items: baseline; gap: 3px 7px; flex-wrap: wrap; }
+.crew-last .dot { align-self: center; }
+.crew-ago { color: var(--text-faint); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Rulebook tab */
+.rules { margin: 0; padding-left: 28px; }
+.rules > li::marker { font-family: var(--display); font-weight: 800; color: var(--sig-ink); }
+.rule-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rule-input { display: block; width: 100%; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--surface-muted); border: 1px solid var(--border-strong); border-radius: 7px;
+  padding: 8px 10px; resize: vertical; }
+.rule-label { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); margin: 9px 0 4px; }
+.rule-add { margin-top: 16px; }
+
+/* Clubhouse tab */
+.clubhouse { display: grid; gap: 12px; }
+.clubhouse-main { display: grid; gap: 12px; align-items: start; }
+.clubhouse-left { display: grid; gap: 10px; min-width: 0; }
+.clubhouse-stage { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--card-shadow); padding: 8px; display: flex; justify-content: center; }
+#clubhouse-canvas { image-rendering: pixelated; width: 100%; max-width: 480px; height: auto; display: block; cursor: pointer; }
+.clubhouse-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+.clubhouse-note { margin: 0; color: var(--text-faint); font-size: 12px; }
+.clubhouse-caption { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; min-height: 22px; }
+.clubhouse-caption .pill { flex: none; color: var(--sig-ink); }
+.clubhouse-at { flex: none; font-family: var(--display); font-weight: 800; font-size: 15px;
+  letter-spacing: .04em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.clubhouse-step { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.clubhouse-figures { display: flex; gap: 5px; flex-wrap: wrap; }
+.clubhouse-figures .chip { font-size: 13px; padding: 4px 10px; }
+.clubhouse-figures .chip[aria-pressed="true"] { background: var(--sig-soft); border-color: var(--sig-ink); color: var(--sig-ink); }
+.clubhouse-legend { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-faint); align-self: center; margin-right: 2px; }
+#clubhouse-card:empty { display: none; }
+#clubhouse-card .card { margin: 0; }
+@media (min-width: 720px) {
+  .clubhouse-main { grid-template-columns: minmax(0, 1fr) minmax(0, 290px); }
+}
+</style>
+
+<div class="mast" role="banner">
+  <div class="mast-in">
+    <span class="wordmark">Ops Room</span>
+    <span class="site">sports-db.live</span>
+    <span class="mast-status"><span class="dot dot-none" id="mast-dot"></span><span id="mast-text">Checking</span></span>
+  </div>
+  <div class="tabs-scroll">
+    <nav class="tabs" role="tablist" aria-label="Ops Room sections">
+      <button type="button" class="tab" role="tab" id="tab-today" aria-controls="panel-today" aria-selected="true">Today</button>
+      <button type="button" class="tab" role="tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" tabindex="-1">Issues</button>
+      <button type="button" class="tab" role="tab" id="tab-runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Runs</button>
+      <button type="button" class="tab" role="tab" id="tab-crew" aria-controls="panel-crew" aria-selected="false" tabindex="-1">Crew</button>
+      <button type="button" class="tab" role="tab" id="tab-rules" aria-controls="panel-rules" aria-selected="false" tabindex="-1">Rulebook</button>
+      <button type="button" class="tab" role="tab" id="tab-clubhouse" aria-controls="panel-clubhouse" aria-selected="false" tabindex="-1">Clubhouse</button>
+    </nav>
+  </div>
+</div>
+
+<main>
+  <section role="tabpanel" id="panel-today" aria-labelledby="tab-today" tabindex="0"></section>
+  <section role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" tabindex="0" hidden><p class="empty">Issues</p></section>
+  <section role="tabpanel" id="panel-runs" aria-labelledby="tab-runs" tabindex="0" hidden><p class="empty">Runs</p></section>
+  <section role="tabpanel" id="panel-crew" aria-labelledby="tab-crew" tabindex="0" hidden><p class="empty">Crew</p></section>
+  <section role="tabpanel" id="panel-rules" aria-labelledby="tab-rules" tabindex="0" hidden><p class="empty">Rulebook</p></section>
+  <section role="tabpanel" id="panel-clubhouse" aria-labelledby="tab-clubhouse" tabindex="0" hidden>
+    <div class="clubhouse">
+      <div class="clubhouse-main">
+        <div class="clubhouse-left">
+          <div class="clubhouse-stage">
+            <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
+          </div>
+          <div class="clubhouse-caption" id="clubhouse-caption"></div>
+          <div class="clubhouse-controls" role="group" aria-label="Clubhouse playback">
+            <button type="button" class="chip" id="clubhouse-pause">Pause</button>
+            <button type="button" class="chip" id="clubhouse-restart">Restart</button>
+            <button type="button" class="chip" id="clubhouse-day">Day</button>
+            <button type="button" class="chip" id="clubhouse-night">Night</button>
+          </div>
+          <div class="clubhouse-figures" id="clubhouse-figures" role="group" aria-label="Choose a figure">
+            <span class="clubhouse-legend">Who</span>
+            <button type="button" class="chip" data-figure="owner">Owner</button>
+            <button type="button" class="chip" data-figure="session">Main session</button>
+            <button type="button" class="chip" data-figure="umpire">Umpire</button>
+            <button type="button" class="chip" data-figure="editor">Editor</button>
+            <button type="button" class="chip" data-figure="physio">Physio</button>
+            <button type="button" class="chip" data-figure="kit-manager">Kit Manager</button>
+            <button type="button" class="chip" data-figure="steward">Steward</button>
+            <button type="button" class="chip" data-figure="analyst">Analyst</button>
+            <button type="button" class="chip" data-figure="scout">Scout</button>
+            <button type="button" class="chip" data-figure="press-officer">Press Officer</button>
+            <button type="button" class="chip" data-figure="scorer">Scorer</button>
+          </div>
+        </div>
+        <div id="clubhouse-card"></div>
+      </div>
+      <p class="clubhouse-note">Characters are drawn in code for this private page. No official art is used. Pick a figure on the scene or from the list to read their card.</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+if (!window.claude) window.claude = { use: async () => null };
+
+const GROUPS = [["dugout", "Dugout"], ["officials", "Match officials"], ["backroom", "Backroom staff"], ["front-office", "Front office"]];
+
+// Twice the 8 KB the protocol asks an agent for. Past this a run's details are
+// cut, so one runaway run cannot freeze the Runs tab.
+const DETAILS_LIMIT = 16000;
+
+// The dugout is the two of us. Neither has a routine, so neither is a crew
+// document: they are written here and never read from the database.
+const DUGOUT = [
+  {
+    id: "owner", name: "Owner", role: "says deploy",
+    job: "Asks for the work, reads Today each morning, acknowledges what needs it, and is the only one who can say deploy.",
+    never: "Deploys between 04:30 and 07:30 IST, or without purging the edge cache afterwards.",
+    when: "Every morning.",
+  },
+  {
+    id: "main-session", name: "Main session", role: "the chat",
+    job: "Does the work the owner asks for: fixes, features, the deploy checklist.",
+    never: "Merges or deploys without the owner's word.",
+    when: "When the owner opens a chat.",
+  },
+];
+
+// The Crew tab's face. The sprite sheet lives in the Clubhouse block below, so
+// this asks for it at draw time rather than at parse time.
+function drawAvatar(canvas, id) {
+  const club = window.Clubhouse;
+  if (club && typeof club.drawAvatar === "function") club.drawAvatar(canvas, id);
+}
+
+const OpsRoom = {
+  state: { crew: {}, issues: {}, runs: {}, status: null, daily: {}, rules: {}, dbReady: null },
+  db: null,
+  canWrite: true,
+  active: "today",
+  filters: { runsAgent: null },
+  tabs: [],
+
+  async init() {
+    this.bindTabs();
+    this.render();
+    let db = null;
+    try { db = await claude.use("db"); } catch (err) { db = null; }
+    this.db = db;
+    this.state.dbReady = db !== null;
+    let user = null;
+    try { user = await claude.use("user"); } catch (err) { user = null; }
+    // can() needs no capability declaration, and it answers null when the page
+    // is opened as a plain file, which is read as "this viewer may write".
+    this.canWrite = user && typeof user.can === "function" ? (user.can("data.write") ?? true) : true;
+    if (db) this.subscribe();
+    this.render();
+  },
+
+  subscribe() {
+    const db = this.db;
+    const into = (name) => (snap) => {
+      const next = {};
+      for (const d of snap.docs) next[d.id] = { id: d.id, ...d.data() };
+      this.state[name] = next;
+      this.render();
+    };
+    db.collection("crew").onSnapshot(into("crew"), (e) => this.fail("crew", e));
+    db.collection("issues").where("status", "in", ["open", "acknowledged", "reopened", "fixed"]).limit(1000).onSnapshot(into("issues"), (e) => this.fail("issues", e));
+    db.collection("runs").orderBy("date", "desc").limit(300).onSnapshot(into("runs"), (e) => this.fail("runs", e));
+    db.collection("daily").orderBy("date", "desc").limit(30).onSnapshot(into("daily"), (e) => this.fail("daily", e));
+    db.collection("rules").onSnapshot(into("rules"), (e) => this.fail("rules", e));
+    db.doc("status/site").onSnapshot((snap) => { this.state.status = snap.exists ? snap.data() : null; this.render(); }, (e) => this.fail("status", e));
+  },
+
+  fail(name, e) { console.warn("subscription " + name + " ended: " + (e && e.code)); },
+
+  bindTabs() {
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    this.tabs = tabs;
+    let saved = null;
+    try { saved = localStorage.getItem("opsroom.tab"); } catch (err) { saved = null; }
+    if (saved && tabs.some((t) => t.id === "tab-" + saved)) this.active = saved;
+    tabs.forEach((tab, i) => {
+      tab.addEventListener("click", () => this.setActive(this.nameOf(tab)));
+      tab.addEventListener("keydown", (ev) => {
+        let n = -1;
+        if (ev.key === "ArrowRight") n = (i + 1) % tabs.length;
+        else if (ev.key === "ArrowLeft") n = (i - 1 + tabs.length) % tabs.length;
+        else if (ev.key === "Home") n = 0;
+        else if (ev.key === "End") n = tabs.length - 1;
+        if (n < 0) return;
+        ev.preventDefault();
+        tabs[n].focus();
+        this.setActive(this.nameOf(tabs[n]));
+      });
+    });
+    this.setActive(this.active, true);
+  },
+
+  nameOf(tab) { return tab.id.slice(4); },
+
+  setActive(name, quiet) {
+    this.active = name;
+    try { localStorage.setItem("opsroom.tab", name); } catch (err) { /* storage can be blocked */ }
+    for (const tab of this.tabs) {
+      const on = this.nameOf(tab) === name;
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+      tab.tabIndex = on ? 0 : -1;
+      const panel = document.getElementById("panel-" + this.nameOf(tab));
+      if (panel) panel.hidden = !on;
+    }
+    if (!quiet) this.render();
+  },
+
+  render() {
+    this.renderMasthead();
+    const root = document.getElementById("panel-" + this.active);
+    if (!root) return;
+    const fn = {
+      today: "renderToday", issues: "renderIssues", runs: "renderRuns",
+      crew: "renderCrew", rules: "renderRules", clubhouse: "renderClubhouse",
+    }[this.active];
+    if (fn && typeof this[fn] === "function") this[fn](root);
+  },
+
+  renderMasthead() {
+    const dot = document.getElementById("mast-dot");
+    const text = document.getElementById("mast-text");
+    if (!dot || !text) return;
+    const s = this.state.status;
+    let tone = "none";
+    let label = "No check yet";
+    if (s) {
+      tone = s.up ? "ok" : "fail";
+      label = s.up ? "Up" : "Down";
+      if (this.has(s.latencyMs)) label += " " + this.num(Math.round(Number(s.latencyMs))) + " ms";
+    } else if (this.state.dbReady === false) {
+      label = "No database";
+    }
+    dot.className = "dot dot-" + tone;
+    text.textContent = label;
+  },
+
+  renderToday(root) {
+    const kids = [this.todayStatus(), this.todayCounts(), this.todayCrew(), this.todayNumbers()];
+    if (this.state.dbReady === false) {
+      kids.push(this.h("section", { class: "card alert" },
+        this.h("p", { class: "empty", text: "This view cannot reach the Ops Room database. Open the page signed in as the owner." })));
+    }
+    root.replaceChildren(...kids);
+  },
+
+  todayStatus() {
+    const h = this.h;
+    const s = this.state.status;
+    const card = h("section", { class: "card" }, h("h2", { class: "sect" }, "Site"));
+    if (!s) {
+      card.append(h("p", { class: "empty", text: "No check yet" }));
+      return card;
+    }
+    const up = !!s.up;
+    card.append(h("div", { class: "banner" },
+      h("span", { class: "dot dot-lg dot-" + (up ? "ok" : "fail") }),
+      h("span", { class: "banner-state " + (up ? "is-ok" : "is-fail"), text: up ? "Up" : "Down" }),
+      this.has(s.latencyMs) ? h("span", { class: "banner-meta", text: this.num(Math.round(Number(s.latencyMs))) + " ms" }) : null,
+      this.has(s.productionCommit) ? h("span", { class: "code", title: "production commit", text: String(s.productionCommit).slice(0, 7) }) : null,
+      s.deployPending ? h("span", { class: "pill pill-warn", text: "deploy pending" }) : null,
+      s.edgeStale ? h("span", { class: "pill pill-warn", text: "edge stale" }) : null,
+      this.ago(s.checkedAt) ? h("span", { class: "banner-time", text: "checked " + this.ago(s.checkedAt) }) : null,
+    ));
+    return card;
+  },
+
+  todayCounts() {
+    const h = this.h;
+    const order = ["critical", "high", "medium", "low"];
+    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+    let total = 0;
+    for (const key of Object.keys(this.state.issues)) {
+      const it = this.state.issues[key];
+      if (it.status !== "open" && it.status !== "reopened") continue;
+      total += 1;
+      const sev = String(it.severity || "low").toLowerCase();
+      counts[order.indexOf(sev) < 0 ? "low" : sev] += 1;
+    }
+    const card = h("section", { class: "card" },
+      h("h2", { class: "sect" }, "Open issues", h("span", { class: "sect-note", text: this.num(total) + " open" })));
+    const tiles = h("div", { class: "tiles" });
+    for (const sev of order) {
+      tiles.append(h("div", { class: "tile tile-" + sev + (counts[sev] === 0 ? " is-zero" : "") },
+        h("span", { class: "tile-n", text: this.num(counts[sev]) }),
+        h("span", { class: "tile-l", text: sev })));
+    }
+    card.append(tiles);
+    return card;
+  },
+
+  todayCrew() {
+    const h = this.h;
+    const list = Object.keys(this.state.crew).map((k) => this.state.crew[k]);
+    list.sort((a, b) => {
+      const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
+      return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
+    });
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Crew", h("span", { class: "sect-note", text: this.num(list.length) + " agents" })));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false ? "No crew list" : "Waiting for the crew list" }));
+      return card;
+    }
+    for (const c of list) {
+      const status = String(c.lastStatus || "none");
+      const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+      card.append(h("div", { class: "crew-row" },
+        h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
+        h("div", { class: "crew-who" },
+          h("span", { class: "crew-name", text: c.name || c.id }), " ",
+          h("span", { class: "crew-role", text: c.role || "" })),
+        h("div", { class: "crew-line", text: c.lastHeadline || "No run yet" }),
+        h("time", { class: "crew-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
+        h("button", {
+          type: "button", class: "chev", "aria-label": "Runs for " + (c.name || c.id),
+          onclick: () => { this.filters.runsAgent = c.id; this.setActive("runs"); },
+        }, "›")));
+    }
+    return card;
+  },
+
+  todayNumbers() {
+    const h = this.h;
+    const d = this.latestDaily();
+    const card = h("section", { class: "card" },
+      h("h2", { class: "sect" }, "Yesterday's numbers",
+        d ? h("span", { class: "sect-note", text: this.dayLabel(d.date || d.id) }) : null));
+    if (!d) {
+      card.append(h("p", { class: "empty", text: "No numbers yet" }));
+      return card;
+    }
+    const top = Array.isArray(d.topGames) && d.topGames.length ? d.topGames[0] : null;
+    const country = this.topShare(d.byCountry);
+    const mobile = this.mobileShare(d.byPlatform);
+    card.append(h("div", { class: "stats" },
+      this.stat("game views", this.has(d.gameViews) ? this.num(d.gameViews) : "not reported"),
+      this.stat("top game", top ? (top.name || top.id || "unknown") : "not reported", top && this.has(top.views) ? this.num(top.views) + " views" : null),
+      this.stat("top country", country ? country.key + " " + this.pct(country.share) : "not reported", country ? this.num(country.value) + " views" : null),
+      this.stat("mobile", mobile === null ? "not reported" : this.pct(mobile))));
+    card.append(h("hr", { class: "rule" }));
+    const gsc = ["gscClicks", "gscImpressions", "gscIndexed", "gscNotIndexed"];
+    if (!gsc.some((k) => this.has(d[k]))) {
+      card.append(h("p", { class: "empty", text: "no Search Console reading yet" }));
+      return card;
+    }
+    const labels = { gscClicks: "clicks", gscImpressions: "impressions", gscIndexed: "indexed", gscNotIndexed: "not indexed" };
+    const row = h("div", { class: "stats" });
+    for (const k of gsc) row.append(this.stat(labels[k], this.has(d[k]) ? this.num(d[k]) : "not reported"));
+    card.append(row);
+    return card;
+  },
+
+  stat(label, value, sub) {
+    const h = this.h;
+    return h("div", { class: "stat" },
+      h("div", { class: "stat-l", text: label }),
+      h("div", { class: "stat-v", text: value }),
+      sub ? h("div", { class: "stat-sub", text: sub }) : null);
+  },
+
+  latestDaily() {
+    let best = null;
+    for (const key of Object.keys(this.state.daily)) {
+      const d = this.state.daily[key];
+      const k = String(d.date || d.id || key);
+      if (!best || k > String(best.date || best.id)) best = d;
+    }
+    return best;
+  },
+
+  topShare(map) {
+    if (!map || typeof map !== "object") return null;
+    let total = 0;
+    let key = null;
+    let value = 0;
+    for (const k of Object.keys(map)) {
+      const n = Number(map[k]);
+      if (!Number.isFinite(n)) continue;
+      total += n;
+      if (n > value) { value = n; key = k; }
+    }
+    if (!key || total <= 0) return null;
+    return { key: key, value: value, share: value / total };
+  },
+
+  mobileShare(map) {
+    if (!map || typeof map !== "object") return null;
+    let total = 0;
+    for (const k of Object.keys(map)) {
+      const n = Number(map[k]);
+      if (Number.isFinite(n)) total += n;
+    }
+    if (total <= 0) return null;
+    const ios = Number(map.ios) || 0;
+    const android = Number(map.android) || 0;
+    return (ios + android) / total;
+  },
+
+  // ---- Issues tab ----
+
+  severityOf(issue) {
+    const sev = String((issue && issue.severity) || "low").toLowerCase();
+    return ["critical", "high", "medium", "low"].indexOf(sev) < 0 ? "low" : sev;
+  },
+
+  agentName(id) {
+    const c = this.state.crew[id];
+    const name = c && typeof c === "object" ? c.name || c.id : null;
+    return name ? String(name) : String(id || "unknown");
+  },
+
+  renderIssues(root) {
+    const h = this.h;
+    const order = ["critical", "high", "medium", "low"];
+    const live = ["open", "reopened", "acknowledged"];
+    const groups = { critical: [], high: [], medium: [], low: [] };
+    const fixed = [];
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    for (const key of Object.keys(this.state.issues)) {
+      const it = this.state.issues[key];
+      const status = String(it.status || "open");
+      if (live.indexOf(status) >= 0) {
+        groups[this.severityOf(it)].push(it);
+      } else if (status === "fixed") {
+        const t = Date.parse(it.statusChangedAt);
+        if (Number.isFinite(t) && t >= cutoff) fixed.push(it);
+      }
+    }
+    const newest = (a, b) => (Date.parse(b.lastSeen) || 0) - (Date.parse(a.lastSeen) || 0)
+      || String(a.title || "").localeCompare(String(b.title || ""));
+    const kids = [];
+    let open = 0;
+    for (const sev of order) {
+      const list = groups[sev];
+      if (!list.length) continue;
+      open += list.length;
+      list.sort(newest);
+      kids.push(h("h2", { class: "sect sev-head is-" + sev }, sev,
+        h("span", { class: "sect-note", text: this.num(list.length) })));
+      for (const it of list) kids.push(this.issueCard(it));
+    }
+    if (!open) kids.push(h("p", { class: "empty", text: "Nothing open. The crew reports each morning." }));
+    if (fixed.length) kids.push(this.fixedRecently(fixed));
+    root.replaceChildren(...kids);
+  },
+
+  issueCard(it) {
+    const h = this.h;
+    const key = String(it.key || it.id || "");
+    const status = String(it.status || "open");
+    const card = h("section", { class: "card issue is-" + this.severityOf(it), id: "issue-" + key, tabindex: "-1" },
+      h("div", { class: "issue-head" },
+        h("span", { class: "issue-title", text: it.title || key }),
+        status === "reopened" ? h("span", { class: "pill pill-fail", text: "reopened" }) : null,
+        status === "acknowledged" ? h("span", { class: "pill pill-warn", text: "acknowledged" }) : null));
+    const bits = [];
+    const first = this.dayLabel(it.firstSeen);
+    const last = this.ago(it.lastSeen);
+    const occ = Number(it.occurrences);
+    if (first) bits.push("first seen " + first);
+    if (last) bits.push("last seen " + last);
+    if (Number.isFinite(occ) && occ > 0) bits.push(this.num(occ) + "x");
+    card.append(h("div", { class: "issue-meta" },
+      h("span", { class: "issue-agent", text: this.agentName(it.agent) }),
+      bits.length ? h("span", { text: bits.join(", ") }) : null));
+    // detail and fix are plain text written by the agents: they are never HTML.
+    if (this.has(it.detail)) card.append(h("p", { class: "issue-text", text: it.detail }));
+    if (this.has(it.fix)) card.append(h("div", { class: "issue-fix" },
+      h("b", { text: "Fix" }), h("span", { class: "issue-text", text: it.fix })));
+    // Same test as the Rulebook: a read-only viewer is not offered buttons that
+    // can only ever answer "Could not save".
+    if (this.db && this.canWrite) {
+      const notice = h("p", { class: "issue-notice", hidden: true });
+      const actions = h("div", { class: "issue-actions" });
+      if (status !== "acknowledged") actions.append(this.issueButton(key, "acknowledged", "Acknowledge", notice));
+      actions.append(this.issueButton(key, "fixed", "Mark fixed", notice));
+      card.append(actions, notice);
+    }
+    return card;
+  },
+
+  issueButton(key, status, label, notice) {
+    return this.h("button", {
+      type: "button", class: "btn",
+      onclick: (ev) => {
+        const btn = ev.currentTarget;
+        btn.disabled = true;
+        notice.hidden = true;
+        notice.textContent = "";
+        Promise.resolve().then(() => this.setIssueStatus(key, status)).catch((err) => {
+          notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
+          notice.hidden = false;
+          btn.disabled = false;
+        });
+      },
+    }, label);
+  },
+
+  setIssueStatus(key, status) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("issues/" + key).update({
+      status: status,
+      statusChangedAt: new Date().toISOString(),
+      autoResolved: false,
+    });
+  },
+
+  fixedRecently(fixed) {
+    const h = this.h;
+    fixed.sort((a, b) => (Date.parse(b.statusChangedAt) || 0) - (Date.parse(a.statusChangedAt) || 0));
+    const det = h("details", { class: "fixed7" },
+      h("summary", {}, "Fixed in the last 7 days ", h("span", { class: "fixed7-count", text: this.num(fixed.length) })));
+    for (const it of fixed) {
+      det.append(h("div", { class: "fixed-row" },
+        h("span", { class: "fixed-title", text: it.title || it.key || it.id }),
+        it.autoResolved ? h("span", { class: "pill pill-muted", text: "auto" }) : null,
+        h("span", { class: "fixed-agent", text: this.agentName(it.agent) }),
+        h("span", { class: "fixed-when", text: this.ago(it.statusChangedAt) })));
+    }
+    return det;
+  },
+
+  // ---- Runs tab ----
+
+  renderRuns(root) {
+    const h = this.h;
+    const sel = this.filters.runsAgent;
+    const crew = Object.keys(this.state.crew).map((k) => this.state.crew[k]);
+    crew.sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
+    const chips = h("div", { class: "chips", role: "group", "aria-label": "Show runs for one agent" },
+      this.agentChip("All", null, !sel));
+    for (const c of crew) chips.append(this.agentChip(c.name || c.id, c.id, sel === c.id));
+    if (sel && !crew.some((c) => c.id === sel)) chips.append(this.agentChip(sel, sel, true));
+    let list = Object.keys(this.state.runs).map((k) => this.state.runs[k]);
+    if (sel) list = list.filter((r) => String(r.agent) === sel);
+    list.sort((a, b) => {
+      const d = String(b.date || "").localeCompare(String(a.date || ""));
+      return d !== 0 ? d : String(a.agent || "").localeCompare(String(b.agent || ""));
+    });
+    const seen = Object.create(null);
+    const kids = [chips];
+    for (const r of list) {
+      const agent = String(r.agent || "");
+      seen[agent] = (seen[agent] || 0) + 1;
+      if (seen[agent] > 14) continue;
+      kids.push(this.runCard(r));
+    }
+    if (kids.length === 1) {
+      kids.push(h("p", { class: "empty", text: sel ? "No runs for this agent yet." : "No runs yet." }));
+    }
+    root.replaceChildren(...kids);
+  },
+
+  agentChip(label, id, on) {
+    return this.h("button", {
+      type: "button", class: "chip", "aria-pressed": on ? "true" : "false",
+      onclick: () => { this.filters.runsAgent = id; this.render(); },
+    }, label);
+  },
+
+  runCard(r) {
+    const h = this.h;
+    const status = String(r.status || "");
+    const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+    const det = h("details", { class: "run" },
+      h("summary", {}, h("span", { class: "run-sum" },
+        h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no status" : tone }),
+        h("span", { class: "run-date", text: this.dayLabel(r.date) || String(r.date || "") }),
+        h("span", { class: "run-agent", text: this.agentName(r.agent) }),
+        h("span", { class: "run-headline", text: r.headline || "No headline" }))));
+    const body = h("div", { class: "run-body" });
+    if (this.has(r.details)) body.append(this.markdownBlock(r.details));
+    const keys = Array.isArray(r.issueKeys) ? r.issueKeys : [];
+    if (keys.length) {
+      const row = h("div", { class: "run-issues" }, h("span", { class: "run-issues-label", text: "Issues" }));
+      for (const k of keys) {
+        const key = String(k);
+        row.append(h("button", { type: "button", class: "chip chip-issue", onclick: () => this.showIssue(key) }, key));
+      }
+      body.append(row);
+    }
+    if (!body.childNodes.length) body.append(h("p", { class: "empty", text: "Nothing written for this run." }));
+    det.append(body);
+    return det;
+  },
+
+  // The one place a run's Markdown enters the page as elements. renderMarkdown
+  // has already parsed it and dropped the scripts, event handlers and script
+  // URLs; the cleaned nodes are imported as they are, never serialised back
+  // into markup. The protocol asks agents for at most 8 KB of details, so a
+  // block twice that size is a runaway run: it is cut rather than allowed to
+  // freeze the tab.
+  markdownBlock(md) {
+    const box = this.h("div", { class: "md" });
+    const text = String(md === null || md === undefined ? "" : md);
+    const cut = text.length > DETAILS_LIMIT;
+    const body = this.renderMarkdown(cut ? text.slice(0, DETAILS_LIMIT) : text);
+    if (body) box.replaceChildren(...Array.from(body.childNodes).map((n) => document.importNode(n, true)));
+    else box.append(this.h("p", { class: "issue-text", text: text }));
+    if (cut) box.append(this.h("p", { class: "empty", text: "details truncated" }));
+    return box;
+  },
+
+  showIssue(key) {
+    this.setActive("issues");
+    const card = document.getElementById("issue-" + key);
+    if (!card) return;
+    card.focus();
+    card.scrollIntoView({ block: "center" });
+  },
+
+  // ---- Crew tab ----
+
+  renderCrew(root) {
+    const h = this.h;
+    const byGroup = {};
+    for (const key of Object.keys(this.state.crew)) {
+      const c = this.state.crew[key];
+      // The dugout is not in the database, and a group nobody recognises would
+      // otherwise drop an agent off the page, so both land in the backroom.
+      const g = String(c.group || "");
+      const known = g === "officials" || g === "backroom" || g === "front-office";
+      const into = known ? g : "backroom";
+      (byGroup[into] = byGroup[into] || []).push(c);
+    }
+    const kids = [];
+    for (const pair of GROUPS) {
+      const key = pair[0];
+      const list = key === "dugout" ? DUGOUT.slice() : (byGroup[key] || []);
+      if (key !== "dugout") {
+        list.sort((a, b) => {
+          const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
+          return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
+        });
+      }
+      kids.push(h("h2", { class: "sect crew-head" }, pair[1],
+        h("span", { class: "sect-note", text: this.num(list.length) })));
+      if (!list.length) {
+        kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No crew list" : "Waiting for the crew list" }));
+        continue;
+      }
+      const grid = h("div", { class: "crew-grid" });
+      for (const c of list) grid.append(this.crewCard(c, key === "dugout"));
+      kids.push(grid);
+    }
+    root.replaceChildren(...kids);
+  },
+
+  crewCard(c, isStatic) {
+    const h = this.h;
+    const id = String(c.id || "");
+    const name = String(c.name || id);
+    const status = String(c.lastStatus || "none");
+    const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+    const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
+    try { drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
+    const facts = h("dl", { class: "crew-facts" });
+    facts.append(
+      h("dt", { text: "Job" }), h("dd", { text: this.has(c.job) ? c.job : "Not recorded" }),
+      h("dt", { text: "Never" }), h("dd", { text: this.has(c.never) ? c.never : "Not recorded" }),
+      h("dt", { text: "When" }), h("dd", { text: this.has(c.when) ? c.when : "Not recorded" }));
+    const last = h("dd", { class: "crew-last" });
+    if (isStatic || !this.has(c.lastHeadline)) {
+      last.append(h("span", { text: "not yet" }));
+    } else {
+      last.append(
+        h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
+        h("span", { text: c.lastHeadline }),
+        this.ago(c.lastRunAt) ? h("span", { class: "crew-ago", text: this.ago(c.lastRunAt) }) : null);
+    }
+    facts.append(h("dt", { text: "Last run" }), last);
+    const card = h("section", { class: "card crew-card" + (isStatic ? "" : " is-click") },
+      h("div", { class: "crew-top" }, canvas,
+        h("div", {},
+          h("div", { class: "crew-card-name", text: name }),
+          h("div", { class: "crew-card-role", text: c.role || "" }))),
+      facts);
+    if (isStatic) return card;
+    const open = () => { this.filters.runsAgent = id; this.setActive("runs"); };
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("aria-label", "Runs for " + name);
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
+      ev.preventDefault();
+      open();
+    });
+    return card;
+  },
+
+  // ---- Rulebook tab ----
+
+  renderRules(root) {
+    const h = this.h;
+    const list = Object.keys(this.state.rules).map((k) => this.state.rules[k]);
+    list.sort((a, b) => {
+      const d = (Number(a.order) || 0) - (Number(b.order) || 0);
+      return d !== 0 ? d : String(a.id || "").localeCompare(String(b.id || ""));
+    });
+    const kids = [h("h2", { class: "sect" }, "House rules",
+      h("span", { class: "sect-note", text: this.num(list.length) + " rules" }))];
+    if (!list.length) {
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No rulebook" : "No rules yet." }));
+    } else {
+      const ol = h("ol", { class: "rules" });
+      for (const r of list) ol.append(this.ruleRow(r));
+      kids.push(ol);
+    }
+    if (this.db && this.canWrite) kids.push(this.addRuleBox());
+    root.replaceChildren(...kids);
+  },
+
+  ruleRow(r) {
+    const h = this.h;
+    const id = String(r.id || "");
+    const li = h("li", { class: "card rule-row" });
+    const notice = h("p", { class: "issue-notice", hidden: true });
+    const say = (err) => {
+      notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
+      notice.hidden = false;
+    };
+    const clear = () => { notice.textContent = ""; notice.hidden = true; };
+    const writable = !!(this.db && this.canWrite);
+    const show = () => {
+      clear();
+      const kids = [h("p", { class: "rule-text", text: this.has(r.text) ? r.text : "(empty rule)" })];
+      if (writable) {
+        const edit = h("button", { type: "button", class: "btn", text: "Edit" });
+        const remove = h("button", { type: "button", class: "btn", text: "Remove" });
+        const cancel = h("button", { type: "button", class: "chip", text: "Cancel", hidden: true });
+        // A modal cannot be relied on here: inside a sandboxed artifact frame
+        // window.confirm answers false without ever asking, so the button would
+        // simply do nothing. It asks for itself instead, and forgets after eight
+        // seconds so a stray first click cannot be completed much later.
+        let armed = null;
+        const disarm = () => {
+          if (armed) { clearTimeout(armed); armed = null; }
+          remove.textContent = "Remove";
+          cancel.hidden = true;
+        };
+        edit.addEventListener("click", () => { disarm(); open(); });
+        cancel.addEventListener("click", () => disarm());
+        remove.addEventListener("click", () => {
+          if (!armed) {
+            clear();
+            remove.textContent = "Confirm remove";
+            cancel.hidden = false;
+            armed = setTimeout(disarm, 8000);
+            return;
+          }
+          disarm();
+          clear();
+          edit.disabled = true;
+          remove.disabled = true;
+          Promise.resolve().then(() => this.removeRule(id)).catch((err) => {
+            say(err);
+            edit.disabled = false;
+            remove.disabled = false;
+          });
+        });
+        kids.push(h("div", { class: "issue-actions" }, edit, remove, cancel));
+      }
+      kids.push(notice);
+      li.replaceChildren(...kids);
+    };
+    const open = () => {
+      clear();
+      const area = h("textarea", { class: "rule-input", rows: "4", "aria-label": "Rule text" });
+      area.value = String(r.text || "");
+      const save = h("button", { type: "button", class: "btn", text: "Save" });
+      const cancel = h("button", { type: "button", class: "btn", text: "Cancel" });
+      cancel.addEventListener("click", () => show());
+      save.addEventListener("click", () => {
+        const text = area.value.trim();
+        if (!text) { area.focus(); return; }
+        clear();
+        save.disabled = true;
+        cancel.disabled = true;
+        Promise.resolve().then(() => this.saveRule(id, text)).catch((err) => {
+          say(err);
+          save.disabled = false;
+          cancel.disabled = false;
+        });
+      });
+      li.replaceChildren(area, h("div", { class: "issue-actions" }, save, cancel), notice);
+      area.focus();
+    };
+    show();
+    return li;
+  },
+
+  addRuleBox() {
+    const h = this.h;
+    const notice = h("p", { class: "issue-notice", hidden: true });
+    const area = h("textarea", { class: "rule-input", rows: "3", id: "rule-new" });
+    const add = h("button", { type: "button", class: "btn", text: "Add rule" });
+    add.addEventListener("click", () => {
+      const text = area.value.trim();
+      if (!text) { area.focus(); return; }
+      notice.textContent = "";
+      notice.hidden = true;
+      add.disabled = true;
+      Promise.resolve().then(() => this.addRule(text)).then(() => {
+        area.value = "";
+        add.disabled = false;
+      }).catch((err) => {
+        notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        add.disabled = false;
+      });
+    });
+    return h("section", { class: "card rule-add" },
+      h("h2", { class: "sect" }, "Add a rule"),
+      h("label", { class: "rule-label", for: "rule-new", text: "The rule, in one sentence" }),
+      area,
+      h("div", { class: "issue-actions" }, add),
+      notice);
+  },
+
+  saveRule(id, text) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("rules/" + id).update({ text: text });
+  },
+
+  removeRule(id) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("rules/" + id).delete();
+  },
+
+  addRule(text) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    let max = 0;
+    for (const k of Object.keys(this.state.rules)) {
+      const n = Number(this.state.rules[k].order);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    return db.collection("rules").add({ text: text, order: max + 1, addedAt: this.today(), addedBy: "owner" });
+  },
+
+  // The viewer's own day, so a rule added this evening is not dated tomorrow.
+  today() {
+    const d = new Date();
+    const pad = (n) => (n < 10 ? "0" + n : String(n));
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  },
+
+  h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    const a = attrs || {};
+    for (const k of Object.keys(a)) {
+      const v = a[k];
+      if (v === null || v === undefined || v === false) continue;
+      if (k === "class") el.className = String(v);
+      else if (k === "text") el.textContent = String(v);
+      else if (k.slice(0, 2) === "on" && typeof v === "function") el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : String(v));
+    }
+    for (const kid of kids) {
+      if (kid === null || kid === undefined || kid === false) continue;
+      el.append(kid && kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  },
+
+  esc(s) {
+    return String(s === null || s === undefined ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  },
+
+  has(v) { return v !== null && v !== undefined && v !== "" && !(typeof v === "number" && !Number.isFinite(v)); },
+
+  num(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return "0";
+    return v.toLocaleString("en-US");
+  },
+
+  pct(x) {
+    const v = Number(x);
+    if (!Number.isFinite(v)) return "0%";
+    return Math.round(v * 100) + "%";
+  },
+
+  ago(iso) {
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return "";
+    const secs = Math.floor((Date.now() - t) / 1000);
+    if (secs < 60) return "just now";
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return mins + " min ago";
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + " h ago";
+    const days = Math.floor(hours / 24);
+    return days === 1 ? "1 day ago" : days + " days ago";
+  },
+
+  dayLabel(iso) {
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return "";
+    const d = new Date(t);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return d.getDate() + " " + months[d.getMonth()];
+  },
+
+  cronMinutes(cron) {
+    const parts = String(cron || "").trim().split(/\s+/);
+    if (parts.length < 2) return 24 * 60;
+    const field = (f) => {
+      const n = parseInt(String(f).replace(/^\*\//, ""), 10);
+      return Number.isFinite(n) ? n : 0;
+    };
+    return field(parts[1]) * 60 + field(parts[0]);
+  },
+
+  renderMarkdown(md) {
+    let out = "";
+    try {
+      out = window.marked && typeof window.marked.parse === "function" ? window.marked.parse(String(md || "")) : this.esc(md);
+    } catch (err) {
+      out = this.esc(md);
+    }
+    return this.sanitize(String(out));
+  },
+
+  // Run details are Markdown written by the agents, so the HTML marked returns
+  // is untrusted. Parse it into an inert document, drop the elements and the
+  // attributes that can run code, move the page or paint over it, unwrap
+  // anything Markdown never produces, and hand back that cleaned body. Nothing
+  // is serialised into a string on the way out: the nodes this walk inspected
+  // are the nodes the page shows, so there is no second parse that could read
+  // the markup differently from the first. Working on the parsed tree is also
+  // what closes the holes an attribute regex leaves open, such as an img tag
+  // written as src=x/onerror=1 with no space before the handler.
+  sanitize(html) {
+    let doc = null;
+    try { doc = new DOMParser().parseFromString(String(html), "text/html"); } catch (err) { doc = null; }
+    if (!doc || !doc.body) return null;
+    const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use"];
+    const strip = ["style", "srcdoc", "formaction"];
+    // Everything Markdown can produce, and nothing else. An element outside this
+    // list is replaced by its own children rather than dropped, so its words
+    // survive even though the tag does not; the drop list above still wins, and
+    // takes its contents with it.
+    const keep = ["p", "br", "hr", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote",
+      "pre", "code", "em", "strong", "b", "i", "a", "img", "table", "thead", "tbody", "tr", "th", "td",
+      "del", "sup", "sub", "span"];
+    for (const el of Array.from(doc.body.querySelectorAll("*"))) {
+      const tag = String(el.localName || el.tagName).toLowerCase();
+      if (drop.indexOf(tag) >= 0) { el.remove(); continue; }
+      if (keep.indexOf(tag) < 0) { el.replaceWith(...Array.from(el.childNodes)); continue; }
+      // A link that opens a new tab must not hand this page to the new one.
+      if (tag === "a" && el.hasAttribute("target")) el.setAttribute("rel", "noopener noreferrer");
+      for (const attr of Array.from(el.attributes)) {
+        const name = String(attr.name).toLowerCase();
+        if (name.slice(0, 2) === "on" || strip.indexOf(name) >= 0) { el.removeAttribute(attr.name); continue; }
+        if (name !== "href" && name !== "src" && name !== "xlink:href") continue;
+        // Browsers ignore whitespace and control characters inside a scheme, so
+        // "jav\tascript:alert(1)" runs. Take them out before the prefix check.
+        const url = String(attr.value).replace(/[\s\u0000-\u001f\u007f]+/g, "").toLowerCase();
+        if (/^(javascript:|data:text\/html)/.test(url)) el.removeAttribute(attr.name);
+      }
+    }
+    return doc.body;
+  },
+};
+
+window.OpsRoom = OpsRoom;
+</script>
+
+<script>
+// ---- The Clubhouse ----
+// A cross-section of the stand drawn pixel by pixel on one canvas, 160 by 232
+// logical pixels blown up by an integer SCALE. Nothing here loads a file: every
+// figure is an array of sixteen strings, one character per pixel, and every
+// number the scene shows is read from OpsRoom.state.
+
+const Clubhouse = {
+  W: 160,
+  H: 232,
+  SCALE: 3,
+  t: 0,
+  canvas: null,
+  ctx: null,
+  root: null,
+  stage: null,
+  buttons: null,
+  captionEl: null,
+  cardEl: null,
+  figureButtons: [],
+  bound: false,
+
+  // The day runs one step at a time. Every step is 48 frames at 8 frames a
+  // second, so six seconds each, and the night after the last step holds for
+  // another four before the loop starts again.
+  STEP_FRAMES: 48,
+  HOLD_FRAMES: 32,
+  FRAME_MS: 125,
+  step: 0,
+  stepT: 0,
+  playing: false,
+  userPaused: false,
+  raf: null,
+  last: 0,
+  shownStep: -1,
+  selected: null,
+  prBump: 0,
+  pos: {},
+  moving: {},
+
+  PAL: { k: "#0b1324", w: "#eef1f7", s: "#f1c9a5", d: "#c98e63", h: "#3b2a1a", b: "#2563eb", r: "#dc2626", g: "#15803d", y: "#eab308", l: "#c6f135", n: "#121c33", m: "#9aa5bd", o: "#d97706", p: "#7c3aed", t: "#0f766e" },
+
+  // A 3 by 5 pixel font: the digits, the letters the room labels and the roof
+  // sign need, and the three marks that hold them together.
+  FONT: {
+    "0": ["###", "#.#", "#.#", "#.#", "###"],
+    "1": [".#.", "##.", ".#.", ".#.", "###"],
+    "2": ["###", "..#", "###", "#..", "###"],
+    "3": ["###", "..#", ".##", "..#", "###"],
+    "4": ["#.#", "#.#", "###", "..#", "..#"],
+    "5": ["###", "#..", "###", "..#", "###"],
+    "6": ["###", "#..", "###", "#.#", "###"],
+    "7": ["###", "..#", "..#", "..#", "..#"],
+    "8": ["###", "#.#", "###", "#.#", "###"],
+    "9": ["###", "#.#", "###", "..#", "###"],
+    A: ["###", "#.#", "###", "#.#", "#.#"],
+    B: ["##.", "#.#", "##.", "#.#", "##."],
+    C: ["###", "#..", "#..", "#..", "###"],
+    D: ["##.", "#.#", "#.#", "#.#", "##."],
+    E: ["###", "#..", "##.", "#..", "###"],
+    F: ["###", "#..", "##.", "#..", "#.."],
+    I: ["###", ".#.", ".#.", ".#.", "###"],
+    K: ["#.#", "#.#", "##.", "#.#", "#.#"],
+    L: ["#..", "#..", "#..", "#..", "###"],
+    M: ["#.#", "###", "###", "#.#", "#.#"],
+    N: ["#.#", "###", "#.#", "#.#", "#.#"],
+    O: ["###", "#.#", "#.#", "#.#", "###"],
+    P: ["###", "#.#", "###", "#..", "#.."],
+    R: ["###", "#.#", "##.", "#.#", "#.#"],
+    S: ["###", "#..", "###", "..#", "###"],
+    T: ["###", ".#.", ".#.", ".#.", ".#."],
+    V: ["#.#", "#.#", "#.#", "#.#", ".#."],
+    X: ["#.#", "#.#", ".#.", "#.#", "#.#"],
+    "?": ["###", "..#", ".##", "...", ".#."],
+    "'": [".#.", "...", "...", "...", "..."],
+    "-": ["...", "...", "###", "...", "..."],
+    ".": ["...", "...", "...", "...", ".#."],
+    " ": ["...", "...", "...", "...", "..."],
+  },
+
+  // Twelve by sixteen. Frame 1 swaps rows 13 and 14, so the legs change step.
+  SPRITES: {
+    "physio": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..mwwwwwwm..",
+      ".mwwwwwwwwm.",
+      ".mwwwwrwwwm.",
+      ".swwwrrrwws.",
+      "..mwwwrwwm..",
+      "..mwwwwwwm..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "umpire": [
+      "...wwwwww...",
+      ".wwwwwwwwww.",
+      "...dddddd...",
+      "...dkddkd...",
+      "...ddssdd...",
+      "....dddd....",
+      "..kkkkkkkk..",
+      ".kkkkkkkkkk.",
+      ".kkkkwwkkkk.",
+      ".dkkkwwkkkd.",
+      "..kkkkkkkk..",
+      "..kkkkkkkk..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "kit-manager": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..ybbbbbby..",
+      ".bbbbbbbbbb.",
+      ".bbbbbbbbbb.",
+      "msbbbbbbbbs.",
+      "mmbbbbbbbb..",
+      "rrbbbbbbbb..",
+      "rrnnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "analyst": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hddddddh..",
+      "..hdkddkdh..",
+      "..hddssddh..",
+      "....dddd....",
+      "..tttttttt..",
+      ".tttttttttt.",
+      ".tttttttttt.",
+      ".dttttttttd.",
+      "..tmllllmt..",
+      "..twwwwwwt..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "scout": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..kkwkkwkk..",
+      "..sssddsss..",
+      "....ssss....",
+      "..gggggggg..",
+      ".gggggggggg.",
+      ".gggggggggg.",
+      ".sggggggggs.",
+      "..gggggggg..",
+      "..gggggggg..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "editor": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..pppppppp..",
+      ".ppppppppppy",
+      ".ppppppppppy",
+      ".sppppppppsy",
+      "..pwwwwwwp..",
+      "..pwkkkkwp..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "press-officer": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hddddddh..",
+      "..hdkddkdh..",
+      "..hddssddh..",
+      "....dddd....",
+      "..rrrrrrrr.m",
+      ".rrrrrrrrrrm",
+      ".rrrrrrrrrrk",
+      ".drrrrrrrrdk",
+      "..rrrrrrrr..",
+      "..rrrrrrrr..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "scorer": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..yyyyyyyy..",
+      ".yyyyyyyyyy.",
+      ".yywwwwwwyyw",
+      ".sywkkkkwysw",
+      "..ywwwwwwy..",
+      "..yyyyyyyy..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "steward": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hddddddh..",
+      "..hdkddkdh..",
+      "..hddssddh..",
+      "....dddd....",
+      "..oooooooo..",
+      ".oooooooooo.",
+      ".oowwwwwwoo.",
+      ".doooooooodk",
+      "..oooooooo.y",
+      "..ooooooooyy",
+      "..nnnnnnnnyy",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+    "owner": [
+      "...hhhhhh...",
+      "..hhhhhhhh..",
+      "..hssssssh..",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..llllllll..",
+      ".nlnnnnnnnn.",
+      ".nlnnnnnnnn.",
+      ".snnnnnnnns.",
+      "..nnnnnnnn..",
+      "..nnnnnnnn..",
+      "..mmmmmmmm..",
+      "..mmm..mmm..",
+      "..mm....mm..",
+      "..kkk..kkk..",
+    ],
+    "session": [
+      "...hhhhhh.ww",
+      "..hhhhhhh.wk",
+      "..hssssssh.w",
+      "..hskssksh..",
+      "..hssddssh..",
+      "....ssss....",
+      "..mmmmmmmm..",
+      ".mmmmmmmmmm.",
+      ".mmmmmmmmmm.",
+      ".smmmmmmmms.",
+      "..mmmmmmmm..",
+      "..mmmmmmmm..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
+  },
+
+  ROOMS: [
+    { id: "box", y: 12, label: "DIRECTORS' BOX", members: ["owner", "session"] },
+    { id: "officials", y: 54, label: "OFFICIALS", members: ["umpire", "editor"] },
+    { id: "backroom", y: 96, label: "BACKROOM", members: ["physio", "kit-manager", "steward"] },
+    { id: "front", y: 138, label: "FRONT OFFICE", members: ["analyst", "scout", "press-officer", "scorer"] },
+    { id: "basement", y: 180, label: "DB", members: [] },
+  ],
+
+  // Where each figure stands when nothing is happening. Task 11 walks them off
+  // these marks and back again.
+  HOME_X: {
+    owner: 54, session: 98,
+    umpire: 46, editor: 88,
+    physio: 54, "kit-manager": 70, steward: 104,
+    analyst: 24, scout: 64, "press-officer": 90, scorer: 118,
+  },
+
+  FIGURES: [],
+
+  // One rack per scraper the Umpire watches, and a spare the site has not
+  // filled yet.
+  RACKS: ["scrape-tick", "fetch-injuries", "fetch-f1-scores", "fetch-f1-standings", "fetch-asian-games-medals", "spare"],
+
+  STARS: [[6, 16], [14, 32], [4, 50], [12, 66], [7, 88], [15, 106], [3, 124], [11, 146], [148, 72], [154, 94], [146, 116], [152, 140]],
+
+  // The scene follows the page: dark theme, or the reader's own preference when
+  // no stamp has been set.
+  night: (function () {
+    try {
+      const stamped = document.documentElement.dataset.theme;
+      if (stamped === "dark") return true;
+      if (stamped) return false;
+      return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    } catch (err) {
+      return false;
+    }
+  })(),
+
+  // The owner's own day or night choice. The night step overrides it while it
+  // runs and hands it back when the loop moves on.
+  nightPref: false,
+
+  // A reader who has asked for less movement gets the same day, one still
+  // frame at a time, with Prev and Next in the caption bar.
+  reduced: (function () {
+    try {
+      return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch (err) {
+      return false;
+    }
+  })(),
+
+  // ---- the panel ----
+
+  // The stage, the controls, the caption and the figure list are written into
+  // the page as markup, so this binds to what is already there rather than
+  // building it. Every state snapshot re-renders the tab, and tearing the
+  // canvas down on each one would restart the day, so this runs once.
+  mount(root) {
+    this.root = root;
+    if (this.bound) return;
+    const byId = (id) => document.getElementById(id);
+    const canvas = byId("clubhouse-canvas");
+    if (!canvas) return;
+    this.bound = true;
+    this.canvas = canvas;
+    this.stage = canvas.parentNode;
+    this.ctx = typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
+    this.captionEl = byId("clubhouse-caption");
+    this.cardEl = byId("clubhouse-card");
+    this.buttons = {
+      pause: byId("clubhouse-pause"), restart: byId("clubhouse-restart"),
+      day: byId("clubhouse-day"), night: byId("clubhouse-night"),
+    };
+    this.nightPref = this.night;
+    if (this.buttons.pause) this.buttons.pause.addEventListener("click", () => this.toggle());
+    if (this.buttons.restart) this.buttons.restart.addEventListener("click", () => this.restart());
+    if (this.buttons.day) this.buttons.day.addEventListener("click", () => this.setNight(false));
+    if (this.buttons.night) this.buttons.night.addEventListener("click", () => this.setNight(true));
+    if (this.reduced && this.captionEl) this.captionEl.setAttribute("aria-live", "polite");
+
+    const list = byId("clubhouse-figures");
+    this.figureButtons = list ? Array.prototype.slice.call(list.querySelectorAll("[data-figure]")) : [];
+    for (const btn of this.figureButtons) {
+      const id = btn.getAttribute("data-figure");
+      btn.addEventListener("click", () => this.select(id));
+      btn.addEventListener("focus", () => this.select(id));
+    }
+
+    canvas.addEventListener("click", (ev) => this.pick(ev));
+    window.addEventListener("resize", () => { if (this.canvas && this.visible()) this.redraw(); });
+    // A hidden page must not burn a frame budget, and the loop picks up again
+    // from where it stopped once the page comes back.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) this.stopLoop();
+      else { this.last = 0; this.schedule(); }
+    });
+    if (this.reduced) this.stepT = this.STEP_FRAMES - 1;
+  },
+
+  setNight(on) {
+    this.nightPref = !!on;
+    this.redraw();
+  },
+
+  // Step 13 turns the lights out whatever the buttons say, and the preference
+  // comes back when the loop leaves it.
+  applyNight() {
+    this.night = this.step === 12 ? true : this.nightPref;
+  },
+
+  // An integer scale keeps the pixels square. The element is capped at 480 CSS
+  // pixels, so there is nothing to gain above three.
+  scaleFor() {
+    const el = this.stage || this.root || this.canvas;
+    const wide = el && el.clientWidth ? el.clientWidth : 480;
+    return Math.max(2, Math.min(5, Math.floor(Math.min(wide, 480) / 160)));
+  },
+
+  redraw() {
+    if (!this.canvas || !this.ctx) return;
+    this.applyNight();
+    this.SCALE = this.scaleFor();
+    const w = this.W * this.SCALE;
+    const tall = this.H * this.SCALE;
+    if (this.canvas.width !== w) this.canvas.width = w;
+    if (this.canvas.height !== tall) this.canvas.height = tall;
+    if (this.buttons && this.buttons.day) {
+      this.buttons.day.setAttribute("aria-pressed", this.nightPref ? "false" : "true");
+      this.buttons.night.setAttribute("aria-pressed", this.nightPref ? "true" : "false");
+    }
+    this.syncControls();
+    this.syncCaption();
+    this.draw(this.ctx, this.t);
+  },
+
+  // ---- the loop ----
+
+  visible() {
+    const room = window.OpsRoom;
+    if (room && room.active !== "clubhouse") return false;
+    const panel = document.getElementById("panel-clubhouse");
+    return !!panel && !panel.hidden;
+  },
+
+  schedule() {
+    if (this.raf !== null || !this.playing || this.reduced) return;
+    if (typeof requestAnimationFrame !== "function") return;
+    if (document.hidden || !this.visible()) return;
+    this.raf = requestAnimationFrame(() => this.tick());
+  },
+
+  stopLoop() {
+    if (this.raf === null) return;
+    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.raf);
+    this.raf = null;
+  },
+
+  tick() {
+    this.raf = null;
+    if (!this.playing || this.reduced) return;
+    if (document.hidden || !this.visible()) return;
+    const now = typeof performance === "object" && performance && typeof performance.now === "function" ? performance.now() : Date.now();
+    if (!this.last) this.last = now;
+    // A tab left in the background can come back hours late, so the catch-up
+    // is capped at a handful of frames rather than replaying the whole day.
+    let frames = Math.floor((now - this.last) / this.FRAME_MS);
+    if (frames > 8) { frames = 8; this.last = now; }
+    else if (frames > 0) this.last += frames * this.FRAME_MS;
+    for (let i = 0; i < frames; i += 1) this.advance();
+    if (frames > 0) this.redraw();
+    this.schedule();
+  },
+
+  advance() {
+    this.t += 1;
+    this.stepT += 1;
+    const last = this.STEPS.length - 1;
+    const limit = this.step === last ? this.STEP_FRAMES + this.HOLD_FRAMES : this.STEP_FRAMES;
+    if (this.stepT < limit) return;
+    this.stepT = 0;
+    this.step = this.step === last ? 0 : this.step + 1;
+    this.applyNight();
+  },
+
+  play() {
+    if (this.reduced) return;
+    this.userPaused = false;
+    this.playing = true;
+    this.last = 0;
+    this.syncControls();
+    this.schedule();
+  },
+
+  pause() {
+    this.userPaused = true;
+    this.playing = false;
+    this.stopLoop();
+    this.syncControls();
+  },
+
+  toggle() {
+    if (this.playing) this.pause();
+    else this.play();
+  },
+
+  restart() { this.goto(1); },
+
+  goto(n) {
+    const total = this.STEPS.length;
+    let i = Math.round(Number(n));
+    if (!Number.isFinite(i)) i = 1;
+    i = (i - 1) % total;
+    if (i < 0) i += total;
+    this.step = i;
+    this.stepT = this.reduced ? this.STEP_FRAMES - 1 : 0;
+    this.last = 0;
+    this.applyNight();
+    this.redraw();
+    this.schedule();
+  },
+
+  // Called on every render of the tab, so a manual pause survives a database
+  // snapshot and the day starts itself when the tab is opened.
+  autoPlay() {
+    if (this.reduced || this.userPaused) return;
+    if (!this.playing) this.play();
+    else this.schedule();
+  },
+
+  syncControls() {
+    const b = this.buttons;
+    if (!b || !b.pause) return;
+    b.pause.textContent = this.reduced ? "Paused" : this.playing ? "Pause" : "Play";
+    b.pause.disabled = this.reduced;
+  },
+
+  syncCaption() {
+    const el = this.captionEl;
+    if (!el) return;
+    if (this.shownStep === this.step && el.firstChild) return;
+    this.shownStep = this.step;
+    const h = OpsRoom.h;
+    const s = this.STEPS[this.step];
+    const kids = [
+      h("span", { class: "pill", text: "Step " + (this.step + 1) + " of " + this.STEPS.length }),
+      h("span", { class: "clubhouse-at", text: s.at }),
+      h("span", { class: "clubhouse-step", text: s.text }),
+    ];
+    if (this.reduced) {
+      kids.push(h("button", { type: "button", class: "chip", onclick: () => this.goto(this.step) }, "Prev"));
+      kids.push(h("button", { type: "button", class: "chip", onclick: () => this.goto(this.step + 2) }, "Next"));
+    }
+    el.replaceChildren(...kids);
+  },
+
+  // ---- the cards ----
+
+  // A tap lands in CSS pixels on an element that is scaled up from the 160 by
+  // 232 scene, so it is mapped back before the figures are tested.
+  pick(ev) {
+    if (!this.canvas || typeof this.canvas.getBoundingClientRect !== "function") return;
+    const rect = this.canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = (ev.clientX - rect.left) * (this.W / rect.width);
+    const y = (ev.clientY - rect.top) * (this.H / rect.height);
+    for (const fig of this.FIGURES) {
+      const p = this.pos[fig.id] || fig.home;
+      if (x >= p.x && x < p.x + 12 && y >= p.y && y < p.y + 16) { this.select(fig.id); return; }
+    }
+  },
+
+  select(id) {
+    if (!this.SPRITES[id]) return;
+    this.selected = id;
+    for (const btn of this.figureButtons) {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-figure") === id ? "true" : "false");
+    }
+    this.renderClubhouseCard(id);
+    this.redraw();
+  },
+
+  // Name, role and the three standing facts, then what the crew member did
+  // tonight. The two of us in the dugout are not crew documents, so the Crew
+  // tab's static entries answer for them.
+  cardData(id) {
+    const crew = this.state().crew || {};
+    const statics = typeof DUGOUT === "undefined" ? [] : DUGOUT;
+    const staticKey = id === "session" ? "main-session" : id;
+    for (const d of statics) {
+      if (d.id !== staticKey) continue;
+      return { name: d.name, role: d.role, job: d.job, never: d.never, when: d.when, tonight: "Read Today; nothing to deploy." };
+    }
+    const c = crew[id] || {};
+    const has = (v) => OpsRoom.has(v);
+    // Before the first run there is no crew document, so the figure list's own
+    // label stands in for the name rather than the bare id.
+    let label = id;
+    for (const btn of this.figureButtons) {
+      if (btn.getAttribute("data-figure") === id) label = btn.textContent || id;
+    }
+    return {
+      name: has(c.name) ? c.name : label,
+      role: has(c.role) ? c.role : "",
+      job: has(c.job) ? c.job : "Not recorded",
+      never: has(c.never) ? c.never : "Not recorded",
+      when: has(c.when) ? c.when : "Not recorded",
+      tonight: has(c.lastHeadline) ? c.lastHeadline : "No run yet.",
+    };
+  },
+
+  renderClubhouseCard(id) {
+    const box = this.cardEl;
+    if (!box) return;
+    const h = OpsRoom.h;
+    const d = this.cardData(id);
+    const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
+    try { this.drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
+    const facts = h("dl", { class: "crew-facts" },
+      h("dt", { text: "Job" }), h("dd", { text: d.job }),
+      h("dt", { text: "Never" }), h("dd", { text: d.never }),
+      h("dt", { text: "When" }), h("dd", { text: d.when }),
+      h("dt", { text: "Tonight" }), h("dd", { text: d.tonight }));
+    box.replaceChildren(h("section", { class: "card" },
+      h("div", { class: "crew-top" }, canvas,
+        h("div", {},
+          h("div", { class: "crew-card-name", text: d.name }),
+          h("div", { class: "crew-card-role", text: d.role }))),
+      facts));
+  },
+
+  // ---- the numbers, all of them from the page's own state ----
+
+  state() {
+    const room = window.OpsRoom;
+    return (room && room.state) || { crew: {}, issues: {}, daily: {}, status: null };
+  },
+
+  openIssues() {
+    const issues = this.state().issues || {};
+    const out = [];
+    for (const key of Object.keys(issues)) {
+      const it = issues[key] || {};
+      if (it.status !== "open" && it.status !== "reopened") continue;
+      out.push({ key: key, issue: it });
+    }
+    return out;
+  },
+
+  severityCounts() {
+    const counts = { critical: 0, high: 0, medium: 0 };
+    for (const row of this.openIssues()) {
+      const sev = String(row.issue.severity || "").toLowerCase();
+      if (counts[sev] !== undefined) counts[sev] += 1;
+    }
+    return counts;
+  },
+
+  prNumber() {
+    const crew = this.state().crew || {};
+    const ed = crew.editor;
+    const m = ed && ed.lastHeadline ? String(ed.lastHeadline).match(/#(\d+)/) : null;
+    return m ? m[1].slice(0, 4) : "";
+  },
+
+  // The heart line is flat until the Physio has a latency to report.
+  heartAmp() {
+    const s = this.state().status;
+    const ms = Number(s ? s.latencyMs : NaN);
+    if (!Number.isFinite(ms)) return 0;
+    return Math.max(1, Math.min(4, 1 + Math.floor(ms / 300)));
+  },
+
+  gameViews() {
+    const daily = this.state().daily || {};
+    let best = null;
+    for (const key of Object.keys(daily)) {
+      const d = daily[key] || {};
+      const stamp = String(d.date || d.id || key);
+      if (!best || stamp > String(best.date || best.id || "")) best = d;
+    }
+    const n = Number(best ? best.gameViews : NaN);
+    if (!Number.isFinite(n)) return "----";
+    const clamped = Math.max(0, Math.min(9999, Math.round(n)));
+    let out = String(clamped);
+    while (out.length < 4) out = "0" + out;
+    return out;
+  },
+
+  // A rack is red when the Umpire has an open finding that names its scraper,
+  // green when it does not, and grey until the Umpire has run at all.
+  rackState(name) {
+    if (name === "spare") return "spare";
+    const crew = this.state().crew || {};
+    const ump = crew.umpire;
+    if (!ump || !OpsRoom.has(ump.lastRunAt)) return "none";
+    const needle = String(name).toLowerCase();
+    for (const row of this.openIssues()) {
+      if (String(row.issue.agent || "") !== "umpire") continue;
+      const hay = (String(row.issue.id || row.key) + " " + String(row.issue.title || "")).toLowerCase();
+      if (hay.indexOf(needle) >= 0) return "bad";
+    }
+    return "ok";
+  },
+
+  // The vault stands open only when the Umpire's own headline says a backup
+  // exists and is less than a day and a bit old.
+  vaultState() {
+    const crew = this.state().crew || {};
+    const ump = crew.umpire;
+    if (!ump || !OpsRoom.has(ump.lastRunAt)) return "none";
+    const line = String(ump.lastHeadline || "").toLowerCase();
+    if (line.indexOf("backup") < 0 || line.indexOf("no backup") >= 0) return "stale";
+    const m = line.match(/(\d+)\s*h old/);
+    if (!m) return "stale";
+    return Number(m[1]) < 26 ? "fresh" : "stale";
+  },
+
+  // ---- painting ----
+
+  tone() {
+    return this.night
+      ? { sky0: "#060c1a", sky1: "#121c33", room: "#1e2a4a", wall: "#0f1830", floor: "#34426a", line: "#050a16", ink: "#7f8bab", glass: "#24406e", pitch: "#123a22", pitchLine: "#4d7c0f", earth: "#140f08", screen: "#0b1324", board: "#5b6480" }
+      : { sky0: "#bfdbfe", sky1: "#ffffff", room: "#eef1f7", wall: "#c3cad8", floor: "#9aa5bd", line: "#0b1324", ink: "#5a6478", glass: "#a9d3ff", pitch: "#2f8f4e", pitchLine: "#eef1f7", earth: "#3b2a1a", screen: "#182342", board: "#eef1f7" };
+  },
+
+  disc(ctx, cx, cy, r) {
+    for (let j = -r; j <= r; j += 1) {
+      for (let i = -r; i <= r; i += 1) {
+        if (i * i + j * j <= r * r) ctx.fillRect(cx + i, cy + j, 1, 1);
+      }
+    }
+  },
+
+  drawText(ctx, text, x, y, colour) {
+    const str = String(text === null || text === undefined ? "" : text).toUpperCase();
+    ctx.fillStyle = colour;
+    for (let i = 0; i < str.length; i += 1) {
+      const glyph = this.FONT[str.charAt(i)];
+      if (glyph) {
+        for (let r = 0; r < glyph.length; r += 1) {
+          const row = glyph[r];
+          for (let c = 0; c < row.length; c += 1) {
+            if (row.charAt(c) === "#") ctx.fillRect(x + i * 4 + c, y + r, 1, 1);
+          }
+        }
+      }
+    }
+    return this.textWidth(str);
+  },
+
+  textWidth(text) {
+    const n = String(text === null || text === undefined ? "" : text).length;
+    return n > 0 ? n * 4 - 1 : 0;
+  },
+
+  drawSprite(ctx, id, x, y, frame) {
+    const rows = this.SPRITES[id] || this.SPRITES.session;
+    for (let j = 0; j < rows.length; j += 1) {
+      let from = j;
+      if (frame === 1) {
+        if (j === 13) from = 14;
+        else if (j === 14) from = 13;
+      }
+      const row = rows[from];
+      for (let i = 0; i < row.length; i += 1) {
+        const colour = this.PAL[row.charAt(i)];
+        if (!colour) continue;
+        ctx.fillStyle = colour;
+        ctx.fillRect(x + i, y + j, 1, 1);
+      }
+    }
+  },
+
+  // The Crew tab's face: the same sprite at three times the size, on nothing.
+  drawAvatar(canvas, id) {
+    const ctx = canvas && typeof canvas.getContext === "function" ? canvas.getContext("2d") : null;
+    if (!ctx) return;
+    canvas.width = 36;
+    canvas.height = 48;
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 12, 16);
+    this.drawSprite(ctx, this.SPRITES[id] ? id : "session", 0, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  },
+
+  // The one entry point. Every figure starts the frame on its home mark, the
+  // step of the day moves the ones it needs and paints its own props, and the
+  // figures go on last so nothing is drawn over a face.
+  draw(ctx, t) {
+    const scale = this.SCALE;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, this.W * scale, this.H * scale);
+    ctx.scale(scale, scale);
+    this.resetPositions();
+    const step = this.STEPS[this.step] || null;
+    const st = this.stepT;
+    this.prBump = this.step > 5 || (this.step === 5 && st >= 32) ? 1 : 0;
+    this.drawSky(ctx, t);
+    this.drawBuilding(ctx, t);
+    this.drawBox(ctx, t);
+    this.drawOfficials(ctx, t);
+    this.drawBackroom(ctx, t);
+    this.drawFront(ctx, t);
+    this.drawBasement(ctx, t);
+    if (step && typeof step.run === "function") step.run.call(this, st, ctx);
+    this.drawFigures(ctx, t);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  },
+
+  drawSky(ctx, t) {
+    const c = this.tone();
+    const grad = ctx.createLinearGradient(0, 0, 0, 178);
+    grad.addColorStop(0, c.sky0);
+    grad.addColorStop(1, c.sky1);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 160, 178);
+    if (this.night) {
+      const phase = Math.floor(t / 8) % 2 === 0;
+      for (let i = 0; i < this.STARS.length; i += 1) {
+        const star = this.STARS[i];
+        const bright = (i % 2 === 0) === phase;
+        ctx.fillStyle = bright ? "#eef1f7" : "#48557a";
+        ctx.fillRect(star[0], star[1], 1, 1);
+        if (!bright) continue;
+        ctx.fillRect(star[0] - 1, star[1], 1, 1);
+        ctx.fillRect(star[0] + 1, star[1], 1, 1);
+        ctx.fillRect(star[0], star[1] - 1, 1, 1);
+        ctx.fillRect(star[0], star[1] + 1, 1, 1);
+      }
+    } else {
+      ctx.fillStyle = this.PAL.l;
+      this.disc(ctx, 9, 28, 6);
+      ctx.fillStyle = "#e6ffa1";
+      this.disc(ctx, 9, 28, 3);
+    }
+    ctx.fillStyle = c.earth;
+    ctx.fillRect(0, 178, 160, 54);
+    ctx.fillStyle = c.pitch;
+    ctx.fillRect(0, 178, 160, 3);
+  },
+
+  drawBuilding(ctx, t) {
+    const c = this.tone();
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(16, 8, 128, 4);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(16, 8, 128, 1);
+    ctx.fillStyle = c.wall;
+    ctx.fillRect(18, 12, 124, 210);
+    for (const room of this.ROOMS) {
+      ctx.fillStyle = c.room;
+      ctx.fillRect(22, room.y, 116, 40);
+      ctx.fillStyle = c.floor;
+      ctx.fillRect(22, room.y + 40, 116, 2);
+      if (this.night) {
+        ctx.fillStyle = this.PAL.y;
+        ctx.fillRect(79, room.y + 1, 3, 1);
+      }
+      this.drawText(ctx, room.label, 24, room.y + 3, c.ink);
+    }
+    ctx.fillStyle = c.line;
+    ctx.fillRect(18, 12, 1, 210);
+    ctx.fillRect(141, 12, 1, 210);
+    ctx.fillRect(18, 221, 124, 1);
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(14, 222, 132, 4);
+    this.drawSign(ctx, t);
+    this.drawPitch(ctx);
+  },
+
+  drawSign(ctx) {
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(50, 0, 60, 8);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(50, 7, 60, 1);
+    this.drawText(ctx, "SPORTS-DB.LIVE", 52, 1, this.PAL.l);
+  },
+
+  // The strip the directors' box looks onto.
+  drawPitch(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.pitch;
+    ctx.fillRect(142, 12, 18, 40);
+    ctx.fillStyle = c.pitchLine;
+    ctx.fillRect(144, 15, 14, 1);
+    ctx.fillRect(144, 48, 14, 1);
+    ctx.fillRect(144, 15, 1, 34);
+    ctx.fillRect(157, 15, 1, 34);
+    ctx.fillRect(144, 31, 14, 1);
+    ctx.fillRect(149, 28, 4, 1);
+    ctx.fillRect(149, 34, 4, 1);
+    ctx.fillRect(148, 29, 1, 5);
+    ctx.fillRect(153, 29, 1, 5);
+  },
+
+  // The directors' box: a wall screen carrying the open-issue counts, the
+  // owner's desk, a whiteboard for the session and the glass onto the pitch.
+  drawBox(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.glass;
+    ctx.fillRect(116, 14, 22, 38);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(116, 14, 1, 38);
+    ctx.fillRect(116, 26, 22, 1);
+    ctx.fillRect(116, 38, 22, 1);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(26, 22, 26, 16);
+    ctx.fillStyle = c.screen;
+    ctx.fillRect(27, 23, 24, 14);
+    const counts = this.severityCounts();
+    const bars = [["critical", "r"], ["high", "o"], ["medium", "y"]];
+    for (let i = 0; i < bars.length; i += 1) {
+      const n = counts[bars[i][0]];
+      const tall = n > 0 ? Math.min(12, n * 2) : 1;
+      ctx.fillStyle = n > 0 ? this.PAL[bars[i][1]] : this.PAL.m;
+      ctx.fillRect(30 + i * 7, 36 - tall, 4, tall);
+    }
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(94, 22, 22, 13);
+    ctx.fillStyle = this.PAL.w;
+    ctx.fillRect(95, 23, 20, 11);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(97, 26, 14, 1);
+    ctx.fillRect(97, 29, 10, 1);
+    ctx.fillRect(97, 32, 12, 1);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(68, 36, 14, 9);
+    ctx.fillStyle = c.screen;
+    ctx.fillRect(69, 37, 12, 7);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(70, 39, 7, 1);
+    ctx.fillRect(70, 41, 10, 1);
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(64, 45, 24, 2);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(65, 47, 2, 5);
+    ctx.fillRect(85, 47, 2, 5);
+  },
+
+  // The officials' room: two desks with a paper on each, and the door to the
+  // pull request queue with the Editor's number on it.
+  drawOfficials(ctx) {
+    const c = this.tone();
+    for (const dx of [24, 66]) {
+      ctx.fillStyle = this.PAL.w;
+      ctx.fillRect(dx + 4, 78, 11, 8);
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(dx + 6, 80, 7, 1);
+      ctx.fillRect(dx + 6, 82, 5, 1);
+      ctx.fillRect(dx + 6, 84, 7, 1);
+      ctx.fillStyle = c.floor;
+      ctx.fillRect(dx, 86, 20, 2);
+      ctx.fillStyle = c.line;
+      ctx.fillRect(dx + 1, 88, 2, 6);
+      ctx.fillRect(dx + 17, 88, 2, 6);
+    }
+    ctx.fillStyle = c.line;
+    ctx.fillRect(110, 64, 22, 30);
+    ctx.fillStyle = this.PAL.h;
+    ctx.fillRect(111, 65, 20, 29);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(111, 74, 20, 1);
+    const label = "PR";
+    this.drawText(ctx, label, 111 + Math.floor((20 - this.textWidth(label)) / 2), 68, this.PAL.l);
+    const pr = this.prShown();
+    if (pr) this.drawText(ctx, pr, 111 + Math.floor((20 - this.textWidth(pr)) / 2), 79, this.PAL.w);
+    ctx.fillStyle = this.PAL.y;
+    ctx.fillRect(128, 87, 2, 2);
+  },
+
+  // The backroom: the Physio's table under a heart line that follows the site's
+  // latency, the Kit Manager's rail of five shirts, the Steward's locker.
+  drawBackroom(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.line;
+    ctx.fillRect(24, 106, 24, 16);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(25, 107, 22, 14);
+    const amp = this.heartAmp();
+    const shape = [0, 0, 0, 0, 1, -1, 4, -3, 1, 0, 0, 0];
+    ctx.fillStyle = amp > 0 ? this.PAL.g : this.PAL.m;
+    let prev = null;
+    for (let i = 0; i < 12; i += 1) {
+      const py = 114 - Math.round((shape[i] * amp) / 4);
+      if (prev === null) ctx.fillRect(28 + i, py, 1, 1);
+      else {
+        const top = Math.min(prev, py);
+        ctx.fillRect(28 + i, top, 1, Math.abs(py - prev) + 1);
+      }
+      prev = py;
+    }
+
+    ctx.fillStyle = this.PAL.w;
+    ctx.fillRect(24, 126, 8, 2);
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(24, 128, 30, 3);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(26, 131, 2, 5);
+    ctx.fillRect(50, 131, 2, 5);
+
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(68, 108, 38, 1);
+    const kit = ["b", "r", "y", "g", "p"];
+    for (let i = 0; i < kit.length; i += 1) {
+      const sx = 69 + i * 7;
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(sx + 2, 109, 2, 2);
+      ctx.fillStyle = this.PAL[kit[i]];
+      ctx.fillRect(sx, 111, 6, 8);
+      ctx.fillStyle = c.room;
+      ctx.fillRect(sx + 2, 111, 2, 1);
+    }
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(120, 106, 14, 30);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(121, 107, 12, 28);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(127, 107, 1, 28);
+    ctx.fillRect(121, 113, 12, 1);
+    ctx.fillStyle = this.PAL.y;
+    ctx.fillRect(125, 120, 1, 3);
+    ctx.fillRect(129, 120, 1, 3);
+  },
+
+  // The front office: the Analyst's two monitors, the Scout's window, the Press
+  // Officer's microphone and the Scorer's board with yesterday's game views.
+  drawFront(ctx) {
+    const c = this.tone();
+    for (let i = 0; i < 2; i += 1) {
+      const mx = 24 + i * 16;
+      ctx.fillStyle = c.line;
+      ctx.fillRect(mx, 146, 14, 11);
+      ctx.fillStyle = c.screen;
+      ctx.fillRect(mx + 1, 147, 12, 9);
+      ctx.fillStyle = i === 0 ? this.PAL.l : this.PAL.b;
+      ctx.fillRect(mx + 3, 149, 8, 1);
+      ctx.fillRect(mx + 3, 151, 6, 1);
+      ctx.fillRect(mx + 3, 153, 9, 1);
+    }
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(22, 157, 36, 2);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(62, 146, 22, 14);
+    ctx.fillStyle = c.glass;
+    ctx.fillRect(63, 147, 20, 12);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(72, 147, 1, 12);
+    ctx.fillRect(63, 152, 20, 1);
+
+    ctx.fillStyle = c.floor;
+    ctx.fillRect(88, 157, 24, 2);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(99, 150, 1, 7);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(97, 147, 5, 4);
+
+    ctx.fillStyle = c.line;
+    ctx.fillRect(114, 144, 24, 16);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(115, 145, 22, 14);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(116, 147, 20, 1);
+    this.drawText(ctx, this.gameViews(), 119, 151, this.PAL.l);
+  },
+
+  // The basement: one rack per scraper with three lights, the backup vault, the
+  // pipe through the wall and the belt the scrape ticks ride in on.
+  drawBasement(ctx, t) {
+    const c = this.tone();
+    const blink = Math.floor(t / 8) % 2 === 0;
+    for (let i = 0; i < this.RACKS.length; i += 1) {
+      const rx = 24 + i * 14;
+      ctx.fillStyle = c.line;
+      ctx.fillRect(rx, 188, 12, 24);
+      ctx.fillStyle = "#182342";
+      ctx.fillRect(rx + 1, 189, 10, 22);
+      ctx.fillStyle = "#2b3a63";
+      ctx.fillRect(rx + 1, 195, 10, 1);
+      ctx.fillRect(rx + 1, 201, 10, 1);
+      ctx.fillRect(rx + 1, 207, 10, 1);
+      const state = this.rackState(this.RACKS[i]);
+      const lamp = state === "none" ? this.PAL.m : state === "bad" ? this.PAL.r : state === "spare" ? this.PAL.t : this.PAL.g;
+      for (let j = 0; j < 3; j += 1) {
+        ctx.fillStyle = j === 1 && !blink ? this.PAL.k : lamp;
+        ctx.fillRect(rx + 3, 191 + j * 6, 6, 2);
+      }
+    }
+
+    const vault = this.vaultState();
+    ctx.fillStyle = c.line;
+    ctx.fillRect(110, 188, 22, 24);
+    ctx.fillStyle = "#34426a";
+    ctx.fillRect(111, 189, 20, 22);
+    if (vault === "fresh") {
+      ctx.fillStyle = this.PAL.k;
+      ctx.fillRect(112, 190, 13, 20);
+      ctx.fillStyle = this.PAL.g;
+      ctx.fillRect(114, 194, 9, 13);
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(126, 190, 4, 20);
+    } else {
+      ctx.fillStyle = this.PAL.m;
+      ctx.fillRect(112, 190, 18, 20);
+      ctx.fillStyle = c.line;
+      ctx.fillRect(121, 190, 1, 20);
+      this.disc(ctx, 121, 200, 3);
+      ctx.fillStyle = this.PAL.m;
+      this.disc(ctx, 121, 200, 1);
+    }
+    ctx.fillStyle = vault === "fresh" ? this.PAL.g : vault === "none" ? this.PAL.m : this.PAL.r;
+    ctx.fillRect(119, 184, 4, 2);
+
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(134, 192, 8, 5);
+    ctx.fillRect(134, 192, 4, 22);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(134, 192, 8, 1);
+    ctx.fillRect(134, 197, 4, 1);
+
+    ctx.fillStyle = "#34426a";
+    ctx.fillRect(22, 214, 116, 4);
+    ctx.fillStyle = this.PAL.k;
+    for (let x = 24; x < 138; x += 6) ctx.fillRect(x, 216, 2, 1);
+    ctx.fillStyle = this.PAL.l;
+    for (let i = 0; i < 4; i += 1) {
+      ctx.fillRect(26 + ((i * 28 + Math.floor(t / 2)) % 108), 211, 3, 3);
+    }
+  },
+
+  drawFigures(ctx, t) {
+    const idle = Math.floor(t / 16) % 2;
+    const walk = Math.floor(t / 2) % 2;
+    for (const fig of this.FIGURES) {
+      const p = this.pos[fig.id] || fig.home;
+      this.drawSprite(ctx, fig.id, p.x, p.y, this.moving[fig.id] ? walk : idle);
+      if (fig.id !== this.selected) continue;
+      ctx.fillStyle = this.PAL.l;
+      ctx.fillRect(p.x + 3, p.y - 6, 6, 1);
+      ctx.fillRect(p.x + 4, p.y - 5, 4, 1);
+      ctx.fillRect(p.x + 5, p.y - 4, 2, 1);
+    }
+  },
+
+  // ---- the day ----
+
+  resetPositions() {
+    const pos = {};
+    for (const fig of this.FIGURES) pos[fig.id] = { x: fig.home.x, y: fig.home.y };
+    this.pos = pos;
+    this.moving = {};
+  },
+
+  homeOf(id) {
+    for (const fig of this.FIGURES) if (fig.id === id) return fig.home;
+    return { x: 60, y: 120 };
+  },
+
+  // 0 before a, 1 after b, and the fraction in between.
+  phase(t, a, b) {
+    if (b <= a) return t >= b ? 1 : 0;
+    return Math.max(0, Math.min(1, (t - a) / (b - a)));
+  },
+
+  place(id, x, y) {
+    const p = this.pos[id];
+    if (!p) return;
+    if (Math.round(x) !== p.x || Math.round(y) !== p.y) this.moving[id] = true;
+    p.x = Math.round(x);
+    p.y = Math.round(y);
+  },
+
+  // Walk sideways to a mark and back to the home mark inside one step.
+  visit(id, toX, t, out, back) {
+    const home = this.homeOf(id);
+    const go = this.phase(t, 0, out);
+    const ret = this.phase(t, back, this.STEP_FRAMES);
+    const u = go - ret;
+    this.place(id, home.x + (toX - home.x) * u, home.y);
+    if (t < out || t > back) this.moving[id] = true;
+  },
+
+  line(ctx, x0, y0, x1, y1) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const n = Math.max(1, Math.round(Math.max(Math.abs(dx), Math.abs(dy))));
+    for (let i = 0; i <= n; i += 1) {
+      ctx.fillRect(Math.round(x0 + (dx * i) / n), Math.round(y0 + (dy * i) / n), 1, 1);
+    }
+  },
+
+  sheet(ctx, x, y) {
+    ctx.fillStyle = this.PAL.w;
+    ctx.fillRect(x, y, 5, 6);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(x + 1, y + 1, 3, 1);
+    ctx.fillRect(x + 1, y + 3, 3, 1);
+  },
+
+  // The shaft the basement report rides up in. Two rails and a ten pixel car.
+  liftShaft(ctx, carY) {
+    const c = this.tone();
+    ctx.fillStyle = c.line;
+    ctx.fillRect(135, 14, 1, 206);
+    ctx.fillRect(140, 14, 1, 206);
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(136, Math.round(carY), 4, 10);
+    ctx.fillStyle = c.line;
+    ctx.fillRect(136, Math.round(carY), 4, 1);
+  },
+
+  // The Editor's verdict, read off the headline the article routine left.
+  verdict() {
+    const crew = this.state().crew || {};
+    const line = String((crew.editor && crew.editor.lastHeadline) || "").toLowerCase();
+    if (line.indexOf("merge with edits") >= 0) return { text: "EDIT", colour: this.PAL.o };
+    if (line.indexOf("merge") >= 0) return { text: "OK", colour: this.PAL.g };
+    if (line.indexOf("skip") >= 0) return { text: "SKIP", colour: this.PAL.r };
+    return { text: "?", colour: this.PAL.m };
+  },
+
+  // The door's number goes up by one once the routine has dropped its draft in,
+  // and stays up until the day starts again.
+  prShown() {
+    const pr = this.prNumber();
+    if (!pr || !this.prBump) return pr;
+    const n = Number(pr) + this.prBump;
+    return Number.isFinite(n) ? String(n).slice(0, 4) : pr;
+  },
+
+  // The crew keeps IST office hours, so the weekday is the one in Kolkata and
+  // not the one in the reader's own timezone.
+  istWeekday() {
+    try {
+      return new Date().toLocaleDateString("en-US", { timeZone: "Asia/Kolkata", weekday: "long" });
+    } catch (err) {
+      return "";
+    }
+  },
+
+  STEPS: [
+    {
+      at: "04:30",
+      text: "The daily scrape starts. Ticks roll down the pipe into the racks.",
+      run(t, ctx) {
+        const targets = [100, 72, 44];
+        for (let i = 0; i < targets.length; i += 1) {
+          const u = this.phase(t, 2 + i * 6, 32 + i * 6);
+          if (u <= 0) continue;
+          let x = 136;
+          let y = 194;
+          if (u < 0.35) y = 194 + (212 - 194) * (u / 0.35);
+          else { y = 212; x = 136 - (136 - targets[i]) * ((u - 0.35) / 0.65); }
+          ctx.fillStyle = this.PAL.l;
+          ctx.fillRect(Math.round(x), Math.round(y), 3, 3);
+        }
+        // The racks answer the belt: every lamp on, in turn, down the row.
+        const on = Math.floor(t / 3) % this.RACKS.length;
+        for (let i = 0; i < this.RACKS.length; i += 1) {
+          if (i !== on) continue;
+          ctx.fillStyle = this.PAL.l;
+          for (let j = 0; j < 3; j += 1) ctx.fillRect(24 + i * 14 + 3, 191 + j * 6, 6, 2);
+        }
+      },
+    },
+    {
+      at: "06:00",
+      text: "The Physio pings the pitch: twenty pages light up green, or one turns red.",
+      run(t, ctx) {
+        const home = this.homeOf("physio");
+        const alongOut = this.phase(t, 0, 8);
+        const alongBack = this.phase(t, 42, 48);
+        const upOut = this.phase(t, 8, 16);
+        const upBack = this.phase(t, 36, 42);
+        const x = home.x + (120 - home.x) * (alongOut - alongBack);
+        const y = home.y + (36 - home.y) * (upOut - upBack);
+        this.place("physio", x, y);
+        if (t < 8 || t > 42) this.moving.physio = true;
+        if (y < home.y - 1) {
+          const c = this.tone();
+          ctx.fillStyle = c.floor;
+          ctx.fillRect(Math.round(x) - 1, Math.round(y) + 16, 14, 2);
+          ctx.fillStyle = c.line;
+          this.line(ctx, Math.round(x) + 6, 14, Math.round(x) + 6, Math.round(y) + 15);
+        }
+        const status = this.state().status;
+        const down = !!(status && status.up === false);
+        const lit = Math.round(this.phase(t, 16, 38) * 20);
+        for (let i = 0; i < lit; i += 1) {
+          ctx.fillStyle = down && i === 7 ? this.PAL.r : this.PAL.l;
+          ctx.fillRect(144 + (i % 4) * 4, 16 + Math.floor(i / 4) * 7, 3, 3);
+        }
+      },
+    },
+    {
+      at: "06:15",
+      text: "The Umpire collects the report from the basement and reads it.",
+      run(t, ctx) {
+        const down = this.phase(t, 10, 20);
+        const up = this.phase(t, 26, 36);
+        const carY = 70 + (196 - 70) * (down - up);
+        this.liftShaft(ctx, carY);
+        if (t >= 20) this.sheet(ctx, 136, Math.round(carY) + 2);
+        this.visit("umpire", 122, t, 10, 36);
+        if (t >= 26) {
+          const p = this.pos.umpire;
+          this.sheet(ctx, p.x + 11, p.y + 6);
+        }
+      },
+    },
+    {
+      at: "06:30",
+      text: "The Kit Manager measures the shirts.",
+      run(t, ctx) {
+        this.visit("kit-manager", 100, t, 22, 34);
+        const p = this.pos["kit-manager"];
+        const from = this.homeOf("kit-manager").x + 6;
+        ctx.fillStyle = this.PAL.y;
+        ctx.fillRect(from, 122, Math.max(1, p.x + 6 - from), 1);
+        ctx.fillRect(from, 120, 1, 4);
+        ctx.fillRect(p.x + 6, 120, 1, 4);
+        for (let x = from; x < p.x + 6; x += 4) ctx.fillRect(x, 121, 1, 1);
+      },
+    },
+    {
+      at: "06:45",
+      text: "The Analyst checks the sitemaps and the schema.",
+      run(t, ctx) {
+        const flash = (t >= 6 && t < 12) || (t >= 18 && t < 24) || (t >= 30 && t < 36);
+        if (!flash) return;
+        for (let i = 0; i < 2; i += 1) {
+          const mx = 24 + i * 16;
+          ctx.fillStyle = this.PAL.w;
+          ctx.fillRect(mx + 4, 148, 6, 8);
+          ctx.fillStyle = this.PAL.k;
+          ctx.fillRect(mx + 5, 150, 4, 1);
+          ctx.fillRect(mx + 5, 152, 3, 1);
+          ctx.fillRect(mx + 5, 154, 4, 1);
+        }
+      },
+    },
+    {
+      at: "07:00",
+      text: "The article routine drops a draft into the PR queue.",
+      run(t, ctx) {
+        if (t >= 32) return;
+        const u = this.phase(t, 6, 32);
+        this.sheet(ctx, Math.round(70 + (116 - 70) * u), 76);
+      },
+    },
+    {
+      at: "07:15",
+      text: "The Scout scans the horizon.",
+      run(t, ctx) {
+        const p = this.pos.scout;
+        const sweep = Math.sin((t / this.STEP_FRAMES) * Math.PI * 2);
+        ctx.fillStyle = this.PAL.k;
+        ctx.fillRect(p.x + 1, p.y + 3, 10, 2);
+        ctx.fillStyle = this.PAL.l;
+        for (let k = -1; k <= 1; k += 1) {
+          this.line(ctx, p.x + 11, p.y + 4, 83, 152 + sweep * 5 + k);
+        }
+        ctx.fillStyle = this.PAL.w;
+        ctx.fillRect(82, Math.round(152 + sweep * 5) - 1, 2, 3);
+      },
+    },
+    {
+      at: "07:30",
+      text: "The Editor reads the draft and holds up a verdict card.",
+      run(t, ctx) {
+        // Back to the desk before the card goes up, so it does not cover the
+        // door's number.
+        const home = this.homeOf("editor");
+        const out = this.phase(t, 0, 10);
+        const back = this.phase(t, 14, 24);
+        this.place("editor", home.x + (104 - home.x) * (out - back), home.y);
+        if (t < 10 || (t > 14 && t < 24)) this.moving.editor = true;
+        const p = this.pos.editor;
+        if (t >= 12) this.sheet(ctx, p.x + 11, p.y + 6);
+        if (t < 24) return;
+        const v = this.verdict();
+        const wide = this.textWidth(v.text) + 4;
+        const cx = p.x + 6 - Math.floor(wide / 2);
+        ctx.fillStyle = this.PAL.k;
+        ctx.fillRect(cx - 1, p.y - 14, wide + 2, 11);
+        ctx.fillStyle = v.colour;
+        ctx.fillRect(cx, p.y - 13, wide, 9);
+        this.drawText(ctx, v.text, cx + 2, p.y - 11, this.PAL.k);
+      },
+    },
+    {
+      at: "07:45",
+      text: "The Press Officer drafts the day's posts.",
+      run(t, ctx) {
+        const glow = Math.floor(t / 3) % 2 === 0;
+        ctx.fillStyle = glow ? this.PAL.l : this.PAL.y;
+        ctx.fillRect(96, 146, 7, 1);
+        ctx.fillRect(96, 146, 1, 6);
+        ctx.fillRect(102, 146, 1, 6);
+        const p = this.pos["press-officer"];
+        for (let i = 0; i < 3; i += 1) {
+          const age = t - (8 + i * 11);
+          if (age < 0 || age > 14) continue;
+          const bx = p.x + 13;
+          const by = p.y - 1 - Math.round(age) - i * 2;
+          ctx.fillStyle = this.PAL.k;
+          ctx.fillRect(bx, by - 1, 11, 9);
+          ctx.fillStyle = this.PAL.w;
+          ctx.fillRect(bx + 1, by, 9, 7);
+          ctx.fillStyle = this.PAL.m;
+          ctx.fillRect(bx + 3, by + 2, 5, 1);
+          ctx.fillRect(bx + 3, by + 4, 3, 1);
+        }
+      },
+    },
+    {
+      at: "08:00",
+      text: "The Scorer chalks the numbers on the board.",
+      run(t, ctx) {
+        this.visit("scorer", 126, t, 8, 40);
+        const target = this.gameViews();
+        let shown = "";
+        for (let i = 0; i < 4; i += 1) {
+          const settled = t >= 10 + i * 7;
+          shown += settled ? target.charAt(i) : String((t * 3 + i * 5) % 10);
+        }
+        ctx.fillStyle = this.PAL.k;
+        ctx.fillRect(118, 150, 20, 6);
+        this.drawText(ctx, shown, 119, 151, this.PAL.l);
+      },
+    },
+    {
+      at: "10:00",
+      text: "Weekdays: a laptop in the directors' box opens Search Console.",
+      run(t, ctx) {
+        const day = this.istWeekday();
+        if (day === "Saturday" || day === "Sunday") return;
+        this.place("session", 84, this.homeOf("session").y);
+        const c = this.tone();
+        ctx.fillStyle = c.line;
+        ctx.fillRect(100, 45, 14, 2);
+        const lid = Math.round(this.phase(t, 4, 14) * 9);
+        if (lid < 1) return;
+        ctx.fillStyle = c.line;
+        ctx.fillRect(101, 45 - lid, 12, lid);
+        ctx.fillStyle = c.screen;
+        ctx.fillRect(102, 46 - lid, 10, Math.max(0, lid - 1));
+        if (lid < 9) return;
+        const bars = [3, 5, 4, 7, 6];
+        const grown = this.phase(t, 16, 40);
+        for (let i = 0; i < bars.length; i += 1) {
+          const tall = Math.max(1, Math.round(bars[i] * grown));
+          ctx.fillStyle = this.PAL.l;
+          ctx.fillRect(103 + i * 2, 44 - tall, 1, tall);
+        }
+      },
+    },
+    {
+      at: "10:30",
+      text: "The owner reads Today, acknowledges what needs it, and says deploy. A purge sweeps the pitch once.",
+      run(t, ctx) {
+        this.visit("owner", 66, t, 12, 44);
+        const u = this.phase(t, 20, 44);
+        if (u <= 0 || u >= 1) return;
+        const x = Math.round(142 + u * 18);
+        ctx.fillStyle = this.PAL.l;
+        ctx.fillRect(x, 12, 2, 40);
+        ctx.fillStyle = "#8fbf1f";
+        if (x > 143) ctx.fillRect(x - 2, 12, 2, 40);
+        ctx.fillStyle = this.PAL.w;
+        ctx.fillRect(x, 12, 2, 2);
+      },
+    },
+    {
+      at: "22:00",
+      text: "Night. The lights dim. On Mondays the Steward patrols with the torch.",
+      run(t, ctx) {
+        if (this.istWeekday() !== "Monday") return;
+        const span = this.STEP_FRAMES + this.HOLD_FRAMES;
+        const u = this.phase(t, 4, span - 4);
+        const x = Math.round(24 + u * 92);
+        this.place("steward", x, 204);
+        this.moving.steward = true;
+        ctx.fillStyle = this.PAL.y;
+        ctx.fillRect(x + 12, 210, 1, 2);
+        for (let k = 0; k < 9; k += 1) {
+          ctx.fillStyle = k % 2 === 0 ? "#7a6a1e" : "#5d5117";
+          this.line(ctx, x + 13, 211, Math.min(138, x + 13 + k * 2), 205 + k);
+        }
+      },
+    },
+  ],
+};
+
+// Every figure stands on its room's floor, twenty four pixels below the ceiling.
+for (const room of Clubhouse.ROOMS) {
+  for (const id of room.members) {
+    Clubhouse.FIGURES.push({ id: id, room: room.id, home: { x: Clubhouse.HOME_X[id], y: room.y + 24 } });
+  }
+}
+
+Clubhouse.nightPref = Clubhouse.night;
+Clubhouse.resetPositions();
+
+// Called again on every database snapshot, so it binds once, keeps the frame
+// the day is on, and only refreshes what the new numbers changed.
+OpsRoom.renderClubhouse = function (root) {
+  Clubhouse.mount(root);
+  Clubhouse.redraw();
+  if (Clubhouse.selected) Clubhouse.renderClubhouseCard(Clubhouse.selected);
+  Clubhouse.autoPlay();
+};
+
+window.Clubhouse = Clubhouse;
+</script>
+
+<script>
+window.addEventListener("DOMContentLoaded", () => OpsRoom.init());
+</script>
