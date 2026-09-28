@@ -4,9 +4,12 @@ export function SectionHeader({
   children,
   action,
   description,
+  badge,
   tools,
 }: {
   children: React.ReactNode;
+  /** Small tinted chip after the title: the matchweek, the season, or a live count. */
+  badge?: React.ReactNode;
   /** Optional link rendered at the right edge ("Full schedule", "View all"). */
   action?: { label: string; href: string };
   description?: React.ReactNode;
@@ -20,6 +23,11 @@ export function SectionHeader({
           <h2 className="display flex items-center gap-3 text-[26px] text-[var(--text)] sm:text-[30px]">
             <span aria-hidden className="h-[22px] w-1.5 shrink-0 rounded-sm bg-[var(--sig)]" />
             <span>{children}</span>
+            {badge && (
+              <span className="font-sans rounded-md bg-[var(--sig-soft)] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[var(--sig-ink)]">
+                {badge}
+              </span>
+            )}
           </h2>
           {description && <p className="mt-0.5 text-xs text-[var(--text-muted)]">{description}</p>}
         </div>

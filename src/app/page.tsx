@@ -41,6 +41,7 @@ function LeagueBlock({ section }: { section: HomeSection }) {
     <section className="sm:col-span-2">
       <SectionHeader
         action={{ label: "All fixtures", href: `/${league}` }}
+        badge={liveCount > 0 ? `${liveCount} live` : snapshot?.seasonLabel}
         description={liveCount > 0 ? `${liveCount} in play, listed under Live now above` : "Latest results and next fixtures"}
       >
         {LEAGUE_LABEL[league]}
@@ -101,7 +102,7 @@ export default async function HomePage() {
               {liveTotal > 0 && (
                 <li>
                   <a href="#live" className="inline-flex items-center gap-2 rounded-full bg-[var(--sig)] px-3.5 py-1.5 text-sm font-bold text-[var(--sig-on)]">
-                    <span className="live-dot bg-[var(--sig-on)]" aria-hidden />
+                    <span className="live-dot bg-[var(--sig-on)]!" aria-hidden />
                     {liveTotal} live now
                   </a>
                 </li>
@@ -165,16 +166,6 @@ export default async function HomePage() {
 
         {(home.news.length > 0 || beyondTheScorelineArticles.length > 0) && (
           <div className="lg:col-span-1 flex flex-col gap-10">
-            {home.news.length > 0 && (
-              <aside>
-                <SectionHeader>Latest news</SectionHeader>
-                <div className="flex flex-col gap-2">
-                  {home.news.map((a) => (
-                    <NewsCard key={a.article_id} article={a} compact />
-                  ))}
-                </div>
-              </aside>
-            )}
             {beyondTheScorelineArticles.length > 0 && (
               <aside>
                 <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
@@ -194,6 +185,16 @@ export default async function HomePage() {
                   >
                     @sportsdblive on X
                   </a>
+                </div>
+              </aside>
+            )}
+            {home.news.length > 0 && (
+              <aside>
+                <SectionHeader>Latest news</SectionHeader>
+                <div className="flex flex-col gap-2">
+                  {home.news.map((a) => (
+                    <NewsCard key={a.article_id} article={a} compact />
+                  ))}
                 </div>
               </aside>
             )}
