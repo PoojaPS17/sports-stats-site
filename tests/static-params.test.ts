@@ -56,6 +56,7 @@ const ABOVE_CAP: Record<string, string> = {
 // change shows up in a diff with a failing test behind it.
 const REVALIDATE: Record<string, number> = {
   "beyond-the-scoreline/[slug]/page.tsx": 300,
+  "beyond-the-scoreline/[slug]/opengraph-image.tsx": 300,
   "[league]/h2h/[pair]/page.tsx": 300,
   "[league]/games/[id]/players/[slug]/page.tsx": 300,
   "[league]/games/[id]/players/[slug]/opengraph-image.tsx": 300,
