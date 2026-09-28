@@ -55,13 +55,14 @@ export function SpotlightCard({ game }: { game: GameRow }) {
     home: <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />,
   };
 
-  const c1 = teamHex(order[0] === "home" ? game.home_color : game.away_color, "#1e3a8a");
-  const c2 = teamHex(order[0] === "home" ? game.away_color : game.home_color, "#7c2d12");
+  const c1 = teamHex(order[0] === "home" ? game.home_color : game.away_color, "var(--mast-2)");
+  const c2 = teamHex(order[0] === "home" ? game.away_color : game.home_color, "var(--mast-2)");
   return (
     <Link
       href={`/${league}/games/${game.espn_id}`}
-      className="card block rounded-2xl border-white/10 px-5 py-4 text-[var(--mast-text)] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)]"
-      style={{ background: `linear-gradient(135deg, ${c1} 0%, var(--mast) 55%, ${c2} 140%)` }}
+      className="card block rounded-2xl border-[var(--mast-line)] px-5 py-4 text-[var(--mast-text)] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)]"
+      // Team colours are mixed toward navy so light kits never wash out the light text.
+      style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${c1} 55%, var(--mast)) 0%, var(--mast) 55%, color-mix(in srgb, ${c2} 55%, var(--mast)) 140%)` }}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--sig)]">
@@ -73,7 +74,7 @@ export function SpotlightCard({ game }: { game: GameRow }) {
         {teams[order[0]]}
         {teams[order[1]]}
       </div>
-      <p className="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5 text-xs font-medium text-[var(--mast-muted)]">
+      <p className="mt-3 flex items-center justify-between border-t border-[var(--mast-line)] pt-2.5 text-xs font-medium text-[var(--mast-muted)]">
         <span>
           {game.completed ? (game.status_summary ?? "Full time") : live ? (game.status_detail ?? "In progress") : <Kickoff league={league} game={game} format="datetime" />}
         </span>
