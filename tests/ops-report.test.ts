@@ -181,6 +181,10 @@ test("dbHealthSection reads sizes, dead rows and connections", async () => {
   assert.ok(s.data.sizeBytes > 0);
   assert.ok(s.data.largestTables.length > 0 && s.data.largestTables.length <= 5);
   assert.ok(s.data.connections.max > 0);
+  assert.equal(typeof s.data.listenAddresses, "string");
+  assert.equal(typeof s.data.ssl, "boolean");
+  assert.ok(s.data.slowStatements === null || Array.isArray(s.data.slowStatements));
+  assert.ok(Array.isArray(s.data.seqScanHeavy));
 });
 
 test("viewsSection splits yesterday and today", async () => {
