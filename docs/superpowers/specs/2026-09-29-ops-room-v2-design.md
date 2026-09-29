@@ -165,7 +165,7 @@ Showcase
 
 **Office.** The v1 Clubhouse design (section 5.1 of v1) with these changes: the tab is called Office; the Groundsman is a figure at pitch level with a roller and a toolbox, lit when an order is running; step 14 is added, "The owner gives an order; the Groundsman collects it and comes back with a pull request"; each figure's card is the Crew card. Pause, Restart, Day and Night, and the step caption as in v1.
 
-**Live and offline.** One subscription per collection, re-render on change. With `db` unavailable the page shows each section's empty state and says why. Writes are pinned with the document version; a conflict re-reads and retries once.
+**Live and offline.** One subscription per collection, re-render on change. With `db` unavailable the page shows each section's empty state and says why. The page's writes are field merges (`update`) except a new order, which is `set` once on a page-made id; the page-side database namespace has no version pin (checked 2026-09-29, runtime contract 0.2.61), so a conflict can only be two writers changing the same field, and the later write wins. The agents pin their writes with `if_version` through the ArtifactData tool.
 
 ## 7. The fuller check list
 

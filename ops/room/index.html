@@ -410,7 +410,7 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
           <div class="clubhouse-main">
             <div class="clubhouse-left">
               <div class="clubhouse-stage">
-                <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
+                <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with the pitch in front of it and one figure for every member of the crew. The Groundsman works on the pitch at the bottom. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
               </div>
               <div class="clubhouse-caption" id="clubhouse-caption"></div>
               <div class="clubhouse-controls" role="group" aria-label="Playback">
@@ -432,6 +432,7 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
                 <button type="button" class="chip" data-figure="scout">Scout</button>
                 <button type="button" class="chip" data-figure="press-officer">Press Officer</button>
                 <button type="button" class="chip" data-figure="scorer">Scorer</button>
+                <button type="button" class="chip" data-figure="groundsman">Groundsman</button>
               </div>
             </div>
             <div id="clubhouse-card"></div>
@@ -2293,15 +2294,16 @@ const OpsRoom = {
 window.OpsRoom = OpsRoom;
 </script>
 <script>
-// ---- The Clubhouse ----
-// A cross-section of the stand drawn pixel by pixel on one canvas, 160 by 232
-// logical pixels blown up by an integer SCALE. Nothing here loads a file: every
-// figure is an array of sixteen strings, one character per pixel, and every
-// number the scene shows is read from OpsRoom.state.
+// ---- The Office ----
+// A cross-section of the stand drawn pixel by pixel on one canvas, 160 by 256
+// logical pixels blown up by an integer SCALE, with the pitch across the front
+// of it. Nothing here loads a file: every figure is an array of sixteen
+// strings, one character per pixel, and every number the scene shows is read
+// from OpsRoom.state.
 
 const Clubhouse = {
   W: 160,
-  H: 232,
+  H: 256,
   SCALE: 3,
   t: 0,
   canvas: null,
@@ -2554,6 +2556,24 @@ const Clubhouse = {
       "..mm....mm..",
       "..kkk..kkk..",
     ],
+    "groundsman": [
+      "...gggggg...",
+      ".gggggggggg.",
+      "..gssssssg..",
+      "..gskssksg..",
+      "..gssddssg..",
+      "....ssss....",
+      "..gggggggg..",
+      ".gggggggggg.",
+      ".gllllllllg.",
+      ".sggggggggs.",
+      "..gggggggg..",
+      "..gggggggg..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
     "session": [
       "...hhhhhh.ww",
       "..hhhhhhh.wk",
@@ -2575,20 +2595,30 @@ const Clubhouse = {
   },
 
   ROOMS: [
-    { id: "box", y: 12, label: "DIRECTORS' BOX", members: ["owner", "session"] },
-    { id: "officials", y: 54, label: "OFFICIALS", members: ["umpire", "editor"] },
-    { id: "backroom", y: 96, label: "BACKROOM", members: ["physio", "kit-manager", "steward"] },
-    { id: "front", y: 138, label: "FRONT OFFICE", members: ["analyst", "scout", "press-officer", "scorer"] },
-    { id: "basement", y: 180, label: "DB", members: [] },
+    { id: "box", y: 12, label: "DIRECTORS' BOX" },
+    { id: "officials", y: 54, label: "OFFICIALS" },
+    { id: "backroom", y: 96, label: "BACKROOM" },
+    { id: "front", y: 138, label: "FRONT OFFICE" },
+    { id: "basement", y: 180, label: "DB" },
   ],
 
-  // Where each figure stands when nothing is happening. Task 11 walks them off
-  // these marks and back again.
-  HOME_X: {
-    owner: 54, session: 98,
-    umpire: 46, editor: 88,
-    physio: 54, "kit-manager": 70, steward: 104,
-    analyst: 24, scout: 64, "press-officer": 90, scorer: 118,
+  // The floor map: where each figure stands when nothing is happening, twenty
+  // four pixels below its room's ceiling. The Groundsman is not on a floor at
+  // all. He works on the pitch across the front of the stand, so his mark sits
+  // below every other one on the scene.
+  FLOOR: {
+    owner: { room: "box", x: 54, y: 36 },
+    session: { room: "box", x: 98, y: 36 },
+    umpire: { room: "officials", x: 46, y: 78 },
+    editor: { room: "officials", x: 88, y: 78 },
+    physio: { room: "backroom", x: 54, y: 120 },
+    "kit-manager": { room: "backroom", x: 70, y: 120 },
+    steward: { room: "backroom", x: 104, y: 120 },
+    analyst: { room: "front", x: 24, y: 162 },
+    scout: { room: "front", x: 64, y: 162 },
+    "press-officer": { room: "front", x: 90, y: 162 },
+    scorer: { room: "front", x: 118, y: 162 },
+    groundsman: { room: "pitch", x: 60, y: 238 },
   },
 
   FIGURES: [],
@@ -2852,64 +2882,53 @@ const Clubhouse = {
     for (const btn of this.figureButtons) {
       btn.setAttribute("aria-pressed", btn.getAttribute("data-figure") === id ? "true" : "false");
     }
-    this.renderClubhouseCard(id);
+    this.renderOfficeCard(id);
     this.redraw();
   },
 
-  // Name, role and the three standing facts, then what the crew member did
-  // tonight. The two of us in the dugout are not crew documents, so the Crew
-  // tab's static entries answer for them.
-  cardData(id) {
-    const crew = this.state().crew || {};
+  // Before the first run there is no crew document, so the figure list's own
+  // label stands in for the name rather than the bare id.
+  labelOf(id) {
+    for (const btn of this.figureButtons) {
+      if (btn.getAttribute("data-figure") === id) return btn.textContent || id;
+    }
+    return id;
+  },
+
+  // The card beside the canvas is the Crew section's card, built by the Crew
+  // section's own function, so the two never drift apart. The two of us in the
+  // dugout are not crew documents, so the dugout entries answer for us.
+  renderOfficeCard(id) {
+    const box = this.cardEl;
+    if (!box) return;
     const statics = typeof DUGOUT === "undefined" ? [] : DUGOUT;
     const staticKey = id === "session" ? "main-session" : id;
     for (const d of statics) {
       if (d.id !== staticKey) continue;
-      return { name: d.name, role: d.role, job: d.job, never: d.never, when: d.when, tonight: "Read Today; nothing to deploy." };
+      box.replaceChildren(OpsRoom.crewCard(d, true));
+      return;
     }
-    const c = crew[id] || {};
-    const has = (v) => OpsRoom.has(v);
-    // Before the first run there is no crew document, so the figure list's own
-    // label stands in for the name rather than the bare id.
-    let label = id;
-    for (const btn of this.figureButtons) {
-      if (btn.getAttribute("data-figure") === id) label = btn.textContent || id;
-    }
-    return {
-      name: has(c.name) ? c.name : label,
-      role: has(c.role) ? c.role : "",
-      job: has(c.job) ? c.job : "Not recorded",
-      never: has(c.never) ? c.never : "Not recorded",
-      when: has(c.when) ? c.when : "Not recorded",
-      tonight: has(c.lastHeadline) ? c.lastHeadline : "No run yet.",
-    };
-  },
-
-  renderClubhouseCard(id) {
-    const box = this.cardEl;
-    if (!box) return;
-    const h = OpsRoom.h;
-    const d = this.cardData(id);
-    const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
-    try { this.drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
-    const facts = h("dl", { class: "crew-facts" },
-      h("dt", { text: "Job" }), h("dd", { text: d.job }),
-      h("dt", { text: "Never" }), h("dd", { text: d.never }),
-      h("dt", { text: "When" }), h("dd", { text: d.when }),
-      h("dt", { text: "Tonight" }), h("dd", { text: d.tonight }));
-    box.replaceChildren(h("section", { class: "card" },
-      h("div", { class: "crew-top" }, canvas,
-        h("div", {},
-          h("div", { class: "crew-card-name", text: d.name }),
-          h("div", { class: "crew-card-role", text: d.role }))),
-      facts));
+    const crew = this.state().crew || {};
+    const c = crew[id] || { id: id, name: this.labelOf(id) };
+    box.replaceChildren(OpsRoom.crewCard(c, false));
   },
 
   // ---- the numbers, all of them from the page's own state ----
 
   state() {
     const room = window.OpsRoom;
-    return (room && room.state) || { crew: {}, issues: {}, daily: {}, status: null };
+    return (room && room.state) || { crew: {}, issues: {}, orders: {}, daily: {}, status: null };
+  },
+
+  // The Groundsman's lamp: on while an order is being carried out, dim while
+  // the queue is quiet.
+  orderRunning() {
+    const orders = this.state().orders || {};
+    for (const key of Object.keys(orders)) {
+      const o = orders[key] || {};
+      if (String(o.status || "") === "running") return true;
+    }
+    return false;
   },
 
   openIssues() {
@@ -3113,9 +3132,22 @@ const Clubhouse = {
       this.disc(ctx, 9, 28, 3);
     }
     ctx.fillStyle = c.earth;
-    ctx.fillRect(0, 178, 160, 54);
+    ctx.fillRect(0, 178, 160, 48);
     ctx.fillStyle = c.pitch;
     ctx.fillRect(0, 178, 160, 3);
+  },
+
+  // The pitch across the front of the stand, mown in stripes, where the
+  // Groundsman keeps his roller and his toolbox.
+  drawApron(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.pitch;
+    ctx.fillRect(0, 226, 160, 30);
+    ctx.fillStyle = this.night ? "#0d2e1b" : "#27804a";
+    for (let x = 0; x < 160; x += 16) ctx.fillRect(x, 226, 8, 30);
+    ctx.fillStyle = c.pitchLine;
+    ctx.fillRect(0, 230, 160, 1);
+    this.drawText(ctx, "PITCH", 138, 233, c.pitchLine);
   },
 
   drawBuilding(ctx, t) {
@@ -3145,6 +3177,7 @@ const Clubhouse = {
     ctx.fillRect(14, 222, 132, 4);
     this.drawSign(ctx, t);
     this.drawPitch(ctx);
+    this.drawApron(ctx);
   },
 
   drawSign(ctx) {
@@ -3182,6 +3215,15 @@ const Clubhouse = {
     ctx.fillRect(116, 14, 1, 38);
     ctx.fillRect(116, 26, 22, 1);
     ctx.fillRect(116, 38, 22, 1);
+
+    // The door in the glass, onto the pitch. The Groundsman knocks on it when
+    // the owner has an order for him.
+    ctx.fillStyle = c.line;
+    ctx.fillRect(127, 38, 11, 14);
+    ctx.fillStyle = c.room;
+    ctx.fillRect(128, 39, 9, 13);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(135, 45, 1, 2);
 
     ctx.fillStyle = c.line;
     ctx.fillRect(26, 22, 26, 16);
@@ -3775,11 +3817,10 @@ const Clubhouse = {
   ],
 };
 
-// Every figure stands on its room's floor, twenty four pixels below the ceiling.
-for (const room of Clubhouse.ROOMS) {
-  for (const id of room.members) {
-    Clubhouse.FIGURES.push({ id: id, room: room.id, home: { x: Clubhouse.HOME_X[id], y: room.y + 24 } });
-  }
+// One figure per mark on the floor map.
+for (const id of Object.keys(Clubhouse.FLOOR)) {
+  const mark = Clubhouse.FLOOR[id];
+  Clubhouse.FIGURES.push({ id: id, room: mark.room, home: { x: mark.x, y: mark.y } });
 }
 
 Clubhouse.nightPref = Clubhouse.night;
@@ -3790,7 +3831,7 @@ Clubhouse.resetPositions();
 OpsRoom.renderOffice = function (root) {
   Clubhouse.mount(root);
   Clubhouse.redraw();
-  if (Clubhouse.selected) Clubhouse.renderClubhouseCard(Clubhouse.selected);
+  if (Clubhouse.selected) Clubhouse.renderOfficeCard(Clubhouse.selected);
   Clubhouse.autoPlay();
 };
 
