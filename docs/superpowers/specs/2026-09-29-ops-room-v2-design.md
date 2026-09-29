@@ -179,7 +179,7 @@ Read by the Umpire and the Steward, computed on the VM in `src/lib/opsReport.ts`
 
 **`dbHealth` additions:** `listen_addresses` and `ssl` settings; the five slowest statements by mean time when `pg_stat_statements` is installed, else null; tables over 100,000 rows where sequential scans outnumber index scans.
 
-**`views` additions:** `follows`, the row count of the `follows` table (check 59). No referrer: `game_views` has no referrer column. Referrers are read from GA4 by the Chrome task instead (check 54).
+**`views` additions:** none. `game_views` has no referrer column and follows are client-side (check 59). Referrers are read from GA4 by the Chrome task instead (check 54).
 
 ### 7.2 Availability and health
 
@@ -276,7 +276,7 @@ Read by the Umpire and the Steward, computed on the VM in `src/lib/opsReport.ts`
 
 **Scorer**
 58. A day whose `gameViews` is under 20 percent of the previous seven-day mean when that mean is over 50 [high]; a 30 percent week-on-week drop in GA4 users, engagement rate or Search Console clicks [medium]; a week-on-week rise over 50 percent is recorded as a headline, not an issue.
-59. Follows: the count of rows in `follows` (through a `follows` figure added to the `views` section) as a daily number, so the feature's uptake is visible on Stats.
+59. Follows: not measurable; the follow feature keeps its state in the browser and the `/api/follows` route reads no table. Recorded here so the gap is written down. A Groundsman order can add a counter later.
 
 **Press Officer**
 60. Every draft's link is a live 200 page and the drafted result matches the score on the site [high].
