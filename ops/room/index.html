@@ -80,6 +80,10 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
   .side-toggle { display: inline-flex; }
   .side-state { margin-bottom: 0; }
   .side-sheet { margin-top: 10px; }
+  /* display: grid on the class would otherwise beat the browser's own rule for
+     the hidden attribute, and the menu button would open a sheet that never
+     closes again. */
+  .side-sheet[hidden] { display: none; }
   main { max-width: none; }
 }
 
@@ -144,8 +148,8 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
   padding: 10px 0; border-top: 1px solid var(--line); }
 .row:first-of-type { border-top: 0; }
 .row-main { min-width: 0; flex: 1 1 220px; }
-.row-title { font-weight: 600; overflow-wrap: anywhere; }
-.row-sub { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.row-title { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.row-sub { display: block; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .row-when { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .crew-name { font-weight: 800; }
 .crew-role { color: var(--muted); font-size: 13px; }
@@ -154,6 +158,25 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
 .fig-v { font-size: 21px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .fig-s { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .sources { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+
+/* ---- Orders ---- */
+.compose { display: grid; gap: 11px; }
+.kinds { display: flex; gap: 6px; flex-wrap: wrap; }
+.field { display: grid; gap: 4px; }
+.field > .sub { margin: 0; }
+.field textarea, .field select { width: 100%; max-width: 100%; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; }
+.field textarea { resize: vertical; }
+.hourly { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.order-head { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; width: 100%;
+  appearance: none; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer; }
+.order-head:hover .order-title { color: var(--accent); }
+.order-title { font-weight: 600; overflow-wrap: anywhere; flex: 1 1 180px; min-width: 0; }
+.order-body { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.order-links { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 9px; }
+.chip-cancelled { color: var(--muted); }
+.chip-kind { cursor: inherit; font-size: 12px; padding: 1px 9px; }
 
 /* ---- Issues ---- */
 .sev-head { margin-top: 22px; }
@@ -217,6 +240,52 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
 .crew-last { display: flex; align-items: baseline; gap: 3px 7px; flex-wrap: wrap; }
 .crew-last .dot { align-self: center; }
 .crew-ago { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.crew-line { padding: 10px 0; border-top: 1px solid var(--line); }
+.crew-line:first-of-type { border-top: 0; }
+.crew-open { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; width: 100%;
+  appearance: none; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer; }
+.crew-open:hover .crew-name { color: var(--accent); }
+.crew-chev { color: var(--muted); font-size: 17px; line-height: 1; flex: none; }
+.crew-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.crew-panel .crew-card { border: 0; box-shadow: none; background: none; padding: 0; }
+
+/* ---- Stats ----
+   The charts are drawn here rather than by a library: four one-series lines and
+   one stacked bar, every mark and every word coloured from the tokens above so
+   both themes are legible. The marks carry the colour; the text never does. */
+.chart { margin: 0 0 18px; }
+.chart:last-child { margin-bottom: 0; }
+.chart-head { display: flex; align-items: baseline; gap: 3px 10px; flex-wrap: wrap; }
+.chart-title { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.chart-now { font-size: 21px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.chart-delta { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.chart-delta.is-up { color: var(--ok); }
+.chart-delta.is-down { color: var(--warn); }
+.chart svg { display: block; width: 100%; height: auto; margin-top: 7px; }
+.ch-grid { stroke: var(--line); stroke-width: 1; fill: none; }
+.ch-line { stroke: var(--accent); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.ch-dot { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.ch-text { fill: var(--muted); font-family: var(--ui); font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums; }
+.ch-critical { fill: var(--crit); }
+.ch-high { fill: var(--high); }
+.ch-medium { fill: var(--medium); }
+.ch-low { fill: var(--low); }
+.legend { display: flex; gap: 5px 14px; flex-wrap: wrap; margin-top: 9px; color: var(--muted); font-size: 13px; }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; background: var(--low); }
+.swatch-critical { background: var(--crit); }
+.swatch-high { background: var(--high); }
+.swatch-medium { background: var(--medium); }
+.swatch-low { background: var(--low); }
+.numbers { margin-top: 12px; color: var(--muted); }
+.numbers > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.grid-table { border-collapse: collapse; margin-top: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.grid-table :is(td, th) { border-top: 1px solid var(--line); padding: 3px 9px 3px 0; text-align: right;
+  white-space: nowrap; color: var(--text); font-weight: 400; }
+.grid-table th { color: var(--muted); font-weight: 800; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.grid-table :is(td, th):first-child { text-align: left; }
 
 /* ---- Rulebook ---- */
 .rules { margin: 0; padding-left: 26px; }
@@ -387,6 +456,21 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // cut, so one runaway run cannot freeze the page.
 const DETAILS_LIMIT = 16000;
 
+// The four kinds of order, in the order the compose box offers them, and the
+// four lists the Orders page groups them into. A cancelled order is shown in
+// the Failed list, with its own chip, because it is also a job that will not be
+// done and the owner should not have to look in a fifth place for it.
+const ORDER_KINDS = [["fix", "Fix"], ["explain", "Explain"], ["recheck", "Recheck"], ["custom", "Custom"]];
+const ORDER_GROUPS = [["queued", "Queued"], ["running", "Running"], ["done", "Done"], ["failed", "Failed"]];
+const ORDER_WORDS = { queued: "waiting", running: "in hand", done: "done", failed: "could not be done", cancelled: "cancelled" };
+
+// The Runs filter is the only thing this page remembers about the viewer, and
+// it is remembered in the browser, never written to the database.
+const RUNS_FILTER_KEY = "ops-room.runs-agent";
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const CHART_DAYS = 14;
+
 // The dugout is the two of us. Neither has a routine, so neither is a crew
 // document: they are written here and never read from the database.
 const DUGOUT = [
@@ -497,9 +581,13 @@ const OpsRoom = {
   sections: SECTIONS,
   links: [],
   filters: { runsAgent: null },
+  compose: { kind: "fix", text: "", issueKey: "" },
+  narrow: false,
   expanded: {},
 
   async init() {
+    this.readFilter();
+    this.narrow = this.isNarrow();
     this.bindNav();
     this.route(true);
     this.render();
@@ -552,6 +640,34 @@ const OpsRoom = {
       });
     }
     window.addEventListener("hashchange", () => this.route());
+    // The charts are drawn to a viewBox chosen for the width they will be shown
+    // at, so crossing the phone breakpoint asks for them again. Nothing else on
+    // the page cares about the size, so nothing else is redrawn.
+    window.addEventListener("resize", () => {
+      const narrow = this.isNarrow();
+      if (narrow === this.narrow) return;
+      this.narrow = narrow;
+      if (this.active === "stats") this.render();
+    });
+  },
+
+  isNarrow() { return typeof window.innerWidth === "number" && window.innerWidth > 0 && window.innerWidth <= 760; },
+
+  // localStorage is missing in a sandboxed frame and throws when site data is
+  // blocked, so both ends of the remembered filter are wrapped.
+  readFilter() {
+    try {
+      const saved = window.localStorage.getItem(RUNS_FILTER_KEY);
+      if (saved) this.filters.runsAgent = String(saved);
+    } catch (err) { /* a viewer with site data blocked simply gets All */ }
+  },
+
+  setRunsAgent(id) {
+    this.filters.runsAgent = id || null;
+    try {
+      if (id) window.localStorage.setItem(RUNS_FILTER_KEY, String(id));
+      else window.localStorage.removeItem(RUNS_FILTER_KEY);
+    } catch (err) { /* the filter still works for this visit */ }
   },
 
   closeSheet() {
@@ -801,7 +917,8 @@ const OpsRoom = {
   },
 
   alertKind(kind) {
-    const map = { "new-critical": "new critical findings", "new-high": "new high findings", digest: "morning digest" };
+    const map = { "new-critical": "new critical findings", "new-high": "new high findings",
+      digest: "morning digest", reminder: "a critical finding still open" };
     return map[String(kind)] || String(kind || "push");
   },
 
@@ -904,9 +1021,8 @@ const OpsRoom = {
 
   orderLabel(order) {
     const status = String(order.status || "queued");
-    const words = { queued: "waiting", running: "in hand", done: "done", failed: "could not be done", cancelled: "cancelled" };
     const when = this.ago(order.finishedAt || order.pickedAt || order.createdAt);
-    return String(order.kind || "order") + ", " + (words[status] || status) + (when ? ", " + when : "");
+    return String(order.kind || "order") + ", " + (ORDER_WORDS[status] || status) + (when ? ", " + when : "");
   },
 
   noteBox(key, value, notice) {
@@ -1053,61 +1169,561 @@ const OpsRoom = {
       this.db.doc("issues/" + key).update({ orderId: order.id }));
   },
 
-  // ---- Orders, Alerts and Stats: the shells the later sections fill ----
+  // ---- Orders ----
 
   renderOrders(root) {
     const h = this.h;
-    const list = this.orderList();
-    const card = h("section", { class: "card card-rows" },
-      h("h2", { class: "sect" }, "Given so far",
-        list.length ? h("span", { class: "sect-note", text: this.num(list.length) }) : null));
-    if (!list.length) {
-      card.append(h("p", { class: "empty", text: this.state.dbReady === false
-        ? "Waiting for the orders list."
-        : "No orders yet. Open an issue and press Fix, Explain or Recheck to hand the Groundsman a job." }));
-    } else {
-      for (const o of list) {
-        card.append(h("div", { class: "row" },
-          h("span", { class: "chip chip-" + String(o.status || "queued"), text: this.orderLabel(o) }),
-          h("span", { class: "row-main" },
-            h("span", { class: "row-title", text: this.has(o.text) ? o.text : (this.has(o.issueKey) ? o.issueKey : "(no note)") }),
-            h("span", { class: "row-sub", text: "given by " + (o.createdBy || "owner") })),
-          h("time", { class: "row-when", datetime: this.has(o.createdAt) ? String(o.createdAt) : null, text: this.ago(o.createdAt) })));
-      }
+    const kids = [];
+    if (this.db && !this.canWrite) {
+      kids.push(h("p", { class: "readonly", text: "You are signed in as a viewer, so the box for giving an order is hidden. Only the owner gives orders." }));
+    } else if (this.db) {
+      kids.push(this.composeBox());
     }
-    root.replaceChildren(card, h("p", { class: "empty", text: "The Groundsman looks for orders every hour between 08:35 and 22:35 IST. Writing an order here in your own words arrives in the next update." }));
+    const all = this.orderList();
+    const buckets = { queued: [], running: [], done: [], failed: [] };
+    for (const o of all) {
+      const status = String(o.status || "queued");
+      const into = status === "cancelled" ? "failed" : (buckets[status] ? status : "failed");
+      buckets[into].push(o);
+    }
+    for (const pair of ORDER_GROUPS) {
+      const list = buckets[pair[0]];
+      if (!list.length) continue;
+      kids.push(h("h2", { class: "sect sev-head" }, pair[1],
+        h("span", { class: "sect-note", text: this.num(list.length) })));
+      for (const o of list) kids.push(this.orderCard(o));
+    }
+    if (!all.length) {
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the orders list."
+        : "Nothing in orders yet. Give one above, or press Fix, Explain or Recheck on an issue." }));
+    }
+    root.replaceChildren(...kids);
   },
+
+  // The compose box holds its own answers in this.compose, so a re-render while
+  // the owner is still typing does not take the words back.
+  composeBox() {
+    const h = this.h;
+    const draft = this.compose;
+    const notice = h("p", { class: "notice", hidden: true });
+
+    const kinds = h("div", { class: "kinds", role: "group", "aria-label": "What kind of order" });
+    const buttons = [];
+    for (const pair of ORDER_KINDS) {
+      const id = pair[0];
+      const btn = h("button", { type: "button", class: "chip", "aria-pressed": draft.kind === id ? "true" : "false", text: pair[1] });
+      btn.addEventListener("click", () => {
+        draft.kind = id;
+        for (const b of buttons) b.el.setAttribute("aria-pressed", b.id === draft.kind ? "true" : "false");
+      });
+      buttons.push({ id: id, el: btn });
+      kinds.append(btn);
+    }
+
+    const area = h("textarea", { rows: "2", id: "order-text",
+      placeholder: "What you want done, in your own words." });
+    area.value = draft.text;
+    area.addEventListener("input", () => { draft.text = area.value; });
+
+    const select = h("select", { id: "order-issue" });
+    select.append(h("option", { value: "", text: "No issue" }));
+    for (const it of this.pickableIssues()) {
+      const key = String(it.key || it.id || "");
+      select.append(h("option", { value: key, text: key + ": " + (it.title || "no title") }));
+    }
+    select.value = draft.issueKey;
+    if (select.value !== draft.issueKey) { draft.issueKey = ""; select.value = ""; }
+    select.addEventListener("change", () => { draft.issueKey = select.value; });
+
+    const send = h("button", { type: "button", class: "btn btn-go", text: "Send" });
+    send.addEventListener("click", () => {
+      const text = area.value.trim();
+      if (draft.kind === "custom" && !text) {
+        notice.textContent = "A custom order needs your words. Say what you want done.";
+        notice.hidden = false;
+        area.focus();
+        return;
+      }
+      notice.textContent = "";
+      notice.hidden = true;
+      send.disabled = true;
+      Promise.resolve().then(() => this.sendOrder(draft.kind, text, select.value)).then(() => {
+        draft.text = "";
+        draft.issueKey = "";
+        area.value = "";
+        select.value = "";
+        send.disabled = false;
+      }).catch((err) => {
+        notice.textContent = "Could not send the order: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        send.disabled = false;
+      });
+    });
+
+    return h("section", { class: "card" },
+      h("h2", { class: "sect" }, "Give an order"),
+      h("div", { class: "compose" },
+        kinds,
+        h("label", { class: "field" }, h("span", { class: "sub", text: "What to do" }), area),
+        h("label", { class: "field" }, h("span", { class: "sub", text: "About an issue (optional)" }), select),
+        h("div", { class: "actions" }, send)),
+      notice,
+      h("p", { class: "hourly", text: "The Groundsman checks for orders every hour between 08:35 and 22:35 IST. To run it now, open its routine and press Run." }));
+  },
+
+  // Everything still live enough to be worth an order: open, seen again, or
+  // acknowledged but not yet closed.
+  pickableIssues() {
+    const out = [];
+    for (const it of this.issueList()) {
+      const status = String(it.status || "open");
+      if (status !== "open" && status !== "reopened" && status !== "acknowledged") continue;
+      out.push(it);
+    }
+    out.sort((a, b) => {
+      const d = SEVERITIES.indexOf(this.severityOf(a)) - SEVERITIES.indexOf(this.severityOf(b));
+      return d !== 0 ? d : String(a.key || a.id || "").localeCompare(String(b.key || b.id || ""));
+    });
+    return out;
+  },
+
+  orderCard(o) {
+    const h = this.h;
+    const id = String(o.id || "");
+    const status = String(o.status || "queued");
+    const mark = "order:" + id;
+    const shown = !!this.expanded[mark];
+
+    const body = h("div", { class: "order-body", hidden: !shown });
+    if (this.has(o.result)) body.append(this.markdownBlock(o.result));
+    else body.append(h("p", { class: "empty", text: status === "queued"
+      ? "Not picked up yet. The Groundsman writes what it found here."
+      : "Nothing written back yet." }));
+    const pr = this.safeUrl(o.prUrl);
+    const session = this.safeUrl(o.sessionUrl);
+    if (pr || session) {
+      body.append(h("div", { class: "order-links" },
+        pr ? h("a", { class: "link", href: pr, target: "_blank", rel: "noopener noreferrer", text: "Read the pull request" }) : null,
+        session ? h("a", { class: "link", href: session, target: "_blank", rel: "noopener noreferrer", text: "Open the session log" }) : null));
+    }
+    // Only a job nobody has started can be called off, so the button exists on
+    // a queued order and nowhere else.
+    if (status === "queued" && this.db && this.canWrite) {
+      const notice = h("p", { class: "notice", hidden: true });
+      body.append(h("div", { class: "actions" },
+        this.actionButton("Cancel this order", notice, () => this.cancelOrder(id))), notice);
+    }
+
+    const head = h("button", { type: "button", class: "order-head", "aria-expanded": shown ? "true" : "false" },
+      h("span", { class: "chip chip-kind", text: this.orderKind(o.kind) }),
+      h("span", { class: "order-title", text: this.orderTitle(o) }),
+      this.has(o.issueKey) ? h("span", { class: "chip chip-issue", text: String(o.issueKey) }) : null,
+      h("span", { class: "chip chip-" + status, text: ORDER_WORDS[status] || status }),
+      h("span", { class: "row-when", text: this.orderWhen(o) }));
+    head.addEventListener("click", () => {
+      const open = !this.expanded[mark];
+      this.expanded[mark] = open;
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+      body.hidden = !open;
+    });
+
+    return h("section", { class: "card" }, head, body);
+  },
+
+  orderKind(kind) {
+    for (const pair of ORDER_KINDS) if (pair[0] === String(kind)) return pair[1];
+    return String(kind || "order");
+  },
+
+  // An order given from an issue row carries no words of its own, so the issue
+  // it names does the talking.
+  orderTitle(o) {
+    if (this.has(o.text)) return String(o.text);
+    const key = String(o.issueKey || "");
+    const issue = key ? this.state.issues[key] : null;
+    if (issue && this.has(issue.title)) return String(issue.title);
+    if (key) return key;
+    return "No note";
+  },
+
+  orderWhen(o) {
+    const given = this.ago(o.createdAt);
+    const done = this.ago(o.finishedAt);
+    return (given ? "given " + given : "") + (done ? (given ? ", " : "") + "finished " + done : "");
+  },
+
+  cancelOrder(id) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("orders/" + id).update({ status: "cancelled", finishedAt: new Date().toISOString() });
+  },
+
+  // An order picked from the compose box's issue list is linked back to that
+  // issue the same way an order given from the row is.
+  sendOrder(kind, text, issueKey) {
+    const key = String(issueKey || "");
+    if (!key) return this.createOrder(kind, text, "");
+    return this.createOrder(kind, text, key).then((order) =>
+      this.db.doc("issues/" + key).update({ orderId: order.id }));
+  },
+
+  // ---- Alerts ----
 
   renderAlerts(root) {
     const h = this.h;
-    const list = this.alertList();
+    const cutoff = Date.now() - 30 * DAY_MS;
+    const list = this.alertList().filter((a) => {
+      const t = Date.parse(a.sentAt);
+      return !Number.isFinite(t) || t >= cutoff;
+    });
     const card = h("section", { class: "card card-rows" },
       h("h2", { class: "sect" }, "Pushes sent",
-        list.length ? h("span", { class: "sect-note", text: this.num(list.length) }) : null));
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) + " in 30 days" }) : null));
     if (!list.length) {
       card.append(h("p", { class: "empty", text: this.state.dbReady === false
-        ? "Waiting for the alerts list." : "Nothing has been pushed yet." }));
-    } else {
-      for (const a of list) {
-        card.append(h("div", { class: "row" },
-          h("span", { class: "row-main" },
-            h("span", { class: "row-title", text: a.message || "(no message)" }),
-            h("span", { class: "row-sub", text: this.alertKind(a.kind)
-              + (Array.isArray(a.issueKeys) && a.issueKeys.length ? ", " + a.issueKeys.join(", ") : "") })),
-          h("time", { class: "row-when", datetime: this.has(a.sentAt) ? String(a.sentAt) : null, text: this.ago(a.sentAt) })));
-      }
+        ? "Waiting for the alerts list."
+        : "Nothing in alerts for the last 30 days. The Groundsman records every push it sends here." }));
+      root.replaceChildren(card);
+      return;
+    }
+    for (const a of list) {
+      const kind = String(a.kind || "push");
+      const named = this.alertTitles(a);
+      card.append(h("div", { class: "row" },
+        h("span", { class: "pill pill-" + this.alertTone(kind), title: this.alertKind(kind), text: kind }),
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: a.message || "No message" }),
+          named.length ? h("span", { class: "row-sub", text: named.join("; ") }) : null),
+        h("time", { class: "row-when", datetime: this.has(a.sentAt) ? String(a.sentAt) : null, text: this.stamp(a.sentAt) })));
     }
     root.replaceChildren(card);
   },
 
+  // The keys a push named, read back as the titles the owner knows them by. A
+  // key whose issue has since been pruned still shows as the key.
+  alertTitles(a) {
+    const out = [];
+    const keys = Array.isArray(a.issueKeys) ? a.issueKeys : [];
+    for (const k of keys) {
+      const key = String(k);
+      const issue = this.state.issues[key];
+      out.push(issue && this.has(issue.title) ? String(issue.title) : key);
+    }
+    return out;
+  },
+
+  alertTone(kind) {
+    if (kind === "new-critical") return "crit";
+    if (kind === "new-high" || kind === "reminder") return "warn";
+    return "muted";
+  },
+
+  // ---- Stats ----
+
   renderStats(root) {
+    const kids = [
+      this.lineChart("Game views", "gameViews"),
+      this.lineChart("GA4 users", "ga4Users"),
+      this.lineChart("Search Console clicks", "gscClicks"),
+      this.lineChart("Indexed pages", "gscIndexed"),
+      this.severityChart(),
+    ];
+    root.replaceChildren(this.h("section", { class: "card" }, ...kids));
+  },
+
+  // Fourteen calendar days ending on the newest reading, so a night nobody read
+  // the numbers is a hole in the line rather than a zero.
+  statsDays() {
+    const byDate = {};
+    for (const d of this.dailyList()) {
+      const key = String(d.date || d.id || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
+      byDate[key] = d;
+    }
+    const keys = Object.keys(byDate).sort();
+    if (!keys.length) return [];
+    const last = keys[keys.length - 1];
+    const out = [];
+    for (let i = CHART_DAYS - 1; i >= 0; i -= 1) {
+      const key = this.shiftDay(last, -i);
+      out.push({ date: key, doc: byDate[key] || null });
+    }
+    return out;
+  },
+
+  shiftDay(key, delta) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ""));
+    if (!m) return String(key || "");
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    d.setUTCDate(d.getUTCDate() + Number(delta));
+    const pad = (n) => (n < 10 ? "0" + n : String(n));
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate());
+  },
+
+  // A plain date key is a day, not an instant, so it is read as written rather
+  // than pushed through the viewer's time zone.
+  dateLabel(key) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ""));
+    if (!m) return this.dayLabel(key);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return String(Number(m[3])) + " " + months[Number(m[2]) - 1];
+  },
+
+  lineChart(title, field) {
     const h = this.h;
-    const days = this.dailyList().length;
-    root.replaceChildren(h("section", { class: "card" },
-      h("h2", { class: "sect" }, "Fourteen days"),
-      h("p", { class: "empty", text: days
-        ? "The charts arrive in the next update. " + this.num(days) + " days of readings are on file."
-        : (this.state.dbReady === false ? "Waiting for the daily readings." : "No readings yet.") })));
+    const days = this.statsDays();
+    const values = days.map((d) => {
+      const v = d.doc ? Number(d.doc[field]) : NaN;
+      return Number.isFinite(v) ? v : null;
+    });
+    let read = 0;
+    for (const v of values) if (v !== null) read += 1;
+    const box = h("div", { class: "chart" });
+    if (read < 2) {
+      box.append(h("div", { class: "chart-head" }, h("span", { class: "chart-title", text: title })));
+      box.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the daily readings."
+        : "Not enough readings yet. Two days in daily with this number draw the first line." }));
+      return box;
+    }
+
+    let lastAt = -1;
+    for (let i = 0; i < values.length; i += 1) if (values[i] !== null) lastAt = i;
+    const now = values[lastAt];
+    const before = lastAt >= 7 ? values[lastAt - 7] : null;
+    const head = h("div", { class: "chart-head" },
+      h("span", { class: "chart-title", text: title }),
+      h("span", { class: "chart-now", text: this.num(now) }));
+    if (before !== null) {
+      const delta = now - before;
+      head.append(h("span", {
+        class: "chart-delta" + (delta > 0 ? " is-up" : (delta < 0 ? " is-down" : "")),
+        text: (delta > 0 ? "+" : (delta < 0 ? "-" : "")) + this.num(Math.abs(delta)) + " on 7 days earlier",
+      }));
+    }
+    box.append(head, this.lineSvg(days, values, title));
+    return box;
+  },
+
+  // The plot box. A phone gets its own viewBox so the words inside the drawing
+  // are the same size as the words around it at either width.
+  frame() {
+    const narrow = this.narrow;
+    const width = narrow ? 356 : 636;
+    return { w: width, padL: 46, padR: 10, padT: 12, plotW: width - 56, band: (width - 56) / CHART_DAYS };
+  },
+
+  lineSvg(days, values, title) {
+    const f = this.frame();
+    const plotH = 88;
+    const base = f.padT + plotH;
+    const svg = this.s("svg", { viewBox: "0 0 " + f.w + " " + (base + 26), role: "img",
+      "aria-label": title + ", the last " + CHART_DAYS + " days" });
+    let top = 0;
+    for (const v of values) if (v !== null && v > top) top = v;
+    const scale = top > 0 ? top : 1;
+    const at = (i) => f.padL + (i + 0.5) * f.band;
+    const up = (v) => base - (v / scale) * plotH;
+
+    for (const tick of this.ticks(top)) {
+      const y = up(tick);
+      svg.append(this.s("line", { class: "ch-grid", x1: f.padL, y1: y, x2: f.w - f.padR, y2: y }));
+      svg.append(this.s("text", { class: "ch-text", x: f.padL - 7, y: y + 4, "text-anchor": "end" }, this.num(tick)));
+    }
+
+    let run = [];
+    const flush = () => {
+      if (run.length > 1) {
+        let d = "";
+        for (let k = 0; k < run.length; k += 1) d += (k ? "L" : "M") + run[k][0].toFixed(1) + " " + run[k][1].toFixed(1);
+        svg.append(this.s("path", { class: "ch-line", d: d }));
+      } else if (run.length === 1) {
+        svg.append(this.s("circle", { class: "ch-dot", cx: run[0][0].toFixed(1), cy: run[0][1].toFixed(1), r: 3 }));
+      }
+      run = [];
+    };
+    for (let i = 0; i < values.length; i += 1) {
+      if (values[i] === null) { flush(); continue; }
+      run.push([at(i), up(values[i])]);
+    }
+    flush();
+
+    let lastAt = -1;
+    for (let i = 0; i < values.length; i += 1) if (values[i] !== null) lastAt = i;
+    if (lastAt >= 0) {
+      svg.append(this.s("circle", { class: "ch-dot", cx: at(lastAt).toFixed(1), cy: up(values[lastAt]).toFixed(1), r: 4 }));
+    }
+    svg.append(this.s("text", { class: "ch-text", x: f.padL, y: base + 20 }, this.dateLabel(days[0].date)));
+    svg.append(this.s("text", { class: "ch-text", x: f.w - f.padR, y: base + 20, "text-anchor": "end" },
+      this.dateLabel(days[days.length - 1].date)));
+    return svg;
+  },
+
+  // Zero, the highest reading, and one clean number between them. Nothing is
+  // labelled above the top of the data, so no tick promises a value the chart
+  // never reaches.
+  ticks(top) {
+    if (!(top > 0)) return [0];
+    const mid = this.cleanNumber(top / 2);
+    return mid > 0 && mid < top ? [0, mid, top] : [0, top];
+  },
+
+  cleanNumber(x) {
+    const v = Number(x);
+    if (!Number.isFinite(v) || v <= 0) return 0;
+    const power = Math.pow(10, Math.floor(Math.log10(v)));
+    const head = v / power;
+    const snapped = head >= 5 ? 5 : (head >= 2 ? 2 : 1);
+    return snapped * power;
+  },
+
+  // One bar per day, the day's distinct issue keys split by the severity the
+  // issue carries now. A key whose issue is no longer on file cannot be ranked,
+  // so it is left out rather than guessed at.
+  severityDays() {
+    const byDate = {};
+    for (const k of Object.keys(this.state.runs)) {
+      const r = this.state.runs[k];
+      const date = String(r.date || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      const seen = byDate[date] || (byDate[date] = {});
+      for (const raw of (Array.isArray(r.issueKeys) ? r.issueKeys : [])) seen[String(raw)] = true;
+    }
+    const dates = Object.keys(byDate).sort();
+    if (!dates.length) return [];
+    const last = dates[dates.length - 1];
+    const out = [];
+    for (let i = CHART_DAYS - 1; i >= 0; i -= 1) {
+      const date = this.shiftDay(last, -i);
+      const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+      let total = 0;
+      for (const key of Object.keys(byDate[date] || {})) {
+        const issue = this.state.issues[key];
+        if (!issue) continue;
+        counts[this.severityOf(issue)] += 1;
+        total += 1;
+      }
+      out.push({ date: date, counts: counts, total: total, ran: !!byDate[date] });
+    }
+    return out;
+  },
+
+  severityChart() {
+    const h = this.h;
+    const days = this.severityDays();
+    const box = h("div", { class: "chart" },
+      h("div", { class: "chart-head" }, h("span", { class: "chart-title", text: "Open issues by severity" })));
+    let ran = 0;
+    for (const d of days) if (d.ran) ran += 1;
+    if (ran < 2) {
+      box.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the runs list."
+        : "Not enough runs yet. Two days of runs naming issues draw the first bars." }));
+      return box;
+    }
+    box.append(this.severitySvg(days));
+    const legend = h("div", { class: "legend" });
+    for (const sev of SEVERITIES) {
+      legend.append(h("span", {}, h("span", { class: "swatch swatch-" + sev }), h("span", { text: sev })));
+    }
+    box.append(legend, this.severityTable(days));
+    return box;
+  },
+
+  severitySvg(days) {
+    const f = this.frame();
+    const plotH = 96;
+    const base = f.padT + plotH;
+    const svg = this.s("svg", { viewBox: "0 0 " + f.w + " " + (base + 26), role: "img",
+      "aria-label": "Open issues by severity for each of the last " + CHART_DAYS + " days" });
+    let top = 0;
+    for (const d of days) if (d.total > top) top = d.total;
+    const scale = top > 0 ? top : 1;
+    const up = (v) => base - (v / scale) * plotH;
+
+    for (const tick of this.ticks(top)) {
+      const y = up(tick);
+      svg.append(this.s("line", { class: "ch-grid", x1: f.padL, y1: y, x2: f.w - f.padR, y2: y }));
+      svg.append(this.s("text", { class: "ch-text", x: f.padL - 7, y: y + 4, "text-anchor": "end" }, this.num(tick)));
+    }
+
+    const barW = Math.min(24, Math.max(6, f.band - 6));
+    for (let i = 0; i < days.length; i += 1) {
+      const day = days[i];
+      const x = f.padL + i * f.band + (f.band - barW) / 2;
+      const parts = [];
+      for (const sev of SEVERITIES) if (day.counts[sev] > 0) parts.push(sev);
+      let foot = base;
+      for (let p = parts.length - 1; p >= 0; p -= 1) {
+        const sev = parts[p];
+        const full = (day.counts[sev] / scale) * plotH;
+        const last = p === 0;
+        // Two pixels of the card showing between segments is what separates
+        // them; no segment is given a border, which would add ink that is not
+        // data.
+        const drawn = Math.max(1, full - (last ? 0 : 2));
+        const y = foot - full;
+        const shape = last && drawn > 4
+          ? this.s("path", { class: "ch-" + sev, d: this.capPath(x, y, barW, drawn, 4) })
+          : this.s("rect", { class: "ch-" + sev, x: x.toFixed(1), y: y.toFixed(1), width: barW.toFixed(1), height: drawn.toFixed(1) });
+        shape.append(this.s("title", {}, this.dateLabel(day.date) + ": " + this.num(day.counts[sev]) + " " + sev));
+        svg.append(shape);
+        foot = y;
+      }
+    }
+    svg.append(this.s("text", { class: "ch-text", x: f.padL, y: base + 20 }, this.dateLabel(days[0].date)));
+    svg.append(this.s("text", { class: "ch-text", x: f.w - f.padR, y: base + 20, "text-anchor": "end" },
+      this.dateLabel(days[days.length - 1].date)));
+    return svg;
+  },
+
+  // A bar with its top two corners rounded and its foot square on the baseline.
+  capPath(x, y, w, hgt, r) {
+    const rr = Math.min(Number(r), w / 2, hgt);
+    const n = (v) => Number(v).toFixed(1);
+    return "M" + n(x) + " " + n(y + hgt) + "V" + n(y + rr)
+      + "A" + n(rr) + " " + n(rr) + " 0 0 1 " + n(x + rr) + " " + n(y)
+      + "H" + n(x + w - rr)
+      + "A" + n(rr) + " " + n(rr) + " 0 0 1 " + n(x + w) + " " + n(y + rr)
+      + "V" + n(y + hgt) + "Z";
+  },
+
+  // The same bars as numbers, for anyone who cannot separate four fills by eye.
+  severityTable(days) {
+    const h = this.h;
+    const table = h("table", { class: "grid-table" });
+    const head = h("tr", {}, h("th", { text: "Day" }));
+    for (const sev of SEVERITIES) head.append(h("th", { text: sev }));
+    table.append(h("thead", {}, head));
+    const rows = h("tbody", {});
+    for (const day of days) {
+      if (!day.ran) continue;
+      const tr = h("tr", {}, h("td", { text: this.dateLabel(day.date) }));
+      for (const sev of SEVERITIES) tr.append(h("td", { text: this.num(day.counts[sev]) }));
+      rows.append(tr);
+    }
+    table.append(rows);
+    return h("details", { class: "numbers" }, h("summary", {}, "Read the bars as numbers"),
+      h("div", { class: "scroll-x" }, table));
+  },
+
+  // The charts' own element maker. Nothing here is markup: every shape is an
+  // element in the SVG namespace, and every colour comes from a class whose
+  // rule reads a token.
+  s(tag, attrs, ...kids) {
+    const el = document.createElementNS(SVG_NS, tag);
+    const a = attrs || {};
+    for (const k of Object.keys(a)) {
+      const v = a[k];
+      if (v === null || v === undefined || v === false) continue;
+      el.setAttribute(k, String(v));
+    }
+    for (const kid of kids) {
+      if (kid === null || kid === undefined || kid === false) continue;
+      el.append(kid && kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
   },
 
   // ---- Runs ----
@@ -1145,7 +1761,7 @@ const OpsRoom = {
   agentChip(label, id, on) {
     return this.h("button", {
       type: "button", class: "chip", "aria-pressed": on ? "true" : "false",
-      onclick: () => { this.filters.runsAgent = id; this.render(); },
+      onclick: () => { this.setRunsAgent(id); this.render(); },
     }, label);
   },
 
@@ -1205,39 +1821,80 @@ const OpsRoom = {
 
   // ---- Crew ----
 
+  // Two kinds of crew member, and the two of us. A crew document written before
+  // the kind field existed is a reporter: nine of the ten were, and the one
+  // that acts says so.
   renderCrew(root) {
     const h = this.h;
-    const byGroup = {};
+    const reporters = [];
+    const actors = [];
     for (const c of this.crewList()) {
-      // The dugout is not in the database, and a group nobody recognises would
-      // otherwise drop an agent off the page, so both land in the backroom.
-      const g = String(c.group || "");
-      const known = g === "officials" || g === "backroom" || g === "front-office";
-      const into = known ? g : "backroom";
-      (byGroup[into] = byGroup[into] || []).push(c);
+      (String(c.kind || "reporter") === "actor" ? actors : reporters).push(c);
     }
+    const byShift = (a, b) => {
+      const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
+      return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
+    };
+    reporters.sort(byShift);
+    actors.sort(byShift);
     const kids = [];
-    for (const pair of GROUPS) {
-      const key = pair[0];
-      const list = key === "dugout" ? DUGOUT.slice() : (byGroup[key] || []);
-      if (key !== "dugout") {
-        list.sort((a, b) => {
-          const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
-          return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
-        });
-      }
-      kids.push(h("h2", { class: "sect crew-head" }, pair[1],
-        h("span", { class: "sect-note", text: this.num(list.length) })));
-      if (!list.length) {
-        kids.push(h("p", { class: "empty", text: this.state.dbReady === false
-          ? "Waiting for the crew list." : "Nobody here yet." }));
-        continue;
-      }
-      const grid = h("div", { class: "crew-grid" });
-      for (const c of list) grid.append(this.crewCard(c, key === "dugout"));
-      kids.push(grid);
-    }
+    kids.push(...this.crewBlock("Reporters", reporters,
+      "Nobody reports yet. Each agent writes its own card in crew on its first run."));
+    kids.push(...this.crewBlock("The Groundsman", actors,
+      "No Groundsman in crew yet. It writes its card on its first run."));
+    kids.push(h("h2", { class: "sect crew-head" }, "Dugout",
+      h("span", { class: "sect-note", text: this.num(DUGOUT.length) })));
+    const grid = h("div", { class: "crew-grid" });
+    for (const d of DUGOUT) grid.append(this.crewCard(d, true));
+    kids.push(grid);
     root.replaceChildren(...kids);
+  },
+
+  crewBlock(title, list, empty) {
+    const h = this.h;
+    const out = [h("h2", { class: "sect crew-head" }, title,
+      h("span", { class: "sect-note", text: this.num(list.length) }))];
+    if (!list.length) {
+      out.push(h("p", { class: "empty", text: this.state.dbReady === false ? "Waiting for the crew list." : empty }));
+      return out;
+    }
+    const card = h("section", { class: "card card-rows" });
+    for (const c of list) card.append(this.crewLine(c));
+    out.push(card);
+    return out;
+  },
+
+  // One row per crew member, and the card opens where the row is rather than on
+  // a page of its own, so the list keeps its place.
+  crewLine(c) {
+    const h = this.h;
+    const id = String(c.id || "");
+    const name = String(c.name || id);
+    const mark = "crew:" + id;
+    const shown = !!this.expanded[mark];
+    const tone = this.tone(c.lastStatus);
+    const panel = h("div", { class: "crew-panel", hidden: !shown }, this.crewCard(c, false));
+    const head = h("button", { type: "button", class: "crew-open", "aria-expanded": shown ? "true" : "false" },
+      h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
+      h("span", { class: "row-main" },
+        h("span", { class: "row-title" },
+          h("span", { class: "crew-name", text: name }), " ",
+          h("span", { class: "crew-role", text: c.role || "" })),
+        h("span", { class: "row-sub", text: this.has(c.lastHeadline) ? c.lastHeadline : "No run yet." })),
+      h("time", { class: "row-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
+      h("span", { class: "crew-chev", "aria-hidden": "true", text: "›" }));
+    head.addEventListener("click", () => {
+      const open = !this.expanded[mark];
+      this.expanded[mark] = open;
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+      panel.hidden = !open;
+    });
+    return h("div", { class: "crew-line" }, head, panel);
+  },
+
+  groupLabel(id) {
+    for (const pair of GROUPS) if (pair[0] === String(id)) return pair[1];
+    return String(id || "");
   },
 
   crewCard(c, isStatic) {
@@ -1247,6 +1904,8 @@ const OpsRoom = {
     const tone = this.tone(c.lastStatus);
     const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
     try { drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
+    const where = isStatic ? "" : this.groupLabel(c.group).toLowerCase();
+    const role = String(c.role || "") + (where ? (c.role ? ", " : "") + where : "");
     const facts = h("dl", { class: "crew-facts" });
     facts.append(
       h("dt", { text: "Job" }), h("dd", { text: this.has(c.job) ? c.job : "Not recorded" }),
@@ -1259,26 +1918,26 @@ const OpsRoom = {
       last.append(
         h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
         h("span", { text: c.lastHeadline }),
-        this.ago(c.lastRunAt) ? h("span", { class: "crew-ago", text: this.ago(c.lastRunAt) }) : null);
+        this.dayLabel(c.lastRunAt) ? h("span", { class: "crew-ago", text: this.dayLabel(c.lastRunAt) }) : null);
     }
-    facts.append(h("dt", { text: "Last run" }), last);
-    const card = h("section", { class: "card crew-card" + (isStatic ? "" : " is-click") },
+    facts.append(h("dt", { text: "Tonight" }), last);
+    const card = h("section", { class: "card crew-card" },
       h("div", { class: "crew-top" }, canvas,
         h("div", {},
           h("div", { class: "crew-card-name", text: name }),
-          h("div", { class: "crew-card-role", text: c.role || "" }))),
+          h("div", { class: "crew-card-role", text: role }))),
       facts);
     if (isStatic) return card;
-    const open = () => { this.filters.runsAgent = id; this.nav("runs"); };
-    card.setAttribute("role", "button");
-    card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", "Runs for " + name);
-    card.addEventListener("click", open);
-    card.addEventListener("keydown", (ev) => {
-      if (ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
-      ev.preventDefault();
-      open();
-    });
+    const bar = h("div", { class: "actions" });
+    const runs = h("button", { type: "button", class: "btn", text: "See its runs" });
+    runs.addEventListener("click", () => { this.setRunsAgent(id); this.nav("runs"); });
+    bar.append(runs);
+    if (this.has(c.routineId)) {
+      bar.append(h("a", { class: "link", target: "_blank", rel: "noopener noreferrer",
+        href: "https://claude.ai/code/routines/" + encodeURIComponent(String(c.routineId)),
+        text: "Open the routine" }));
+    }
+    card.append(bar);
     return card;
   },
 
@@ -1556,6 +2215,15 @@ const OpsRoom = {
     const d = new Date(t);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return d.getDate() + " " + months[d.getMonth()];
+  },
+
+  // A push went out at a moment, so it is shown in the clock the viewer reads.
+  stamp(iso) {
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return "";
+    const d = new Date(t);
+    const pad = (n) => (n < 10 ? "0" + n : String(n));
+    return this.dayLabel(iso) + ", " + pad(d.getHours()) + ":" + pad(d.getMinutes());
   },
 
   cronMinutes(cron) {

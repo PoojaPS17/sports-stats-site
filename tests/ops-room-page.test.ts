@@ -213,6 +213,133 @@ test("the Issues write buttons respect a read-only viewer", () => {
   assert.ok(/if \(this\.db && !this\.canWrite\)/.test(html), "and the viewer is told why they are missing");
 });
 
+// ---- Task 13: Orders, Runs, Alerts ----
+
+test("the three log sections have renderers of their own", () => {
+  for (const fn of ["renderOrders", "renderRuns", "renderAlerts"]) {
+    assert.ok(new RegExp("\\n  " + fn + "\\(root\\) \\{").test(html), fn);
+  }
+});
+
+test("the compose box offers the four kinds, a text field and an issue picker", () => {
+  assert.ok(html.includes('const ORDER_KINDS = [["fix", "Fix"], ["explain", "Explain"], ["recheck", "Recheck"], ["custom", "Custom"]];'),
+    "four kinds, in the order the box offers them");
+  assert.ok(/"aria-pressed": draft\.kind === id \? "true" : "false"/.test(html), "the chosen kind is the pressed one");
+  assert.ok(html.includes('h("select", { id: "order-issue" })'), "the issue picker is a select");
+  assert.ok(html.includes('h("option", { value: "", text: "No issue" })'), "with a way to name no issue");
+  assert.ok(/pickableIssues\(\)/.test(html), "and it lists the issues still worth an order");
+  assert.ok(/if \(status !== "open" && status !== "reopened" && status !== "acknowledged"\) continue;/.test(html),
+    "open, seen again and acknowledged");
+  assert.ok(html.includes('id: "order-text"'), "a text field");
+  assert.ok(html.includes("A custom order needs your words."), "which a custom order cannot go without");
+  assert.ok(/this\.sendOrder\(draft\.kind, text, select\.value\)/.test(html), "Send hands over the three answers");
+  assert.ok(html.includes("return this.createOrder(kind, text, key)") && html.includes('return this.createOrder(kind, text, "")'),
+    "and sendOrder is a call to createOrder");
+  assert.ok(html.includes('area.value = "";') && html.includes('select.value = "";'), "the form is cleared afterwards");
+  assert.ok(html.includes("The Groundsman checks for orders every hour between 08:35 and 22:35 IST. To run it now, open its routine and press Run."),
+    "the note under the box");
+  assert.ok(/} else if \(this\.db\) \{\n      kids\.push\(this\.composeBox\(\)\);/.test(html), "writing needs a database");
+  assert.ok(html.includes("You are signed in as a viewer, so the box for giving an order is hidden."),
+    "and a viewer is told why the box is missing");
+});
+
+test("an order can be called off only while it is queued", () => {
+  assert.ok(/if \(status === "queued" && this\.db && this\.canWrite\) \{/.test(html), "the Cancel button is guarded");
+  assert.ok(html.includes('"Cancel this order"'));
+  assert.ok(html.includes('db.doc("orders/" + id).update({ status: "cancelled", finishedAt: new Date().toISOString() });'),
+    "and cancelling is an update, not a delete");
+});
+
+test("the orders list is grouped, and a row opens the result with its links", () => {
+  assert.ok(html.includes('const ORDER_GROUPS = [["queued", "Queued"], ["running", "Running"], ["done", "Done"], ["failed", "Failed"]];'));
+  assert.ok(/const into = status === "cancelled" \? "failed"/.test(html), "a cancelled order is folded under Failed");
+  assert.ok(/ORDER_WORDS\[status\] \|\| status/.test(html), "and keeps a chip that says cancelled");
+  assert.ok(/orderList\(\)/.test(html) && /\(Date\.parse\(b\.createdAt\) \|\| 0\) - \(Date\.parse\(a\.createdAt\) \|\| 0\)/.test(html),
+    "newest first");
+  assert.ok(html.includes("this.markdownBlock(o.result)"), "the result goes through the sanitizer");
+  assert.ok(html.includes("const pr = this.safeUrl(o.prUrl);") && html.includes("const session = this.safeUrl(o.sessionUrl);"),
+    "both links are checked before they are shown");
+  assert.ok(html.includes("/^https?:\\/\\//i.test(s)"), "and only an http or https link is shown");
+  assert.ok(html.includes("Read the pull request") && html.includes("Open the session log"));
+  assert.ok(html.includes("this.orderKind(o.kind)") && html.includes("this.orderWhen(o)"),
+    "each row carries its kind and when it was given");
+  assert.ok(html.includes("Nothing in orders yet."), "the empty state names the collection");
+});
+
+test("Runs keeps the fourteen, the sanitizer, the limit and a remembered filter", () => {
+  assert.ok(html.includes("if (seen[agent] > 14) continue;"), "the last fourteen runs per agent");
+  assert.ok(html.includes("if (this.has(r.details)) body.append(this.markdownBlock(r.details));"),
+    "a run's details go through the sanitizer");
+  assert.ok(html.includes("const cut = text.length > DETAILS_LIMIT;"), "and the limit still cuts a runaway block");
+  assert.ok(html.includes('const RUNS_FILTER_KEY = "ops-room.runs-agent";'));
+  assert.ok(/readFilter\(\) \{\n    try \{\n      const saved = window\.localStorage\.getItem\(RUNS_FILTER_KEY\);/.test(html),
+    "reading the remembered filter is wrapped");
+  assert.ok(/setRunsAgent\(id\) \{[\s\S]{0,400}?try \{[\s\S]{0,300}?window\.localStorage\.setItem\(RUNS_FILTER_KEY/.test(html),
+    "and so is writing it");
+  assert.ok(html.includes('this.agentChip("All", null, !sel)'), "All, plus one chip per crew member");
+});
+
+test("Alerts shows 30 days of pushes with their kind and the issues they named", () => {
+  assert.ok(html.includes("const cutoff = Date.now() - 30 * DAY_MS;"));
+  for (const kind of ["new-critical", "new-high", "digest", "reminder"]) assert.ok(html.includes(kind), kind);
+  assert.ok(html.includes("this.alertTitles(a)"), "the keys it named are read back as titles");
+  assert.ok(html.includes("out.push(issue && this.has(issue.title) ? String(issue.title) : key);"),
+    "with the key itself as the fallback");
+  assert.ok(html.includes("text: this.stamp(a.sentAt)"), "the time is the viewer's own clock");
+  assert.ok(html.includes("Nothing in alerts for the last 30 days."), "the empty state names the collection");
+});
+
+// ---- Task 14: Crew, Stats, Rulebook ----
+
+test("Crew is split by kind, keeps the dugout, and links to the routine", () => {
+  assert.ok(html.includes('(String(c.kind || "actor") === "actor" ? actors : reporters)')
+    || html.includes('(String(c.kind || "reporter") === "actor" ? actors : reporters)'),
+    "a crew document with no kind is a reporter");
+  assert.ok(html.includes('this.crewBlock("Reporters", reporters,'));
+  assert.ok(html.includes('this.crewBlock("The Groundsman", actors,'));
+  assert.ok(html.includes('"Dugout"'), "and the two of us keep a heading of our own");
+  assert.ok(html.includes('"https://claude.ai/code/routines/" + encodeURIComponent(String(c.routineId))'),
+    "the card links to the routine");
+  assert.ok(html.includes("Open the routine"));
+  for (const fact of ["Job", "Never", "When", "Tonight"]) {
+    assert.ok(html.includes('h("dt", { text: "' + fact + '" })'), fact);
+  }
+  assert.ok(/const panel = h\("div", \{ class: "crew-panel", hidden: !shown \}/.test(html),
+    "the card opens where the row is");
+  assert.ok(/class: "crew-open", "aria-expanded": shown \? "true" : "false"/.test(html), "and says so");
+  assert.ok(html.includes("Waiting for the crew list."), "the empty state names the collection");
+});
+
+test("Stats draws its own SVG and the page loads no chart library", () => {
+  const srcs = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(srcs, ["https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"],
+    "marked is the only script the page loads");
+  for (const lib of ["chart.js", "chartjs", "d3.v", "d3.min", "plotly", "echarts", "highcharts", "apexcharts", "recharts"]) {
+    assert.ok(!html.toLowerCase().includes(lib), lib);
+  }
+  const stats = html.slice(html.indexOf("  renderStats(root) {"), html.indexOf("  // ---- Runs ----"));
+  assert.ok(stats.length > 2000, "the Stats renderer is in the main script");
+  assert.ok(html.includes('const SVG_NS = "http://www.w3.org/2000/svg";'));
+  assert.ok(stats.includes("document.createElementNS(SVG_NS, tag)"), "every shape is made in the SVG namespace");
+  assert.ok(!stats.includes("canvas"), "and nothing in Stats is drawn on a canvas");
+  assert.ok(stats.includes('viewBox: "0 0 " + f.w + " " + (base + 26)'), "a viewBox with room for the outermost labels");
+  for (const field of ["gameViews", "ga4Users", "gscClicks", "gscIndexed"]) {
+    assert.ok(stats.includes('"' + field + '"'), field);
+  }
+  assert.ok(stats.includes("this.severityChart()") && stats.includes("counts[this.severityOf(issue)] += 1;"),
+    "and one stacked bar of open issues by severity");
+  // Every mark and every word inside a drawing wears a token, in both themes.
+  for (const rule of ["ch-grid", "ch-line", "ch-dot", "ch-text", "ch-critical", "ch-high", "ch-medium", "ch-low"]) {
+    assert.ok(new RegExp("\\." + rule + " \\{[^}]*var\\(--").test(html), rule);
+  }
+  assert.ok(stats.includes("on 7 days earlier"), "the delta against a week ago");
+  assert.ok(stats.includes("if (values[i] === null) { flush(); continue; }"), "a day nobody read is a gap, not a zero");
+  assert.ok(stats.includes("Not enough readings yet.") && stats.includes("Not enough runs yet."),
+    "an empty state for each chart");
+  assert.ok(stats.includes("Waiting for the daily readings.") && stats.includes("Waiting for the runs list."),
+    "naming the collection each one waits for");
+});
+
 // ---- kept from v1 ----
 
 test("crew and rulebook renderers exist and rules are written as whole documents with an order", () => {
