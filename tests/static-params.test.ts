@@ -71,6 +71,7 @@ const REVALIDATE: Record<string, number> = {
   "[league]/teams/[slug]/history/page.tsx": 300,
   "[league]/teams/[slug]/opengraph-image.tsx": 86400,
   "f1/drivers/[slug]/page.tsx": 300,
+  "f1/events/[id]/opengraph-image.tsx": 300,
   "f1/events/[id]/page.tsx": 300,
   "f1/teams/[slug]/page.tsx": 300,
   "tennis/[tour]/players/[slug]/page.tsx": 300,

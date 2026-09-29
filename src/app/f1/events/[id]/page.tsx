@@ -31,7 +31,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const year = event.season_year ?? new Date(event.date).getUTCFullYear();
   const where = event.circuit_name ? ` at ${event.circuit_name}` : "";
   const description = f1EventDescription(event, year, where);
-  return pageMeta(`${event.name} ${year}: Results`, description, `/f1/events/${event.espn_id}`);
+  // ownImage: the opengraph-image route beside this page draws the weekend its own card; without
+  // the flag pageMeta would replace it with the site-wide one, as it did for all 241 weekends.
+  return pageMeta(`${event.name} ${year}: Results`, description, `/f1/events/${event.espn_id}`, { ownImage: true });
 }
 
 export default async function F1EventPage({ params }: { params: Promise<{ id: string }> }) {

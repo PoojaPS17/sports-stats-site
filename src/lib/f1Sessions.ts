@@ -44,3 +44,16 @@ export function sortF1Sessions<T extends { session_type: string }>(season: numbe
   const rank = (t: string) => (order.includes(t) ? order.indexOf(t) : order.length);
   return [...sessions].sort((a, b) => rank(a.session_type) - rank(b.session_type));
 }
+
+/**
+ * The podium of a weekend: the drivers classified first, second and third in the Race.
+ *
+ * The place shown is the driver's own finishing position, never their index in this list. A
+ * disqualification is removed from the classification rather than renumbering the drivers behind it,
+ * so a list read positionally could caption a P4 finisher "3rd" — the one claim on a share card that
+ * would be flatly untrue. A weekend with no Race session on file, one still to come and a cancelled
+ * one all yield nothing, which is what a card with no result to show wants.
+ */
+export function f1Podium<T extends { session_type: string; completed: boolean; position: number | null }>(results: T[]): T[] {
+  return results.filter((r) => r.session_type === "Race" && r.completed && r.position !== null && r.position >= 1 && r.position <= 3);
+}
