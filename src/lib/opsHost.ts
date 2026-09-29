@@ -77,15 +77,42 @@ function isoFromSystemd(text: string): string | null {
   return Number.isNaN(t) ? null : new Date(t).toISOString();
 }
 
-// One list-timers row: NEXT LEFT LAST PASSED UNIT ACTIVATES. NEXT and LAST are four words each
-// ("Tue 2026-09-29 06:22:00 UTC") or the single word "n/a"; LEFT and PASSED are two words or "n/a".
-function parseTimerRow(line: string): { name: string; next: string | null; last: string | null } {
+// One list-timers row: NEXT LEFT LAST PASSED UNIT ACTIVATES. NEXT and LAST are each a stamp: four
+// words ("Tue 2026-09-29 06:22:00 UTC", the second word matching YYYY-MM-DD) or the single word
+// "n/a". LEFT and PASSED are not fixed width: "14min left" is two words but "1h 30min left" is
+// three, and they collapse to the single word "n/a" when their paired stamp is "n/a". So NEXT and
+// LAST are found by their own shape (a stamp, or "n/a") instead of by counting words for LEFT and
+// PASSED; the words in between are simply skipped up to the "left" or "ago" that ends them, or the
+// single "n/a" that replaces them.
+export function parseTimerRow(line: string): { name: string; next: string | null; last: string | null } {
   const cols = line.split(/\s+/);
-  const name = cols[cols.length - 2];
-  const stamp = (from: number) => (cols[from] === "n/a" ? { text: null, used: 1 } : { text: cols.slice(from, from + 4).join(" "), used: 4 });
-  const gap = (from: number) => (cols[from] === "n/a" ? 1 : 2);
-  const next = stamp(0);
-  const last = stamp(next.used + gap(next.used));
+
+  function isStampStart(i: number): boolean {
+    return cols[i + 1] !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(cols[i + 1]);
+  }
+
+  function readStamp(from: number): { text: string | null; nextIndex: number } {
+    if (cols[from] === "n/a") return { text: null, nextIndex: from + 1 };
+    if (isStampStart(from)) return { text: cols.slice(from, from + 4).join(" "), nextIndex: from + 4 };
+    return { text: null, nextIndex: from + 1 };
+  }
+
+  // Skips a LEFT or PASSED field: a single "n/a", or a duration that runs up to and including
+  // the given end word.
+  function skipDuration(from: number, endWord: string): number {
+    if (cols[from] === "n/a") return from + 1;
+    let i = from;
+    while (i < cols.length && cols[i] !== endWord) i += 1;
+    return i < cols.length ? i + 1 : i;
+  }
+
+  const next = readStamp(0);
+  const afterLeft = skipDuration(next.nextIndex, "left");
+  const last = readStamp(afterLeft);
+
+  const timerIndex = cols.findIndex((c) => c.endsWith(".timer"));
+  const name = timerIndex >= 0 ? cols[timerIndex] : cols[cols.length - 2];
+
   return { name, next: next.text, last: last.text };
 }
 
@@ -103,12 +130,21 @@ export async function readHost(deps: HostDeps): Promise<HostData> {
     quiet(() => deps.meminfo()),
   ]);
 
-  const disk = (df ?? "")
+  // df prints one line per path given to it, but two paths on the same filesystem share a mount, so
+  // "df -P / /var/backups" prints that mount twice when both live on the root filesystem. Keep the
+  // first row for each mount name so the report never lists a mount more than once.
+  const diskRows = (df ?? "")
     .split("\n")
     .slice(1)
     .map((line) => line.trim().split(/\s+/))
     .filter((cols) => cols.length >= 6)
     .map((cols) => ({ mount: cols[5], freePercent: pct(Number(cols[3]), Number(cols[1])) }));
+  const seenMounts = new Set<string>();
+  const disk = diskRows.filter((row) => {
+    if (seenMounts.has(row.mount)) return false;
+    seenMounts.add(row.mount);
+    return true;
+  });
 
   const memKb = (key: string) => Number((mem ?? "").match(new RegExp(`^${key}:\\s+(\\d+)`, "m"))?.[1] ?? NaN);
   const availablePercent = mem && !Number.isNaN(memKb("MemTotal")) && !Number.isNaN(memKb("MemAvailable")) ? pct(memKb("MemAvailable"), memKb("MemTotal")) : null;

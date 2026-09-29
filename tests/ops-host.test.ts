@@ -96,6 +96,54 @@ test("hostSection answers null for what it cannot read and never fails the secti
   assert.equal(d.restoreTest, null);
 });
 
+test("hostSection de-duplicates disk mounts when df reports the same mount twice", async () => {
+  const { hostSection } = await import("../src/lib/opsHost");
+  const s = await hostSection(
+    fakeDeps({
+      exec: async (cmd) => {
+        if (cmd === "df -P / /var/backups") {
+          return "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/sda1 40000000 30000000 10000000 75% /\n/dev/sda1 40000000 30000000 10000000 75% /\n";
+        }
+        throw new Error(`no such command: ${cmd}`);
+      },
+    })
+  );
+  assert.equal(s.ok, true);
+  if (!s.ok) return;
+  assert.deepEqual(s.data.disk, [{ mount: "/", freePercent: 25 }], "the second row for the same mount is dropped, not appended");
+});
+
+test("parseTimerRow finds NEXT and LAST by their own shape, not by a fixed word count", async () => {
+  const { parseTimerRow } = await import("../src/lib/opsHost");
+
+  assert.deepEqual(
+    parseTimerRow(
+      "Tue 2026-09-29 06:00:00 UTC 14min left Tue 2026-09-29 05:45:01 UTC 4min ago sportsdb-scrape-tick.timer sportsdb-scrape-tick.service"
+    ),
+    { name: "sportsdb-scrape-tick.timer", next: "Tue 2026-09-29 06:00:00 UTC", last: "Tue 2026-09-29 05:45:01 UTC" }
+  );
+
+  assert.deepEqual(
+    parseTimerRow(
+      "Tue 2026-09-29 08:00:00 UTC 1h 30min left Tue 2026-09-29 05:45:01 UTC 4min ago sportsdb-daily.timer sportsdb-daily.service"
+    ),
+    { name: "sportsdb-daily.timer", next: "Tue 2026-09-29 08:00:00 UTC", last: "Tue 2026-09-29 05:45:01 UTC" },
+    "a three word LEFT ('1h 30min left') does not push LAST out of place"
+  );
+
+  assert.deepEqual(
+    parseTimerRow("Tue 2026-09-29 06:00:00 UTC 14min left n/a n/a sportsdb-once.timer sportsdb-once.service"),
+    { name: "sportsdb-once.timer", next: "Tue 2026-09-29 06:00:00 UTC", last: null },
+    "a n/a LAST is not misread as part of the NEXT stamp or the LEFT duration"
+  );
+
+  assert.deepEqual(
+    parseTimerRow("n/a n/a Tue 2026-09-29 05:45:01 UTC 4min ago sportsdb-retired.timer sportsdb-retired.service"),
+    { name: "sportsdb-retired.timer", next: null, last: "Tue 2026-09-29 05:45:01 UTC" },
+    "a n/a NEXT paired with a n/a LEFT does not consume the real LAST stamp that follows"
+  );
+});
+
 test("a reader that hangs is cut off by the section timeout, not the request", async () => {
   const { hostSection } = await import("../src/lib/opsHost");
   // The section's alarm is unref'd on purpose (a request keeps a server alive, not the alarm), so

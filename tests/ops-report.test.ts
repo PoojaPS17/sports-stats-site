@@ -187,6 +187,32 @@ test("dbHealthSection reads sizes, dead rows and connections", async () => {
   assert.ok(Array.isArray(s.data.seqScanHeavy));
 });
 
+test("dbHealthSection survives pg_stat_statements failing with 55000 (object not in prerequisite state)", async () => {
+  const { dbHealthSection } = await import("../src/lib/opsReport");
+  // The extension row exists (as it does on the VM) but the module is not in
+  // shared_preload_libraries, so Postgres refuses the select with 55000. Everything else is
+  // answered by the real test database; only the pg_stat_statements query is faked.
+  const fakePool = {
+    query: (async (text: unknown, params?: unknown) => {
+      const sql = String(text);
+      if (sql.includes("pg_extension") && sql.includes("pg_stat_statements")) {
+        return { rows: [{ n: "1" }] };
+      }
+      if (sql.includes("from pg_stat_statements")) {
+        throw Object.assign(new Error("pg_stat_statements must be loaded via shared_preload_libraries"), { code: "55000" });
+      }
+      return db.pool.query(sql, params as never[]);
+    }) as typeof db.pool.query,
+  } as unknown as typeof db.pool;
+  const s = await dbHealthSection(fakePool);
+  assert.ok(s.ok);
+  assert.equal(s.data.slowStatements, null, "the failed query leaves slowStatements null instead of failing the section");
+  assert.ok(s.data.sizeBytes > 0, "the rest of the section still ran");
+  assert.ok(s.data.largestTables.length > 0);
+  assert.ok(s.data.connections.max > 0);
+  assert.equal(typeof s.data.listenAddresses, "string");
+});
+
 test("viewsSection splits yesterday and today", async () => {
   const { viewsSection } = await import("../src/lib/opsReport");
   await db.pool.query(`delete from game_views`);
