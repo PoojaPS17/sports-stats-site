@@ -24,6 +24,7 @@ V2 answers all four with the same database and one new crew member.
 | Page | Rebuilt as a sidebar app with the sections below, republished to the same artifact URL so nothing else changes. |
 | Office | Kept, in the reference's form (building, step-through, agent cards), now with the Groundsman. |
 | New routine | Exactly one, the Groundsman. Routines cannot be deleted, so it is created once, its id stored in `crew/groundsman.routineId` and in memory, and never re-created. |
+| Cost | About 26 cloud sessions a day: nine reporters (the Steward weekly), fifteen Groundsman runs, the article draft. Most Groundsman runs find nothing to do and end within two minutes. |
 | Font | Nunito from Google Fonts, weights 400, 600 and 800, with a system sans fallback. Tabular figures on every number column. |
 | Theme | Navy dark theme by default in the reference's manner, and a matching light theme, both from tokens. The site's Volt lime is the "ok" colour only, not the accent. |
 
@@ -99,9 +100,10 @@ Front matter carries `kind: actor` and `protocol: none`: the routine builder doe
 **Each run, in order:**
 
 1. Read the clock. Mark any `running` order older than two hours `failed` with reason "abandoned".
-2. **Alerts.** Query `issues/` for `severity in [critical, high]`, `status in [open, reopened]`, no `alertedAt`. If any, send one push: `<n> new critical/high: <first title, truncated>. Ops Room.` under 200 characters, then set `alertedAt` on each and write `alerts/<stamp>`. At the 03:05 UTC run only, also send the digest: `Ops Room 29 Sep: <c> critical, <h> high, <m> medium, <o> orders waiting. Top: <title>.` and write `alerts/<stamp>` with `kind: digest`. Never more than two pushes per run, never more than twelve per day.
-3. **Orders.** Query `orders/` with `status == queued`, oldest first, take at most three. For each: set `running` and `pickedAt`, do the work below, then set `done` or `failed` with `result`, `finishedAt`, `prUrl` and `sessionUrl`, and set `issues/<issueKey>.orderId` when linked.
-4. Prune `alerts/` older than 30 days and `orders/` that are `done`, `failed` or `cancelled` and older than 60 days. Write `crew/groundsman` with `lastRunAt`, `lastStatus`, `lastHeadline` (for example `29 Sep 14:35: 2 orders done (1 PR), 1 push sent`). Write `runs/groundsman-<date>` once per day, appending a line per run to `details`.
+2. **Watch.** Three small checks that only an hourly agent can do, each written as an issue under the `groundsman:` prefix with the reporters' issue rules: (a) at the 03:05 UTC run, every reporter due that night has a `runs/<agent>-<today>` document, and the Chrome task wrote `daily/<yesterday>.readAt.chrome` by the 06:05 UTC run on a weekday; a missing run is `high`, "missed run", and is pushed; (b) when `/api/ticker` lists a live game, the score shown on that game's page is compared with ESPN's scoreboard for the league; a difference held for two consecutive runs is `critical`, "live score stale"; (c) the database document count read from any write result is over 20,000 of the 25,000 limit, `medium`.
+3. **Alerts.** Query `issues/` for `severity in [critical, high]`, `status in [open, reopened]`, no `alertedAt`. If any, send one push: `<n> new critical/high: <first title, truncated>. Ops Room.` under 200 characters, then set `alertedAt` on each and write `alerts/<stamp>`. At the 03:05 UTC run only, also send the digest: `Ops Room 29 Sep: <c> critical, <h> high, <m> medium, <o> orders waiting. Top: <title>.` and write `alerts/<stamp>` with `kind: digest`. A critical issue still `open` or `reopened` with no order and no `ownerNote` 24 hours after `alertedAt` is pushed again, once per day, with "still open" in the message; that is the reminder. Never more than two pushes per run, never more than twelve per day.
+4. **Orders.** Query `orders/` with `status == queued`, oldest first, take at most three. For each: set `running` and `pickedAt`, do the work below, then set `done` or `failed` with `result`, `finishedAt`, `prUrl` and `sessionUrl`, and set `issues/<issueKey>.orderId` when linked.
+5. Prune `alerts/` older than 30 days and `orders/` that are `done`, `failed` or `cancelled` and older than 60 days. Write `crew/groundsman` with `lastRunAt`, `lastStatus`, `lastHeadline` (for example `29 Sep 14:35: 2 orders done (1 PR), 1 push sent`). Write `runs/groundsman-<date>` once per day, appending a line per run to `details`.
 
 **Doing an order:**
 
@@ -167,64 +169,156 @@ Showcase
 
 ## 7. The fuller check list
 
-New checks by agent. Severity in brackets. Each is written into the agent's file as a numbered check with the exact URL, command and threshold, in the style of v1.
+The list below is the result of a gap review across eight domains: availability, security, performance, data quality, search visibility, engagement, editorial, and the operation itself. Section 7.10 maps every domain to its checks so nothing is covered by assumption. Severity is in brackets. Each check is written into the agent's file as a numbered step with the exact URL, command and threshold, in the style of v1. Numbering is continuous so the owner can refer to a check by number.
 
-**Report endpoint, new `host` section** (in `src/lib/opsReport.ts`, read by the Umpire): disk free percent for `/` and `/var/backups` from `df`, available memory percent and load average from `/proc/meminfo` and `os.loadavg()`, failed systemd units from `systemctl --failed --no-legend`, the app process start time, the Node version, and `restoreTest` (see the Steward below) read from `/var/backups/sportsdb/restore-test.json` when present. Umpire thresholds: disk free under 15 percent [high], under 8 percent [critical]; memory available under 10 percent [medium]; any failed unit [high, named]; load average over 4 for the 15-minute figure [medium].
+### 7.1 Report endpoint additions
+
+Read by the Umpire and the Steward, computed on the VM in `src/lib/opsReport.ts`, tested against mocked commands.
+
+**New `host` section:** disk free percent for `/` and `/var/backups` (`df`); available memory percent and the 1, 5 and 15 minute load averages; failed systemd units (`systemctl --failed --no-legend`); every `sportsdb-*` timer with its last and next run (`systemctl list-timers`); the app's start time, restart count (`systemctl show sportsdb-app -p NRestarts,ActiveEnterTimestamp`) and resident memory; the Node version; `appErrors24h` from `journalctl -u sportsdb-app --since -24h -p err` (null when the journal is not readable; the README says how the owner grants it once); pending package updates and whether a reboot is required (`/var/lib/update-notifier/updates-available`, `/var/run/reboot-required`); NTP synchronised (`timedatectl show -p NTPSynchronized`); days left on the origin certificate at `/etc/ssl/cloudflare/sports-db.live.pem` (null when unreadable); and `restoreTest` from `/var/backups/sportsdb/restore-test.json` when present.
+
+**`dbHealth` additions:** `listen_addresses` and `ssl` settings; the five slowest statements by mean time when `pg_stat_statements` is installed, else null; tables over 100,000 rows where sequential scans outnumber index scans.
+
+**`views` additions:** `follows`, the row count of the `follows` table (check 59). No referrer: `game_views` has no referrer column. Referrers are read from GA4 by the Chrome task instead (check 54).
+
+### 7.2 Availability and health
 
 **Physio**
-1. Redirects: `http://sports-db.live/` and `https://www.sports-db.live/` must land on `https://sports-db.live/` in at most two hops [high].
-2. The 404 page: `/this-page-does-not-exist` returns 404 with the site's own not-found page, not a blank or a 200 [medium].
-3. Broken links, sampled: from `/`, the six league pages and the newest article, collect internal links, fetch 200 of them chosen by the day of the month as an offset so every link is covered in time; any 404 or 5xx [high, named]. Every outbound link on the newest article [medium, named].
-4. Hotlinked images: every `<img src>` on `/` and the newest match page that points off-site must return 200 [medium, named].
-5. `robots.txt` must not block `/` or the league paths, and no seed page may carry `noindex` [critical].
-6. Response size drift: a seed page whose HTML is under 40 percent of its size in yesterday's run [high], because an empty page still returns 200.
+1. Redirects: `http://sports-db.live/` and `https://www.sports-db.live/` land on `https://sports-db.live/` in at most two hops [high].
+2. Cloudflare in front: every seed response carries `server: cloudflare`; the DNS A records for the apex resolve to Cloudflare ranges (fetched live from `cloudflare.com/ips-v4`) [critical], because the origin firewall admits Cloudflare only.
+3. The 404 page: `/this-page-does-not-exist` returns 404 with the site's own not-found page, not a blank or a 200 [medium].
+4. Broken links, sampled: from `/`, the six league pages and the newest article, collect internal links, fetch 200 chosen by a day-of-month offset so every link is covered in time; any 404 or 5xx [high, named]. Every outbound link on the newest article [medium, named].
+5. Hotlinked images: every off-site `<img src>` on `/` and the newest match page returns 200 [medium, named].
+6. `robots.txt` does not block `/` or the league paths, and no seed page carries `noindex` [critical].
+7. Response size drift: a seed page whose HTML is under 40 percent of its size in yesterday's run [high], because an empty page still returns 200.
+8. `/api/ticker` and `/api/search?q=india` return valid JSON with at least one item [high].
+9. Edge caching works: among the league and standings pages, any answered `cf-cache-status: DYNAMIC` or `BYPASS` two runs in a row [medium], because the 2026-09-28 cache fix must stay effective; `content-encoding` is `br` or `gzip` on HTML [low].
+10. Latency trend: the median `time_total` across the twenty seed pages, kept in the run details; a median over 1.5 seconds [medium], or up 50 percent on the seven-day median [medium].
 
-**Umpire**
-7. Second-source scores for every league ESPN covers: every game the site shows as completed yesterday against ESPN's scoreboard for that date, not three samples [critical when any score differs].
-8. Stale fixtures: games shown as upcoming whose scheduled time is more than three hours in the past, and games shown as live for more than six hours [high].
-9. Match times: for three games from today's list, the kick-off shown on the page against ESPN's `date` converted to IST [high].
-10. Empty pages: fetch the newest match page, one standings page per league and three player pages linked from match pages; a page whose main table has no rows, or that shows "No data", "No stats" or "Coming soon" text while ESPN has the data [high, named].
-11. Site search: run `/search?q=` for a fixed list of 20 team and player names (in the file) and flag any that returns no results [medium, named].
-12. The `host` section thresholds above.
+**Umpire**, from the `host` section
+11. Disk free under 15 percent [high], under 8 percent [critical]; at the current seven-day growth rate full within 30 days [medium].
+12. Available memory under 10 percent [medium]; app resident memory doubled over seven days [medium], the sign of a leak.
+13. Any failed systemd unit [high, named]; any `sportsdb-*` timer with no next run [high, named]; app restarts up since yesterday [high].
+14. `appErrors24h` over 20 [medium]; over 200 [high].
+15. Pending security updates for more than seven days, or a reboot required for more than seven days [medium]. The fix names the command; the owner runs it.
+16. NTP not synchronised [medium], because match times depend on the clock.
+17. Oracle idle reclaim: Always Free instances that stay below Oracle's idle thresholds for seven days can be reclaimed; a 15-minute load average under 0.05 on every one of the last seven readings [medium], with the fix "confirm the instance is not flagged idle in the Oracle console".
+18. Origin certificate under 30 days [high].
+
+**Steward**, weekly
+19. The GitHub watchdog workflow (`.github/workflows/watchdog.yml`) exists, ran in the last six hours and passed; it is the external monitor for the scrapers [high when missing or red]. The Groundsman's first proposed change (an order the owner gives once) widens it to fetch `/` and `/api/health` every 30 minutes, so the site itself has an off-VM uptime check that emails the owner.
+20. Domain expiry: RDAP at `https://rdap.org/domain/sports-db.live`; under 30 days [critical], under 60 [high].
+
+### 7.3 Security
+
+**Steward**, weekly
+21. Direct-to-origin exposure: connections to the VM's public address on 80, 443 and 5432 must time out or be refused [critical if any answers].
+22. Exposed files: `/.env`, `/.env.production`, `/.git/HEAD`, `/.git/config`, `/package.json`, `/next.config.ts`, `/server.js` all return 404 [critical].
+23. Secrets in the client bundle: fetch every JS chunk referenced by `/` and grep for `postgres://`, `DATABASE_URL`, key-shaped strings and the IndexNow key [critical].
+24. Stack traces: `/api/search?q=%27%22%3C%3E`, `/api/ticker?x=1` and `/api/track-view` with a malformed body return clean JSON errors, never a stack frame or a file path [high].
+25. Database posture from `dbHealth`: `listen_addresses` is `localhost` or `127.0.0.1` [critical otherwise]; `ssl` state recorded.
+26. Repository posture: branch protection on `main` (`GET /repos/PoojaPS17/sports-stats-site/branches/main/protection`; skip on 403), Dependabot alerts enabled, no secret-scanning alerts open [medium each].
+27. Existing v1 checks continue: `npm audit`, outdated majors, security headers, TLS, tracked `.env`, key-shaped strings in the tree. Add: Next.js security releases in the last seven days affecting the running version [high]; Node version against the current LTS line [low].
+28. Contact form: if `/contact` posts to an API route, one weekly test message tagged `[ops-test]` that the owner should receive; a non-200 [high]. If the page only shows an address, the check records that and does nothing.
+29. Cloudflare settings, only when the owner adds a read-only token as an environment variable on the Steward routine: Always Use HTTPS on, minimum TLS 1.2, Bot Fight Mode on, a rate-limiting rule covering `/api/search` [medium each]; last seven days' 5xx rate over 1 percent [high], cache hit ratio under 60 percent [low], and a request spike over three times the weekly mean [medium]. Without the token the check is skipped and the run says so once.
+
+**Local Chrome task** (the owner's Mac)
+30. The off-VM backup copy: the newest file in `~/sportsdb-backups` is under seven days old [high]; the pull script is the fix.
+
+**Groundsman**, on order
+31. The monthly restore test: an order the owner gives once produces `deploy/vm/restore-test.sh` in a pull request (restore the newest dump into a scratch database, count tables and rows, drop it, write `restore-test.json`) plus a systemd timer unit. The Steward then reads `host.restoreTest` and flags a result older than 35 days or `ok: false` [high].
+
+### 7.4 Performance
 
 **Kit Manager**
-13. Page weight: HTML plus referenced CSS and JS for the five pages, mobile; over 1.5 MB [medium]. Images over 300 KB on those pages [low, named].
-14. Duplicate titles and descriptions among the five pages plus three more articles [low].
-15. Missing `alt` on images that are not decorative (no `alt` attribute at all) [low, named].
-16. A `<title>` or `<h1>` that is empty or the same on two pages [medium].
+32. PageSpeed as v1 once the owner supplies an API key (stored as an environment variable on the routine); with the key the field data (CrUX) is recorded too. Core Web Vitals: LCP over 2.5 s, CLS over 0.1, INP over 200 ms on mobile [medium each].
+33. Page weight: HTML plus referenced CSS and JS for the five pages, mobile; over 1.5 MB [medium]. Images over 300 KB on those pages [low, named]. Total JS for `/` up 20 percent on seven days ago [low].
+34. Duplicate titles and descriptions among the five pages plus three more articles [low]; an empty `<title>` or `<h1>`, or the same on two pages [medium].
+35. Accessibility beyond the scores: images without any `alt` attribute [low, named]; `<html lang>` present and a skip link to `main` [low]; every form control labelled on `/search` and `/contact` [low].
+36. `alt-svc: h3` advertised (HTTP/3 through Cloudflare) [low].
+
+**Umpire**, from `dbHealth`
+37. A statement with mean time over 500 ms in the slow-statement list [medium, with the statement's first 80 characters]; a large table with more sequential than index scans [low].
+
+### 7.5 Data quality
+
+**Umpire**
+38. Second-source scores: every game the site shows as completed yesterday, in every league ESPN covers, against ESPN's scoreboard for that date [critical when any score differs].
+39. Standings against ESPN's standings endpoint per league, top five rows: position, played, points [high when different].
+40. Player totals: three players linked from yesterday's match pages, season totals against ESPN's player page within the known ESPN counting rules from `memory/espn-api-quirks` [high]; the rules are written into the file so the agent applies them.
+41. Stale fixtures: games shown as upcoming whose scheduled time is more than three hours in the past, and games shown as live for more than six hours [high].
+42. Match times: for three games from today's list, the kick-off shown on the page against ESPN's `date` converted to IST [high].
+43. Empty pages: the newest match page, one standings page per league and three player pages linked from match pages; a page whose main table has no rows, or that shows "No data", "No stats" or "Coming soon" while ESPN has the data [high, named].
+44. Coming week: each league in season on ESPN has scheduled games on the site for the next seven days [high].
+45. Encoding: the checked pages contain no mojibake sequences (`Ã`, `â€`, `Ã©`) [medium, named].
+46. Season labelling: games whose `season` does not match the season implied by their date under the league's season boundaries [low].
+47. User journey (Chrome task, weekdays): home, a league page, the newest match page, a player page from it, the search box with a team name; any console error, a layout wider than the viewport, or a main table with no rows [high, named]. Screenshots are not stored.
+48. Site search: `/api/search?q=` for a fixed list of 20 team and player names in the file; any with no results [medium, named].
+
+### 7.6 Search visibility
 
 **Analyst**
-17. Canonical tags: each checked page has one `rel=canonical` pointing at itself on `https://sports-db.live` [medium].
-18. Open Graph and Twitter cards on the newest article and the home page: `og:title`, `og:description`, `og:image` (fetch it, must be 200 and an image), `twitter:card` [medium].
-19. Sitemap URLs: fetch 50 URLs from the sitemaps chosen by day-of-month offset; any that is not 200 [high, named].
-20. `lastmod` staleness: a league sitemap whose newest `lastmod` is older than seven days while that league had games [medium].
+49. Canonical: each checked page has one `rel=canonical` pointing at itself on `https://sports-db.live` [medium].
+50. Open Graph and Twitter cards on the newest article and the home page: `og:title`, `og:description`, `og:image` (fetched, 200, an image), `twitter:card` [medium].
+51. Structured data, extended: `NewsArticle` on the newest article has `headline`, `datePublished`, `author`, `image`; `Person` on a player page has `name`; `BreadcrumbList` on a match page [medium each]; the known `offers` and `endDate` warnings stay `low` and open on purpose.
+52. Sitemap URLs: 50 chosen by day-of-month offset; any not 200 [high, named]. A league sitemap whose newest `lastmod` is older than seven days while that league had games [medium].
+53. Bing sees new articles: the newest article older than three days appears in a Bing `site:` search [low].
+
+**Local Chrome task**
+54. Search Console: manual actions and security issues pages are empty [critical]; coverage errors count and the Core Web Vitals report's poor-URL count [medium on a rise]; top ten queries by impressions with CTR, written to `daily/` for the Scout; GA4 top ten landing pages and referrers, engagement rate and returning users, written to `daily/`.
 
 **Scout**
-21. Search visibility, extended: `site:` results for the six league landing pages, and a plain search for `<site name> <league> standings`; record the rank if the site appears in the first page [informational, kept in details; a league page that disappears after being indexed is medium].
-22. Competitor gap, weekly on Mondays: for the two biggest fixtures of the coming week, what the site's match page lacks that the first two search results have (line-ups, head to head, form) [low, one suggestion].
+55. Search visibility, extended: `site:` results for the six league landing pages and a plain search for `sports-db <league> standings`; a league page that disappears after being indexed [medium].
+56. Content gap: queries from check 54 with over 100 impressions and CTR under 2 percent become the day's suggestion, one per day, never repeated in 14 days [low].
+57. Competitor gap, Mondays: for the two biggest fixtures of the coming week, what the site's match page lacks that the first two search results have [low, one suggestion].
 
-**Editor**
-23. Internal links in the draft article: at least two links to the site's own match, player or league pages, all returning 200 [medium].
-24. Image rights: the draft uses no image file it does not own; any `<img>` or Markdown image pointing at a third-party host [high].
-
-**Press Officer**
-25. Every draft's link is a live 200 page, and the drafted result matches the score on the site [high].
+### 7.7 Engagement
 
 **Scorer**
-26. A day whose `gameViews` is under 20 percent of the previous seven-day mean, when that mean is over 50 [high].
-27. Referrers, when the `views` section gains them: the top five referring hosts, kept in `daily/` [informational].
+58. A day whose `gameViews` is under 20 percent of the previous seven-day mean when that mean is over 50 [high]; a 30 percent week-on-week drop in GA4 users, engagement rate or Search Console clicks [medium]; a week-on-week rise over 50 percent is recorded as a headline, not an issue.
+59. Follows: the count of rows in `follows` (through a `follows` figure added to the `views` section) as a daily number, so the feature's uptake is visible on Stats.
 
-**Steward, weekly**
-28. Node version against the current LTS line [low]; Next.js security releases in the last seven days [high when the running version is affected].
-29. Restore test: the Steward proposes, through one Groundsman order the owner gives once, a script `deploy/vm/restore-test.sh` that restores the newest dump into a scratch database, counts tables and rows, drops the scratch database, and writes `/var/backups/sportsdb/restore-test.json`. Once installed on a monthly timer by the owner, the Steward reads it through the `host` section and flags a result older than 35 days or `ok: false` [high].
-30. Cloudflare: if the owner adds a read-only Analytics token as an environment variable on the Steward routine, the weekly run reads the last seven days' request count, 5xx rate and cache hit ratio from the Cloudflare GraphQL API; 5xx over 1 percent [high], cache hit under 60 percent [low]. Without the token the check is skipped and the run says so once.
+**Press Officer**
+60. Every draft's link is a live 200 page and the drafted result matches the score on the site [high].
+61. X readings, only if the Mac's Chrome is signed in to X: follower count and yesterday's post impressions, read by the Chrome task into `daily/` [informational, a 20 percent fall in seven days is low].
 
-**Local Chrome task** (weekdays 10:00 IST, on the owner's Mac)
-31. A user journey: home, a league page, the newest match page, a player page from it, the search box with a team name. Any page with a console error, a layout wider than the viewport, or a main table with no rows [high, named]. Screenshots are not stored; the finding names the page and the error text.
+### 7.8 Editorial
 
-Not added, and why: real-browser checks in the cloud (the sandbox would need a browser download the egress policy may block; the Chrome task covers it), Lighthouse without an API key (the free quota is exhausted; the owner's PageSpeed key restores the Kit Manager's scores), an external uptime monitor (rule 6 already asks the owner to set one up; a cloud routine cannot run every five minutes).
+**Editor**
+62. No article today: no open pull request from the article routine by 07:30 IST [medium], because the daily draft is the site's content engine.
+63. Internal links in the draft: at least two to the site's own match, player or league pages, all 200 [medium].
+64. Image rights: any image in the draft pointing at a third-party host [high].
+65. Legal and personal claims: sentences about legal proceedings, bans, injuries or personal conduct without a source link in the draft [high, quoted], because a wrong claim about a person is the costliest error the site can publish.
+66. Topic repeat: the draft's subject against the last 30 article titles [medium].
+67. Spelling and grammar: obvious errors, listed [low]; readability kept to the article standards in `memory/beyond-the-scoreline-article-standards`.
 
-**Owner actions this list depends on:** a PageSpeed API key, and optionally a Cloudflare analytics token. Both are stored as environment variables on the routine that uses them, never in the repository.
+### 7.9 The operation itself
+
+**Groundsman**, section 5 step 2: missed reporter runs [high, pushed], missed Chrome task [medium], live score stale [critical], database document count [medium].
+
+**Physio**
+68. `deployPending` as v1, plus: `main` ahead of production for more than 48 hours [medium], so merged work does not sit undeployed.
+
+**Steward**
+69. Routine drift: every crew file's front matter `schedule` and `model` match the live routine (`GET /v1/code/triggers` is not reachable from the cloud; instead the Steward reads `crew/<id>.routineId` and the owner-facing routine page is not fetched). Recorded as "not checkable from the cloud"; the main session verifies it whenever a prompt changes. Kept here so the gap is written down, not assumed closed.
+
+### 7.10 Coverage map
+
+| Domain | Checks | Where the numbers come from |
+|---|---|---|
+| Availability | 1 to 10, 19, 20, Groundsman watch | Physio, Steward, Groundsman |
+| Host and database health | 11 to 18, 25, 37, v1 backup and dbHealth | Umpire via the `host` and `dbHealth` sections |
+| Security | 21 to 31, v1 Steward checks | Steward, Chrome task, Groundsman |
+| Performance | 32 to 37, 9, 10 | Kit Manager, Physio, Umpire |
+| Data quality | 38 to 48, v1 Umpire checks | Umpire |
+| Search visibility | 49 to 57, v1 Analyst and Scout checks | Analyst, Scout, Chrome task |
+| Engagement | 58 to 61, v1 Scorer and Press Officer | Scorer, Press Officer, Chrome task |
+| Editorial | 62 to 67, v1 Editor checks | Editor |
+| The operation | 68, 69, Groundsman watch, Alerts page | Groundsman, Physio, Steward |
+
+Not added, and why: real-browser checks in the cloud (the sandbox would need a browser download the egress policy may block; the Chrome task covers the journey), Lighthouse without an API key (the free quota is exhausted; the owner's PageSpeed key restores the scores), an uptime probe every five minutes (a cloud routine cannot run that often; the widened watchdog workflow is the substitute), server-side search analytics (the site does not log queries; a Groundsman order can add a small log later).
+
+**Owner actions this list depends on:** a PageSpeed API key; optionally a Cloudflare read-only token; adding the `ubuntu` user to the `systemd-journal` group for check 14; installing the restore-test timer from the pull request for check 31. Each is stored or done once and written into `ops/README.md`.
 
 ## 8. Crew file and builder changes
 
