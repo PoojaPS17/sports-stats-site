@@ -6,7 +6,7 @@ import type { OpsReport } from "../src/lib/opsReport";
 // the test asserts the route's own contract (the cache header, the shape, the memo) and nothing else.
 const SECTION_KEYS = [
   "build", "heartbeats", "freshness", "volume", "duplicates",
-  "scraping", "integrity", "backup", "dbHealth", "views",
+  "scraping", "integrity", "backup", "host", "dbHealth", "views",
 ] as const;
 
 function stubReport(): OpsReport {
