@@ -37,6 +37,10 @@ export async function startTestDb(): Promise<TestDb> {
       user: "postgres",
       password: "password",
       persistent: false,
+      // Postgres refuses to run as root. When the tests run as root (the cloud sandbox does), this
+      // makes embedded-postgres hand the data directory to the system postgres user, creating that
+      // user first if the image has none; without it initdb cannot enter the root-owned temp dir.
+      createPostgresUser: typeof process.getuid === "function" && process.getuid() === 0,
       onLog: () => {},
       onError: () => {},
     });
