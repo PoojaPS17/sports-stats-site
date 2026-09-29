@@ -142,6 +142,18 @@ test("parseTimerRow finds NEXT and LAST by their own shape, not by a fixed word 
     { name: "sportsdb-retired.timer", next: null, last: "Tue 2026-09-29 05:45:01 UTC" },
     "a n/a NEXT paired with a n/a LEFT does not consume the real LAST stamp that follows"
   );
+
+  // The VM's systemd prints LEFT and PASSED as bare durations, with no "left" or "ago" word.
+  assert.deepEqual(
+    parseTimerRow("Tue 2026-09-29 06:15:00 UTC 3min Tue 2026-09-29 06:00:01 UTC 11min sportsdb-scrape-tick.timer sportsdb-scrape-tick.service"),
+    { name: "sportsdb-scrape-tick.timer", next: "Tue 2026-09-29 06:15:00 UTC", last: "Tue 2026-09-29 06:00:01 UTC" },
+    "bare durations without 'left' or 'ago' are skipped"
+  );
+  assert.deepEqual(
+    parseTimerRow("Tue 2026-09-29 08:17:00 UTC 2h 29min Mon 2026-09-28 08:17:00 UTC 21h sportsdb-scrape-rosters.timer sportsdb-scrape-rosters.service"),
+    { name: "sportsdb-scrape-rosters.timer", next: "Tue 2026-09-29 08:17:00 UTC", last: "Mon 2026-09-28 08:17:00 UTC" },
+    "a two word bare duration is skipped too"
+  );
 });
 
 test("a reader that hangs is cut off by the section timeout, not the request", async () => {
