@@ -39,6 +39,30 @@ test("a breadcrumb trail starts at Home and links every step but the last", () =
   assert.deepEqual(breadcrumbSchema([{ label: "Cricket series" }]).itemListElement.map((i) => i.name), ["Home", "Cricket series"]);
 });
 
+// Google treats a missing `item` as a critical error everywhere but the last step, where it falls
+// back to the page's own URL. The h2h pages named a "Head-to-head" section that has no index page
+// to point at, which invalidated the trail on all 1,781 of them.
+test("a step with no page of its own is dropped from the trail rather than left without a URL", () => {
+  const list = breadcrumbSchema([{ label: "NFL", href: "/nfl" }, { label: "Head-to-head" }, { label: "Cardinals vs Falcons" }]).itemListElement;
+  assert.deepEqual(list.map((i) => i.name), ["Home", "NFL", "Cardinals vs Falcons"]);
+  assert.deepEqual(list.map((i) => i.position), [1, 2, 3], "the steps that remain are renumbered");
+});
+
+test("no trail can leave a URL off any step but the last", () => {
+  const trails = [
+    [{ label: "Cricket series" }],
+    [{ label: "NFL", href: "/nfl" }, { label: "Head-to-head" }, { label: "Cardinals vs Falcons" }],
+    [{ label: "A" }, { label: "B" }, { label: "C" }],
+    [{ label: "NFL", href: "/nfl" }, { label: "Teams", href: "/nfl/teams" }, { label: "Cardinals", href: "/nfl/teams/arizona-cardinals" }, { label: "About" }],
+    [{ label: "Cricket series", href: "/cricket/series" }],
+  ];
+  for (const trail of trails) {
+    const list = breadcrumbSchema(trail).itemListElement;
+    for (const step of list.slice(0, -1)) assert.equal(typeof step.item, "string", `${step.name} in ${JSON.stringify(trail)}`);
+    assert.deepEqual(list.map((i) => i.position), list.map((_, i) => i + 1));
+  }
+});
+
 test("a BlogPosting names the desk as author, reuses the Organization publisher, and links its own page", () => {
   const schema = blogPostingSchema({ slug: "second-gold-asian-record", title: "T", dek: "D", publishedAt: "2026-09-25" });
   assert.equal(schema["@type"], "BlogPosting");

@@ -27,3 +27,16 @@ test("no page draws its own breadcrumb trail, which would leave it unmarked for 
   const handRolled = walk("src/app").filter((f) => readFileSync(f, "utf8").includes("›"));
   assert.deepEqual(handRolled, [], "these pages must use <Breadcrumbs /> instead");
 });
+
+// The trail readers see and the trail Google reads are allowed to differ by exactly this: a step
+// with no page of its own stays on screen and leaves the JSON-LD, which cannot describe it.
+test("a step with no page of its own stays in the visible trail but not in the JSON-LD", async () => {
+  const { Breadcrumbs } = await import("../src/components/Breadcrumbs");
+  const html = renderToStaticMarkup(
+    createElement(Breadcrumbs, { items: [{ label: "NFL", href: "/nfl" }, { label: "Head-to-head" }, { label: "Cardinals vs Falcons" }] })
+  );
+  assert.match(html, /Head-to-head/, "readers still see the section they are in");
+  const json = JSON.parse(html.match(/"@type":"BreadcrumbList".*?\}\]\}/)?.[0].replace(/^/, "{") ?? "{}");
+  assert.deepEqual(json.itemListElement.map((i: { name: string }) => i.name), ["Home", "NFL", "Cardinals vs Falcons"]);
+  for (const step of json.itemListElement.slice(0, -1)) assert.equal(typeof step.item, "string");
+});

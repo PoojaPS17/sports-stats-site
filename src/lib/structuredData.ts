@@ -43,16 +43,26 @@ function nested<T extends { "@context": string }>(schema: T): Omit<T, "@context"
   return rest as Omit<T, "@context">;
 }
 
+/**
+ * Google requires `item` on every crumb except the last, where it falls back to the page's own URL.
+ * A label-only crumb part-way along the trail - a section with no page of its own, such as
+ * "Head-to-head" - therefore cannot be expressed, and leaving it in makes the whole list a critical
+ * error rather than a warning. Such crumbs are dropped here and the rest renumbered; the visible
+ * trail in `Breadcrumbs` still shows them, because they are useful to a reader either way.
+ */
 export function breadcrumbSchema(items: { label: string; href?: string }[]) {
+  const trail = [{ label: "Home", href: "/" }, ...items];
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    itemListElement: [{ label: "Home", href: "/" }, ...items].map((item, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: item.label,
-      ...(item.href ? { item: absoluteUrl(item.href) } : {}),
-    })),
+    itemListElement: trail
+      .filter((item, i) => item.href || i === trail.length - 1)
+      .map((item, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: item.label,
+        ...(item.href ? { item: absoluteUrl(item.href) } : {}),
+      })),
   };
 }
 
