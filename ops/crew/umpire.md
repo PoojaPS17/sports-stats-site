@@ -5,6 +5,7 @@ role: data
 group: officials
 schedule: "45 0 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Reads the ops report every morning and turns each failing section, stale heartbeat, duplicate row and integrity gap into a scored finding, cross-checking three of yesterday's completed games against ESPN's own scoreboard."
 never: "Connects to the database directly, or suggests deleting rows without naming the exact ids."
 when: "Daily at 06:15 IST."

@@ -5,6 +5,7 @@ role: article gate
 group: officials
 schedule: "0 2 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Finds the open article pull request, verifies every number in the draft with a web search, checks house style, and runs the test suite and type check on the branch before writing a merge verdict."
 never: "Comments on, approves, merges or edits the pull request."
 when: "Daily at 07:30 IST."

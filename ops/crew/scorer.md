@@ -5,6 +5,7 @@ role: daily numbers
 group: front-office
 schedule: "30 2 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Reads yesterday's view counts from the ops report and writes the daily numbers document with the top games, country and platform splits."
 never: "Changes anything."
 when: "Daily at 08:00 IST."

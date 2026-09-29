@@ -9,7 +9,8 @@
       "never": "Changes anything. Reads only.",
       "when": "Daily at 06:00 IST.",
       "schedule": "30 0 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "umpire": {
       "id": "umpire",
@@ -20,7 +21,8 @@
       "never": "Connects to the database directly, or suggests deleting rows without naming the exact ids.",
       "when": "Daily at 06:15 IST.",
       "schedule": "45 0 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "kit-manager": {
       "id": "kit-manager",
@@ -31,7 +33,8 @@
       "never": "Runs Lighthouse against the VM origin directly, only the public URL.",
       "when": "Daily at 06:30 IST.",
       "schedule": "0 1 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "analyst": {
       "id": "analyst",
@@ -42,7 +45,8 @@
       "never": "Submits anything to a search engine.",
       "when": "Daily at 06:45 IST.",
       "schedule": "15 1 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "scout": {
       "id": "scout",
@@ -53,7 +57,8 @@
       "never": "Creates content or posts.",
       "when": "Daily at 07:15 IST.",
       "schedule": "45 1 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "editor": {
       "id": "editor",
@@ -64,7 +69,8 @@
       "never": "Comments on, approves, merges or edits the pull request.",
       "when": "Daily at 07:30 IST.",
       "schedule": "0 2 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "press-officer": {
       "id": "press-officer",
@@ -75,7 +81,8 @@
       "never": "Posts, replies, schedules or writes to any social account or document.",
       "when": "Daily at 07:45 IST.",
       "schedule": "15 2 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "scorer": {
       "id": "scorer",
@@ -86,7 +93,8 @@
       "never": "Changes anything.",
       "when": "Daily at 08:00 IST.",
       "schedule": "30 2 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "steward": {
       "id": "steward",
@@ -97,15 +105,58 @@
       "never": "Upgrades, edits or commits anything.",
       "when": "Weekly, Monday at 05:30 IST.",
       "schedule": "0 0 * * 1",
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
+    },
+    "groundsman": {
+      "id": "groundsman",
+      "name": "Groundsman",
+      "role": "orders",
+      "group": "backroom",
+      "kind": "actor",
+      "job": "Checks the Orders queue every hour from 08:35 to 22:35 IST, carries out the owner's fix, explain and recheck orders, opens a pull request for anything that changes code, and sends the mobile push for new critical and high issues and the 08:35 digest.",
+      "never": "Merges, deploys, pushes to main, runs anything on the VM, or acts without an order.",
+      "when": "Hourly at :35, 08:35 to 22:35 IST.",
+      "schedule": "5 3-17 * * *",
       "model": "claude-sonnet-5"
     }
   },
   "rules": {
-    "r1": { "text": "Deploy from main only, after the pull request is merged. Never between 04:30 and 07:30 IST, when the daily scrape runs.", "order": 1, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r2": { "text": "Purge the Cloudflare cache once after every deploy, then check /beyond-the-scoreline serves the new build.", "order": 2, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r3": { "text": "Agents report. They never commit, merge, post or change a setting.", "order": 3, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r4": { "text": "Nothing is posted to X without the owner's approval of the exact copy.", "order": 4, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r5": { "text": "Numbers in articles are verified by search or left out.", "order": 5, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r6": { "text": "To do: set up an external uptime monitor pinging https://sports-db.live/api/health every five minutes. Owner action.", "order": 6, "addedAt": "2026-09-28", "addedBy": "owner" }
+    "r1": {
+      "text": "Deploy from main only, after the pull request is merged. Never between 04:30 and 07:30 IST, when the daily scrape runs.",
+      "order": 1,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r2": {
+      "text": "Purge the Cloudflare cache once after every deploy, then check /beyond-the-scoreline serves the new build.",
+      "order": 2,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r3": {
+      "text": "Reporters report. The Groundsman acts only on an order from this page, and only through a pull request the owner merges. Nothing changes production on its own.",
+      "order": 3,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r4": {
+      "text": "Nothing is posted to X without the owner's approval of the exact copy.",
+      "order": 4,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r5": {
+      "text": "Numbers in articles are verified by search or left out.",
+      "order": 5,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r6": {
+      "text": "To do: set up an external uptime monitor pinging https://sports-db.live/api/health every five minutes. Owner action.",
+      "order": 6,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    }
   }
 }

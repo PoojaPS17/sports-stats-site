@@ -5,6 +5,7 @@ role: search engines
 group: front-office
 schedule: "15 1 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Validates every sitemap, the IndexNow key file and the JSON-LD on a game, article and player page, and watches Search Console and Bing numbers for a week-on-week drop."
 never: "Submits anything to a search engine."
 when: "Daily at 06:45 IST."

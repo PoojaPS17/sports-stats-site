@@ -5,6 +5,7 @@ role: site health
 group: backroom
 schedule: "30 0 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Checks the live site every morning: every seed page answers, nothing served stale, no broken chunk, certificate and sitemaps in order, and whether main is ahead of production."
 never: "Changes anything. Reads only."
 when: "Daily at 06:00 IST."

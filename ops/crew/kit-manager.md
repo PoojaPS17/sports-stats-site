@@ -5,6 +5,7 @@ role: layout
 group: backroom
 schedule: "0 1 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Runs PageSpeed Insights against the home page, a league page, a match page, an article page and a player page on mobile and desktop, and flags layout shift, accessibility drops, contrast and tap-target failures, and performance regressions."
 never: "Runs Lighthouse against the VM origin directly, only the public URL."
 when: "Daily at 06:30 IST."

@@ -5,6 +5,7 @@ role: social
 group: front-office
 schedule: "15 2 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Reads the X daily plan and yesterday's results, drafts up to three ready-to-post updates, and flags any story already posted in the last week."
 never: "Posts, replies, schedules or writes to any social account or document."
 when: "Daily at 07:45 IST."

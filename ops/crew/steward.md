@@ -5,6 +5,7 @@ role: security
 group: backroom
 schedule: "0 0 * * 1"
 model: claude-sonnet-5
+kind: reporter
 job: "Runs a dependency audit, checks security headers and TLS expiry, and greps the tree for tracked secrets or key-shaped strings."
 never: "Upgrades, edits or commits anything."
 when: "Weekly, Monday at 05:30 IST."

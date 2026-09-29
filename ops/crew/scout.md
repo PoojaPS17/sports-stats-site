@@ -5,6 +5,7 @@ role: visibility
 group: front-office
 schedule: "45 1 * * *"
 model: claude-sonnet-5
+kind: reporter
 job: "Checks whether the newest article and recent games are indexed, finds pages missing from the sitemap or under-linked internally, and writes one concrete reach suggestion a day."
 never: "Creates content or posts."
 when: "Daily at 07:15 IST."
