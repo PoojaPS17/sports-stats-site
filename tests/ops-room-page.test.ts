@@ -677,3 +677,20 @@ test("the dead helpers are gone", () => {
   assert.ok(!/plotW/.test(html), "and plotW was computed for nobody");
   assert.ok(!/cleanMarkdown/.test(html), "markdownBlock is the only name for the walk");
 });
+
+test("section links drive nav() themselves, because the artifact frame swallows a plain hash click", () => {
+  const bind = html.slice(html.indexOf("bindNav()"), html.indexOf("syncSheet()"));
+  assert.match(bind, /a\.addEventListener\("click", \(ev\) => \{\s*ev\.preventDefault\(\);\s*this\.nav\(a\.getAttribute\("data-section"\)\);/);
+});
+
+test("an issue with an order waiting shows the order instead of a second Fix button, and actions report success", () => {
+  const actions = html.slice(html.indexOf("issueActions(key, status, notice) {"), html.indexOf("actionButton(label, notice, run, extra, done) {"));
+  assert.match(actions, /const pending = this\.pendingOrderFor\(key\)/);
+  assert.match(actions, /"Order given: " \+ this\.orderLabel\(pending\)/);
+  assert.match(actions, /this\.actionButton\("Fix", notice, [^\n]*"btn-go", given\)/);
+  assert.match(html, /const ORDER_GIVEN = "Order given\./);
+  assert.match(html, /notice\.textContent = "Note saved\.";/);
+  assert.match(html, /\.notice\.is-ok \{ color: var\(--ok\); \}/);
+  const pend = html.slice(html.indexOf("pendingOrderFor(key) {"), html.indexOf("snoozedList(all) {"));
+  assert.match(pend, /status === "queued" \|\| status === "running"/);
+});

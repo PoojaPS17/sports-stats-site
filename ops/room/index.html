@@ -119,6 +119,7 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
 .btn-go { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
 .notice { margin: 8px 0 0; color: var(--crit); font-size: 13px; }
+.notice.is-ok { color: var(--ok); }
 .chev { appearance: none; background: none; border: 1px solid var(--line); border-radius: 8px;
   color: var(--muted); width: 28px; height: 28px; line-height: 1; font-size: 17px; cursor: pointer; flex: none; }
 .chev:hover { background: var(--panel-2); color: var(--text); }
@@ -460,6 +461,8 @@ const DETAILS_LIMIT = 16000;
 // done and the owner should not have to look in a fifth place for it.
 const ORDER_KINDS = [["fix", "Fix"], ["explain", "Explain"], ["recheck", "Recheck"], ["custom", "Custom"]];
 const ORDER_GROUPS = [["queued", "Queued"], ["running", "Running"], ["done", "Done"], ["failed", "Failed"]];
+// What the owner reads after giving an order from an issue.
+const ORDER_GIVEN = "Order given. The Groundsman collects orders hourly at 35 past, 08:35 to 22:35 IST; the answer appears under Orders and on this issue.";
 const ORDER_WORDS = { queued: "waiting", running: "in hand", done: "done", failed: "could not be done", cancelled: "cancelled" };
 
 // The Runs filter is the only thing this page remembers about the viewer, and
@@ -651,7 +654,16 @@ const OpsRoom = {
 
   bindNav() {
     this.links = Array.prototype.slice.call(document.querySelectorAll("[data-section]"));
-    for (const a of this.links) a.addEventListener("click", () => this.closeSheet());
+    // Inside the artifact frame a plain click on an href="#section" link never
+    // reaches the browser's own hash navigation, so the click drives nav()
+    // itself; the hash is still written for the deep link and the back button.
+    for (const a of this.links) {
+      a.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        this.nav(a.getAttribute("data-section"));
+        this.closeSheet();
+      });
+    }
     const toggle = document.getElementById("side-toggle");
     const sheet = document.getElementById("side-sheet");
     if (toggle && sheet) {
@@ -1107,9 +1119,13 @@ const OpsRoom = {
       save.disabled = true;
       notice.hidden = true;
       notice.textContent = "";
+      notice.classList.remove("is-ok");
       Promise.resolve().then(() => this.saveNote(key, area.value.trim())).then(() => {
         delete this.drafts[key];
         save.disabled = false;
+        notice.textContent = "Note saved.";
+        notice.classList.add("is-ok");
+        notice.hidden = false;
       }).catch((err) => {
         notice.textContent = "Could not save your note: " + ((err && err.code) || "unknown");
         notice.hidden = false;
@@ -1124,9 +1140,15 @@ const OpsRoom = {
   issueActions(key, status, notice) {
     const h = this.h;
     const bar = h("div", { class: "actions" });
-    bar.append(this.actionButton("Fix", notice, () => this.orderFromIssue(key, "fix"), "btn-go"));
-    bar.append(this.actionButton("Explain", notice, () => this.orderFromIssue(key, "explain")));
-    bar.append(this.actionButton("Recheck", notice, () => this.orderFromIssue(key, "recheck")));
+    const pending = this.pendingOrderFor(key);
+    if (pending) {
+      bar.append(h("span", { class: "chip chip-" + String(pending.status || "queued"), text: "Order given: " + this.orderLabel(pending) }));
+    } else {
+      const given = ORDER_GIVEN;
+      bar.append(this.actionButton("Fix", notice, () => this.orderFromIssue(key, "fix"), "btn-go", given));
+      bar.append(this.actionButton("Explain", notice, () => this.orderFromIssue(key, "explain"), null, given));
+      bar.append(this.actionButton("Recheck", notice, () => this.orderFromIssue(key, "recheck"), null, given));
+    }
     if (status !== "acknowledged") bar.append(this.actionButton("Acknowledge", notice, () => this.setIssueStatus(key, "acknowledged")));
     for (const days of [3, 7, 30]) {
       bar.append(this.actionButton("Ignore for " + days + " days", notice, () => this.snoozeIssue(key, days)));
@@ -1135,19 +1157,37 @@ const OpsRoom = {
     return bar;
   },
 
-  actionButton(label, notice, run, extra) {
+  actionButton(label, notice, run, extra, done) {
     const btn = this.h("button", { type: "button", class: "btn" + (extra ? " " + extra : ""), text: label });
     btn.addEventListener("click", () => {
       btn.disabled = true;
       notice.hidden = true;
       notice.textContent = "";
-      Promise.resolve().then(run).catch((err) => {
+      notice.classList.remove("is-ok");
+      Promise.resolve().then(run).then(() => {
+        if (!done) return;
+        notice.textContent = done;
+        notice.classList.add("is-ok");
+        notice.hidden = false;
+      }).catch((err) => {
         notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
         notice.hidden = false;
         btn.disabled = false;
       });
     });
     return btn;
+  },
+
+  // The order this issue is waiting on, if the owner has already given one
+  // that the Groundsman has not finished. A second Fix on the same issue would
+  // only queue the same job twice.
+  pendingOrderFor(key) {
+    for (const o of this.orderList()) {
+      if (String(o.issueKey || "") !== key) continue;
+      const status = String(o.status || "queued");
+      if (status === "queued" || status === "running") return o;
+    }
+    return null;
   },
 
   snoozedList(all) {
