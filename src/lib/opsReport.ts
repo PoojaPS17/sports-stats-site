@@ -304,10 +304,18 @@ export function dbHealthSection(pool: Pool) {
     const { rows: ext } = await pool.query<{ n: string }>(`select count(*) as n from pg_extension where extname = 'pg_stat_statements'`);
     let slowStatements: { text: string; meanMs: number; calls: number }[] | null = null;
     if (Number(ext[0].n) > 0) {
-      const { rows } = await pool.query<{ text: string; mean: string; calls: string }>(
-        `select left(query, 80) as text, mean_exec_time as mean, calls from pg_stat_statements
-         where calls > 10 order by mean_exec_time desc limit 5`);
-      slowStatements = rows.map((r) => ({ text: r.text, meanMs: Math.round(Number(r.mean)), calls: Number(r.calls) }));
+      // The catalog row can exist while the module is not in shared_preload_libraries (error 55000,
+      // object_not_in_prerequisite_state), which the extension check above cannot detect on its own.
+      // That should not take down the rest of dbHealth, so it gets its own try/catch and leaves
+      // slowStatements null instead of failing the whole section.
+      try {
+        const { rows } = await pool.query<{ text: string; mean: string; calls: string }>(
+          `select left(query, 80) as text, mean_exec_time as mean, calls from pg_stat_statements
+           where calls > 10 order by mean_exec_time desc limit 5`);
+        slowStatements = rows.map((r) => ({ text: r.text, meanMs: Math.round(Number(r.mean)), calls: Number(r.calls) }));
+      } catch {
+        slowStatements = null;
+      }
     }
     const { rows: seq } = await pool.query<{ table: string; seq: string; idx: string; rows: string }>(
       `select relname as table, seq_scan as seq, coalesce(idx_scan, 0) as idx, n_live_tup as rows from pg_stat_user_tables
