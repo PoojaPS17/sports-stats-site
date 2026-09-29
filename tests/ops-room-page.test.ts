@@ -152,8 +152,12 @@ test("needsDecision keeps the oldest unanswered critical and high issues", () =>
     { key: "acked", severity: "high", status: "acknowledged", firstSeen: "2026-09-18T01:00:00Z" },
     { key: "snoozed", severity: "critical", status: "open", firstSeen: "2026-09-17T01:00:00Z", snoozedUntil: new Date(now + day).toISOString() },
     { key: "quiet", severity: "medium", status: "open", firstSeen: "2026-09-10T01:00:00Z" },
+    // Ignoring an issue acknowledges it, so once the date it was ignored until
+    // has passed it has to be asked about again or it never comes back.
+    { key: "woke", severity: "critical", status: "acknowledged", firstSeen: "2026-09-19T12:00:00Z", snoozedUntil: new Date(now - day).toISOString() },
+    { key: "closed", severity: "critical", status: "fixed", firstSeen: "2026-09-16T01:00:00Z", snoozedUntil: new Date(now - day).toISOString() },
   ], now);
-  assert.deepEqual(list.map((i) => i.key), ["old", "new"]);
+  assert.deepEqual(list.map((i) => i.key), ["woke", "old", "new"]);
 });
 
 test("an order is a new document with the shape the Groundsman reads", () => {
@@ -326,7 +330,7 @@ test("Stats draws its own SVG and the page loads no chart library", () => {
   for (const field of ["gameViews", "ga4Users", "gscClicks", "gscIndexed"]) {
     assert.ok(stats.includes('"' + field + '"'), field);
   }
-  assert.ok(stats.includes("this.severityChart()") && stats.includes("counts[this.severityOf(issue)] += 1;"),
+  assert.ok(stats.includes("this.severityChart(anchor)") && stats.includes("counts[this.severityOf(issue)] += 1;"),
     "and one stacked bar of open issues by severity");
   // Every mark and every word inside a drawing wears a token, in both themes.
   for (const rule of ["ch-grid", "ch-line", "ch-dot", "ch-text", "ch-critical", "ch-high", "ch-medium", "ch-low"]) {
@@ -407,8 +411,10 @@ test("the Markdown stripper works on a parsed document, not on attribute regexes
   assert.ok(!/\\son\[a-z-\]\+/.test(html), "no whitespace-anchored on* attribute regex survives");
   // node has no DOM, so the lists are asserted as literals here and the behaviour
   // is proven in the browser: base, link, meta and style="" must not survive.
-  assert.ok(html.includes('const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use"];'),
-    "base, link, meta and svg use are dropped with the script elements");
+  assert.ok(html.includes('const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use", "img"];'),
+    "base, link, meta, svg use and images are dropped with the script elements");
+  assert.ok(/if \(!this\.safeUrl\(url\)\) el\.removeAttribute\(attr\.name\);/.test(html),
+    "href, src and xlink:href are judged by safeUrl, not by a list of bad schemes");
   assert.ok(html.includes('const strip = ["style", "srcdoc", "formaction"];'),
     "style, srcdoc and formaction attributes are removed");
 });
@@ -417,17 +423,48 @@ test("the Markdown stripper works on a parsed document, not on attribute regexes
 // real DOM rather than asserted as source text: the page's main inline script is evaluated inside a
 // JSDOM window with the two globals it expects (window.claude, and marked stubbed to hand its input
 // straight back, since the test feeds HTML in already).
-function opsRoomWindow() {
+type Row = Record<string, unknown>;
+
+interface OpsRoomPage {
+  markdownBlock(md: unknown): Element;
+  sanitize(s: string): Node | null;
+  db: unknown;
+  state: {
+    crew: Record<string, Row>;
+    issues: Record<string, Row>;
+    runs: Record<string, Row>;
+    orders: Record<string, Row>;
+    daily: Record<string, Row>;
+    dbReady: boolean | null;
+    failed: Record<string, string>;
+  };
+  drafts: Record<string, string>;
+  h(tag: string, attrs?: Record<string, unknown>): Element;
+  subscribe(): void;
+  noteBox(key: string, value: unknown, notice: Element): Element;
+  cancelOrder(id: string): Promise<unknown>;
+  chartAnchor(): string;
+  statsDays(anchor?: string): { date: string }[];
+  severityDays(anchor?: string): { date: string }[];
+  snoozedList(all: Row[]): Element;
+  todayOvernight(): Element;
+  todayActors(): Element | null;
+}
+
+interface OpsRoomWindow {
+  OpsRoom: OpsRoomPage;
+  claude: unknown;
+  marked: unknown;
+  Event: { new (type: string): Event };
+  eval(code: string): unknown;
+}
+
+function opsRoomWindow(): OpsRoomWindow {
   const scripts = [...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
   const main = scripts.find((s) => s.includes("window.OpsRoom = OpsRoom"));
   assert.ok(main, "the main script defines OpsRoom");
   const dom = new JSDOM("<!doctype html><title>t</title><body></body>", { runScripts: "outside-only" });
-  const win = dom.window as unknown as {
-    OpsRoom: { markdownBlock(md: unknown): Element; cleanMarkdown(md: unknown): Element; sanitize(s: string): Node | null };
-    claude: unknown;
-    marked: unknown;
-    eval(code: string): unknown;
-  };
+  const win = dom.window as unknown as OpsRoomWindow;
   win.claude = { use: async () => null };
   win.marked = { parse: (s: string) => s };
   win.eval(main!);
@@ -438,13 +475,24 @@ test("the sanitizer drops what can run and keeps what Markdown needs", () => {
   const ops = opsRoomWindow().OpsRoom;
   const box = (md: string) => ops.markdownBlock(md);
 
-  const withImg = box('<img src="x" onerror="alert(1)">');
-  const img = withImg.querySelector("img");
-  assert.ok(img, "an image survives the walk");
-  assert.equal(img!.hasAttribute("onerror"), false, "its handler does not");
+  // The page shows no pictures, and an image in an agent's Markdown would be an
+  // outbound request to whatever host the text named, so the element goes.
+  assert.equal(box('<img src="x" onerror="alert(1)">').querySelector("img"), null, "an image does not survive the walk");
+  assert.equal(box('<img src="https://x/pixel.png">').querySelector("img"), null, "nor does one that names a real host");
 
   const jsLink = box('<a href="jav&#9;ascript:alert(1)">x</a>');
   assert.equal(jsLink.querySelector("a")!.hasAttribute("href"), false, "a tab-broken javascript: url is removed");
+
+  // A list of bad schemes always misses one, so an address has to prove it is
+  // http or https instead.
+  for (const bad of ["vbscript:msgbox(1)", "file:///etc/passwd", "data:text/html,<b>x", "javascript:alert(1)"]) {
+    const link = box('<a href="' + bad + '">x</a>').querySelector("a");
+    assert.equal(link!.hasAttribute("href"), false, bad + " is not a link this page will write");
+  }
+  assert.equal(box('<a href="https://sports-db.live/x">x</a>').querySelector("a")!.getAttribute("href"),
+    "https://sports-db.live/x", "an https link is kept whole");
+  assert.equal(box('<a href="#heading">x</a>').querySelector("a")!.getAttribute("href"), "#heading",
+    "and so is a link inside the same block");
 
   assert.equal(box('<base href="https://evil.example/">').querySelector("base"), null, "base cannot move the page");
   assert.equal(box('<p style="color:red">hi</p>').querySelector("p")!.hasAttribute("style"), false, "inline style is stripped");
@@ -461,7 +509,7 @@ test("the sanitizer drops what can run and keeps what Markdown needs", () => {
   assert.ok(unwrapped.textContent!.includes("words kept"), "its words survive");
 
   assert.ok(ops.sanitize("<p>hi</p>")!.nodeType === 1, "sanitize hands back nodes, never a string to re-parse");
-  assert.equal(ops.cleanMarkdown("<p>hi</p>").textContent, "hi", "cleanMarkdown is the same walk");
+  assert.equal(ops.markdownBlock("<p>hi</p>").textContent, "hi", "markdownBlock is the one way in");
 });
 
 test("a runaway details block is truncated instead of rendered whole", () => {
@@ -474,4 +522,158 @@ test("a runaway details block is truncated instead of rendered whole", () => {
 
 test("the page never assigns markup to a live element", () => {
   assert.ok(!html.includes("innerHTML"), "no innerHTML anywhere in the page");
+});
+
+// ---- the review's fixes ----
+
+// A collection nobody has written yet can throw where it is asked for, and
+// orders and alerts do not exist before the Groundsman's first run.
+interface FakeQuery {
+  where(...a: unknown[]): FakeQuery;
+  orderBy(...a: unknown[]): FakeQuery;
+  limit(n: number): FakeQuery;
+  onSnapshot(next: unknown, fail: unknown): void;
+}
+
+function fakeDb(throwsOn: string, opened: string[]) {
+  const chain = (name: string): FakeQuery => {
+    const q: FakeQuery = {
+      where: () => q,
+      orderBy: () => q,
+      limit: () => q,
+      onSnapshot: () => {
+        if (name === throwsOn) throw Object.assign(new Error("no such collection"), { code: "not-found" });
+        opened.push(name);
+      },
+    };
+    return q;
+  };
+  return { collection: (name: string) => chain(name), doc: (path: string) => chain(path) };
+}
+
+test("one collection that will not open costs the page only that collection", () => {
+  const ops = opsRoomWindow().OpsRoom;
+  const opened: string[] = [];
+  ops.db = fakeDb("orders", opened);
+  ops.subscribe();
+  assert.deepEqual(opened, ["crew", "issues", "runs", "alerts", "daily", "rules", "status/site"],
+    "the seven that can be read are read, in order, with the eighth left out");
+  assert.equal(ops.state.failed.orders, "not-found", "and the one that could not is recorded");
+  assert.ok(/try \{ this\.subscribe\(\); \} catch \(err\) \{ this\.fail\("subscriptions", err\); \}/.test(html),
+    "init survives a subscribe that throws, so its second render still runs");
+});
+
+test("a half-typed owner note survives the next snapshot", async () => {
+  const win = opsRoomWindow();
+  const ops = win.OpsRoom;
+  const key = "kit-manager:img-missing-dimensions-home";
+  const notice = ops.h("p", {});
+
+  const first = ops.noteBox(key, "saved earlier", notice);
+  const area = first.querySelector("textarea")!;
+  assert.equal((area as HTMLTextAreaElement).value, "saved earlier", "the saved note is what the box starts with");
+  assert.ok(area.id, "the box has an id of its own");
+  assert.equal(first.querySelector("label")!.getAttribute("for"), area.id, "and the label points at it");
+
+  (area as HTMLTextAreaElement).value = "half a th";
+  area.dispatchEvent(new win.Event("input"));
+  assert.equal(ops.drafts[key], "half a th", "what is typed is kept while it is being typed");
+
+  const again = ops.noteBox(key, "saved earlier", notice);
+  assert.equal((again.querySelector("textarea") as HTMLTextAreaElement).value, "half a th",
+    "and a rebuild on the next snapshot does not take it back");
+
+  const writes: [string, Row][] = [];
+  ops.db = { doc: (path: string) => ({ update: (patch: Row) => { writes.push([path, patch]); return Promise.resolve(); } }) };
+  (again.querySelector("button") as HTMLButtonElement).click();
+  await new Promise((done) => setTimeout(done, 0));
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][0], "issues/" + key);
+  assert.equal(writes[0][1].ownerNote, "half a th");
+  assert.equal(key in ops.drafts, false, "the draft is dropped once it has been saved");
+});
+
+test("every chart on Stats ends on the same day", () => {
+  const ops = opsRoomWindow().OpsRoom;
+  ops.state.daily = { "2026-09-24": { date: "2026-09-24", gameViews: 10 } };
+  ops.state.runs = { r1: { date: "2026-09-27", issueKeys: [] } };
+  assert.equal(ops.chartAnchor(), "2026-09-27", "the later of the newest reading and the newest run");
+  const lines = ops.statsDays();
+  const bars = ops.severityDays();
+  assert.equal(lines.length, 14);
+  assert.equal(bars.length, 14);
+  assert.equal(lines[13].date, "2026-09-27");
+  assert.equal(bars[13].date, "2026-09-27");
+  assert.equal(ops.statsDays("2026-09-30")[13].date, "2026-09-30", "an anchor handed in is the one used");
+  ops.state.daily = {};
+  ops.state.runs = {};
+  assert.match(ops.chartAnchor(), /^\d{4}-\d{2}-\d{2}$/, "and with neither, the viewer's own day");
+  assert.ok(html.includes("const anchor = this.chartAnchor();"), "renderStats works one anchor out for all five charts");
+});
+
+test("an order is only called off while it is still queued", async () => {
+  const ops = opsRoomWindow().OpsRoom;
+  const writes: [string, Row][] = [];
+  ops.db = { doc: (path: string) => ({ update: (patch: Row) => { writes.push([path, patch]); return Promise.resolve(); } }) };
+  ops.state.orders = {
+    running: { id: "running", status: "running" },
+    queued: { id: "queued", status: "queued" },
+  };
+  await ops.cancelOrder("running");
+  assert.equal(writes.length, 0, "a job the Groundsman has picked up is left alone");
+  await ops.cancelOrder("gone");
+  assert.equal(writes.length, 0, "and so is an order that is no longer on file");
+  await ops.cancelOrder("queued");
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][0], "orders/queued");
+  assert.equal(writes[0][1].status, "cancelled");
+});
+
+test("Ignored for now leaves out what has since been fixed", () => {
+  const ops = opsRoomWindow().OpsRoom;
+  const later = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  const det = ops.snoozedList([
+    { key: "a", title: "Still ignored", status: "acknowledged", snoozedUntil: later },
+    { key: "b", title: "Fixed while ignored", status: "fixed", snoozedUntil: later },
+  ]);
+  const text = det.textContent ?? "";
+  assert.ok(text.includes("Still ignored"));
+  assert.ok(!text.includes("Fixed while ignored"), "a fixed issue is closed, not waiting to come back");
+});
+
+test("the hourly Groundsman is not listed among the overnight reports", () => {
+  const ops = opsRoomWindow().OpsRoom;
+  ops.state.crew = {
+    physio: { id: "physio", name: "Physio", role: "checks the site", group: "backroom", kind: "reporter" },
+    groundsman: { id: "groundsman", name: "Groundsman", role: "does the work", group: "backroom", kind: "actor" },
+  };
+  const overnight = ops.todayOvernight().textContent ?? "";
+  assert.ok(overnight.includes("Physio"));
+  assert.ok(!overnight.includes("Groundsman"), "an hourly actor never worked overnight");
+  const through = ops.todayActors();
+  assert.ok(through, "and has a line of his own");
+  assert.ok((through!.textContent ?? "").includes("Groundsman"));
+  ops.state.crew = { physio: { id: "physio", name: "Physio", kind: "reporter" } };
+  assert.equal(ops.todayActors(), null, "which is not drawn when there is no actor");
+});
+
+test("the section list is a menu on a phone and the sidebar everywhere else", () => {
+  assert.ok(!/display: grid !important/.test(html), "no stylesheet overrules the hidden attribute");
+  assert.ok(/<div class="side-sheet" id="side-sheet">/.test(html), "the markup no longer claims it is hidden");
+  assert.ok(/syncSheet\(\) \{[\s\S]{0,400}?sheet\.hidden = this\.narrow;/.test(html),
+    "the width decides, in one place");
+  assert.ok(/this\.syncSheet\(\);\n  \},/.test(html), "which runs once as the page binds");
+  assert.ok(/\.side-sheet\[hidden\] \{ display: none; \}/.test(html), "and the phone rule still closes it");
+});
+
+test("a second nav to the section already shown does not rebuild it", () => {
+  assert.ok(/const same = this\.active === to;/.test(html));
+  assert.ok(/if \(!quiet && !same\) this\.render\(\);/.test(html),
+    "the hashchange that follows nav cannot throw away the card showIssue focused");
+});
+
+test("the dead helpers are gone", () => {
+  assert.ok(!/\bpct\(/.test(html), "pct was never called");
+  assert.ok(!/plotW/.test(html), "and plotW was computed for nobody");
+  assert.ok(!/cleanMarkdown/.test(html), "markdownBlock is the only name for the walk");
 });

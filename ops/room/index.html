@@ -70,9 +70,6 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
   font-variant-numeric: tabular-nums; border-radius: 999px; padding: 1px 7px;
   background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
 .badge.is-hot { color: var(--crit); border-color: currentColor; background: none; }
-@media (min-width: 761px) {
-  .side-sheet[hidden] { display: grid !important; }
-}
 @media (max-width: 760px) {
   .shell { display: block; }
   .side { width: auto; position: sticky; top: 0; max-height: none; overflow: visible;
@@ -129,7 +126,7 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
 .md { overflow-wrap: anywhere; font-size: 14px; }
 .md :is(p, ul, ol, blockquote) { margin: 7px 0; }
 .md :is(h1, h2, h3, h4) { margin: 12px 0 6px; font-size: 16px; }
-.md :is(img, table) { max-width: 100%; }
+.md table { max-width: 100%; }
 .md pre { overflow-x: auto; background: var(--panel-2); padding: 10px; border-radius: 8px; }
 .md table { border-collapse: collapse; }
 .md :is(td, th) { border: 1px solid var(--line); padding: 3px 7px; text-align: left; }
@@ -335,7 +332,7 @@ main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0
       <button type="button" class="side-toggle" id="side-toggle" aria-expanded="false" aria-controls="side-sheet">Sections</button>
     </div>
     <p class="side-state"><span class="dot dot-none" id="side-dot"></span><span id="side-state-text">Checking</span></p>
-    <div class="side-sheet" id="side-sheet" hidden>
+    <div class="side-sheet" id="side-sheet">
       <a href="#today" data-section="today">Today</a>
       <p class="side-group">Work</p>
       <a href="#orders" data-section="orders">Orders<span class="badge" id="badge-orders" hidden>0</span></a>
@@ -519,7 +516,10 @@ function rankIssues(list, now) {
 
 // What the owner still has to answer for: critical and high, still live, with no
 // order given, no acknowledgement and no ignore date running. Oldest first,
-// because the oldest is the one that has waited.
+// because the oldest is the one that has waited. Ignoring an issue for a few
+// days acknowledges it at the same time, so an issue whose ignore date has come
+// and gone is asked about again whatever its status says; only an issue that
+// has been closed stays out for good.
 function needsDecision(list, now) {
   const at = now === undefined || now === null ? Date.now() : (now instanceof Date ? now.getTime() : Number(now));
   const out = [];
@@ -529,10 +529,12 @@ function needsDecision(list, now) {
     const sev = String(it.severity || "low").toLowerCase();
     if (sev !== "critical" && sev !== "high") continue;
     const status = String(it.status || "open");
-    if (status !== "open" && status !== "reopened") continue;
+    if (status === "fixed" || status === "ignored") continue;
     if (it.orderId) continue;
     const until = Date.parse(it.snoozedUntil);
     if (Number.isFinite(until) && until > at) continue;
+    const woke = Number.isFinite(until) && until <= at;
+    if (status !== "open" && status !== "reopened" && !woke) continue;
     out.push(it);
   }
   out.sort(function (a, b) { return (Date.parse(a.firstSeen) || 0) - (Date.parse(b.firstSeen) || 0); });
@@ -574,7 +576,7 @@ function drawAvatar(canvas, id) {
 }
 
 const OpsRoom = {
-  state: { crew: {}, issues: {}, runs: {}, orders: {}, alerts: {}, daily: {}, rules: {}, status: null, dbReady: null },
+  state: { crew: {}, issues: {}, runs: {}, orders: {}, alerts: {}, daily: {}, rules: {}, status: null, dbReady: null, failed: {} },
   db: null,
   canWrite: true,
   who: "owner",
@@ -585,6 +587,8 @@ const OpsRoom = {
   compose: { kind: "fix", text: "", issueKey: "" },
   narrow: false,
   expanded: {},
+  // Owner notes typed but not yet saved, by issue key.
+  drafts: {},
 
   async init() {
     this.readFilter();
@@ -602,10 +606,19 @@ const OpsRoom = {
     // is opened as a plain file, which is read as "this viewer may write".
     this.canWrite = user && typeof user.can === "function" ? (user.can("data.write") ?? true) : true;
     if (user && typeof user.name === "string" && user.name) this.who = user.name;
-    if (db) this.subscribe();
+    // orders and alerts do not exist until the Groundsman's first run, and
+    // asking for a collection that was never written can throw where it stands,
+    // so even opening the subscriptions is allowed to fail without costing the
+    // page the render below.
+    if (db) {
+      try { this.subscribe(); } catch (err) { this.fail("subscriptions", err); }
+    }
     this.render();
   },
 
+  // Eight feeds, each opened inside its own try. One collection that throws as
+  // it is asked for used to take the seven after it down with it, which left
+  // the page showing nothing at all rather than the seven it could read.
   subscribe() {
     const db = this.db;
     const into = (name) => (snap) => {
@@ -614,17 +627,25 @@ const OpsRoom = {
       this.state[name] = next;
       this.render();
     };
-    db.collection("crew").onSnapshot(into("crew"), (e) => this.fail("crew", e));
-    db.collection("issues").where("status", "in", ["open", "acknowledged", "reopened", "fixed"]).limit(1000).onSnapshot(into("issues"), (e) => this.fail("issues", e));
-    db.collection("runs").orderBy("date", "desc").limit(300).onSnapshot(into("runs"), (e) => this.fail("runs", e));
-    db.collection("orders").orderBy("createdAt", "desc").limit(200).onSnapshot(into("orders"), (e) => this.fail("orders", e));
-    db.collection("alerts").orderBy("sentAt", "desc").limit(120).onSnapshot(into("alerts"), (e) => this.fail("alerts", e));
-    db.collection("daily").orderBy("date", "desc").limit(30).onSnapshot(into("daily"), (e) => this.fail("daily", e));
-    db.collection("rules").onSnapshot(into("rules"), (e) => this.fail("rules", e));
-    db.doc("status/site").onSnapshot((snap) => { this.state.status = snap.exists ? snap.data() : null; this.render(); }, (e) => this.fail("status", e));
+    const feeds = [
+      ["crew", () => db.collection("crew").onSnapshot(into("crew"), (e) => this.fail("crew", e))],
+      ["issues", () => db.collection("issues").where("status", "in", ["open", "acknowledged", "reopened", "fixed"]).limit(1000).onSnapshot(into("issues"), (e) => this.fail("issues", e))],
+      ["runs", () => db.collection("runs").orderBy("date", "desc").limit(300).onSnapshot(into("runs"), (e) => this.fail("runs", e))],
+      ["orders", () => db.collection("orders").orderBy("createdAt", "desc").limit(200).onSnapshot(into("orders"), (e) => this.fail("orders", e))],
+      ["alerts", () => db.collection("alerts").orderBy("sentAt", "desc").limit(120).onSnapshot(into("alerts"), (e) => this.fail("alerts", e))],
+      ["daily", () => db.collection("daily").orderBy("date", "desc").limit(30).onSnapshot(into("daily"), (e) => this.fail("daily", e))],
+      ["rules", () => db.collection("rules").onSnapshot(into("rules"), (e) => this.fail("rules", e))],
+      ["status", () => db.doc("status/site").onSnapshot((snap) => { this.state.status = snap.exists ? snap.data() : null; this.render(); }, (e) => this.fail("status", e))],
+    ];
+    for (const feed of feeds) {
+      try { feed[1](); } catch (e) { this.fail(feed[0], e); }
+    }
   },
 
-  fail(name, e) { console.warn("subscription " + name + " ended: " + (e && e.code)); },
+  fail(name, e) {
+    this.state.failed[name] = String((e && (e.code || e.message)) || "unknown");
+    console.warn("subscription " + name + " ended: " + (e && (e.code || e.message)));
+  },
 
   // ---- routing ----
 
@@ -642,14 +663,29 @@ const OpsRoom = {
     }
     window.addEventListener("hashchange", () => this.route());
     // The charts are drawn to a viewBox chosen for the width they will be shown
-    // at, so crossing the phone breakpoint asks for them again. Nothing else on
-    // the page cares about the size, so nothing else is redrawn.
+    // at, so crossing the phone breakpoint asks for them again, and the sheet
+    // that is a menu on a phone and a sidebar on a desktop is opened or closed
+    // to match. Nothing else on the page cares about the size.
     window.addEventListener("resize", () => {
       const narrow = this.isNarrow();
       if (narrow === this.narrow) return;
       this.narrow = narrow;
+      this.syncSheet();
       if (this.active === "stats") this.render();
     });
+    this.syncSheet();
+  },
+
+  // Above the phone breakpoint the list is the sidebar itself and is always
+  // shown; below it, it is a menu that starts closed. The hidden attribute says
+  // which, rather than a stylesheet overruling it, so what the markup claims and
+  // what the viewer sees are the same thing.
+  syncSheet() {
+    const sheet = document.getElementById("side-sheet");
+    const toggle = document.getElementById("side-toggle");
+    if (!sheet) return;
+    sheet.hidden = this.narrow;
+    if (toggle) toggle.setAttribute("aria-expanded", this.narrow ? "false" : "true");
   },
 
   isNarrow() { return typeof window.innerWidth === "number" && window.innerWidth > 0 && window.innerWidth <= 760; },
@@ -684,8 +720,15 @@ const OpsRoom = {
     this.nav(this.sections.indexOf(want) >= 0 ? want : "today", quiet);
   },
 
+  // Setting location.hash below fires hashchange a moment later, which comes
+  // back through route into here. Building the section again on that second
+  // pass would throw away the card showIssue had just scrolled to and focused,
+  // so a nav that does not change the section leaves the rendered section
+  // alone; the sidebar and the panels are still set, since they cost nothing
+  // and a first nav has to set them.
   nav(name, quiet) {
     const to = this.sections.indexOf(name) >= 0 ? name : "today";
+    const same = this.active === to;
     this.active = to;
     for (const a of this.links) {
       if (a.getAttribute("data-section") === to) a.setAttribute("aria-current", "page");
@@ -698,7 +741,7 @@ const OpsRoom = {
     if (location.hash !== "#" + to) {
       try { location.hash = "#" + to; } catch (err) { /* a file url can refuse */ }
     }
-    if (!quiet) this.render();
+    if (!quiet && !same) this.render();
   },
 
   render() {
@@ -767,8 +810,9 @@ const OpsRoom = {
       kids.push(this.h("section", { class: "card card-alert" },
         this.h("p", { class: "empty", text: "This page cannot reach the Ops Room database, so every section is empty. Open it signed in as the owner." })));
     }
-    kids.push(this.todayStatus(), this.todayDecisions(), this.todayOvernight(), this.todayNumbers(), this.todayAlerts());
-    root.replaceChildren(...kids);
+    kids.push(this.todayStatus(), this.todayDecisions(), this.todayOvernight(), this.todayActors(),
+      this.todayNumbers(), this.todayAlerts());
+    root.replaceChildren(...kids.filter((k) => k !== null));
   },
 
   todayStatus() {
@@ -825,11 +869,14 @@ const OpsRoom = {
     return card;
   },
 
+  // The reporters, and only the reporters: every one of them runs once while
+  // the owner is asleep, which is what makes them one list. The Groundsman
+  // works through the day and gets his own line below.
   todayOvernight() {
     const h = this.h;
     const rank = { officials: 0, backroom: 1, "front-office": 2 };
     const at = (g) => (rank[String(g)] === undefined ? 3 : rank[String(g)]);
-    const list = this.crewList();
+    const list = this.crewList().filter((c) => String(c.kind || "reporter") !== "actor");
     list.sort((a, b) => {
       const d = at(a.group) - at(b.group);
       return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
@@ -842,20 +889,38 @@ const OpsRoom = {
         ? "Waiting for the crew list." : "No crew yet. Each agent writes its own card on its first run." }));
       return card;
     }
-    for (const c of list) {
-      const tone = this.tone(c.lastStatus);
-      card.append(h("div", { class: "row" },
-        h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
-        h("span", { class: "row-main" },
-          h("span", { class: "row-title" },
-            h("span", { class: "crew-name", text: c.name || c.id }), " ",
-            h("span", { class: "crew-role", text: c.role || "" })),
-          h("span", { class: "row-sub", text: c.lastHeadline || "No run yet." })),
-        h("time", { class: "row-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
-        h("button", { type: "button", class: "chev", "aria-label": "Open the crew card for " + (c.name || c.id),
-          onclick: () => this.nav("crew") }, "›")));
-    }
+    for (const c of list) card.append(this.crewRow(c));
     return card;
+  },
+
+  // The hourly crew. The Groundsman's last run is a job he collected at some
+  // point today, not a report filed before breakfast, so reading it in a list
+  // headed Overnight said the wrong thing about both him and the reporters.
+  todayActors() {
+    const h = this.h;
+    const list = this.crewList().filter((c) => String(c.kind || "reporter") === "actor");
+    if (!list.length) return null;
+    list.sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Through the day",
+        h("span", { class: "sect-note", text: "every hour" })));
+    for (const c of list) card.append(this.crewRow(c));
+    return card;
+  },
+
+  crewRow(c) {
+    const h = this.h;
+    const tone = this.tone(c.lastStatus);
+    return h("div", { class: "row" },
+      h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
+      h("span", { class: "row-main" },
+        h("span", { class: "row-title" },
+          h("span", { class: "crew-name", text: c.name || c.id }), " ",
+          h("span", { class: "crew-role", text: c.role || "" })),
+        h("span", { class: "row-sub", text: c.lastHeadline || "No run yet." })),
+      h("time", { class: "row-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
+      h("button", { type: "button", class: "chev", "aria-label": "Open the crew card for " + (c.name || c.id),
+        onclick: () => this.nav("crew") }, "›"));
   },
 
   todayNumbers() {
@@ -1026,16 +1091,24 @@ const OpsRoom = {
     return String(order.kind || "order") + ", " + (ORDER_WORDS[status] || status) + (when ? ", " + when : "");
   },
 
+  // A snapshot lands on every write anywhere in the database and builds this box
+  // again, so what the owner has typed and not yet saved is held in this.drafts
+  // the way the Orders compose box holds its own answers in this.compose. The
+  // draft is dropped once the save it was holding has gone through.
   noteBox(key, value, notice) {
     const h = this.h;
-    const area = h("textarea", { class: "note-box", rows: "2", "aria-label": "Your note on this issue" });
-    area.value = this.has(value) ? String(value) : "";
+    const id = "note-" + key;
+    const area = h("textarea", { class: "note-box", rows: "2", id: id });
+    const draft = this.drafts[key];
+    area.value = draft !== undefined ? String(draft) : (this.has(value) ? String(value) : "");
+    area.addEventListener("input", () => { this.drafts[key] = area.value; });
     const save = h("button", { type: "button", class: "btn", text: "Save note" });
     save.addEventListener("click", () => {
       save.disabled = true;
       notice.hidden = true;
       notice.textContent = "";
       Promise.resolve().then(() => this.saveNote(key, area.value.trim())).then(() => {
+        delete this.drafts[key];
         save.disabled = false;
       }).catch((err) => {
         notice.textContent = "Could not save your note: " + ((err && err.code) || "unknown");
@@ -1044,7 +1117,7 @@ const OpsRoom = {
       });
     });
     return h("div", { class: "issue-fix" },
-      h("label", { class: "sub", text: "Your note" }), area,
+      h("label", { class: "sub", for: id, text: "Your note" }), area,
       h("div", { class: "actions" }, save));
   },
 
@@ -1082,6 +1155,9 @@ const OpsRoom = {
     const now = Date.now();
     const list = [];
     for (const it of all) {
+      // An issue that was fixed while it was being ignored is closed, not
+      // waiting to come back, so it belongs in the list below this one.
+      if (String(it.status || "") === "fixed") continue;
       const until = Date.parse(it.snoozedUntil);
       if (Number.isFinite(until) && until > now) list.push(it);
     }
@@ -1354,9 +1430,15 @@ const OpsRoom = {
     return (given ? "given " + given : "") + (done ? (given ? ", " : "") + "finished " + done : "");
   },
 
+  // The button was drawn from the orders list as it stood, and the Groundsman
+  // may have picked the job up since. The status is read again from the state
+  // the snapshots keep current, so a job already in hand is left alone rather
+  // than marked cancelled underneath the agent doing it.
   cancelOrder(id) {
     const db = this.db;
     if (!db) return Promise.reject({ code: "no-database" });
+    const order = this.state.orders[String(id)];
+    if (!order || String(order.status || "queued") !== "queued") return Promise.resolve();
     return db.doc("orders/" + id).update({ status: "cancelled", finishedAt: new Date().toISOString() });
   },
 
@@ -1423,28 +1505,44 @@ const OpsRoom = {
   // ---- Stats ----
 
   renderStats(root) {
+    // Every chart on the page ends on the same day. The lines used to end on
+    // the newest reading and the bars on the newest run, so a night the
+    // readings were taken and the reporters were not put two windows side by
+    // side that covered different fortnights.
+    const anchor = this.chartAnchor();
     const kids = [
-      this.lineChart("Game views", "gameViews"),
-      this.lineChart("GA4 users", "ga4Users"),
-      this.lineChart("Search Console clicks", "gscClicks"),
-      this.lineChart("Indexed pages", "gscIndexed"),
-      this.severityChart(),
+      this.lineChart("Game views", "gameViews", anchor),
+      this.lineChart("GA4 users", "ga4Users", anchor),
+      this.lineChart("Search Console clicks", "gscClicks", anchor),
+      this.lineChart("Indexed pages", "gscIndexed", anchor),
+      this.severityChart(anchor),
     ];
     root.replaceChildren(this.h("section", { class: "card" }, ...kids));
   },
 
-  // Fourteen calendar days ending on the newest reading, so a night nobody read
-  // the numbers is a hole in the line rather than a zero.
-  statsDays() {
+  // The last day either the readings or the runs know about, and the viewer's
+  // own day when neither knows any.
+  chartAnchor() {
+    let best = "";
+    const keep = (raw) => {
+      const key = String(raw || "");
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key) && key > best) best = key;
+    };
+    for (const d of this.dailyList()) keep(d.date || d.id);
+    for (const k of Object.keys(this.state.runs)) keep(this.state.runs[k].date);
+    return best || this.today();
+  },
+
+  // Fourteen calendar days ending on the anchor, so a night nobody read the
+  // numbers is a hole in the line rather than a zero.
+  statsDays(anchor) {
     const byDate = {};
     for (const d of this.dailyList()) {
       const key = String(d.date || d.id || "");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
       byDate[key] = d;
     }
-    const keys = Object.keys(byDate).sort();
-    if (!keys.length) return [];
-    const last = keys[keys.length - 1];
+    const last = /^\d{4}-\d{2}-\d{2}$/.test(String(anchor || "")) ? String(anchor) : this.chartAnchor();
     const out = [];
     for (let i = CHART_DAYS - 1; i >= 0; i -= 1) {
       const key = this.shiftDay(last, -i);
@@ -1471,9 +1569,9 @@ const OpsRoom = {
     return String(Number(m[3])) + " " + months[Number(m[2]) - 1];
   },
 
-  lineChart(title, field) {
+  lineChart(title, field, anchor) {
     const h = this.h;
-    const days = this.statsDays();
+    const days = this.statsDays(anchor);
     const values = days.map((d) => {
       const v = d.doc ? Number(d.doc[field]) : NaN;
       return Number.isFinite(v) ? v : null;
@@ -1512,7 +1610,7 @@ const OpsRoom = {
   frame() {
     const narrow = this.narrow;
     const width = narrow ? 356 : 636;
-    return { w: width, padL: 46, padR: 10, padT: 12, plotW: width - 56, band: (width - 56) / CHART_DAYS };
+    return { w: width, padL: 46, padR: 10, padT: 12, band: (width - 56) / CHART_DAYS };
   },
 
   lineSvg(days, values, title) {
@@ -1582,7 +1680,7 @@ const OpsRoom = {
   // One bar per day, the day's distinct issue keys split by the severity the
   // issue carries now. A key whose issue is no longer on file cannot be ranked,
   // so it is left out rather than guessed at.
-  severityDays() {
+  severityDays(anchor) {
     const byDate = {};
     for (const k of Object.keys(this.state.runs)) {
       const r = this.state.runs[k];
@@ -1591,9 +1689,7 @@ const OpsRoom = {
       const seen = byDate[date] || (byDate[date] = {});
       for (const raw of (Array.isArray(r.issueKeys) ? r.issueKeys : [])) seen[String(raw)] = true;
     }
-    const dates = Object.keys(byDate).sort();
-    if (!dates.length) return [];
-    const last = dates[dates.length - 1];
+    const last = /^\d{4}-\d{2}-\d{2}$/.test(String(anchor || "")) ? String(anchor) : this.chartAnchor();
     const out = [];
     for (let i = CHART_DAYS - 1; i >= 0; i -= 1) {
       const date = this.shiftDay(last, -i);
@@ -1610,9 +1706,9 @@ const OpsRoom = {
     return out;
   },
 
-  severityChart() {
+  severityChart(anchor) {
     const h = this.h;
-    const days = this.severityDays();
+    const days = this.severityDays(anchor);
     const box = h("div", { class: "chart" },
       h("div", { class: "chart-head" }, h("span", { class: "chart-title", text: "Open issues by severity" })));
     let ran = 0;
@@ -1808,12 +1904,14 @@ const OpsRoom = {
     return box;
   },
 
-  // The name the rest of the page uses for the same walk.
-  cleanMarkdown(md) { return this.markdownBlock(md); },
-
   showIssue(key) {
+    const already = this.active === "issues";
     this.expanded[key] = true;
     this.nav("issues");
+    // nav only builds the section when it changes, so a jump from one issue to
+    // another inside Issues asks for the rebuild itself, before the card it
+    // wants is looked up.
+    if (already) this.render();
     const card = document.getElementById("issue-" + key);
     if (!card) return;
     card.focus();
@@ -2191,12 +2289,6 @@ const OpsRoom = {
     return v.toLocaleString("en-US");
   },
 
-  pct(x) {
-    const v = Number(x);
-    if (!Number.isFinite(v)) return "0%";
-    return Math.round(v * 100) + "%";
-  },
-
   ago(iso) {
     const t = Date.parse(iso);
     if (!Number.isFinite(t)) return "";
@@ -2261,14 +2353,17 @@ const OpsRoom = {
     let doc = null;
     try { doc = new DOMParser().parseFromString(String(html), "text/html"); } catch (err) { doc = null; }
     if (!doc || !doc.body) return null;
-    const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use"];
+    // "img" is on this list because the page shows no pictures at all: an image
+    // an agent wrote into its Markdown would be an outbound request made on the
+    // owner's behalf to whatever host the text named.
+    const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use", "img"];
     const strip = ["style", "srcdoc", "formaction"];
     // Everything Markdown can produce, and nothing else. An element outside this
     // list is replaced by its own children rather than dropped, so its words
     // survive even though the tag does not; the drop list above still wins, and
     // takes its contents with it.
     const keep = ["p", "br", "hr", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote",
-      "pre", "code", "em", "strong", "b", "i", "a", "img", "table", "thead", "tbody", "tr", "th", "td",
+      "pre", "code", "em", "strong", "b", "i", "a", "table", "thead", "tbody", "tr", "th", "td",
       "del", "sup", "sub", "span"];
     for (const el of Array.from(doc.body.querySelectorAll("*"))) {
       const tag = String(el.localName || el.tagName).toLowerCase();
@@ -2282,9 +2377,14 @@ const OpsRoom = {
         if (name !== "href" && name !== "src" && name !== "xlink:href") continue;
         // Browsers ignore whitespace and control characters inside a scheme, so
         // a tab written into "javascript:" still runs. Take them out before the
-        // prefix check.
+        // address is judged.
         const url = String(attr.value).replace(/[\s\u0000-\u001f\u007f]+/g, "").toLowerCase();
-        if (/^(javascript:|data:text\/html)/.test(url)) el.removeAttribute(attr.name);
+        // A list of the schemes known to be dangerous always misses one, so the
+        // address has to prove it is http or https instead, through the same
+        // check every link this page writes itself is held to. A link into the
+        // same block of Markdown is the one other thing allowed to stay.
+        if (name === "href" && url.charAt(0) === "#") continue;
+        if (!this.safeUrl(url)) el.removeAttribute(attr.name);
       }
     }
     return doc.body;
