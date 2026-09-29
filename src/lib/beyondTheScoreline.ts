@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { article as kaneFastestTo100BundesligaGoals } from "@/content/beyondTheScoreline/kane-fastest-to-100-bundesliga-goals";
 import { article as secondGoldAsianRecord } from "@/content/beyondTheScoreline/second-gold-asian-record";
 import { article as russellBakuWinCutsTitleGap } from "@/content/beyondTheScoreline/russell-baku-win-cuts-title-gap";
 import { article as kabaddiGoldenSweepAsianGames } from "@/content/beyondTheScoreline/kabaddi-golden-sweep-asian-games";
@@ -60,6 +61,7 @@ export function sortByPublishedDesc<T extends { publishedAt: string }>(articles:
 // directory on purpose: a draft file can sit in src/content/beyondTheScoreline/ without being
 // live until it's added here — that's the whole draft/publish mechanism (see the design spec).
 export const ARTICLES: BeyondTheScorelineArticle[] = [
+  kaneFastestTo100BundesligaGoals,
   secondGoldAsianRecord,
   russellBakuWinCutsTitleGap,
   kabaddiGoldenSweepAsianGames,
