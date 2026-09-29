@@ -61,13 +61,14 @@ test("last_changed_at moves only when changed is true", async () => {
   assert.equal((row.last_changed_at as Date).getTime(), first.getTime());
 });
 
-test("the default limits cover the tick and the hourly feeds; a missing row is stale with a null age", async () => {
+test("the default limits cover the tick, the daily job and the hourly feeds; a missing row is stale with a null age", async () => {
   assert.deepEqual(
     (await hb.findStale(db.pool)).map((s) => s.scraper).sort(),
-    ["fetch-asian-games-medals", "fetch-f1-scores", "fetch-f1-standings", "fetch-injuries", "scrape-tick"]
+    ["fetch-asian-games-medals", "fetch-f1-scores", "fetch-f1-standings", "fetch-injuries", "scrape-daily", "scrape-tick"]
   );
   assert.deepEqual((await hb.findStale(db.pool)).find((s) => s.scraper === "scrape-tick"), { scraper: "scrape-tick", ageMinutes: null });
   assert.equal(hb.MAX_AGE_MINUTES["scrape-tick"], 150);
+  assert.equal(hb.MAX_AGE_MINUTES["scrape-daily"], 1500);
   assert.equal(hb.MAX_AGE_MINUTES["fetch-injuries"], 120);
 });
 

@@ -82,6 +82,12 @@ job_daily() {
   run topup:cricket-player-stats
   run fetch:fixtures
   run seed:f1-teams
+  # Heartbeat for check:stale, only when every step above succeeded. This is the only job that
+  # pulls in new fixtures and standings for a whole league (a tick only ever touches leagues
+  # check:live already sees as live or pending) — production football went nine days stale, with
+  # no successful daily run in that whole span, and check:stale never noticed because nothing
+  # tracked this job's own heartbeat, only the tick's.
+  if [ "$failed" -eq 0 ]; then run record:run -- scrape-daily; fi
 }
 
 # Feeds the old workflow never scheduled, then the alarm for any scraper that stopped.
