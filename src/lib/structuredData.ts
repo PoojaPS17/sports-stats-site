@@ -277,7 +277,9 @@ function isoInstant(value: string | Date): string {
  * the first practice to the chequered flag, and `end_date` says so honestly instead of a guess. The
  * circuit is a fixed address, which is why this one always carries its city and country.
  * No competitors: a Grand Prix has twenty of them, and the classification on the page is the place
- * to read them, not a list repeated in the head of every weekend's markup.
+ * to read them, not a list repeated in the head of every weekend's markup. The share card beside the
+ * page shows the podium, which is the readable part of that classification; `image` names it, and the
+ * page passes `ownImage` so pageMeta does not put the site's generic card back in its place.
  */
 export function f1EventSchema(event: F1EventRow) {
   const year = event.season_year ?? new Date(event.date).getUTCFullYear();
@@ -296,6 +298,8 @@ export function f1EventSchema(event: F1EventRow) {
     eventStatus: schemaStatusForLabel(status.kind === "called-off" ? status.label : null),
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     url: absoluteUrl(`/f1/events/${event.espn_id}`),
+    // The page's own share card: the circuit, the weekend's dates and the podium when it has run.
+    image: absoluteUrl(`/f1/events/${event.espn_id}/opengraph-image`),
     ...(event.circuit_name
       ? { location: place(event.circuit_name, postalAddress({ venue_city: event.circuit_city, venue_country: event.circuit_country })) }
       : {}),

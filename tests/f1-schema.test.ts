@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { f1EventSchema } from "../src/lib/structuredData";
 import { SITE_URL } from "../src/lib/site";
 import type { F1EventRow } from "../src/lib/f1";
@@ -50,6 +50,28 @@ test("a weekend with no circuit on file names no place, and one run in a day cla
   assert.equal("endDate" in bare, false);
   const sameDay = f1EventSchema(weekend({ end_date: "2026-12-04T15:00:00Z" }));
   assert.equal("endDate" in sameDay, false, "an end on the start's own day adds nothing");
+});
+
+// Every F1 weekend page fell back to the site's generic logo card, so 241 different Grand Prix
+// looked like one link when shared, and Search Console counted every one of them as an Event
+// missing `image`. The card beside the page is the fix; the schema has to name it.
+test("a race weekend carries its own share card", () => {
+  const schema = f1EventSchema(weekend());
+  assert.equal(schema.image, `${SITE_URL}/f1/events/600057451/opengraph-image`);
+});
+
+test("the image a race weekend points at is a share-card route that exists", () => {
+  // Google fetches this URL; if the route file ever goes, the schema would advertise a 404.
+  const image = f1EventSchema(weekend()).image;
+  const route = image.slice(`${SITE_URL}/`.length).replace("f1/events/600057451", "f1/events/[id]");
+  assert.ok(existsSync(new URL(`../src/app/${route}.tsx`, import.meta.url)), `${route}.tsx must exist`);
+});
+
+// pageMeta substitutes the site-wide share image unless the page says it has one of its own, so
+// the route above would have been overridden and never served. The flag is the other half of the fix.
+test("the race weekend page keeps its own share card instead of the site's", () => {
+  const src = readFileSync("src/app/f1/events/[id]/page.tsx", "utf8");
+  assert.match(src, /ownImage:\s*true/);
 });
 
 test("the race weekend page emits the event schema, not only its breadcrumb", () => {
