@@ -86,34 +86,31 @@ function isoFromSystemd(text: string): string | null {
 // single "n/a" that replaces them.
 export function parseTimerRow(line: string): { name: string; next: string | null; last: string | null } {
   const cols = line.split(/\s+/);
-
-  function isStampStart(i: number): boolean {
-    return cols[i + 1] !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(cols[i + 1]);
-  }
-
-  function readStamp(from: number): { text: string | null; nextIndex: number } {
-    if (cols[from] === "n/a") return { text: null, nextIndex: from + 1 };
-    if (isStampStart(from)) return { text: cols.slice(from, from + 4).join(" "), nextIndex: from + 4 };
-    return { text: null, nextIndex: from + 1 };
-  }
-
-  // Skips a LEFT or PASSED field: a single "n/a", or a duration that runs up to and including
-  // the given end word.
-  function skipDuration(from: number, endWord: string): number {
-    if (cols[from] === "n/a") return from + 1;
-    let i = from;
-    while (i < cols.length && cols[i] !== endWord) i += 1;
-    return i < cols.length ? i + 1 : i;
-  }
-
-  const next = readStamp(0);
-  const afterLeft = skipDuration(next.nextIndex, "left");
-  const last = readStamp(afterLeft);
-
   const timerIndex = cols.findIndex((c) => c.endsWith(".timer"));
   const name = timerIndex >= 0 ? cols[timerIndex] : cols[cols.length - 2];
+  const limit = timerIndex >= 0 ? timerIndex : cols.length;
 
-  return { name, next: next.text, last: last.text };
+  // The row is NEXT LEFT LAST PASSED. A stamp is four words whose second is a date, or the word
+  // "n/a". LEFT and PASSED are durations whose shape depends on the systemd version ("14min left",
+  // "1h 30min", "4min ago"), so they are never read: every word that is not part of a stamp is
+  // skipped, and the stamps are taken in the order they appear. When NEXT is "n/a", LEFT is "n/a"
+  // too and LAST is the third slot; otherwise LEFT is a duration and LAST is the second slot.
+  const slots: (string | null)[] = [];
+  let i = 0;
+  while (i < limit) {
+    if (cols[i] === "n/a") {
+      slots.push(null);
+      i += 1;
+    } else if (cols[i + 1] !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(cols[i + 1]) && i + 3 < limit) {
+      slots.push(cols.slice(i, i + 4).join(" "));
+      i += 4;
+    } else {
+      i += 1;
+    }
+  }
+  const next = slots.length > 0 ? slots[0] : null;
+  const last = next === null ? (slots.length > 2 ? slots[2] : null) : (slots.length > 1 ? slots[1] : null);
+  return { name, next, last };
 }
 
 export async function readHost(deps: HostDeps): Promise<HostData> {
