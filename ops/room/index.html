@@ -2322,6 +2322,9 @@ const Clubhouse = {
   STEP_FRAMES: 48,
   HOLD_FRAMES: 32,
   FRAME_MS: 125,
+  // The index of the step in which the owner gives an order, so the pull
+  // request queue knows when to count the Groundsman's own.
+  ORDER_STEP: 12,
   step: 0,
   stepT: 0,
   playing: false,
@@ -2355,6 +2358,7 @@ const Clubhouse = {
     D: ["##.", "#.#", "#.#", "#.#", "##."],
     E: ["###", "#..", "##.", "#..", "###"],
     F: ["###", "#..", "##.", "#..", "#.."],
+    H: ["#.#", "#.#", "###", "#.#", "#.#"],
     I: ["###", ".#.", ".#.", ".#.", "###"],
     K: ["#.#", "#.#", "##.", "#.#", "#.#"],
     L: ["#..", "#..", "#..", "#..", "###"],
@@ -2709,10 +2713,10 @@ const Clubhouse = {
     this.redraw();
   },
 
-  // Step 13 turns the lights out whatever the buttons say, and the preference
-  // comes back when the loop leaves it.
+  // The last step turns the lights out whatever the buttons say, and the
+  // preference comes back when the loop leaves it.
   applyNight() {
-    this.night = this.step === 12 ? true : this.nightPref;
+    this.night = this.step === this.STEPS.length - 1 ? true : this.nightPref;
   },
 
   // An integer scale keeps the pixels square. The element is capped at 480 CSS
@@ -3093,6 +3097,8 @@ const Clubhouse = {
     const step = this.STEPS[this.step] || null;
     const st = this.stepT;
     this.prBump = this.step > 5 || (this.step === 5 && st >= 32) ? 1 : 0;
+    // And the order the Groundsman collects comes back as a second one.
+    if (this.step > this.ORDER_STEP || (this.step === this.ORDER_STEP && st >= 44)) this.prBump = 2;
     this.drawSky(ctx, t);
     this.drawBuilding(ctx, t);
     this.drawBox(ctx, t);
@@ -3101,6 +3107,7 @@ const Clubhouse = {
     this.drawFront(ctx, t);
     this.drawBasement(ctx, t);
     if (step && typeof step.run === "function") step.run.call(this, st, ctx);
+    this.drawKit(ctx, t);
     this.drawFigures(ctx, t);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   },
@@ -3453,6 +3460,39 @@ const Clubhouse = {
     }
   },
 
+  // The Groundsman's kit. The roller follows him while he is on the grass and
+  // stays parked on his mark while he is away; the toolbox never moves, and
+  // the lamp over it is lit while an order is running.
+  drawKit(ctx, t) {
+    const home = this.homeOf("groundsman");
+    const p = this.pos.groundsman || home;
+    const onGrass = p.y >= home.y - 2;
+    const rx = Math.round(onGrass ? p.x : home.x) + 13;
+    const ry = home.y + 9;
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(rx, ry, 9, 6);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(rx, ry, 9, 1);
+    ctx.fillRect(rx, ry + 5, 9, 1);
+    ctx.fillRect(rx + 1 + (Math.floor(t / 2) % 3) * 3, ry + 1, 1, 4);
+    this.line(ctx, rx - 2, ry - 6, rx + 1, ry + 1);
+
+    const bx = home.x - 15;
+    const by = home.y + 6;
+    ctx.fillStyle = this.PAL.r;
+    ctx.fillRect(bx, by, 11, 8);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(bx, by, 11, 1);
+    ctx.fillRect(bx + 4, by - 2, 3, 2);
+    ctx.fillRect(bx + 5, by - 10, 1, 8);
+    const lit = this.orderRunning();
+    ctx.fillStyle = lit ? this.PAL.y : this.PAL.m;
+    ctx.fillRect(bx + 3, by - 13, 5, 3);
+    if (!lit) return;
+    ctx.fillStyle = this.PAL.l;
+    for (let i = 0; i < 3; i += 1) ctx.fillRect(bx + 2 + i * 2, by - 9, 1, 2);
+  },
+
   drawFigures(ctx, t) {
     const idle = Math.floor(t / 16) % 2;
     const walk = Math.floor(t / 2) % 2;
@@ -3794,6 +3834,37 @@ const Clubhouse = {
         if (x > 143) ctx.fillRect(x - 2, 12, 2, 40);
         ctx.fillStyle = this.PAL.w;
         ctx.fillRect(x, 12, 2, 2);
+      },
+    },
+    {
+      at: "11:00",
+      text: "The owner gives an order; the Groundsman collects it and comes back with a pull request",
+      run(t, ctx) {
+        // Off the grass, up the front of the stand on the hoist rope, in at the
+        // box door, and back down to the pitch with the order in hand.
+        const home = this.homeOf("groundsman");
+        const alongOut = this.phase(t, 0, 10);
+        const alongBack = this.phase(t, 40, 47);
+        const upOut = this.phase(t, 10, 20);
+        const upBack = this.phase(t, 30, 40);
+        const x = home.x + (144 - home.x) * (alongOut - alongBack);
+        const y = home.y + (36 - home.y) * (upOut - upBack);
+        this.place("groundsman", x, y);
+        if (t < 10 || (t > 40 && t < 47)) this.moving.groundsman = true;
+        if (y < home.y - 1) {
+          const c = this.tone();
+          ctx.fillStyle = c.line;
+          this.line(ctx, Math.round(x) + 6, 9, Math.round(x) + 6, Math.round(y) + 2);
+        }
+        this.visit("owner", 84, t, 14, 32);
+        if (t >= 20 && t < 28) this.sheet(ctx, 138, 42);
+        if (t >= 28) {
+          const p = this.pos.groundsman;
+          this.sheet(ctx, Math.min(p.x + 12, 154), p.y + 6);
+        }
+        // The pull request card drops from the box down to the queue door.
+        const card = this.phase(t, 32, 44);
+        if (card > 0 && card < 1) this.sheet(ctx, Math.round(130 - 12 * card), Math.round(52 + 24 * card));
       },
     },
     {

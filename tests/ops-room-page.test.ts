@@ -356,21 +356,50 @@ test("the Rulebook confirms a removal in the page, not in a modal", () => {
 
 test("the office has a sprite for every crew member and draws in code only", () => {
   for (const id of ["physio", "umpire", "kit-manager", "analyst", "scout", "editor", "press-officer",
-    "scorer", "steward", "owner", "session"]) {
+    "scorer", "steward", "owner", "session", "groundsman"]) {
     assert.ok(new RegExp(`"${id}":\\s*\\[`).test(html), id + " sprite");
   }
   assert.ok(!/<img/.test(html.split('id="panel-office"')[1] ?? ""), "no image files in the office");
   assert.ok(html.includes("image-rendering: pixelated"));
 });
 
-test("the office plays a 13-step day with the four controls and honours reduced motion", () => {
+test("the office plays a 14-step day with the four controls and honours reduced motion", () => {
   const scene = html.split('id="panel-office"')[1] ?? "";
-  assert.equal((html.match(/\{\s*at:\s*"\d\d:\d\d"/g) ?? []).length, 13, "13 steps");
+  assert.equal((html.match(/\{\s*at:\s*"\d\d:\d\d"/g) ?? []).length, 14, "14 steps");
+  assert.ok(html.includes('"Step " + (this.step + 1) + " of " + this.STEPS.length'), "the caption counts them");
+  assert.ok(html.includes("The owner gives an order; the Groundsman collects it and comes back with a pull request"),
+    "the fourteenth step's caption");
   for (const id of ["clubhouse-pause", "clubhouse-restart", "clubhouse-day", "clubhouse-night", "clubhouse-caption"]) {
     assert.ok(scene.includes(`id="${id}"`), id);
   }
   assert.ok(html.includes("prefers-reduced-motion"));
   assert.ok(html.includes("visibilitychange"));
+});
+
+// The floor map is a plain object literal, so it is read out of the page and
+// evaluated on its own, the way rankIssues is above.
+test("the Groundsman works on the pitch, below every other floor", () => {
+  const src = /\n  FLOOR: (\{[\s\S]*?\n  \}),\n/.exec(html);
+  assert.ok(src, "the floor map is a plain object literal");
+  const floor = new Function("return " + src![1] + ";")() as Record<string, { x: number; y: number }>;
+  const others = Object.keys(floor).filter((id) => id !== "groundsman");
+  assert.ok(floor.groundsman, "the Groundsman has a mark of his own");
+  assert.equal(others.length, 11, "and the other eleven keep theirs");
+  for (const id of others) {
+    assert.ok(floor.groundsman.y > floor[id].y, "the Groundsman stands below " + id);
+  }
+  assert.ok(html.includes('data-figure="groundsman"'), "a chip in the figure list picks him out");
+  assert.ok(html.includes('if (String(o.status || "") === "running") return true;'),
+    "and his lamp follows a running order");
+  assert.ok(html.includes("const lit = this.orderRunning();"), "which is what the lamp asks");
+});
+
+test("the office card is the Crew section's card, not a second one", () => {
+  const office = html.slice(html.indexOf("// ---- The Office ----"));
+  assert.ok(office.length > 10_000, "the Office script block was found");
+  assert.ok(office.includes("OpsRoom.crewCard(d, true)") && office.includes("OpsRoom.crewCard(c, false)"),
+    "the Office builds its card with the Crew section's crewCard");
+  assert.ok(!office.includes('h("dl", { class: "crew-facts" }'), "and does not build a rival one");
 });
 
 test("the Markdown stripper works on a parsed document, not on attribute regexes", () => {
