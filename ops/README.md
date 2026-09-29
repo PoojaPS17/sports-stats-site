@@ -68,3 +68,19 @@ never overwritten). Agents never write to the repository, never touch the
 production database, and never take an action outside their own report:
 no commits, no pull request activity, no social posts, no search-engine
 submissions, no setting changes.
+
+## Setup outside the repository
+
+These are done once, by the owner, and nothing in the repository can do them.
+
+- **Cloud environment network access.** The routines run in the claude.ai cloud environment "Default". Its Network access must be Custom with `sports-db.live`, `site.api.espn.com`, `www.googleapis.com`, `api.github.com`, `github.com` and `rdap.org` allowed, plus the default package-manager list. Path: claude.ai/code home, the "Default" chip, hover Cloud, the gear beside Default, "Edit cloud environment". The URLs `/code/environments` and `/code/settings/environments` are 404.
+- **Repository source on routines that use GitHub.** Physio, Editor, Steward and Groundsman list the repository as a source; without it the sandbox answers `GitHub access to this repository is not enabled for this session` to every `api.github.com` call.
+- **Backup directory on the VM.** `/var/backups/sportsdb` is owned by `postgres` and the app runs as `ubuntu`, so the report's backup section needs: `sudo apt install -y acl && sudo setfacl -m u:ubuntu:rx /var/backups/sportsdb && sudo setfacl -m u:ubuntu:r /var/backups/sportsdb/*.dump && sudo setfacl -d -m u:ubuntu:r /var/backups/sportsdb`.
+- **Journal access on the VM**, for `host.app.errors24h`: `sudo usermod -aG systemd-journal ubuntu`, then restart `sportsdb-app`. Until then the field is null.
+- **PageSpeed API key**, for the Kit Manager's scores: an environment variable `PAGESPEED_API_KEY` on the Kit Manager routine (the main session sets it; the value never enters the repository).
+- **Cloudflare read-only token**, optional, for the Steward's Cloudflare checks: `CLOUDFLARE_ANALYTICS_TOKEN` on the Steward routine, scoped to Analytics: Read and Zone Settings: Read.
+- **The restore-test timer**, once the Groundsman's pull request lands: install `deploy/vm/restore-test.service` and `.timer` per the PR body.
+
+## Giving orders
+
+On the page, every issue row has Fix, Explain and Recheck; the Orders section takes a free-text order. Orders go into `orders/` and the Groundsman routine picks them up hourly between 08:35 and 22:35 IST. Code changes come back as a pull request on a `groundsman/<order id>` branch; data changes come back as a script under `scripts/ops/` with the command to run on the VM. The Groundsman never merges, deploys or touches the VM. To run it now, open its routine at claude.ai/code/routines and press Run.
