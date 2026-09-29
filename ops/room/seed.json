@@ -5,107 +5,158 @@
       "name": "Physio",
       "role": "site health",
       "group": "backroom",
-      "job": "Checks the live site every morning: every seed page answers, nothing served stale, no broken chunk, certificate and sitemaps in order, and whether main is ahead of production.",
+      "job": "Checks the live site every morning: every seed page answers, redirects and the Cloudflare front end are correct, nothing served stale or blocked from search, no broken chunk, broken link or dead hotlinked image, the 404 page and robots rules hold, response size and latency stay steady day to day, certificate and sitemaps in order, and whether main is ahead of production.",
       "never": "Changes anything. Reads only.",
       "when": "Daily at 06:00 IST.",
       "schedule": "30 0 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "umpire": {
       "id": "umpire",
       "name": "Umpire",
       "role": "data",
       "group": "officials",
-      "job": "Reads the ops report every morning and turns each failing section, stale heartbeat, duplicate row and integrity gap into a scored finding, cross-checking three of yesterday's completed games against ESPN's own scoreboard.",
+      "job": "Reads the ops report every morning and turns each failing section, stale heartbeat, duplicate row, integrity gap, host health reading and slow database pattern into a scored finding, cross-checking three of yesterday's completed games, then every completed game leaguewide, standings, player season totals, kickoff times, stale fixtures, the coming week's schedule, page encoding and site search against ESPN and the site itself, while watching disk, memory, updates, the clock and the certificate on the VM.",
       "never": "Connects to the database directly, or suggests deleting rows without naming the exact ids.",
       "when": "Daily at 06:15 IST.",
       "schedule": "45 0 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "kit-manager": {
       "id": "kit-manager",
       "name": "Kit Manager",
       "role": "layout",
       "group": "backroom",
-      "job": "Runs PageSpeed Insights against the home page, a league page, a match page, an article page and a player page on mobile and desktop, and flags layout shift, accessibility drops, contrast and tap-target failures, and performance regressions.",
+      "job": "Runs PageSpeed Insights, with CrUX field data when a key is available, against the home page, a league page, a match page, an article page and a player page on mobile and desktop, and flags layout shift, accessibility drops, contrast and tap-target failures, performance regressions, page weight, duplicate titles and descriptions, and missing HTTP/3.",
       "never": "Runs Lighthouse against the VM origin directly, only the public URL.",
       "when": "Daily at 06:30 IST.",
       "schedule": "0 1 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "analyst": {
       "id": "analyst",
       "name": "Analyst",
       "role": "search engines",
       "group": "front-office",
-      "job": "Validates every sitemap, the IndexNow key file and the JSON-LD on a game, article and player page, and watches Search Console and Bing numbers for a week-on-week drop.",
+      "job": "Validates every sitemap, including a rotating daily sample of individual sitemap URLs, the IndexNow key file, canonical tags, Open Graph and Twitter cards, and the JSON-LD on a game, article and player page, and watches Search Console and Bing numbers, including whether the newest article is indexed by Bing, for a week-on-week drop.",
       "never": "Submits anything to a search engine.",
       "when": "Daily at 06:45 IST.",
       "schedule": "15 1 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "scout": {
       "id": "scout",
       "name": "Scout",
       "role": "visibility",
       "group": "front-office",
-      "job": "Checks whether the newest article and recent games are indexed, finds pages missing from the sitemap or under-linked internally, and writes one concrete reach suggestion a day.",
+      "job": "Checks whether the newest article and recent games are indexed, watches the six league pages for a search deindex, finds pages missing from the sitemap or under-linked internally, turns a high-impression low-click-through search query into the day's content-gap suggestion, and writes a competitor-gap suggestion each Monday.",
       "never": "Creates content or posts.",
       "when": "Daily at 07:15 IST.",
       "schedule": "45 1 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "editor": {
       "id": "editor",
       "name": "Editor",
       "role": "article gate",
       "group": "officials",
-      "job": "Finds the open article pull request, verifies every number in the draft with a web search, checks house style, and runs the test suite and type check on the branch before writing a merge verdict.",
+      "job": "Finds the open article pull request, flags a missing daily draft by 07:30 IST, verifies every number in the draft with a web search, checks house style, internal links, image rights, unsourced legal and personal claims and topic repeats against the last 30 articles, and runs the test suite and type check on the branch before writing a merge verdict.",
       "never": "Comments on, approves, merges or edits the pull request.",
       "when": "Daily at 07:30 IST.",
       "schedule": "0 2 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "press-officer": {
       "id": "press-officer",
       "name": "Press Officer",
       "role": "social",
       "group": "front-office",
-      "job": "Reads the X daily plan and yesterday's results, drafts up to three ready-to-post updates, and flags any story already posted in the last week.",
+      "job": "Reads the X daily plan and yesterday's results, drafts up to three ready-to-post updates, verifies each draft's link is live and its score matches the site, and flags any story already posted in the last week.",
       "never": "Posts, replies, schedules or writes to any social account or document.",
       "when": "Daily at 07:45 IST.",
       "schedule": "15 2 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "scorer": {
       "id": "scorer",
       "name": "Scorer",
       "role": "daily numbers",
       "group": "front-office",
-      "job": "Reads yesterday's view counts from the ops report and writes the daily numbers document with the top games, country and platform splits.",
+      "job": "Reads yesterday's view counts from the ops report and writes the daily numbers document with the top games, country and platform splits, watching for a collapse against the seven-day mean and week-on-week drops in GA4 and Search Console numbers.",
       "never": "Changes anything.",
       "when": "Daily at 08:00 IST.",
       "schedule": "30 2 * * *",
-      "model": "claude-sonnet-5"
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
     },
     "steward": {
       "id": "steward",
       "name": "Steward",
       "role": "security",
       "group": "backroom",
-      "job": "Runs a dependency audit, checks security headers and TLS expiry, and greps the tree for tracked secrets or key-shaped strings.",
+      "job": "Runs a weekly security sweep: dependency audit, security headers, TLS and domain expiry, direct-to-origin exposure, exposed files, secrets in the client bundle, API stack traces, database and GitHub repository posture, Node and Next.js currency, the contact form, optional Cloudflare posture, and the monthly restore test.",
       "never": "Upgrades, edits or commits anything.",
       "when": "Weekly, Monday at 05:30 IST.",
       "schedule": "0 0 * * 1",
+      "model": "claude-sonnet-5",
+      "kind": "reporter"
+    },
+    "groundsman": {
+      "id": "groundsman",
+      "name": "Groundsman",
+      "role": "orders",
+      "group": "backroom",
+      "kind": "actor",
+      "job": "Checks the Orders queue every hour from 08:35 to 22:35 IST, carries out the owner's fix, explain and recheck orders, opens a pull request for anything that changes code, and sends the mobile push for new critical and high issues and the 08:35 digest.",
+      "never": "Merges, deploys, pushes to main, runs anything on the VM, or acts without an order.",
+      "when": "Hourly at :35, 08:35 to 22:35 IST.",
+      "schedule": "5 3-17 * * *",
       "model": "claude-sonnet-5"
     }
   },
   "rules": {
-    "r1": { "text": "Deploy from main only, after the pull request is merged. Never between 04:30 and 07:30 IST, when the daily scrape runs.", "order": 1, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r2": { "text": "Purge the Cloudflare cache once after every deploy, then check /beyond-the-scoreline serves the new build.", "order": 2, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r3": { "text": "Agents report. They never commit, merge, post or change a setting.", "order": 3, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r4": { "text": "Nothing is posted to X without the owner's approval of the exact copy.", "order": 4, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r5": { "text": "Numbers in articles are verified by search or left out.", "order": 5, "addedAt": "2026-09-28", "addedBy": "owner" },
-    "r6": { "text": "To do: set up an external uptime monitor pinging https://sports-db.live/api/health every five minutes. Owner action.", "order": 6, "addedAt": "2026-09-28", "addedBy": "owner" }
+    "r1": {
+      "text": "Deploy from main only, after the pull request is merged. Never between 04:30 and 07:30 IST, when the daily scrape runs.",
+      "order": 1,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r2": {
+      "text": "Purge the Cloudflare cache once after every deploy, then check /beyond-the-scoreline serves the new build.",
+      "order": 2,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r3": {
+      "text": "Reporters report. The Groundsman acts only on an order from this page, and only through a pull request the owner merges. Nothing changes production on its own.",
+      "order": 3,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r4": {
+      "text": "Nothing is posted to X without the owner's approval of the exact copy.",
+      "order": 4,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r5": {
+      "text": "Numbers in articles are verified by search or left out.",
+      "order": 5,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    },
+    "r6": {
+      "text": "To do: set up an external uptime monitor pinging https://sports-db.live/api/health every five minutes. Owner action.",
+      "order": 6,
+      "addedAt": "2026-09-28",
+      "addedBy": "owner"
+    }
   }
 }

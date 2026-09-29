@@ -1,317 +1,480 @@
 <title>Ops Room</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap">
 <style>
+/* Light palette. Every colour on the page comes from one of these. */
 :root {
-  --bg: #f3f4f8; --surface: #ffffff; --surface-muted: #eceef4; --border: #dde1ea; --border-strong: #c3cad8;
-  --text: #0b1324; --text-muted: #5a6478; --text-faint: #8b95a8;
-  --sig: #c6f135; --sig-ink: #4d7c0f; --sig-soft: #eef9c9; --sig-on: #0b1324;
-  --mast: #0b1324; --mast-2: #121c33; --mast-text: #eef1f7; --mast-muted: #9aa5bd; --mast-line: rgba(255,255,255,.08);
-  --ok: #15803d; --warn: #d97706; --fail: #b91c1c; --live: #ff3b5c;
-  --display: "Barlow Condensed", "Arial Narrow", sans-serif; --body: "Barlow", system-ui, sans-serif;
+  --bg: #f1f4fb;
+  --panel: #ffffff;
+  --panel-2: #e8edf8;
+  --line: #d6deee;
+  --text: #0f1a2e;
+  --muted: #5a6780;
+  --accent: #1d5fd6;
+  --accent-soft: #e1eafd;
+  --ok: #4f7a0c;
+  --crit: #c0241c;
+  --high: #b95c07;
+  --medium: #8d6f08;
+  --low: #64708c;
+  --warn: #a8560a;
+  --ui: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(15, 26, 46, .07);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0b1324; --surface: #121c33; --surface-muted: #182342; --border: #24304f; --border-strong: #34426a; --text: #eef1f7; --text-muted: #9aa5bd; --text-faint: #6f7b96; --sig-ink: #c6f135; --sig-soft: #1d2a12; } }
-:root[data-theme="dark"] { --bg: #0b1324; --surface: #121c33; --surface-muted: #182342; --border: #24304f; --border-strong: #34426a; --text: #eef1f7; --text-muted: #9aa5bd; --text-faint: #6f7b96; --sig-ink: #c6f135; --sig-soft: #1d2a12; }
-body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--body); margin: 0; padding-block: 0 32px; padding-inline: 16px; }
-
-/* Tokens added on top of the site set: readable ink for the state colours in both themes. */
-:root { --ok-ink: #15803d; --warn-ink: #a35709; --fail-ink: #b91c1c; --radius: 10px; --card-shadow: 0 1px 2px rgba(11,19,36,.06); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ok-ink: #5fd88a; --warn-ink: #f2b43c; --fail-ink: #ff8d8d; --card-shadow: 0 1px 2px rgba(0,0,0,.45); } }
-:root[data-theme="dark"] { --ok-ink: #5fd88a; --warn-ink: #f2b43c; --fail-ink: #ff8d8d; --card-shadow: 0 1px 2px rgba(0,0,0,.45); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1a33; --panel: #132648; --panel-2: #0f2043; --line: #1c3561;
+    --text: #e8eefb; --muted: #94a4c6; --accent: #7cadff; --accent-soft: #15294d;
+    --ok: #c6ff00; --crit: #ff8178; --high: #ffb066; --medium: #ecd176; --low: #8c9dbe; --warn: #ffc46b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .45);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1a33; --panel: #132648; --panel-2: #0f2043; --line: #1c3561;
+  --text: #e8eefb; --muted: #94a4c6; --accent: #7cadff; --accent-soft: #15294d;
+  --ok: #c6ff00; --crit: #ff8178; --high: #ffb066; --medium: #ecd176; --low: #8c9dbe; --warn: #ffc46b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45);
+}
 
 *, *::before, *::after { box-sizing: border-box; }
-:focus-visible { outline: 2px solid var(--sig-ink); outline-offset: 2px; }
-.mast :focus-visible { outline-color: var(--sig); }
+body { background: var(--bg); color: var(--text); font: 15px/1.55 var(--ui); margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
 
-.mast { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; margin-inline: -16px; padding-inline: 16px;
-  background: var(--mast); background-image: linear-gradient(180deg, var(--mast-2), var(--mast));
-  color: var(--mast-text); border-bottom: 2px solid var(--sig); }
-.mast-in { max-width: 1080px; margin: 0 auto; display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; padding: 10px 0 6px; }
-.wordmark { font-family: var(--display); font-weight: 800; font-size: 27px; line-height: 1; letter-spacing: .05em; text-transform: uppercase; }
-.wordmark::after { content: ""; display: inline-block; width: 9px; height: 9px; background: var(--sig); margin-left: 8px; vertical-align: 2px; }
-.site { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--mast-muted); }
-.mast-status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
-.mast .dot-ok { background: var(--sig); }
-.mast .dot-fail { background: var(--live); }
-.mast .dot-none { background: var(--mast-muted); }
+/* ---- shell ---- */
+.shell { display: flex; align-items: flex-start; }
+main { flex: 1 1 auto; min-width: 0; max-width: 760px; padding-inline: 16px; padding-block: 22px 64px; }
+main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 4px; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
 
-.tabs-scroll { max-width: 1080px; margin: 0 auto; overflow-x: auto; scrollbar-width: none; }
-.tabs-scroll::-webkit-scrollbar { display: none; }
-.tabs { display: flex; gap: 2px; min-width: max-content; }
-.tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--mast-muted);
-  font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-  padding: 9px 12px 7px; cursor: pointer; white-space: nowrap; }
-.tab:hover { color: var(--mast-text); }
-.tab[aria-selected="true"] { color: var(--mast-text); border-bottom-color: var(--sig); }
-@media (prefers-reduced-motion: no-preference) { .tab { transition: color .15s ease, border-color .15s ease; } .chev { transition: background .15s ease, border-color .15s ease; } }
-
-main { max-width: 1080px; margin: 0 auto; }
-[role="tabpanel"] { padding-top: 16px; }
-
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 13px 14px; margin: 0 0 14px; }
-.card-rows { padding-bottom: 0; }
-.card.alert { border-color: var(--fail); border-left: 4px solid var(--fail); }
-.sect { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 14px;
-  letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); margin: 0; }
-.sect::before { content: ""; width: 9px; height: 15px; background: var(--sig); flex: none; }
-.sect .sect-note { margin-left: auto; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.empty { color: var(--text-muted); margin: 8px 0 0; }
-
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint); display: inline-block; flex: none; }
-.dot-ok { background: var(--ok-ink); }
-.dot-warn { background: var(--warn-ink); }
-.dot-fail { background: var(--fail-ink); }
-.dot-none { background: var(--border-strong); }
-.dot-lg { width: 13px; height: 13px; }
-
-.banner { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; margin-top: 8px; }
-.banner-state { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; letter-spacing: .02em; }
-.is-ok { color: var(--ok-ink); }
-.is-fail { color: var(--fail-ink); }
-.banner-meta { color: var(--text-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--surface-muted);
-  border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; color: var(--text-muted); }
-.banner-time { margin-left: auto; color: var(--text-faint); font-size: 12px; }
-.pill { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em; text-transform: uppercase;
-  padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
-.pill-warn { color: var(--warn-ink); }
-
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 8px; margin-top: 10px; }
-.tile { background: var(--surface-muted); border-radius: 0 8px 8px 0; border-left: 4px solid var(--border-strong); padding: 8px 10px; }
-.tile-n { display: block; font-family: var(--display); font-weight: 800; font-size: 27px; line-height: 1; font-variant-numeric: tabular-nums; }
-.tile-l { display: block; margin-top: 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.tile-critical { border-left-color: var(--fail); } .tile-critical .tile-n { color: var(--fail-ink); }
-.tile-high { border-left-color: var(--warn); } .tile-high .tile-n { color: var(--warn-ink); }
-.tile-medium { border-left-color: var(--sig); }
-.tile-low { border-left-color: var(--border-strong); } .tile-low .tile-n { color: var(--text-muted); }
-.tile.is-zero .tile-n { color: var(--text-faint); }
-
-.crew-row { display: grid; align-items: center; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--border);
-  grid-template-columns: 10px minmax(0, 1fr) auto 28px; grid-template-areas: "dot who when chev" "pad line line line"; }
-.crew-row .dot { grid-area: dot; }
-.crew-who { grid-area: who; min-width: 0; }
-.crew-line { grid-area: line; min-width: 0; color: var(--text-muted); font-size: 14px; overflow-wrap: anywhere; }
-.crew-when { grid-area: when; color: var(--text-faint); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.chev { grid-area: chev; appearance: none; background: none; border: 1px solid var(--border); border-radius: 6px;
-  color: var(--text-muted); width: 28px; height: 28px; line-height: 1; font-size: 17px; cursor: pointer; }
-.chev:hover { background: var(--surface-muted); border-color: var(--border-strong); color: var(--text); }
-.crew-name { font-weight: 600; }
-.crew-role { color: var(--text-muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; font-family: var(--display); }
-@media (min-width: 720px) {
-  .crew-row { grid-template-columns: 10px minmax(150px, 20%) minmax(0, 1fr) auto 28px; grid-template-areas: "dot who line when chev"; }
+/* ---- sidebar ---- */
+.side { flex: none; width: 232px; background: var(--panel); border-right: 1px solid var(--line);
+  padding: 18px 14px 28px; position: sticky; top: env(safe-area-inset-top, 0px);
+  max-height: 100vh; overflow-y: auto; align-self: flex-start; }
+.side-head { display: flex; align-items: center; gap: 10px; }
+.mark { display: grid; min-width: 0; }
+.mark-sm { font-size: 11px; font-weight: 800; letter-spacing: .18em; color: var(--muted); }
+.mark-lg { font-size: 20px; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+.side-toggle { display: none; margin-left: auto; appearance: none; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 9px; color: var(--text); font: inherit; font-weight: 600;
+  font-size: 14px; padding: 7px 12px; cursor: pointer; }
+.side-state { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: 13px; color: var(--muted); }
+.side-sheet { display: grid; gap: 1px; }
+.side-sheet a { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px;
+  color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; }
+.side-sheet a:hover { background: var(--panel-2); }
+.side-sheet a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.side-group { margin: 14px 0 3px; padding-inline: 10px; font-size: 10px; font-weight: 800;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.badge { margin-left: auto; min-width: 22px; text-align: center; font-size: 12px; font-weight: 800;
+  font-variant-numeric: tabular-nums; border-radius: 999px; padding: 1px 7px;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+.badge.is-hot { color: var(--crit); border-color: currentColor; background: none; }
+@media (max-width: 760px) {
+  .shell { display: block; }
+  .side { width: auto; position: sticky; top: 0; max-height: none; overflow: visible;
+    border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-top, 0px)); }
+  .side-toggle { display: inline-flex; }
+  .side-state { margin-bottom: 0; }
+  .side-sheet { margin-top: 10px; }
+  /* display: grid on the class would otherwise beat the browser's own rule for
+     the hidden attribute, and the menu button would open a sheet that never
+     closes again. */
+  .side-sheet[hidden] { display: none; }
+  main { max-width: none; }
 }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 14px; margin-top: 10px; }
-.stat-l { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.stat-v { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stat-sub { font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.rule { border: 0; border-top: 1px solid var(--border); margin: 12px 0 0; }
-.md :is(h1, h2, h3) { font-family: var(--display); letter-spacing: .02em; }
-.md pre { overflow-x: auto; background: var(--surface-muted); padding: 10px; border-radius: 8px; }
-
-/* Issues tab */
-.sev-head { margin: 18px 0 8px; }
-.sev-head:first-child { margin-top: 0; }
-.sev-head .sect-note { letter-spacing: .04em; }
-.sev-head.is-critical::before, .sev-head.is-high::before { background: var(--fail); }
-.sev-head.is-medium::before { background: var(--warn); }
-.sev-head.is-low::before { background: var(--border-strong); }
-.issue { border-left: 4px solid var(--border-strong); }
-.issue.is-critical, .issue.is-high { border-left-color: var(--fail); }
-.issue.is-medium { border-left-color: var(--warn); }
-.issue.is-low { border-left-color: var(--border-strong); }
-.issue-head { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; }
-.issue-title { font-weight: 600; overflow-wrap: anywhere; }
-.issue-meta { display: flex; align-items: baseline; gap: 2px 8px; flex-wrap: wrap; margin-top: 3px;
-  color: var(--text-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
-.issue-agent { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--text-muted); }
-.issue-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
-p.issue-text { margin: 9px 0 0; }
-.issue-fix { margin: 9px 0 0; }
-.issue-fix b { display: block; font-family: var(--display); font-weight: 800; font-size: 13px;
-  letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.issue-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
-.btn { appearance: none; background: var(--surface-muted); border: 1px solid var(--border-strong); border-radius: 7px;
-  color: var(--text); font: inherit; font-size: 14px; padding: 6px 12px; cursor: pointer; }
-.btn:hover:not(:disabled) { border-color: var(--sig-ink); color: var(--sig-ink); }
+/* ---- shared furniture ---- */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 15px; margin: 0 0 14px; }
+.card-rows { padding-bottom: 2px; }
+.card-alert { border-color: var(--crit); }
+.sect { display: flex; align-items: center; gap: 8px; margin: 0 0 8px;
+  font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.sect-note { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: .02em;
+  text-transform: none; color: var(--muted); }
+.empty { color: var(--muted); margin: 6px 0 10px; font-size: 14px; }
+.sub { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.link { color: var(--accent); font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--low); display: inline-block; flex: none; }
+.dot-ok { background: var(--ok); }
+.dot-warn { background: var(--warn); }
+.dot-fail { background: var(--crit); }
+.dot-none { background: var(--line); }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+.pill { font-size: 12px; font-weight: 800; letter-spacing: .04em; padding: 1px 9px; border-radius: 999px;
+  border: 1px solid currentColor; }
+.pill-warn { color: var(--warn); }
+.pill-crit { color: var(--crit); }
+.pill-muted { color: var(--muted); }
+.chip { appearance: none; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+  color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; padding: 3px 11px; cursor: pointer; }
+.chip:hover { color: var(--text); border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.btn { appearance: none; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px;
+  color: var(--text); font: inherit; font-size: 14px; font-weight: 600; padding: 6px 12px; cursor: pointer; }
+.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .btn:disabled { opacity: .55; cursor: default; }
-.issue-notice { margin: 8px 0 0; color: var(--fail-ink); font-size: 13px; }
-.pill-fail { color: var(--fail-ink); }
-.pill-muted { color: var(--text-faint); }
-.fixed7-count { color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.fixed7 { margin-top: 18px; color: var(--text-muted); }
-.fixed7 > summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 15px;
-  letter-spacing: .06em; text-transform: uppercase; }
-.fixed-row { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; padding: 7px 0;
-  border-top: 1px solid var(--border); font-size: 14px; }
-.fixed-row:first-of-type { margin-top: 6px; }
-.fixed-title { color: var(--text); overflow-wrap: anywhere; }
-.fixed-agent, .fixed-when { color: var(--text-faint); font-size: 12px; }
-.fixed-when { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.btn-go { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+.notice { margin: 8px 0 0; color: var(--crit); font-size: 13px; }
+.chev { appearance: none; background: none; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--muted); width: 28px; height: 28px; line-height: 1; font-size: 17px; cursor: pointer; flex: none; }
+.chev:hover { background: var(--panel-2); color: var(--text); }
+.readonly { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+.md { overflow-wrap: anywhere; font-size: 14px; }
+.md :is(p, ul, ol, blockquote) { margin: 7px 0; }
+.md :is(h1, h2, h3, h4) { margin: 12px 0 6px; font-size: 16px; }
+.md table { max-width: 100%; }
+.md pre { overflow-x: auto; background: var(--panel-2); padding: 10px; border-radius: 8px; }
+.md table { border-collapse: collapse; }
+.md :is(td, th) { border: 1px solid var(--line); padding: 3px 7px; text-align: left; }
+.scroll-x { overflow-x: auto; }
 
-/* Runs tab */
+/* ---- Today ---- */
+.statline { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; font-size: 14px; }
+.state { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 17px; }
+.is-ok { color: var(--ok); }
+.is-crit { color: var(--crit); }
+.fact { color: var(--muted); font-variant-numeric: tabular-nums; }
+.when { margin-left: auto; font-size: 12px; }
+.nudge { margin: 0 0 10px; padding: 8px 11px; border-radius: 9px; font-size: 14px; font-weight: 600;
+  color: var(--high); border: 1px solid currentColor; }
+.row { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap;
+  padding: 10px 0; border-top: 1px solid var(--line); }
+.row:first-of-type { border-top: 0; }
+.row-main { min-width: 0; flex: 1 1 220px; }
+.row-title { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.row-sub { display: block; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.row-when { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.crew-name { font-weight: 800; }
+.crew-role { color: var(--muted); font-size: 13px; }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 14px; margin-top: 8px; }
+.fig-l { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.fig-v { font-size: 21px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.fig-s { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sources { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+
+/* ---- Orders ---- */
+.compose { display: grid; gap: 11px; }
+.kinds { display: flex; gap: 6px; flex-wrap: wrap; }
+.field { display: grid; gap: 4px; }
+.field > .sub { margin: 0; }
+.field textarea, .field select { width: 100%; max-width: 100%; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; }
+.field textarea { resize: vertical; }
+.hourly { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.order-head { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; width: 100%;
+  appearance: none; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer; }
+.order-head:hover .order-title { color: var(--accent); }
+.order-title { font-weight: 600; overflow-wrap: anywhere; flex: 1 1 180px; min-width: 0; }
+.order-body { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.order-links { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 9px; }
+.chip-cancelled { color: var(--muted); }
+.chip-kind { cursor: inherit; font-size: 12px; padding: 1px 9px; }
+
+/* ---- Issues ---- */
+.sev-head { margin-top: 22px; }
+.sev-head:first-child { margin-top: 0; }
+.issue { padding-left: 11px; border-left: 4px solid var(--low); }
+.issue.is-critical { border-left-color: var(--crit); }
+.issue.is-high { border-left-color: var(--high); }
+.issue.is-medium { border-left-color: var(--medium); }
+.issue.is-low { border-left-color: var(--low); }
+.issue-head { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; width: 100%;
+  appearance: none; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer; }
+.issue-head:hover .issue-title { color: var(--accent); }
+.issue-title { font-weight: 600; overflow-wrap: anywhere; }
+.chip-agent { cursor: inherit; font-size: 12px; padding: 1px 9px; }
+.issue-meta { display: flex; gap: 3px 10px; flex-wrap: wrap; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.issue-body { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.issue-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.issue-fix { margin-top: 10px; }
+.order-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chip-queued { color: var(--muted); }
+.chip-running { color: var(--accent); border-color: var(--accent); }
+.chip-done { color: var(--ok); border-color: currentColor; }
+.chip-failed { color: var(--crit); border-color: currentColor; }
+.note-box { display: block; width: 100%; margin-top: 6px; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; resize: vertical; }
+.fold { margin-top: 20px; color: var(--muted); }
+.fold > summary { cursor: pointer; font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+
+/* ---- Runs ---- */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
-.chip { appearance: none; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px;
-  color: var(--text-muted); font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .06em;
-  text-transform: uppercase; padding: 5px 12px; cursor: pointer; }
-.chip:hover { color: var(--text); border-color: var(--text-faint); }
-.chip[aria-pressed="true"] { background: var(--sig-soft); border-color: var(--sig-ink); color: var(--sig-ink); }
-.run { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--card-shadow); padding: 10px 12px; margin: 0 0 10px; }
+.chip-issue { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  padding: 2px 10px; overflow-wrap: anywhere; }
+.run { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 10px 13px; margin: 0 0 10px; }
 .run > summary { cursor: pointer; }
 .run-sum { display: inline-flex; align-items: baseline; gap: 4px 9px; flex-wrap: wrap;
   max-width: calc(100% - 22px); vertical-align: top; }
 .run-sum .dot { align-self: center; }
-.run-date { color: var(--text-faint); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.run-agent { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
-.run-headline { color: var(--text-muted); overflow-wrap: anywhere; }
-.run-body { margin-top: 9px; border-top: 1px solid var(--border); padding-top: 4px; }
+.run-date { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.run-agent { font-weight: 800; }
+.run-headline { color: var(--muted); overflow-wrap: anywhere; }
+.run-body { margin-top: 9px; border-top: 1px solid var(--line); padding-top: 4px; }
 .run-issues { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
-.run-issues-label { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-muted); }
-.chip-issue { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 0;
-  text-transform: none; padding: 3px 10px; overflow-wrap: anywhere; }
-.md { overflow-wrap: anywhere; }
-.md :is(p, ul, ol, blockquote) { margin: 7px 0; }
-.md :is(h1, h2, h3, h4) { margin: 12px 0 6px; font-size: 16px; }
-.md :is(img, table) { max-width: 100%; }
-.md table { border-collapse: collapse; }
-.md :is(td, th) { border: 1px solid var(--border); padding: 3px 7px; text-align: left; }
 
-/* Crew tab */
-.crew-head { margin: 20px 0 9px; }
+/* ---- Crew ---- */
+.crew-head { margin-top: 22px; }
 .crew-head:first-child { margin-top: 0; }
-.crew-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 12px; margin: 0 0 4px; }
+.crew-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 0 0 4px; }
 .crew-card { margin: 0; }
 .crew-card.is-click { cursor: pointer; }
-.crew-card.is-click:hover { border-color: var(--sig-ink); }
+.crew-card.is-click:hover { border-color: var(--accent); }
 .crew-top { display: flex; align-items: center; gap: 11px; }
 .avatar { width: 36px; height: 48px; flex: none; image-rendering: pixelated; background: none; }
-.crew-card-name { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.1;
-  letter-spacing: .02em; overflow-wrap: anywhere; }
-.crew-card-role { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em;
-  text-transform: uppercase; color: var(--text-muted); }
+.crew-card-name { font-size: 19px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.crew-card-role { font-size: 13px; color: var(--muted); }
 .crew-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 10px; margin: 11px 0 0; }
-.crew-facts dt { font-family: var(--display); font-weight: 800; font-size: 12px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-muted); padding-top: 3px; }
+.crew-facts dt { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); padding-top: 3px; }
 .crew-facts dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
 .crew-last { display: flex; align-items: baseline; gap: 3px 7px; flex-wrap: wrap; }
 .crew-last .dot { align-self: center; }
-.crew-ago { color: var(--text-faint); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.crew-ago { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.crew-line { padding: 10px 0; border-top: 1px solid var(--line); }
+.crew-line:first-of-type { border-top: 0; }
+.crew-open { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; width: 100%;
+  appearance: none; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer; }
+.crew-open:hover .crew-name { color: var(--accent); }
+.crew-chev { color: var(--muted); font-size: 17px; line-height: 1; flex: none; }
+.crew-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.crew-panel .crew-card { border: 0; box-shadow: none; background: none; padding: 0; }
 
-/* Rulebook tab */
-.rules { margin: 0; padding-left: 28px; }
-.rules > li::marker { font-family: var(--display); font-weight: 800; color: var(--sig-ink); }
+/* ---- Stats ----
+   The charts are drawn here rather than by a library: four one-series lines and
+   one stacked bar, every mark and every word coloured from the tokens above so
+   both themes are legible. The marks carry the colour; the text never does. */
+.chart { margin: 0 0 18px; }
+.chart:last-child { margin-bottom: 0; }
+.chart-head { display: flex; align-items: baseline; gap: 3px 10px; flex-wrap: wrap; }
+.chart-title { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.chart-now { font-size: 21px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.chart-delta { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.chart-delta.is-up { color: var(--ok); }
+.chart-delta.is-down { color: var(--warn); }
+.chart svg { display: block; width: 100%; height: auto; margin-top: 7px; }
+.ch-grid { stroke: var(--line); stroke-width: 1; fill: none; }
+.ch-line { stroke: var(--accent); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.ch-dot { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.ch-text { fill: var(--muted); font-family: var(--ui); font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums; }
+.ch-critical { fill: var(--crit); }
+.ch-high { fill: var(--high); }
+.ch-medium { fill: var(--medium); }
+.ch-low { fill: var(--low); }
+.legend { display: flex; gap: 5px 14px; flex-wrap: wrap; margin-top: 9px; color: var(--muted); font-size: 13px; }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; background: var(--low); }
+.swatch-critical { background: var(--crit); }
+.swatch-high { background: var(--high); }
+.swatch-medium { background: var(--medium); }
+.swatch-low { background: var(--low); }
+.numbers { margin-top: 12px; color: var(--muted); }
+.numbers > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.grid-table { border-collapse: collapse; margin-top: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.grid-table :is(td, th) { border-top: 1px solid var(--line); padding: 3px 9px 3px 0; text-align: right;
+  white-space: nowrap; color: var(--text); font-weight: 400; }
+.grid-table th { color: var(--muted); font-weight: 800; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.grid-table :is(td, th):first-child { text-align: left; }
+
+/* ---- Rulebook ---- */
+.rules { margin: 0; padding-left: 26px; }
+.rules > li::marker { font-weight: 800; color: var(--accent); }
+.rule-row { margin-bottom: 10px; }
 .rule-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .rule-input { display: block; width: 100%; font: inherit; font-size: 14px; color: var(--text);
-  background: var(--surface-muted); border: 1px solid var(--border-strong); border-radius: 7px;
-  padding: 8px 10px; resize: vertical; }
-.rule-label { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--text-muted); margin: 9px 0 4px; }
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; resize: vertical; }
+.rule-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); margin: 9px 0 4px; }
 .rule-add { margin-top: 16px; }
 
-/* Clubhouse tab */
+/* ---- Office ---- */
 .clubhouse { display: grid; gap: 12px; }
 .clubhouse-main { display: grid; gap: 12px; align-items: start; }
 .clubhouse-left { display: grid; gap: 10px; min-width: 0; }
-.clubhouse-stage { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--card-shadow); padding: 8px; display: flex; justify-content: center; }
+.clubhouse-stage { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 8px; display: flex; justify-content: center; }
 #clubhouse-canvas { image-rendering: pixelated; width: 100%; max-width: 480px; height: auto; display: block; cursor: pointer; }
 .clubhouse-controls { display: flex; gap: 6px; flex-wrap: wrap; }
-.clubhouse-note { margin: 0; color: var(--text-faint); font-size: 12px; }
+.clubhouse-note { margin: 0; color: var(--muted); font-size: 12px; }
 .clubhouse-caption { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; min-height: 22px; }
-.clubhouse-caption .pill { flex: none; color: var(--sig-ink); }
-.clubhouse-at { flex: none; font-family: var(--display); font-weight: 800; font-size: 15px;
-  letter-spacing: .04em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.clubhouse-caption .pill { flex: none; color: var(--accent); }
+.clubhouse-at { flex: none; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
 .clubhouse-step { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
 .clubhouse-figures { display: flex; gap: 5px; flex-wrap: wrap; }
-.clubhouse-figures .chip { font-size: 13px; padding: 4px 10px; }
-.clubhouse-figures .chip[aria-pressed="true"] { background: var(--sig-soft); border-color: var(--sig-ink); color: var(--sig-ink); }
-.clubhouse-legend { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-faint); align-self: center; margin-right: 2px; }
+.clubhouse-figures .chip { font-size: 13px; padding: 3px 10px; }
+.clubhouse-legend { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); align-self: center; margin-right: 2px; }
 #clubhouse-card:empty { display: none; }
 #clubhouse-card .card { margin: 0; }
-@media (min-width: 720px) {
-  .clubhouse-main { grid-template-columns: minmax(0, 1fr) minmax(0, 290px); }
+@media (min-width: 900px) {
+  .clubhouse-main { grid-template-columns: minmax(0, 1fr) minmax(0, 280px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .side-sheet a, .chip, .btn, .chev { transition: color .15s ease, background .15s ease, border-color .15s ease; }
 }
 </style>
 
-<div class="mast" role="banner">
-  <div class="mast-in">
-    <span class="wordmark">Ops Room</span>
-    <span class="site">sports-db.live</span>
-    <span class="mast-status"><span class="dot dot-none" id="mast-dot"></span><span id="mast-text">Checking</span></span>
-  </div>
-  <div class="tabs-scroll">
-    <nav class="tabs" role="tablist" aria-label="Ops Room sections">
-      <button type="button" class="tab" role="tab" id="tab-today" aria-controls="panel-today" aria-selected="true">Today</button>
-      <button type="button" class="tab" role="tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" tabindex="-1">Issues</button>
-      <button type="button" class="tab" role="tab" id="tab-runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Runs</button>
-      <button type="button" class="tab" role="tab" id="tab-crew" aria-controls="panel-crew" aria-selected="false" tabindex="-1">Crew</button>
-      <button type="button" class="tab" role="tab" id="tab-rules" aria-controls="panel-rules" aria-selected="false" tabindex="-1">Rulebook</button>
-      <button type="button" class="tab" role="tab" id="tab-clubhouse" aria-controls="panel-clubhouse" aria-selected="false" tabindex="-1">Clubhouse</button>
-    </nav>
-  </div>
-</div>
-
-<main>
-  <section role="tabpanel" id="panel-today" aria-labelledby="tab-today" tabindex="0"></section>
-  <section role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" tabindex="0" hidden><p class="empty">Issues</p></section>
-  <section role="tabpanel" id="panel-runs" aria-labelledby="tab-runs" tabindex="0" hidden><p class="empty">Runs</p></section>
-  <section role="tabpanel" id="panel-crew" aria-labelledby="tab-crew" tabindex="0" hidden><p class="empty">Crew</p></section>
-  <section role="tabpanel" id="panel-rules" aria-labelledby="tab-rules" tabindex="0" hidden><p class="empty">Rulebook</p></section>
-  <section role="tabpanel" id="panel-clubhouse" aria-labelledby="tab-clubhouse" tabindex="0" hidden>
-    <div class="clubhouse">
-      <div class="clubhouse-main">
-        <div class="clubhouse-left">
-          <div class="clubhouse-stage">
-            <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
-          </div>
-          <div class="clubhouse-caption" id="clubhouse-caption"></div>
-          <div class="clubhouse-controls" role="group" aria-label="Clubhouse playback">
-            <button type="button" class="chip" id="clubhouse-pause">Pause</button>
-            <button type="button" class="chip" id="clubhouse-restart">Restart</button>
-            <button type="button" class="chip" id="clubhouse-day">Day</button>
-            <button type="button" class="chip" id="clubhouse-night">Night</button>
-          </div>
-          <div class="clubhouse-figures" id="clubhouse-figures" role="group" aria-label="Choose a figure">
-            <span class="clubhouse-legend">Who</span>
-            <button type="button" class="chip" data-figure="owner">Owner</button>
-            <button type="button" class="chip" data-figure="session">Main session</button>
-            <button type="button" class="chip" data-figure="umpire">Umpire</button>
-            <button type="button" class="chip" data-figure="editor">Editor</button>
-            <button type="button" class="chip" data-figure="physio">Physio</button>
-            <button type="button" class="chip" data-figure="kit-manager">Kit Manager</button>
-            <button type="button" class="chip" data-figure="steward">Steward</button>
-            <button type="button" class="chip" data-figure="analyst">Analyst</button>
-            <button type="button" class="chip" data-figure="scout">Scout</button>
-            <button type="button" class="chip" data-figure="press-officer">Press Officer</button>
-            <button type="button" class="chip" data-figure="scorer">Scorer</button>
-          </div>
-        </div>
-        <div id="clubhouse-card"></div>
-      </div>
-      <p class="clubhouse-note">Characters are drawn in code for this private page. No official art is used. Pick a figure on the scene or from the list to read their card.</p>
+<div class="shell">
+  <nav class="side" aria-label="Ops Room sections">
+    <div class="side-head">
+      <span class="mark">
+        <span class="mark-sm">SPORTS-DB</span>
+        <span class="mark-lg">Ops Room</span>
+      </span>
+      <button type="button" class="side-toggle" id="side-toggle" aria-expanded="false" aria-controls="side-sheet">Sections</button>
     </div>
-  </section>
-</main>
+    <p class="side-state"><span class="dot dot-none" id="side-dot"></span><span id="side-state-text">Checking</span></p>
+    <div class="side-sheet" id="side-sheet">
+      <a href="#today" data-section="today">Today</a>
+      <p class="side-group">Work</p>
+      <a href="#orders" data-section="orders">Orders<span class="badge" id="badge-orders" hidden>0</span></a>
+      <a href="#issues" data-section="issues">Issues<span class="badge" id="badge-issues" hidden>0</span></a>
+      <p class="side-group">Log</p>
+      <a href="#runs" data-section="runs">Runs</a>
+      <a href="#alerts" data-section="alerts">Alerts</a>
+      <p class="side-group">Team</p>
+      <a href="#crew" data-section="crew">Crew</a>
+      <a href="#stats" data-section="stats">Stats</a>
+      <p class="side-group">Knowledge</p>
+      <a href="#rules" data-section="rules">Rulebook</a>
+      <p class="side-group">Showcase</p>
+      <a href="#office" data-section="office">Office</a>
+    </div>
+  </nav>
+
+  <main>
+    <section data-panel="today" id="panel-today">
+      <h1>Today</h1>
+      <p class="lede">What the night crew found, and what is waiting on you.</p>
+      <div id="body-today"></div>
+    </section>
+
+    <section data-panel="orders" id="panel-orders" hidden>
+      <h1>Orders</h1>
+      <p class="lede">Jobs you hand to the Groundsman, and what came back.</p>
+      <div id="body-orders"></div>
+    </section>
+
+    <section data-panel="issues" id="panel-issues" hidden>
+      <h1>Issues</h1>
+      <p class="lede">Everything the crew has found and not yet closed, worst first.</p>
+      <div id="body-issues"></div>
+    </section>
+
+    <section data-panel="runs" id="panel-runs" hidden>
+      <h1>Runs</h1>
+      <p class="lede">Every check the crew has run, with the notes they wrote.</p>
+      <div id="body-runs"></div>
+    </section>
+
+    <section data-panel="alerts" id="panel-alerts" hidden>
+      <h1>Alerts</h1>
+      <p class="lede">The pushes sent to your phone in the last 30 days.</p>
+      <div id="body-alerts"></div>
+    </section>
+
+    <section data-panel="crew" id="panel-crew" hidden>
+      <h1>Crew</h1>
+      <p class="lede">Who checks what, and when.</p>
+      <div id="body-crew"></div>
+    </section>
+
+    <section data-panel="stats" id="panel-stats" hidden>
+      <h1>Stats</h1>
+      <p class="lede">Fourteen days of readers, searches and open issues.</p>
+      <div id="body-stats"></div>
+    </section>
+
+    <section data-panel="rules" id="panel-rules" hidden>
+      <h1>Rulebook</h1>
+      <p class="lede">The house rules every agent reads before it starts.</p>
+      <div id="body-rules"></div>
+    </section>
+
+    <section data-panel="office" id="panel-office" hidden>
+      <h1>Office</h1>
+      <p class="lede">The crew at work, drawn in code. Pick a figure to read their card.</p>
+      <div id="body-office">
+        <div class="clubhouse">
+          <div class="clubhouse-main">
+            <div class="clubhouse-left">
+              <div class="clubhouse-stage">
+                <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with the pitch in front of it and one figure for every member of the crew. The Groundsman works on the pitch at the bottom. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
+              </div>
+              <div class="clubhouse-caption" id="clubhouse-caption"></div>
+              <div class="clubhouse-controls" role="group" aria-label="Playback">
+                <button type="button" class="chip" id="clubhouse-pause">Pause</button>
+                <button type="button" class="chip" id="clubhouse-restart">Restart</button>
+                <button type="button" class="chip" id="clubhouse-day">Day</button>
+                <button type="button" class="chip" id="clubhouse-night">Night</button>
+              </div>
+              <div class="clubhouse-figures" id="clubhouse-figures" role="group" aria-label="Choose a figure">
+                <span class="clubhouse-legend">Who</span>
+                <button type="button" class="chip" data-figure="owner">Owner</button>
+                <button type="button" class="chip" data-figure="session">Main session</button>
+                <button type="button" class="chip" data-figure="umpire">Umpire</button>
+                <button type="button" class="chip" data-figure="editor">Editor</button>
+                <button type="button" class="chip" data-figure="physio">Physio</button>
+                <button type="button" class="chip" data-figure="kit-manager">Kit Manager</button>
+                <button type="button" class="chip" data-figure="steward">Steward</button>
+                <button type="button" class="chip" data-figure="analyst">Analyst</button>
+                <button type="button" class="chip" data-figure="scout">Scout</button>
+                <button type="button" class="chip" data-figure="press-officer">Press Officer</button>
+                <button type="button" class="chip" data-figure="scorer">Scorer</button>
+                <button type="button" class="chip" data-figure="groundsman">Groundsman</button>
+              </div>
+            </div>
+            <div id="clubhouse-card"></div>
+          </div>
+          <p class="clubhouse-note">Characters are drawn in code for this private page. No official art is used.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script>
 if (!window.claude) window.claude = { use: async () => null };
 
+const SECTIONS = ["today", "orders", "issues", "runs", "alerts", "crew", "stats", "rules", "office"];
 const GROUPS = [["dugout", "Dugout"], ["officials", "Match officials"], ["backroom", "Backroom staff"], ["front-office", "Front office"]];
+const SEVERITIES = ["critical", "high", "medium", "low"];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Twice the 8 KB the protocol asks an agent for. Past this a run's details are
-// cut, so one runaway run cannot freeze the Runs tab.
+// cut, so one runaway run cannot freeze the page.
 const DETAILS_LIMIT = 16000;
+
+// The four kinds of order, in the order the compose box offers them, and the
+// four lists the Orders page groups them into. A cancelled order is shown in
+// the Failed list, with its own chip, because it is also a job that will not be
+// done and the owner should not have to look in a fifth place for it.
+const ORDER_KINDS = [["fix", "Fix"], ["explain", "Explain"], ["recheck", "Recheck"], ["custom", "Custom"]];
+const ORDER_GROUPS = [["queued", "Queued"], ["running", "Running"], ["done", "Done"], ["failed", "Failed"]];
+const ORDER_WORDS = { queued: "waiting", running: "in hand", done: "done", failed: "could not be done", cancelled: "cancelled" };
+
+// The Runs filter is the only thing this page remembers about the viewer, and
+// it is remembered in the browser, never written to the database.
+const RUNS_FILTER_KEY = "ops-room.runs-agent";
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const CHART_DAYS = 14;
 
 // The dugout is the two of us. Neither has a routine, so neither is a crew
 // document: they are written here and never read from the database.
 const DUGOUT = [
   {
     id: "owner", name: "Owner", role: "says deploy",
-    job: "Asks for the work, reads Today each morning, acknowledges what needs it, and is the only one who can say deploy.",
+    job: "Asks for the work, reads Today each morning, gives the orders, and is the only one who can say deploy.",
     never: "Deploys between 04:30 and 07:30 IST, or without purging the edge cache afterwards.",
     when: "Every morning.",
   },
@@ -323,7 +486,89 @@ const DUGOUT = [
   },
 ];
 
-// The Crew tab's face. The sprite sheet lives in the Clubhouse block below, so
+// ---- pure helpers, kept free of the page so they can be read and tested alone ----
+
+// Four ranked groups, worst first, newest sighting first inside each group, with
+// anything the owner has ignored until a future date left out. Nothing here
+// touches the page or the database.
+function rankIssues(list, now) {
+  const at = now === undefined || now === null ? Date.now() : (now instanceof Date ? now.getTime() : Number(now));
+  const groups = { critical: [], high: [], medium: [], low: [] };
+  const all = Array.isArray(list) ? list : [];
+  for (const it of all) {
+    if (!it) continue;
+    const status = String(it.status || "open");
+    if (status !== "open" && status !== "reopened" && status !== "acknowledged") continue;
+    const until = Date.parse(it.snoozedUntil);
+    if (Number.isFinite(until) && until > at) continue;
+    const sev = String(it.severity || "low").toLowerCase();
+    const into = ["critical", "high", "medium", "low"].indexOf(sev) < 0 ? "low" : sev;
+    groups[into].push(it);
+  }
+  for (const sev of ["critical", "high", "medium", "low"]) {
+    groups[sev].sort(function (a, b) {
+      const d = (Date.parse(b.lastSeen) || 0) - (Date.parse(a.lastSeen) || 0);
+      return d !== 0 ? d : String(a.title || a.key || "").localeCompare(String(b.title || b.key || ""));
+    });
+  }
+  return groups;
+}
+
+// What the owner still has to answer for: critical and high, still live, with no
+// order given, no acknowledgement and no ignore date running. Oldest first,
+// because the oldest is the one that has waited. Ignoring an issue for a few
+// days acknowledges it at the same time, so an issue whose ignore date has come
+// and gone is asked about again whatever its status says; only an issue that
+// has been closed stays out for good.
+function needsDecision(list, now) {
+  const at = now === undefined || now === null ? Date.now() : (now instanceof Date ? now.getTime() : Number(now));
+  const out = [];
+  const all = Array.isArray(list) ? list : [];
+  for (const it of all) {
+    if (!it) continue;
+    const sev = String(it.severity || "low").toLowerCase();
+    if (sev !== "critical" && sev !== "high") continue;
+    const status = String(it.status || "open");
+    if (status === "fixed" || status === "ignored") continue;
+    if (it.orderId) continue;
+    const until = Date.parse(it.snoozedUntil);
+    if (Number.isFinite(until) && until > at) continue;
+    const woke = Number.isFinite(until) && until <= at;
+    if (status !== "open" && status !== "reopened" && !woke) continue;
+    out.push(it);
+  }
+  out.sort(function (a, b) { return (Date.parse(a.firstSeen) || 0) - (Date.parse(b.firstSeen) || 0); });
+  return out;
+}
+
+// An order id the owner can read back off a branch name: the local date and
+// time it was given, plus four hex characters so two orders given in the same
+// second cannot collide.
+function newOrderId(now) {
+  const d = now instanceof Date ? now : new Date();
+  const pad = function (n) { return n < 10 ? "0" + n : String(n); };
+  const stamp = String(d.getFullYear()) + pad(d.getMonth() + 1) + pad(d.getDate())
+    + "-" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+  let tail = "";
+  for (let i = 0; i < 4; i += 1) tail += "0123456789abcdef".charAt(Math.floor(Math.random() * 16));
+  return stamp + "-" + tail;
+}
+
+function buildOrder(kind, text, issueKey, createdBy, now) {
+  const d = now instanceof Date ? now : new Date();
+  return {
+    id: newOrderId(d),
+    createdAt: d.toISOString(),
+    createdBy: String(createdBy || "owner"),
+    kind: String(kind || "custom"),
+    text: String(text === null || text === undefined ? "" : text),
+    issueKey: String(issueKey === null || issueKey === undefined ? "" : issueKey),
+    status: "queued",
+    attempts: 0,
+  };
+}
+
+// The Crew section's face. The sprite sheet lives in the Office block below, so
 // this asks for it at draw time rather than at parse time.
 function drawAvatar(canvas, id) {
   const club = window.Clubhouse;
@@ -331,15 +576,25 @@ function drawAvatar(canvas, id) {
 }
 
 const OpsRoom = {
-  state: { crew: {}, issues: {}, runs: {}, status: null, daily: {}, rules: {}, dbReady: null },
+  state: { crew: {}, issues: {}, runs: {}, orders: {}, alerts: {}, daily: {}, rules: {}, status: null, dbReady: null, failed: {} },
   db: null,
   canWrite: true,
+  who: "owner",
   active: "today",
+  sections: SECTIONS,
+  links: [],
   filters: { runsAgent: null },
-  tabs: [],
+  compose: { kind: "fix", text: "", issueKey: "" },
+  narrow: false,
+  expanded: {},
+  // Owner notes typed but not yet saved, by issue key.
+  drafts: {},
 
   async init() {
-    this.bindTabs();
+    this.readFilter();
+    this.narrow = this.isNarrow();
+    this.bindNav();
+    this.route(true);
     this.render();
     let db = null;
     try { db = await claude.use("db"); } catch (err) { db = null; }
@@ -350,10 +605,20 @@ const OpsRoom = {
     // can() needs no capability declaration, and it answers null when the page
     // is opened as a plain file, which is read as "this viewer may write".
     this.canWrite = user && typeof user.can === "function" ? (user.can("data.write") ?? true) : true;
-    if (db) this.subscribe();
+    if (user && typeof user.name === "string" && user.name) this.who = user.name;
+    // orders and alerts do not exist until the Groundsman's first run, and
+    // asking for a collection that was never written can throw where it stands,
+    // so even opening the subscriptions is allowed to fail without costing the
+    // page the render below.
+    if (db) {
+      try { this.subscribe(); } catch (err) { this.fail("subscriptions", err); }
+    }
     this.render();
   },
 
+  // Eight feeds, each opened inside its own try. One collection that throws as
+  // it is asked for used to take the seven after it down with it, which left
+  // the page showing nothing at all rather than the seven it could read.
   subscribe() {
     const db = this.db;
     const into = (name) => (snap) => {
@@ -362,166 +627,300 @@ const OpsRoom = {
       this.state[name] = next;
       this.render();
     };
-    db.collection("crew").onSnapshot(into("crew"), (e) => this.fail("crew", e));
-    db.collection("issues").where("status", "in", ["open", "acknowledged", "reopened", "fixed"]).limit(1000).onSnapshot(into("issues"), (e) => this.fail("issues", e));
-    db.collection("runs").orderBy("date", "desc").limit(300).onSnapshot(into("runs"), (e) => this.fail("runs", e));
-    db.collection("daily").orderBy("date", "desc").limit(30).onSnapshot(into("daily"), (e) => this.fail("daily", e));
-    db.collection("rules").onSnapshot(into("rules"), (e) => this.fail("rules", e));
-    db.doc("status/site").onSnapshot((snap) => { this.state.status = snap.exists ? snap.data() : null; this.render(); }, (e) => this.fail("status", e));
-  },
-
-  fail(name, e) { console.warn("subscription " + name + " ended: " + (e && e.code)); },
-
-  bindTabs() {
-    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
-    this.tabs = tabs;
-    let saved = null;
-    try { saved = localStorage.getItem("opsroom.tab"); } catch (err) { saved = null; }
-    if (saved && tabs.some((t) => t.id === "tab-" + saved)) this.active = saved;
-    tabs.forEach((tab, i) => {
-      tab.addEventListener("click", () => this.setActive(this.nameOf(tab)));
-      tab.addEventListener("keydown", (ev) => {
-        let n = -1;
-        if (ev.key === "ArrowRight") n = (i + 1) % tabs.length;
-        else if (ev.key === "ArrowLeft") n = (i - 1 + tabs.length) % tabs.length;
-        else if (ev.key === "Home") n = 0;
-        else if (ev.key === "End") n = tabs.length - 1;
-        if (n < 0) return;
-        ev.preventDefault();
-        tabs[n].focus();
-        this.setActive(this.nameOf(tabs[n]));
-      });
-    });
-    this.setActive(this.active, true);
-  },
-
-  nameOf(tab) { return tab.id.slice(4); },
-
-  setActive(name, quiet) {
-    this.active = name;
-    try { localStorage.setItem("opsroom.tab", name); } catch (err) { /* storage can be blocked */ }
-    for (const tab of this.tabs) {
-      const on = this.nameOf(tab) === name;
-      tab.setAttribute("aria-selected", on ? "true" : "false");
-      tab.tabIndex = on ? 0 : -1;
-      const panel = document.getElementById("panel-" + this.nameOf(tab));
-      if (panel) panel.hidden = !on;
+    const feeds = [
+      ["crew", () => db.collection("crew").onSnapshot(into("crew"), (e) => this.fail("crew", e))],
+      ["issues", () => db.collection("issues").where("status", "in", ["open", "acknowledged", "reopened", "fixed"]).limit(1000).onSnapshot(into("issues"), (e) => this.fail("issues", e))],
+      ["runs", () => db.collection("runs").orderBy("date", "desc").limit(300).onSnapshot(into("runs"), (e) => this.fail("runs", e))],
+      ["orders", () => db.collection("orders").orderBy("createdAt", "desc").limit(200).onSnapshot(into("orders"), (e) => this.fail("orders", e))],
+      ["alerts", () => db.collection("alerts").orderBy("sentAt", "desc").limit(120).onSnapshot(into("alerts"), (e) => this.fail("alerts", e))],
+      ["daily", () => db.collection("daily").orderBy("date", "desc").limit(30).onSnapshot(into("daily"), (e) => this.fail("daily", e))],
+      ["rules", () => db.collection("rules").onSnapshot(into("rules"), (e) => this.fail("rules", e))],
+      ["status", () => db.doc("status/site").onSnapshot((snap) => { this.state.status = snap.exists ? snap.data() : null; this.render(); }, (e) => this.fail("status", e))],
+    ];
+    for (const feed of feeds) {
+      try { feed[1](); } catch (e) { this.fail(feed[0], e); }
     }
-    if (!quiet) this.render();
+  },
+
+  fail(name, e) {
+    this.state.failed[name] = String((e && (e.code || e.message)) || "unknown");
+    console.warn("subscription " + name + " ended: " + (e && (e.code || e.message)));
+  },
+
+  // ---- routing ----
+
+  bindNav() {
+    this.links = Array.prototype.slice.call(document.querySelectorAll("[data-section]"));
+    for (const a of this.links) a.addEventListener("click", () => this.closeSheet());
+    const toggle = document.getElementById("side-toggle");
+    const sheet = document.getElementById("side-sheet");
+    if (toggle && sheet) {
+      toggle.addEventListener("click", () => {
+        const opening = sheet.hidden;
+        sheet.hidden = !opening;
+        toggle.setAttribute("aria-expanded", opening ? "true" : "false");
+      });
+    }
+    window.addEventListener("hashchange", () => this.route());
+    // The charts are drawn to a viewBox chosen for the width they will be shown
+    // at, so crossing the phone breakpoint asks for them again, and the sheet
+    // that is a menu on a phone and a sidebar on a desktop is opened or closed
+    // to match. Nothing else on the page cares about the size.
+    window.addEventListener("resize", () => {
+      const narrow = this.isNarrow();
+      if (narrow === this.narrow) return;
+      this.narrow = narrow;
+      this.syncSheet();
+      if (this.active === "stats") this.render();
+    });
+    this.syncSheet();
+  },
+
+  // Above the phone breakpoint the list is the sidebar itself and is always
+  // shown; below it, it is a menu that starts closed. The hidden attribute says
+  // which, rather than a stylesheet overruling it, so what the markup claims and
+  // what the viewer sees are the same thing.
+  syncSheet() {
+    const sheet = document.getElementById("side-sheet");
+    const toggle = document.getElementById("side-toggle");
+    if (!sheet) return;
+    sheet.hidden = this.narrow;
+    if (toggle) toggle.setAttribute("aria-expanded", this.narrow ? "false" : "true");
+  },
+
+  isNarrow() { return typeof window.innerWidth === "number" && window.innerWidth > 0 && window.innerWidth <= 760; },
+
+  // localStorage is missing in a sandboxed frame and throws when site data is
+  // blocked, so both ends of the remembered filter are wrapped.
+  readFilter() {
+    try {
+      const saved = window.localStorage.getItem(RUNS_FILTER_KEY);
+      if (saved) this.filters.runsAgent = String(saved);
+    } catch (err) { /* a viewer with site data blocked simply gets All */ }
+  },
+
+  setRunsAgent(id) {
+    this.filters.runsAgent = id || null;
+    try {
+      if (id) window.localStorage.setItem(RUNS_FILTER_KEY, String(id));
+      else window.localStorage.removeItem(RUNS_FILTER_KEY);
+    } catch (err) { /* the filter still works for this visit */ }
+  },
+
+  closeSheet() {
+    const sheet = document.getElementById("side-sheet");
+    const toggle = document.getElementById("side-toggle");
+    if (!sheet || !toggle || window.innerWidth > 760) return;
+    sheet.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  },
+
+  route(quiet) {
+    const want = String(location.hash || "").replace(/^#/, "").toLowerCase();
+    this.nav(this.sections.indexOf(want) >= 0 ? want : "today", quiet);
+  },
+
+  // Setting location.hash below fires hashchange a moment later, which comes
+  // back through route into here. Building the section again on that second
+  // pass would throw away the card showIssue had just scrolled to and focused,
+  // so a nav that does not change the section leaves the rendered section
+  // alone; the sidebar and the panels are still set, since they cost nothing
+  // and a first nav has to set them.
+  nav(name, quiet) {
+    const to = this.sections.indexOf(name) >= 0 ? name : "today";
+    const same = this.active === to;
+    this.active = to;
+    for (const a of this.links) {
+      if (a.getAttribute("data-section") === to) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    }
+    for (const s of this.sections) {
+      const panel = document.getElementById("panel-" + s);
+      if (panel) panel.hidden = s !== to;
+    }
+    if (location.hash !== "#" + to) {
+      try { location.hash = "#" + to; } catch (err) { /* a file url can refuse */ }
+    }
+    if (!quiet && !same) this.render();
   },
 
   render() {
-    this.renderMasthead();
-    const root = document.getElementById("panel-" + this.active);
-    if (!root) return;
+    this.renderSidebar();
     const fn = {
-      today: "renderToday", issues: "renderIssues", runs: "renderRuns",
-      crew: "renderCrew", rules: "renderRules", clubhouse: "renderClubhouse",
+      today: "renderToday", orders: "renderOrders", issues: "renderIssues", runs: "renderRuns",
+      alerts: "renderAlerts", crew: "renderCrew", stats: "renderStats", rules: "renderRules",
+      office: "renderOffice",
     }[this.active];
-    if (fn && typeof this[fn] === "function") this[fn](root);
+    const root = document.getElementById("body-" + this.active);
+    if (root && fn && typeof this[fn] === "function") this[fn](root);
   },
 
-  renderMasthead() {
-    const dot = document.getElementById("mast-dot");
-    const text = document.getElementById("mast-text");
-    if (!dot || !text) return;
+  // ---- sidebar ----
+
+  renderSidebar() {
+    const dot = document.getElementById("side-dot");
+    const text = document.getElementById("side-state-text");
     const s = this.state.status;
+    const hot = this.hotCount();
     let tone = "none";
-    let label = "No check yet";
-    if (s) {
-      tone = s.up ? "ok" : "fail";
-      label = s.up ? "Up" : "Down";
-      if (this.has(s.latencyMs)) label += " " + this.num(Math.round(Number(s.latencyMs))) + " ms";
-    } else if (this.state.dbReady === false) {
-      label = "No database";
-    }
-    dot.className = "dot dot-" + tone;
-    text.textContent = label;
+    let label = "Unknown";
+    if (!s) label = this.state.dbReady === false ? "No database" : "Unknown";
+    else if (!s.up) { tone = "fail"; label = "Down"; }
+    else if (hot > 0) { tone = "warn"; label = "Online, with notes"; }
+    else { tone = "ok"; label = "Online"; }
+    if (dot) dot.className = "dot dot-" + tone;
+    if (text) text.textContent = label;
+    this.setBadge("badge-orders", this.orderCount(), false);
+    this.setBadge("badge-issues", hot, true);
   },
+
+  setBadge(id, n, hot) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = this.num(n);
+    el.className = "badge" + (hot && n > 0 ? " is-hot" : "");
+    el.hidden = n === 0;
+  },
+
+  hotCount() {
+    let n = 0;
+    for (const it of this.issueList()) {
+      const status = String(it.status || "open");
+      if (status !== "open" && status !== "reopened") continue;
+      const sev = this.severityOf(it);
+      if (sev === "critical" || sev === "high") n += 1;
+    }
+    return n;
+  },
+
+  orderCount() {
+    let n = 0;
+    for (const o of this.orderList()) {
+      const status = String(o.status || "queued");
+      if (status === "queued" || status === "running") n += 1;
+    }
+    return n;
+  },
+
+  // ---- Today ----
 
   renderToday(root) {
-    const kids = [this.todayStatus(), this.todayCounts(), this.todayCrew(), this.todayNumbers()];
+    const kids = [];
     if (this.state.dbReady === false) {
-      kids.push(this.h("section", { class: "card alert" },
-        this.h("p", { class: "empty", text: "This view cannot reach the Ops Room database. Open the page signed in as the owner." })));
+      kids.push(this.h("section", { class: "card card-alert" },
+        this.h("p", { class: "empty", text: "This page cannot reach the Ops Room database, so every section is empty. Open it signed in as the owner." })));
     }
-    root.replaceChildren(...kids);
+    kids.push(this.todayStatus(), this.todayDecisions(), this.todayOvernight(), this.todayActors(),
+      this.todayNumbers(), this.todayAlerts());
+    root.replaceChildren(...kids.filter((k) => k !== null));
   },
 
   todayStatus() {
     const h = this.h;
     const s = this.state.status;
-    const card = h("section", { class: "card" }, h("h2", { class: "sect" }, "Site"));
+    const card = h("section", { class: "card" }, h("h2", { class: "sect" }, "The site"));
     if (!s) {
-      card.append(h("p", { class: "empty", text: "No check yet" }));
+      card.append(h("p", { class: "empty", text: "No check yet. The Physio writes the site check into status." }));
       return card;
     }
     const up = !!s.up;
-    card.append(h("div", { class: "banner" },
-      h("span", { class: "dot dot-lg dot-" + (up ? "ok" : "fail") }),
-      h("span", { class: "banner-state " + (up ? "is-ok" : "is-fail"), text: up ? "Up" : "Down" }),
-      this.has(s.latencyMs) ? h("span", { class: "banner-meta", text: this.num(Math.round(Number(s.latencyMs))) + " ms" }) : null,
-      this.has(s.productionCommit) ? h("span", { class: "code", title: "production commit", text: String(s.productionCommit).slice(0, 7) }) : null,
-      s.deployPending ? h("span", { class: "pill pill-warn", text: "deploy pending" }) : null,
-      s.edgeStale ? h("span", { class: "pill pill-warn", text: "edge stale" }) : null,
-      this.ago(s.checkedAt) ? h("span", { class: "banner-time", text: "checked " + this.ago(s.checkedAt) }) : null,
-    ));
+    card.append(h("div", { class: "statline" },
+      h("span", { class: "state " + (up ? "is-ok" : "is-crit") },
+        h("span", { class: "dot dot-" + (up ? "ok" : "fail") }),
+        h("span", { text: up ? "Online" : "Down" })),
+      this.has(s.latencyMs) ? h("span", { class: "fact", text: this.num(Math.round(Number(s.latencyMs))) + " ms" }) : null,
+      this.has(s.productionCommit) ? h("span", { class: "code", title: "the commit production is running", text: String(s.productionCommit).slice(0, 7) }) : null,
+      s.deployPending ? h("span", { class: "pill pill-warn", text: "deploy pending" }) : h("span", { class: "fact", text: "nothing to deploy" }),
+      s.edgeStale ? h("span", { class: "pill pill-warn", text: "edge cache stale" }) : null,
+      this.ago(s.checkedAt) ? h("span", { class: "fact when", text: "checked " + this.ago(s.checkedAt) }) : null));
     return card;
   },
 
-  todayCounts() {
+  todayDecisions() {
     const h = this.h;
-    const order = ["critical", "high", "medium", "low"];
-    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
-    let total = 0;
-    for (const key of Object.keys(this.state.issues)) {
-      const it = this.state.issues[key];
-      if (it.status !== "open" && it.status !== "reopened") continue;
-      total += 1;
-      const sev = String(it.severity || "low").toLowerCase();
-      counts[order.indexOf(sev) < 0 ? "low" : sev] += 1;
+    const list = needsDecision(this.issueList());
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Needs a decision",
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) }) : null));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the issues list."
+        : "Nothing is waiting on you. Critical and high findings appear here until you give an order or acknowledge them." }));
+      return card;
     }
-    const card = h("section", { class: "card" },
-      h("h2", { class: "sect" }, "Open issues", h("span", { class: "sect-note", text: this.num(total) + " open" })));
-    const tiles = h("div", { class: "tiles" });
-    for (const sev of order) {
-      tiles.append(h("div", { class: "tile tile-" + sev + (counts[sev] === 0 ? " is-zero" : "") },
-        h("span", { class: "tile-n", text: this.num(counts[sev]) }),
-        h("span", { class: "tile-l", text: sev })));
+    let waited = 0;
+    for (const it of list) { const d = this.daysOpen(it); if (d !== null && d > 3) waited += 1; }
+    if (waited) {
+      card.append(h("p", { class: "nudge", text: this.num(waited)
+        + (waited === 1 ? " issue has" : " issues have") + " waited more than three days." }));
     }
-    card.append(tiles);
+    for (const it of list) {
+      const key = String(it.key || it.id || "");
+      const days = this.daysOpen(it);
+      const sev = this.severityOf(it);
+      card.append(h("div", { class: "row" },
+        h("span", { class: "pill pill-" + (sev === "critical" ? "crit" : "warn"), text: sev }),
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: it.title || key }),
+          h("span", { class: "row-sub", text: this.agentName(it.agent) + (days === null ? "" : ", " + this.dayCount(days) + " open") })),
+        h("button", { type: "button", class: "chev", "aria-label": "Open " + (it.title || key) + " in Issues",
+          onclick: () => this.showIssue(key) }, "›")));
+    }
     return card;
   },
 
-  todayCrew() {
+  // The reporters, and only the reporters: every one of them runs once while
+  // the owner is asleep, which is what makes them one list. The Groundsman
+  // works through the day and gets his own line below.
+  todayOvernight() {
     const h = this.h;
-    const list = Object.keys(this.state.crew).map((k) => this.state.crew[k]);
+    const rank = { officials: 0, backroom: 1, "front-office": 2 };
+    const at = (g) => (rank[String(g)] === undefined ? 3 : rank[String(g)]);
+    const list = this.crewList().filter((c) => String(c.kind || "reporter") !== "actor");
     list.sort((a, b) => {
-      const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
+      const d = at(a.group) - at(b.group);
       return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
     });
     const card = h("section", { class: "card card-rows" },
-      h("h2", { class: "sect" }, "Crew", h("span", { class: "sect-note", text: this.num(list.length) + " agents" })));
+      h("h2", { class: "sect" }, "Overnight",
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) + " agents" }) : null));
     if (!list.length) {
-      card.append(h("p", { class: "empty", text: this.state.dbReady === false ? "No crew list" : "Waiting for the crew list" }));
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the crew list." : "No crew yet. Each agent writes its own card on its first run." }));
       return card;
     }
-    for (const c of list) {
-      const status = String(c.lastStatus || "none");
-      const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
-      card.append(h("div", { class: "crew-row" },
-        h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
-        h("div", { class: "crew-who" },
+    for (const c of list) card.append(this.crewRow(c));
+    return card;
+  },
+
+  // The hourly crew. The Groundsman's last run is a job he collected at some
+  // point today, not a report filed before breakfast, so reading it in a list
+  // headed Overnight said the wrong thing about both him and the reporters.
+  todayActors() {
+    const h = this.h;
+    const list = this.crewList().filter((c) => String(c.kind || "reporter") === "actor");
+    if (!list.length) return null;
+    list.sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Through the day",
+        h("span", { class: "sect-note", text: "every hour" })));
+    for (const c of list) card.append(this.crewRow(c));
+    return card;
+  },
+
+  crewRow(c) {
+    const h = this.h;
+    const tone = this.tone(c.lastStatus);
+    return h("div", { class: "row" },
+      h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
+      h("span", { class: "row-main" },
+        h("span", { class: "row-title" },
           h("span", { class: "crew-name", text: c.name || c.id }), " ",
           h("span", { class: "crew-role", text: c.role || "" })),
-        h("div", { class: "crew-line", text: c.lastHeadline || "No run yet" }),
-        h("time", { class: "crew-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
-        h("button", {
-          type: "button", class: "chev", "aria-label": "Runs for " + (c.name || c.id),
-          onclick: () => { this.filters.runsAgent = c.id; this.setActive("runs"); },
-        }, "›")));
-    }
-    return card;
+        h("span", { class: "row-sub", text: c.lastHeadline || "No run yet." })),
+      h("time", { class: "row-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
+      h("button", { type: "button", class: "chev", "aria-label": "Open the crew card for " + (c.name || c.id),
+        onclick: () => this.nav("crew") }, "›"));
   },
 
   todayNumbers() {
@@ -531,175 +930,281 @@ const OpsRoom = {
       h("h2", { class: "sect" }, "Yesterday's numbers",
         d ? h("span", { class: "sect-note", text: this.dayLabel(d.date || d.id) }) : null));
     if (!d) {
-      card.append(h("p", { class: "empty", text: "No numbers yet" }));
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the daily readings." : "No readings yet. The Scorer and the Chrome task write the daily numbers." }));
       return card;
     }
     const top = Array.isArray(d.topGames) && d.topGames.length ? d.topGames[0] : null;
-    const country = this.topShare(d.byCountry);
-    const mobile = this.mobileShare(d.byPlatform);
-    card.append(h("div", { class: "stats" },
-      this.stat("game views", this.has(d.gameViews) ? this.num(d.gameViews) : "not reported"),
-      this.stat("top game", top ? (top.name || top.id || "unknown") : "not reported", top && this.has(top.views) ? this.num(top.views) + " views" : null),
-      this.stat("top country", country ? country.key + " " + this.pct(country.share) : "not reported", country ? this.num(country.value) + " views" : null),
-      this.stat("mobile", mobile === null ? "not reported" : this.pct(mobile))));
-    card.append(h("hr", { class: "rule" }));
-    const gsc = ["gscClicks", "gscImpressions", "gscIndexed", "gscNotIndexed"];
-    if (!gsc.some((k) => this.has(d[k]))) {
-      card.append(h("p", { class: "empty", text: "no Search Console reading yet" }));
-      return card;
+    card.append(h("div", { class: "figures" },
+      this.figure("game views", this.has(d.gameViews) ? this.num(d.gameViews) : "not read"),
+      this.figure("top game", top ? (top.name || top.id || "unknown") : "not read",
+        top && this.has(top.views) ? this.num(top.views) + " views" : null),
+      this.figure("GA4 users", this.has(d.ga4Users) ? this.num(d.ga4Users) : "not read"),
+      this.figure("Search Console clicks", this.has(d.gscClicks) ? this.num(d.gscClicks) : "not read")));
+    const read = d.readAt && typeof d.readAt === "object" ? d.readAt : null;
+    const bits = [];
+    if (read) {
+      for (const k of Object.keys(read)) {
+        const when = this.ago(read[k]);
+        if (when) bits.push(this.agentName(k) + " read " + when);
+      }
     }
-    const labels = { gscClicks: "clicks", gscImpressions: "impressions", gscIndexed: "indexed", gscNotIndexed: "not indexed" };
-    const row = h("div", { class: "stats" });
-    for (const k of gsc) row.append(this.stat(labels[k], this.has(d[k]) ? this.num(d[k]) : "not reported"));
-    card.append(row);
+    card.append(h("p", { class: "sources", text: bits.length ? bits.join(". ") + "." : "No reading time recorded." }));
     return card;
   },
 
-  stat(label, value, sub) {
+  figure(label, value, sub) {
     const h = this.h;
-    return h("div", { class: "stat" },
-      h("div", { class: "stat-l", text: label }),
-      h("div", { class: "stat-v", text: value }),
-      sub ? h("div", { class: "stat-sub", text: sub }) : null);
+    return h("div", {},
+      h("div", { class: "fig-l", text: label }),
+      h("div", { class: "fig-v", text: value }),
+      sub ? h("div", { class: "fig-s", text: sub }) : null);
   },
 
-  latestDaily() {
-    let best = null;
-    for (const key of Object.keys(this.state.daily)) {
-      const d = this.state.daily[key];
-      const k = String(d.date || d.id || key);
-      if (!best || k > String(best.date || best.id)) best = d;
+  todayAlerts() {
+    const h = this.h;
+    const list = this.alertList().slice(0, 7);
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Sent to your phone",
+        list.length ? h("span", { class: "sect-note", text: "last " + this.num(list.length) }) : null));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the alerts list." : "Nothing has been pushed yet. The Groundsman records every push it sends in alerts." }));
+      return card;
     }
-    return best;
-  },
-
-  topShare(map) {
-    if (!map || typeof map !== "object") return null;
-    let total = 0;
-    let key = null;
-    let value = 0;
-    for (const k of Object.keys(map)) {
-      const n = Number(map[k]);
-      if (!Number.isFinite(n)) continue;
-      total += n;
-      if (n > value) { value = n; key = k; }
+    for (const a of list) {
+      card.append(h("div", { class: "row" },
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: a.message || "(no message)" }),
+          h("span", { class: "row-sub", text: this.alertKind(a.kind) })),
+        h("time", { class: "row-when", datetime: this.has(a.sentAt) ? String(a.sentAt) : null, text: this.ago(a.sentAt) })));
     }
-    if (!key || total <= 0) return null;
-    return { key: key, value: value, share: value / total };
+    return card;
   },
 
-  mobileShare(map) {
-    if (!map || typeof map !== "object") return null;
-    let total = 0;
-    for (const k of Object.keys(map)) {
-      const n = Number(map[k]);
-      if (Number.isFinite(n)) total += n;
-    }
-    if (total <= 0) return null;
-    const ios = Number(map.ios) || 0;
-    const android = Number(map.android) || 0;
-    return (ios + android) / total;
+  alertKind(kind) {
+    const map = { "new-critical": "new critical findings", "new-high": "new high findings",
+      digest: "morning digest", reminder: "a critical finding still open" };
+    return map[String(kind)] || String(kind || "push");
   },
 
-  // ---- Issues tab ----
-
-  severityOf(issue) {
-    const sev = String((issue && issue.severity) || "low").toLowerCase();
-    return ["critical", "high", "medium", "low"].indexOf(sev) < 0 ? "low" : sev;
-  },
-
-  agentName(id) {
-    const c = this.state.crew[id];
-    const name = c && typeof c === "object" ? c.name || c.id : null;
-    return name ? String(name) : String(id || "unknown");
-  },
+  // ---- Issues ----
 
   renderIssues(root) {
     const h = this.h;
-    const order = ["critical", "high", "medium", "low"];
-    const live = ["open", "reopened", "acknowledged"];
-    const groups = { critical: [], high: [], medium: [], low: [] };
-    const fixed = [];
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    for (const key of Object.keys(this.state.issues)) {
-      const it = this.state.issues[key];
-      const status = String(it.status || "open");
-      if (live.indexOf(status) >= 0) {
-        groups[this.severityOf(it)].push(it);
-      } else if (status === "fixed") {
-        const t = Date.parse(it.statusChangedAt);
-        if (Number.isFinite(t) && t >= cutoff) fixed.push(it);
-      }
-    }
-    const newest = (a, b) => (Date.parse(b.lastSeen) || 0) - (Date.parse(a.lastSeen) || 0)
-      || String(a.title || "").localeCompare(String(b.title || ""));
+    const all = this.issueList();
+    const groups = rankIssues(all);
+    const labels = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
     const kids = [];
-    let open = 0;
-    for (const sev of order) {
+    if (this.db && !this.canWrite) {
+      kids.push(h("p", { class: "readonly", text: "You are signed in as a viewer, so the buttons that change an issue are hidden. The owner gives the orders." }));
+    }
+    let total = 0;
+    for (const sev of SEVERITIES) {
       const list = groups[sev];
-      if (!list.length) continue;
-      open += list.length;
-      list.sort(newest);
-      kids.push(h("h2", { class: "sect sev-head is-" + sev }, sev,
+      total += list.length;
+      kids.push(h("h2", { class: "sect sev-head is-" + sev }, labels[sev],
         h("span", { class: "sect-note", text: this.num(list.length) })));
+      if (!list.length) {
+        kids.push(h("p", { class: "empty", text: "Nothing at this level." }));
+        continue;
+      }
       for (const it of list) kids.push(this.issueCard(it));
     }
-    if (!open) kids.push(h("p", { class: "empty", text: "Nothing open. The crew reports each morning." }));
-    if (fixed.length) kids.push(this.fixedRecently(fixed));
+    if (!total) {
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the issues list." : "Nothing open. The crew reports again tonight." }));
+    }
+    kids.push(this.snoozedList(all), this.fixedRecently(all));
     root.replaceChildren(...kids);
   },
 
   issueCard(it) {
     const h = this.h;
     const key = String(it.key || it.id || "");
+    const sev = this.severityOf(it);
     const status = String(it.status || "open");
-    const card = h("section", { class: "card issue is-" + this.severityOf(it), id: "issue-" + key, tabindex: "-1" },
-      h("div", { class: "issue-head" },
-        h("span", { class: "issue-title", text: it.title || key }),
-        status === "reopened" ? h("span", { class: "pill pill-fail", text: "reopened" }) : null,
-        status === "acknowledged" ? h("span", { class: "pill pill-warn", text: "acknowledged" }) : null));
-    const bits = [];
-    const first = this.dayLabel(it.firstSeen);
-    const last = this.ago(it.lastSeen);
-    const occ = Number(it.occurrences);
-    if (first) bits.push("first seen " + first);
-    if (last) bits.push("last seen " + last);
-    if (Number.isFinite(occ) && occ > 0) bits.push(this.num(occ) + "x");
-    card.append(h("div", { class: "issue-meta" },
-      h("span", { class: "issue-agent", text: this.agentName(it.agent) }),
-      bits.length ? h("span", { text: bits.join(", ") }) : null));
-    // detail and fix are plain text written by the agents: they are never HTML.
-    if (this.has(it.detail)) card.append(h("p", { class: "issue-text", text: it.detail }));
-    if (this.has(it.fix)) card.append(h("div", { class: "issue-fix" },
-      h("b", { text: "Fix" }), h("span", { class: "issue-text", text: it.fix })));
-    // Same test as the Rulebook: a read-only viewer is not offered buttons that
-    // can only ever answer "Could not save".
-    if (this.db && this.canWrite) {
-      const notice = h("p", { class: "issue-notice", hidden: true });
-      const actions = h("div", { class: "issue-actions" });
-      if (status !== "acknowledged") actions.append(this.issueButton(key, "acknowledged", "Acknowledge", notice));
-      actions.append(this.issueButton(key, "fixed", "Mark fixed", notice));
-      card.append(actions, notice);
+    const card = h("section", { class: "card issue is-" + sev, id: "issue-" + key, tabindex: "-1" });
+    const shown = !!this.expanded[key];
+
+    const body = h("div", { class: "issue-body", hidden: !shown });
+    if (this.has(it.detail)) body.append(this.markdownBlock(it.detail));
+    if (this.has(it.fix)) {
+      body.append(h("div", { class: "issue-fix" },
+        h("div", { class: "sub", text: "Suggested fix" }),
+        h("span", { class: "issue-text", text: it.fix })));
     }
+    if (this.has(it.orderId)) body.append(this.orderRow(String(it.orderId)));
+    if (this.db && this.canWrite) {
+      const notice = h("p", { class: "notice", hidden: true });
+      body.append(this.noteBox(key, it.ownerNote, notice));
+      body.append(this.issueActions(key, status, notice), notice);
+    } else if (this.has(it.ownerNote)) {
+      body.append(h("div", { class: "issue-fix" },
+        h("div", { class: "sub", text: "Your note" }),
+        h("span", { class: "issue-text", text: it.ownerNote })));
+    }
+
+    const head = h("button", { type: "button", class: "issue-head", "aria-expanded": shown ? "true" : "false" },
+      h("span", { class: "chip chip-agent", text: this.agentName(it.agent) }),
+      h("span", { class: "issue-title", text: it.title || key }),
+      status === "reopened" ? h("span", { class: "pill pill-crit", text: "seen again" }) : null,
+      status === "acknowledged" ? h("span", { class: "pill pill-muted", text: "acknowledged" }) : null);
+    head.addEventListener("click", () => {
+      const open = !this.expanded[key];
+      this.expanded[key] = open;
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+      body.hidden = !open;
+    });
+
+    const meta = h("div", { class: "issue-meta num" });
+    const days = this.daysOpen(it);
+    if (days !== null) meta.append(h("span", { text: this.dayCount(days) + " open" }));
+    const occ = Number(it.occurrences);
+    if (Number.isFinite(occ) && occ > 0) meta.append(h("span", { text: "seen " + this.num(occ) + (occ === 1 ? " time" : " times") }));
+    if (this.ago(it.lastSeen)) meta.append(h("span", { text: "last seen " + this.ago(it.lastSeen) }));
+
+    card.append(head, meta, body);
     return card;
   },
 
-  issueButton(key, status, label, notice) {
-    return this.h("button", {
-      type: "button", class: "btn",
-      onclick: (ev) => {
-        const btn = ev.currentTarget;
-        btn.disabled = true;
-        notice.hidden = true;
-        notice.textContent = "";
-        Promise.resolve().then(() => this.setIssueStatus(key, status)).catch((err) => {
-          notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
-          notice.hidden = false;
-          btn.disabled = false;
-        });
-      },
-    }, label);
+  orderRow(orderId) {
+    const h = this.h;
+    const order = this.state.orders[orderId] || null;
+    const row = h("div", { class: "order-row" }, h("span", { class: "sub", text: "Order" }));
+    if (!order) {
+      row.append(h("span", { class: "chip chip-queued", text: "given, not picked up yet" }));
+      return row;
+    }
+    const status = String(order.status || "queued");
+    row.append(h("span", { class: "chip chip-" + status, text: this.orderLabel(order) }));
+    const pr = this.safeUrl(order.prUrl);
+    if (pr) row.append(h("a", { class: "link", href: pr, target: "_blank", rel: "noopener noreferrer", text: "Read the pull request" }));
+    const box = h("div", {}, row);
+    if (this.has(order.result)) box.append(this.markdownBlock(order.result));
+    return box;
   },
+
+  orderLabel(order) {
+    const status = String(order.status || "queued");
+    const when = this.ago(order.finishedAt || order.pickedAt || order.createdAt);
+    return String(order.kind || "order") + ", " + (ORDER_WORDS[status] || status) + (when ? ", " + when : "");
+  },
+
+  // A snapshot lands on every write anywhere in the database and builds this box
+  // again, so what the owner has typed and not yet saved is held in this.drafts
+  // the way the Orders compose box holds its own answers in this.compose. The
+  // draft is dropped once the save it was holding has gone through.
+  noteBox(key, value, notice) {
+    const h = this.h;
+    const id = "note-" + key;
+    const area = h("textarea", { class: "note-box", rows: "2", id: id });
+    const draft = this.drafts[key];
+    area.value = draft !== undefined ? String(draft) : (this.has(value) ? String(value) : "");
+    area.addEventListener("input", () => { this.drafts[key] = area.value; });
+    const save = h("button", { type: "button", class: "btn", text: "Save note" });
+    save.addEventListener("click", () => {
+      save.disabled = true;
+      notice.hidden = true;
+      notice.textContent = "";
+      Promise.resolve().then(() => this.saveNote(key, area.value.trim())).then(() => {
+        delete this.drafts[key];
+        save.disabled = false;
+      }).catch((err) => {
+        notice.textContent = "Could not save your note: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        save.disabled = false;
+      });
+    });
+    return h("div", { class: "issue-fix" },
+      h("label", { class: "sub", for: id, text: "Your note" }), area,
+      h("div", { class: "actions" }, save));
+  },
+
+  issueActions(key, status, notice) {
+    const h = this.h;
+    const bar = h("div", { class: "actions" });
+    bar.append(this.actionButton("Fix", notice, () => this.orderFromIssue(key, "fix"), "btn-go"));
+    bar.append(this.actionButton("Explain", notice, () => this.orderFromIssue(key, "explain")));
+    bar.append(this.actionButton("Recheck", notice, () => this.orderFromIssue(key, "recheck")));
+    if (status !== "acknowledged") bar.append(this.actionButton("Acknowledge", notice, () => this.setIssueStatus(key, "acknowledged")));
+    for (const days of [3, 7, 30]) {
+      bar.append(this.actionButton("Ignore for " + days + " days", notice, () => this.snoozeIssue(key, days)));
+    }
+    bar.append(this.actionButton("Mark fixed", notice, () => this.setIssueStatus(key, "fixed")));
+    return bar;
+  },
+
+  actionButton(label, notice, run, extra) {
+    const btn = this.h("button", { type: "button", class: "btn" + (extra ? " " + extra : ""), text: label });
+    btn.addEventListener("click", () => {
+      btn.disabled = true;
+      notice.hidden = true;
+      notice.textContent = "";
+      Promise.resolve().then(run).catch((err) => {
+        notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        btn.disabled = false;
+      });
+    });
+    return btn;
+  },
+
+  snoozedList(all) {
+    const h = this.h;
+    const now = Date.now();
+    const list = [];
+    for (const it of all) {
+      // An issue that was fixed while it was being ignored is closed, not
+      // waiting to come back, so it belongs in the list below this one.
+      if (String(it.status || "") === "fixed") continue;
+      const until = Date.parse(it.snoozedUntil);
+      if (Number.isFinite(until) && until > now) list.push(it);
+    }
+    list.sort((a, b) => (Date.parse(a.snoozedUntil) || 0) - (Date.parse(b.snoozedUntil) || 0));
+    const det = h("details", { class: "fold" },
+      h("summary", {}, "Ignored for now ", h("span", { class: "num", text: this.num(list.length) })));
+    if (!list.length) {
+      det.append(h("p", { class: "empty", text: "Nothing is being ignored." }));
+      return det;
+    }
+    for (const it of list) {
+      det.append(h("div", { class: "row" },
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: it.title || it.key || it.id }),
+          h("span", { class: "row-sub", text: this.agentName(it.agent) })),
+        h("span", { class: "row-when", text: "back on " + this.dayLabel(it.snoozedUntil) })));
+    }
+    return det;
+  },
+
+  fixedRecently(all) {
+    const h = this.h;
+    const cutoff = Date.now() - 7 * DAY_MS;
+    const list = [];
+    for (const it of all) {
+      if (String(it.status || "") !== "fixed") continue;
+      const t = Date.parse(it.statusChangedAt);
+      if (Number.isFinite(t) && t >= cutoff) list.push(it);
+    }
+    list.sort((a, b) => (Date.parse(b.statusChangedAt) || 0) - (Date.parse(a.statusChangedAt) || 0));
+    const det = h("details", { class: "fold" },
+      h("summary", {}, "Fixed in the last 7 days ", h("span", { class: "num", text: this.num(list.length) })));
+    if (!list.length) {
+      det.append(h("p", { class: "empty", text: "Nothing closed this week." }));
+      return det;
+    }
+    for (const it of list) {
+      det.append(h("div", { class: "row" },
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: it.title || it.key || it.id }),
+          h("span", { class: "row-sub", text: this.agentName(it.agent) + (it.autoResolved ? ", closed by a clean run" : "") })),
+        h("span", { class: "row-when", text: this.ago(it.statusChangedAt) })));
+    }
+    return det;
+  },
+
+  // ---- writes ----
 
   setIssueStatus(key, status) {
     const db = this.db;
@@ -711,27 +1216,619 @@ const OpsRoom = {
     });
   },
 
-  fixedRecently(fixed) {
-    const h = this.h;
-    fixed.sort((a, b) => (Date.parse(b.statusChangedAt) || 0) - (Date.parse(a.statusChangedAt) || 0));
-    const det = h("details", { class: "fixed7" },
-      h("summary", {}, "Fixed in the last 7 days ", h("span", { class: "fixed7-count", text: this.num(fixed.length) })));
-    for (const it of fixed) {
-      det.append(h("div", { class: "fixed-row" },
-        h("span", { class: "fixed-title", text: it.title || it.key || it.id }),
-        it.autoResolved ? h("span", { class: "pill pill-muted", text: "auto" }) : null,
-        h("span", { class: "fixed-agent", text: this.agentName(it.agent) }),
-        h("span", { class: "fixed-when", text: this.ago(it.statusChangedAt) })));
-    }
-    return det;
+  snoozeIssue(key, days) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("issues/" + key).update({
+      status: "acknowledged",
+      snoozedUntil: new Date(Date.now() + days * DAY_MS).toISOString(),
+      statusChangedAt: new Date().toISOString(),
+    });
   },
 
-  // ---- Runs tab ----
+  saveNote(key, text) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("issues/" + key).update({ ownerNote: String(text || "") });
+  },
+
+  // A new order is the one document this page creates, so it is written with
+  // set, on an id the page made, and can never land on top of something else.
+  createOrder(kind, text, issueKey) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    const order = buildOrder(kind, text, issueKey, this.who);
+    return db.doc("orders/" + order.id).set(order).then(() => order);
+  },
+
+  orderFromIssue(key, kind) {
+    return this.createOrder(kind, "", key).then((order) =>
+      this.db.doc("issues/" + key).update({ orderId: order.id }));
+  },
+
+  // ---- Orders ----
+
+  renderOrders(root) {
+    const h = this.h;
+    const kids = [];
+    if (this.db && !this.canWrite) {
+      kids.push(h("p", { class: "readonly", text: "You are signed in as a viewer, so the box for giving an order is hidden. Only the owner gives orders." }));
+    } else if (this.db) {
+      kids.push(this.composeBox());
+    }
+    const all = this.orderList();
+    const buckets = { queued: [], running: [], done: [], failed: [] };
+    for (const o of all) {
+      const status = String(o.status || "queued");
+      const into = status === "cancelled" ? "failed" : (buckets[status] ? status : "failed");
+      buckets[into].push(o);
+    }
+    for (const pair of ORDER_GROUPS) {
+      const list = buckets[pair[0]];
+      if (!list.length) continue;
+      kids.push(h("h2", { class: "sect sev-head" }, pair[1],
+        h("span", { class: "sect-note", text: this.num(list.length) })));
+      for (const o of list) kids.push(this.orderCard(o));
+    }
+    if (!all.length) {
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the orders list."
+        : "Nothing in orders yet. Give one above, or press Fix, Explain or Recheck on an issue." }));
+    }
+    root.replaceChildren(...kids);
+  },
+
+  // The compose box holds its own answers in this.compose, so a re-render while
+  // the owner is still typing does not take the words back.
+  composeBox() {
+    const h = this.h;
+    const draft = this.compose;
+    const notice = h("p", { class: "notice", hidden: true });
+
+    const kinds = h("div", { class: "kinds", role: "group", "aria-label": "What kind of order" });
+    const buttons = [];
+    for (const pair of ORDER_KINDS) {
+      const id = pair[0];
+      const btn = h("button", { type: "button", class: "chip", "aria-pressed": draft.kind === id ? "true" : "false", text: pair[1] });
+      btn.addEventListener("click", () => {
+        draft.kind = id;
+        for (const b of buttons) b.el.setAttribute("aria-pressed", b.id === draft.kind ? "true" : "false");
+      });
+      buttons.push({ id: id, el: btn });
+      kinds.append(btn);
+    }
+
+    const area = h("textarea", { rows: "2", id: "order-text",
+      placeholder: "What you want done, in your own words." });
+    area.value = draft.text;
+    area.addEventListener("input", () => { draft.text = area.value; });
+
+    const select = h("select", { id: "order-issue" });
+    select.append(h("option", { value: "", text: "No issue" }));
+    for (const it of this.pickableIssues()) {
+      const key = String(it.key || it.id || "");
+      select.append(h("option", { value: key, text: key + ": " + (it.title || "no title") }));
+    }
+    select.value = draft.issueKey;
+    if (select.value !== draft.issueKey) { draft.issueKey = ""; select.value = ""; }
+    select.addEventListener("change", () => { draft.issueKey = select.value; });
+
+    const send = h("button", { type: "button", class: "btn btn-go", text: "Send" });
+    send.addEventListener("click", () => {
+      const text = area.value.trim();
+      if (draft.kind === "custom" && !text) {
+        notice.textContent = "A custom order needs your words. Say what you want done.";
+        notice.hidden = false;
+        area.focus();
+        return;
+      }
+      notice.textContent = "";
+      notice.hidden = true;
+      send.disabled = true;
+      Promise.resolve().then(() => this.sendOrder(draft.kind, text, select.value)).then(() => {
+        draft.text = "";
+        draft.issueKey = "";
+        area.value = "";
+        select.value = "";
+        send.disabled = false;
+      }).catch((err) => {
+        notice.textContent = "Could not send the order: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        send.disabled = false;
+      });
+    });
+
+    return h("section", { class: "card" },
+      h("h2", { class: "sect" }, "Give an order"),
+      h("div", { class: "compose" },
+        kinds,
+        h("label", { class: "field" }, h("span", { class: "sub", text: "What to do" }), area),
+        h("label", { class: "field" }, h("span", { class: "sub", text: "About an issue (optional)" }), select),
+        h("div", { class: "actions" }, send)),
+      notice,
+      h("p", { class: "hourly", text: "The Groundsman checks for orders every hour between 08:35 and 22:35 IST. To run it now, open its routine and press Run." }));
+  },
+
+  // Everything still live enough to be worth an order: open, seen again, or
+  // acknowledged but not yet closed.
+  pickableIssues() {
+    const out = [];
+    for (const it of this.issueList()) {
+      const status = String(it.status || "open");
+      if (status !== "open" && status !== "reopened" && status !== "acknowledged") continue;
+      out.push(it);
+    }
+    out.sort((a, b) => {
+      const d = SEVERITIES.indexOf(this.severityOf(a)) - SEVERITIES.indexOf(this.severityOf(b));
+      return d !== 0 ? d : String(a.key || a.id || "").localeCompare(String(b.key || b.id || ""));
+    });
+    return out;
+  },
+
+  orderCard(o) {
+    const h = this.h;
+    const id = String(o.id || "");
+    const status = String(o.status || "queued");
+    const mark = "order:" + id;
+    const shown = !!this.expanded[mark];
+
+    const body = h("div", { class: "order-body", hidden: !shown });
+    if (this.has(o.result)) body.append(this.markdownBlock(o.result));
+    else body.append(h("p", { class: "empty", text: status === "queued"
+      ? "Not picked up yet. The Groundsman writes what it found here."
+      : "Nothing written back yet." }));
+    const pr = this.safeUrl(o.prUrl);
+    const session = this.safeUrl(o.sessionUrl);
+    if (pr || session) {
+      body.append(h("div", { class: "order-links" },
+        pr ? h("a", { class: "link", href: pr, target: "_blank", rel: "noopener noreferrer", text: "Read the pull request" }) : null,
+        session ? h("a", { class: "link", href: session, target: "_blank", rel: "noopener noreferrer", text: "Open the session log" }) : null));
+    }
+    // Only a job nobody has started can be called off, so the button exists on
+    // a queued order and nowhere else.
+    if (status === "queued" && this.db && this.canWrite) {
+      const notice = h("p", { class: "notice", hidden: true });
+      body.append(h("div", { class: "actions" },
+        this.actionButton("Cancel this order", notice, () => this.cancelOrder(id))), notice);
+    }
+
+    const head = h("button", { type: "button", class: "order-head", "aria-expanded": shown ? "true" : "false" },
+      h("span", { class: "chip chip-kind", text: this.orderKind(o.kind) }),
+      h("span", { class: "order-title", text: this.orderTitle(o) }),
+      this.has(o.issueKey) ? h("span", { class: "chip chip-issue", text: String(o.issueKey) }) : null,
+      h("span", { class: "chip chip-" + status, text: ORDER_WORDS[status] || status }),
+      h("span", { class: "row-when", text: this.orderWhen(o) }));
+    head.addEventListener("click", () => {
+      const open = !this.expanded[mark];
+      this.expanded[mark] = open;
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+      body.hidden = !open;
+    });
+
+    return h("section", { class: "card" }, head, body);
+  },
+
+  orderKind(kind) {
+    for (const pair of ORDER_KINDS) if (pair[0] === String(kind)) return pair[1];
+    return String(kind || "order");
+  },
+
+  // An order given from an issue row carries no words of its own, so the issue
+  // it names does the talking.
+  orderTitle(o) {
+    if (this.has(o.text)) return String(o.text);
+    const key = String(o.issueKey || "");
+    const issue = key ? this.state.issues[key] : null;
+    if (issue && this.has(issue.title)) return String(issue.title);
+    if (key) return key;
+    return "No note";
+  },
+
+  orderWhen(o) {
+    const given = this.ago(o.createdAt);
+    const done = this.ago(o.finishedAt);
+    return (given ? "given " + given : "") + (done ? (given ? ", " : "") + "finished " + done : "");
+  },
+
+  // The button was drawn from the orders list as it stood, and the Groundsman
+  // may have picked the job up since. The status is read again from the state
+  // the snapshots keep current, so a job already in hand is left alone rather
+  // than marked cancelled underneath the agent doing it.
+  cancelOrder(id) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    const order = this.state.orders[String(id)];
+    if (!order || String(order.status || "queued") !== "queued") return Promise.resolve();
+    return db.doc("orders/" + id).update({ status: "cancelled", finishedAt: new Date().toISOString() });
+  },
+
+  // An order picked from the compose box's issue list is linked back to that
+  // issue the same way an order given from the row is.
+  sendOrder(kind, text, issueKey) {
+    const key = String(issueKey || "");
+    if (!key) return this.createOrder(kind, text, "");
+    return this.createOrder(kind, text, key).then((order) =>
+      this.db.doc("issues/" + key).update({ orderId: order.id }));
+  },
+
+  // ---- Alerts ----
+
+  renderAlerts(root) {
+    const h = this.h;
+    const cutoff = Date.now() - 30 * DAY_MS;
+    const list = this.alertList().filter((a) => {
+      const t = Date.parse(a.sentAt);
+      return !Number.isFinite(t) || t >= cutoff;
+    });
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Pushes sent",
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) + " in 30 days" }) : null));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the alerts list."
+        : "Nothing in alerts for the last 30 days. The Groundsman records every push it sends here." }));
+      root.replaceChildren(card);
+      return;
+    }
+    for (const a of list) {
+      const kind = String(a.kind || "push");
+      const named = this.alertTitles(a);
+      card.append(h("div", { class: "row" },
+        h("span", { class: "pill pill-" + this.alertTone(kind), title: this.alertKind(kind), text: kind }),
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: a.message || "No message" }),
+          named.length ? h("span", { class: "row-sub", text: named.join("; ") }) : null),
+        h("time", { class: "row-when", datetime: this.has(a.sentAt) ? String(a.sentAt) : null, text: this.stamp(a.sentAt) })));
+    }
+    root.replaceChildren(card);
+  },
+
+  // The keys a push named, read back as the titles the owner knows them by. A
+  // key whose issue has since been pruned still shows as the key.
+  alertTitles(a) {
+    const out = [];
+    const keys = Array.isArray(a.issueKeys) ? a.issueKeys : [];
+    for (const k of keys) {
+      const key = String(k);
+      const issue = this.state.issues[key];
+      out.push(issue && this.has(issue.title) ? String(issue.title) : key);
+    }
+    return out;
+  },
+
+  alertTone(kind) {
+    if (kind === "new-critical") return "crit";
+    if (kind === "new-high" || kind === "reminder") return "warn";
+    return "muted";
+  },
+
+  // ---- Stats ----
+
+  renderStats(root) {
+    // Every chart on the page ends on the same day. The lines used to end on
+    // the newest reading and the bars on the newest run, so a night the
+    // readings were taken and the reporters were not put two windows side by
+    // side that covered different fortnights.
+    const anchor = this.chartAnchor();
+    const kids = [
+      this.lineChart("Game views", "gameViews", anchor),
+      this.lineChart("GA4 users", "ga4Users", anchor),
+      this.lineChart("Search Console clicks", "gscClicks", anchor),
+      this.lineChart("Indexed pages", "gscIndexed", anchor),
+      this.severityChart(anchor),
+    ];
+    root.replaceChildren(this.h("section", { class: "card" }, ...kids));
+  },
+
+  // The last day either the readings or the runs know about, and the viewer's
+  // own day when neither knows any.
+  chartAnchor() {
+    let best = "";
+    const keep = (raw) => {
+      const key = String(raw || "");
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key) && key > best) best = key;
+    };
+    for (const d of this.dailyList()) keep(d.date || d.id);
+    for (const k of Object.keys(this.state.runs)) keep(this.state.runs[k].date);
+    return best || this.today();
+  },
+
+  // Fourteen calendar days ending on the anchor, so a night nobody read the
+  // numbers is a hole in the line rather than a zero.
+  statsDays(anchor) {
+    const byDate = {};
+    for (const d of this.dailyList()) {
+      const key = String(d.date || d.id || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
+      byDate[key] = d;
+    }
+    const last = /^\d{4}-\d{2}-\d{2}$/.test(String(anchor || "")) ? String(anchor) : this.chartAnchor();
+    const out = [];
+    for (let i = CHART_DAYS - 1; i >= 0; i -= 1) {
+      const key = this.shiftDay(last, -i);
+      out.push({ date: key, doc: byDate[key] || null });
+    }
+    return out;
+  },
+
+  shiftDay(key, delta) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ""));
+    if (!m) return String(key || "");
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    d.setUTCDate(d.getUTCDate() + Number(delta));
+    const pad = (n) => (n < 10 ? "0" + n : String(n));
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate());
+  },
+
+  // A plain date key is a day, not an instant, so it is read as written rather
+  // than pushed through the viewer's time zone.
+  dateLabel(key) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ""));
+    if (!m) return this.dayLabel(key);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return String(Number(m[3])) + " " + months[Number(m[2]) - 1];
+  },
+
+  lineChart(title, field, anchor) {
+    const h = this.h;
+    const days = this.statsDays(anchor);
+    const values = days.map((d) => {
+      const v = d.doc ? Number(d.doc[field]) : NaN;
+      return Number.isFinite(v) ? v : null;
+    });
+    let read = 0;
+    for (const v of values) if (v !== null) read += 1;
+    const box = h("div", { class: "chart" });
+    if (read < 2) {
+      box.append(h("div", { class: "chart-head" }, h("span", { class: "chart-title", text: title })));
+      box.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the daily readings."
+        : "Not enough readings yet. Two days in daily with this number draw the first line." }));
+      return box;
+    }
+
+    let lastAt = -1;
+    for (let i = 0; i < values.length; i += 1) if (values[i] !== null) lastAt = i;
+    const now = values[lastAt];
+    const before = lastAt >= 7 ? values[lastAt - 7] : null;
+    const head = h("div", { class: "chart-head" },
+      h("span", { class: "chart-title", text: title }),
+      h("span", { class: "chart-now", text: this.num(now) }));
+    if (before !== null) {
+      const delta = now - before;
+      head.append(h("span", {
+        class: "chart-delta" + (delta > 0 ? " is-up" : (delta < 0 ? " is-down" : "")),
+        text: (delta > 0 ? "+" : (delta < 0 ? "-" : "")) + this.num(Math.abs(delta)) + " on 7 days earlier",
+      }));
+    }
+    box.append(head, this.lineSvg(days, values, title));
+    return box;
+  },
+
+  // The plot box. A phone gets its own viewBox so the words inside the drawing
+  // are the same size as the words around it at either width.
+  frame() {
+    const narrow = this.narrow;
+    const width = narrow ? 356 : 636;
+    return { w: width, padL: 46, padR: 10, padT: 12, band: (width - 56) / CHART_DAYS };
+  },
+
+  lineSvg(days, values, title) {
+    const f = this.frame();
+    const plotH = 88;
+    const base = f.padT + plotH;
+    const svg = this.s("svg", { viewBox: "0 0 " + f.w + " " + (base + 26), role: "img",
+      "aria-label": title + ", the last " + CHART_DAYS + " days" });
+    let top = 0;
+    for (const v of values) if (v !== null && v > top) top = v;
+    const scale = top > 0 ? top : 1;
+    const at = (i) => f.padL + (i + 0.5) * f.band;
+    const up = (v) => base - (v / scale) * plotH;
+
+    for (const tick of this.ticks(top)) {
+      const y = up(tick);
+      svg.append(this.s("line", { class: "ch-grid", x1: f.padL, y1: y, x2: f.w - f.padR, y2: y }));
+      svg.append(this.s("text", { class: "ch-text", x: f.padL - 7, y: y + 4, "text-anchor": "end" }, this.num(tick)));
+    }
+
+    let run = [];
+    const flush = () => {
+      if (run.length > 1) {
+        let d = "";
+        for (let k = 0; k < run.length; k += 1) d += (k ? "L" : "M") + run[k][0].toFixed(1) + " " + run[k][1].toFixed(1);
+        svg.append(this.s("path", { class: "ch-line", d: d }));
+      } else if (run.length === 1) {
+        svg.append(this.s("circle", { class: "ch-dot", cx: run[0][0].toFixed(1), cy: run[0][1].toFixed(1), r: 3 }));
+      }
+      run = [];
+    };
+    for (let i = 0; i < values.length; i += 1) {
+      if (values[i] === null) { flush(); continue; }
+      run.push([at(i), up(values[i])]);
+    }
+    flush();
+
+    let lastAt = -1;
+    for (let i = 0; i < values.length; i += 1) if (values[i] !== null) lastAt = i;
+    if (lastAt >= 0) {
+      svg.append(this.s("circle", { class: "ch-dot", cx: at(lastAt).toFixed(1), cy: up(values[lastAt]).toFixed(1), r: 4 }));
+    }
+    svg.append(this.s("text", { class: "ch-text", x: f.padL, y: base + 20 }, this.dateLabel(days[0].date)));
+    svg.append(this.s("text", { class: "ch-text", x: f.w - f.padR, y: base + 20, "text-anchor": "end" },
+      this.dateLabel(days[days.length - 1].date)));
+    return svg;
+  },
+
+  // Zero, the highest reading, and one clean number between them. Nothing is
+  // labelled above the top of the data, so no tick promises a value the chart
+  // never reaches.
+  ticks(top) {
+    if (!(top > 0)) return [0];
+    const mid = this.cleanNumber(top / 2);
+    return mid > 0 && mid < top ? [0, mid, top] : [0, top];
+  },
+
+  cleanNumber(x) {
+    const v = Number(x);
+    if (!Number.isFinite(v) || v <= 0) return 0;
+    const power = Math.pow(10, Math.floor(Math.log10(v)));
+    const head = v / power;
+    const snapped = head >= 5 ? 5 : (head >= 2 ? 2 : 1);
+    return snapped * power;
+  },
+
+  // One bar per day, the day's distinct issue keys split by the severity the
+  // issue carries now. A key whose issue is no longer on file cannot be ranked,
+  // so it is left out rather than guessed at.
+  severityDays(anchor) {
+    const byDate = {};
+    for (const k of Object.keys(this.state.runs)) {
+      const r = this.state.runs[k];
+      const date = String(r.date || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      const seen = byDate[date] || (byDate[date] = {});
+      for (const raw of (Array.isArray(r.issueKeys) ? r.issueKeys : [])) seen[String(raw)] = true;
+    }
+    const last = /^\d{4}-\d{2}-\d{2}$/.test(String(anchor || "")) ? String(anchor) : this.chartAnchor();
+    const out = [];
+    for (let i = CHART_DAYS - 1; i >= 0; i -= 1) {
+      const date = this.shiftDay(last, -i);
+      const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+      let total = 0;
+      for (const key of Object.keys(byDate[date] || {})) {
+        const issue = this.state.issues[key];
+        if (!issue) continue;
+        counts[this.severityOf(issue)] += 1;
+        total += 1;
+      }
+      out.push({ date: date, counts: counts, total: total, ran: !!byDate[date] });
+    }
+    return out;
+  },
+
+  severityChart(anchor) {
+    const h = this.h;
+    const days = this.severityDays(anchor);
+    const box = h("div", { class: "chart" },
+      h("div", { class: "chart-head" }, h("span", { class: "chart-title", text: "Open issues by severity" })));
+    let ran = 0;
+    for (const d of days) if (d.ran) ran += 1;
+    if (ran < 2) {
+      box.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the runs list."
+        : "Not enough runs yet. Two days of runs naming issues draw the first bars." }));
+      return box;
+    }
+    box.append(this.severitySvg(days));
+    const legend = h("div", { class: "legend" });
+    for (const sev of SEVERITIES) {
+      legend.append(h("span", {}, h("span", { class: "swatch swatch-" + sev }), h("span", { text: sev })));
+    }
+    box.append(legend, this.severityTable(days));
+    return box;
+  },
+
+  severitySvg(days) {
+    const f = this.frame();
+    const plotH = 96;
+    const base = f.padT + plotH;
+    const svg = this.s("svg", { viewBox: "0 0 " + f.w + " " + (base + 26), role: "img",
+      "aria-label": "Open issues by severity for each of the last " + CHART_DAYS + " days" });
+    let top = 0;
+    for (const d of days) if (d.total > top) top = d.total;
+    const scale = top > 0 ? top : 1;
+    const up = (v) => base - (v / scale) * plotH;
+
+    for (const tick of this.ticks(top)) {
+      const y = up(tick);
+      svg.append(this.s("line", { class: "ch-grid", x1: f.padL, y1: y, x2: f.w - f.padR, y2: y }));
+      svg.append(this.s("text", { class: "ch-text", x: f.padL - 7, y: y + 4, "text-anchor": "end" }, this.num(tick)));
+    }
+
+    const barW = Math.min(24, Math.max(6, f.band - 6));
+    for (let i = 0; i < days.length; i += 1) {
+      const day = days[i];
+      const x = f.padL + i * f.band + (f.band - barW) / 2;
+      const parts = [];
+      for (const sev of SEVERITIES) if (day.counts[sev] > 0) parts.push(sev);
+      let foot = base;
+      for (let p = parts.length - 1; p >= 0; p -= 1) {
+        const sev = parts[p];
+        const full = (day.counts[sev] / scale) * plotH;
+        const last = p === 0;
+        // Two pixels of the card showing between segments is what separates
+        // them; no segment is given a border, which would add ink that is not
+        // data.
+        const drawn = Math.max(1, full - (last ? 0 : 2));
+        const y = foot - full;
+        const shape = last && drawn > 4
+          ? this.s("path", { class: "ch-" + sev, d: this.capPath(x, y, barW, drawn, 4) })
+          : this.s("rect", { class: "ch-" + sev, x: x.toFixed(1), y: y.toFixed(1), width: barW.toFixed(1), height: drawn.toFixed(1) });
+        shape.append(this.s("title", {}, this.dateLabel(day.date) + ": " + this.num(day.counts[sev]) + " " + sev));
+        svg.append(shape);
+        foot = y;
+      }
+    }
+    svg.append(this.s("text", { class: "ch-text", x: f.padL, y: base + 20 }, this.dateLabel(days[0].date)));
+    svg.append(this.s("text", { class: "ch-text", x: f.w - f.padR, y: base + 20, "text-anchor": "end" },
+      this.dateLabel(days[days.length - 1].date)));
+    return svg;
+  },
+
+  // A bar with its top two corners rounded and its foot square on the baseline.
+  capPath(x, y, w, hgt, r) {
+    const rr = Math.min(Number(r), w / 2, hgt);
+    const n = (v) => Number(v).toFixed(1);
+    return "M" + n(x) + " " + n(y + hgt) + "V" + n(y + rr)
+      + "A" + n(rr) + " " + n(rr) + " 0 0 1 " + n(x + rr) + " " + n(y)
+      + "H" + n(x + w - rr)
+      + "A" + n(rr) + " " + n(rr) + " 0 0 1 " + n(x + w) + " " + n(y + rr)
+      + "V" + n(y + hgt) + "Z";
+  },
+
+  // The same bars as numbers, for anyone who cannot separate four fills by eye.
+  severityTable(days) {
+    const h = this.h;
+    const table = h("table", { class: "grid-table" });
+    const head = h("tr", {}, h("th", { text: "Day" }));
+    for (const sev of SEVERITIES) head.append(h("th", { text: sev }));
+    table.append(h("thead", {}, head));
+    const rows = h("tbody", {});
+    for (const day of days) {
+      if (!day.ran) continue;
+      const tr = h("tr", {}, h("td", { text: this.dateLabel(day.date) }));
+      for (const sev of SEVERITIES) tr.append(h("td", { text: this.num(day.counts[sev]) }));
+      rows.append(tr);
+    }
+    table.append(rows);
+    return h("details", { class: "numbers" }, h("summary", {}, "Read the bars as numbers"),
+      h("div", { class: "scroll-x" }, table));
+  },
+
+  // The charts' own element maker. Nothing here is markup: every shape is an
+  // element in the SVG namespace, and every colour comes from a class whose
+  // rule reads a token.
+  s(tag, attrs, ...kids) {
+    const el = document.createElementNS(SVG_NS, tag);
+    const a = attrs || {};
+    for (const k of Object.keys(a)) {
+      const v = a[k];
+      if (v === null || v === undefined || v === false) continue;
+      el.setAttribute(k, String(v));
+    }
+    for (const kid of kids) {
+      if (kid === null || kid === undefined || kid === false) continue;
+      el.append(kid && kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return el;
+  },
+
+  // ---- Runs ----
 
   renderRuns(root) {
     const h = this.h;
     const sel = this.filters.runsAgent;
-    const crew = Object.keys(this.state.crew).map((k) => this.state.crew[k]);
+    const crew = this.crewList();
     crew.sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
     const chips = h("div", { class: "chips", role: "group", "aria-label": "Show runs for one agent" },
       this.agentChip("All", null, !sel));
@@ -752,7 +1849,8 @@ const OpsRoom = {
       kids.push(this.runCard(r));
     }
     if (kids.length === 1) {
-      kids.push(h("p", { class: "empty", text: sel ? "No runs for this agent yet." : "No runs yet." }));
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the runs list." : (sel ? "No runs for this agent yet." : "No runs yet.") }));
     }
     root.replaceChildren(...kids);
   },
@@ -760,14 +1858,13 @@ const OpsRoom = {
   agentChip(label, id, on) {
     return this.h("button", {
       type: "button", class: "chip", "aria-pressed": on ? "true" : "false",
-      onclick: () => { this.filters.runsAgent = id; this.render(); },
+      onclick: () => { this.setRunsAgent(id); this.render(); },
     }, label);
   },
 
   runCard(r) {
     const h = this.h;
-    const status = String(r.status || "");
-    const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+    const tone = this.tone(r.status);
     const det = h("details", { class: "run" },
       h("summary", {}, h("span", { class: "run-sum" },
         h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no status" : tone }),
@@ -778,7 +1875,7 @@ const OpsRoom = {
     if (this.has(r.details)) body.append(this.markdownBlock(r.details));
     const keys = Array.isArray(r.issueKeys) ? r.issueKeys : [];
     if (keys.length) {
-      const row = h("div", { class: "run-issues" }, h("span", { class: "run-issues-label", text: "Issues" }));
+      const row = h("div", { class: "run-issues" }, h("span", { class: "sub", text: "Issues" }));
       for (const k of keys) {
         const key = String(k);
         row.append(h("button", { type: "button", class: "chip chip-issue", onclick: () => this.showIssue(key) }, key));
@@ -790,12 +1887,12 @@ const OpsRoom = {
     return det;
   },
 
-  // The one place a run's Markdown enters the page as elements. renderMarkdown
+  // The one place an agent's Markdown enters the page as elements. renderMarkdown
   // has already parsed it and dropped the scripts, event handlers and script
   // URLs; the cleaned nodes are imported as they are, never serialised back
   // into markup. The protocol asks agents for at most 8 KB of details, so a
   // block twice that size is a runaway run: it is cut rather than allowed to
-  // freeze the tab.
+  // freeze the page.
   markdownBlock(md) {
     const box = this.h("div", { class: "md" });
     const text = String(md === null || md === undefined ? "" : md);
@@ -808,58 +1905,106 @@ const OpsRoom = {
   },
 
   showIssue(key) {
-    this.setActive("issues");
+    const already = this.active === "issues";
+    this.expanded[key] = true;
+    this.nav("issues");
+    // nav only builds the section when it changes, so a jump from one issue to
+    // another inside Issues asks for the rebuild itself, before the card it
+    // wants is looked up.
+    if (already) this.render();
     const card = document.getElementById("issue-" + key);
     if (!card) return;
     card.focus();
     card.scrollIntoView({ block: "center" });
   },
 
-  // ---- Crew tab ----
+  // ---- Crew ----
 
+  // Two kinds of crew member, and the two of us. A crew document written before
+  // the kind field existed is a reporter: nine of the ten were, and the one
+  // that acts says so.
   renderCrew(root) {
     const h = this.h;
-    const byGroup = {};
-    for (const key of Object.keys(this.state.crew)) {
-      const c = this.state.crew[key];
-      // The dugout is not in the database, and a group nobody recognises would
-      // otherwise drop an agent off the page, so both land in the backroom.
-      const g = String(c.group || "");
-      const known = g === "officials" || g === "backroom" || g === "front-office";
-      const into = known ? g : "backroom";
-      (byGroup[into] = byGroup[into] || []).push(c);
+    const reporters = [];
+    const actors = [];
+    for (const c of this.crewList()) {
+      (String(c.kind || "reporter") === "actor" ? actors : reporters).push(c);
     }
+    const byShift = (a, b) => {
+      const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
+      return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
+    };
+    reporters.sort(byShift);
+    actors.sort(byShift);
     const kids = [];
-    for (const pair of GROUPS) {
-      const key = pair[0];
-      const list = key === "dugout" ? DUGOUT.slice() : (byGroup[key] || []);
-      if (key !== "dugout") {
-        list.sort((a, b) => {
-          const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
-          return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
-        });
-      }
-      kids.push(h("h2", { class: "sect crew-head" }, pair[1],
-        h("span", { class: "sect-note", text: this.num(list.length) })));
-      if (!list.length) {
-        kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No crew list" : "Waiting for the crew list" }));
-        continue;
-      }
-      const grid = h("div", { class: "crew-grid" });
-      for (const c of list) grid.append(this.crewCard(c, key === "dugout"));
-      kids.push(grid);
-    }
+    kids.push(...this.crewBlock("Reporters", reporters,
+      "Nobody reports yet. Each agent writes its own card in crew on its first run."));
+    kids.push(...this.crewBlock("The Groundsman", actors,
+      "No Groundsman in crew yet. It writes its card on its first run."));
+    kids.push(h("h2", { class: "sect crew-head" }, "Dugout",
+      h("span", { class: "sect-note", text: this.num(DUGOUT.length) })));
+    const grid = h("div", { class: "crew-grid" });
+    for (const d of DUGOUT) grid.append(this.crewCard(d, true));
+    kids.push(grid);
     root.replaceChildren(...kids);
+  },
+
+  crewBlock(title, list, empty) {
+    const h = this.h;
+    const out = [h("h2", { class: "sect crew-head" }, title,
+      h("span", { class: "sect-note", text: this.num(list.length) }))];
+    if (!list.length) {
+      out.push(h("p", { class: "empty", text: this.state.dbReady === false ? "Waiting for the crew list." : empty }));
+      return out;
+    }
+    const card = h("section", { class: "card card-rows" });
+    for (const c of list) card.append(this.crewLine(c));
+    out.push(card);
+    return out;
+  },
+
+  // One row per crew member, and the card opens where the row is rather than on
+  // a page of its own, so the list keeps its place.
+  crewLine(c) {
+    const h = this.h;
+    const id = String(c.id || "");
+    const name = String(c.name || id);
+    const mark = "crew:" + id;
+    const shown = !!this.expanded[mark];
+    const tone = this.tone(c.lastStatus);
+    const panel = h("div", { class: "crew-panel", hidden: !shown }, this.crewCard(c, false));
+    const head = h("button", { type: "button", class: "crew-open", "aria-expanded": shown ? "true" : "false" },
+      h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
+      h("span", { class: "row-main" },
+        h("span", { class: "row-title" },
+          h("span", { class: "crew-name", text: name }), " ",
+          h("span", { class: "crew-role", text: c.role || "" })),
+        h("span", { class: "row-sub", text: this.has(c.lastHeadline) ? c.lastHeadline : "No run yet." })),
+      h("time", { class: "row-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
+      h("span", { class: "crew-chev", "aria-hidden": "true", text: "›" }));
+    head.addEventListener("click", () => {
+      const open = !this.expanded[mark];
+      this.expanded[mark] = open;
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+      panel.hidden = !open;
+    });
+    return h("div", { class: "crew-line" }, head, panel);
+  },
+
+  groupLabel(id) {
+    for (const pair of GROUPS) if (pair[0] === String(id)) return pair[1];
+    return String(id || "");
   },
 
   crewCard(c, isStatic) {
     const h = this.h;
     const id = String(c.id || "");
     const name = String(c.name || id);
-    const status = String(c.lastStatus || "none");
-    const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+    const tone = this.tone(c.lastStatus);
     const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
     try { drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
+    const where = isStatic ? "" : this.groupLabel(c.group).toLowerCase();
+    const role = String(c.role || "") + (where ? (c.role ? ", " : "") + where : "");
     const facts = h("dl", { class: "crew-facts" });
     facts.append(
       h("dt", { text: "Job" }), h("dd", { text: this.has(c.job) ? c.job : "Not recorded" }),
@@ -872,30 +2017,30 @@ const OpsRoom = {
       last.append(
         h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
         h("span", { text: c.lastHeadline }),
-        this.ago(c.lastRunAt) ? h("span", { class: "crew-ago", text: this.ago(c.lastRunAt) }) : null);
+        this.dayLabel(c.lastRunAt) ? h("span", { class: "crew-ago", text: this.dayLabel(c.lastRunAt) }) : null);
     }
-    facts.append(h("dt", { text: "Last run" }), last);
-    const card = h("section", { class: "card crew-card" + (isStatic ? "" : " is-click") },
+    facts.append(h("dt", { text: "Tonight" }), last);
+    const card = h("section", { class: "card crew-card" },
       h("div", { class: "crew-top" }, canvas,
         h("div", {},
           h("div", { class: "crew-card-name", text: name }),
-          h("div", { class: "crew-card-role", text: c.role || "" }))),
+          h("div", { class: "crew-card-role", text: role }))),
       facts);
     if (isStatic) return card;
-    const open = () => { this.filters.runsAgent = id; this.setActive("runs"); };
-    card.setAttribute("role", "button");
-    card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", "Runs for " + name);
-    card.addEventListener("click", open);
-    card.addEventListener("keydown", (ev) => {
-      if (ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
-      ev.preventDefault();
-      open();
-    });
+    const bar = h("div", { class: "actions" });
+    const runs = h("button", { type: "button", class: "btn", text: "See its runs" });
+    runs.addEventListener("click", () => { this.setRunsAgent(id); this.nav("runs"); });
+    bar.append(runs);
+    if (this.has(c.routineId)) {
+      bar.append(h("a", { class: "link", target: "_blank", rel: "noopener noreferrer",
+        href: "https://claude.ai/code/routines/" + encodeURIComponent(String(c.routineId)),
+        text: "Open the routine" }));
+    }
+    card.append(bar);
     return card;
   },
 
-  // ---- Rulebook tab ----
+  // ---- Rulebook ----
 
   renderRules(root) {
     const h = this.h;
@@ -907,7 +2052,8 @@ const OpsRoom = {
     const kids = [h("h2", { class: "sect" }, "House rules",
       h("span", { class: "sect-note", text: this.num(list.length) + " rules" }))];
     if (!list.length) {
-      kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No rulebook" : "No rules yet." }));
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the rulebook." : "No rules yet." }));
     } else {
       const ol = h("ol", { class: "rules" });
       for (const r of list) ol.append(this.ruleRow(r));
@@ -921,7 +2067,7 @@ const OpsRoom = {
     const h = this.h;
     const id = String(r.id || "");
     const li = h("li", { class: "card rule-row" });
-    const notice = h("p", { class: "issue-notice", hidden: true });
+    const notice = h("p", { class: "notice", hidden: true });
     const say = (err) => {
       notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
       notice.hidden = false;
@@ -965,7 +2111,7 @@ const OpsRoom = {
             remove.disabled = false;
           });
         });
-        kids.push(h("div", { class: "issue-actions" }, edit, remove, cancel));
+        kids.push(h("div", { class: "actions" }, edit, remove, cancel));
       }
       kids.push(notice);
       li.replaceChildren(...kids);
@@ -989,7 +2135,7 @@ const OpsRoom = {
           cancel.disabled = false;
         });
       });
-      li.replaceChildren(area, h("div", { class: "issue-actions" }, save, cancel), notice);
+      li.replaceChildren(area, h("div", { class: "actions" }, save, cancel), notice);
       area.focus();
     };
     show();
@@ -998,7 +2144,7 @@ const OpsRoom = {
 
   addRuleBox() {
     const h = this.h;
-    const notice = h("p", { class: "issue-notice", hidden: true });
+    const notice = h("p", { class: "notice", hidden: true });
     const area = h("textarea", { class: "rule-input", rows: "3", id: "rule-new" });
     const add = h("button", { type: "button", class: "btn", text: "Add rule" });
     add.addEventListener("click", () => {
@@ -1020,7 +2166,7 @@ const OpsRoom = {
       h("h2", { class: "sect" }, "Add a rule"),
       h("label", { class: "rule-label", for: "rule-new", text: "The rule, in one sentence" }),
       area,
-      h("div", { class: "issue-actions" }, add),
+      h("div", { class: "actions" }, add),
       notice);
   },
 
@@ -1045,6 +2191,63 @@ const OpsRoom = {
       if (Number.isFinite(n) && n > max) max = n;
     }
     return db.collection("rules").add({ text: text, order: max + 1, addedAt: this.today(), addedBy: "owner" });
+  },
+
+  // ---- small helpers ----
+
+  issueList() { return Object.keys(this.state.issues).map((k) => this.state.issues[k]); },
+
+  orderList() {
+    const list = Object.keys(this.state.orders).map((k) => this.state.orders[k]);
+    list.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+    return list;
+  },
+
+  alertList() {
+    const list = Object.keys(this.state.alerts).map((k) => this.state.alerts[k]);
+    list.sort((a, b) => (Date.parse(b.sentAt) || 0) - (Date.parse(a.sentAt) || 0));
+    return list;
+  },
+
+  crewList() { return Object.keys(this.state.crew).map((k) => this.state.crew[k]); },
+
+  dailyList() { return Object.keys(this.state.daily).map((k) => this.state.daily[k]); },
+
+  latestDaily() {
+    let best = null;
+    for (const d of this.dailyList()) {
+      if (!best || String(d.date || d.id) > String(best.date || best.id)) best = d;
+    }
+    return best;
+  },
+
+  severityOf(issue) {
+    const sev = String((issue && issue.severity) || "low").toLowerCase();
+    return SEVERITIES.indexOf(sev) < 0 ? "low" : sev;
+  },
+
+  tone(status) {
+    const s = String(status || "none");
+    return s === "ok" || s === "warn" || s === "fail" ? s : "none";
+  },
+
+  agentName(id) {
+    const c = this.state.crew[id];
+    const name = c && typeof c === "object" ? c.name || c.id : null;
+    return name ? String(name) : String(id || "unknown");
+  },
+
+  daysOpen(it) {
+    const t = Date.parse(it && it.firstSeen);
+    if (!Number.isFinite(t)) return null;
+    return Math.max(0, Math.floor((Date.now() - t) / DAY_MS));
+  },
+
+  dayCount(n) { return n === 1 ? "1 day" : this.num(n) + " days"; },
+
+  safeUrl(u) {
+    const s = String(u === null || u === undefined ? "" : u).trim();
+    return /^https?:\/\//i.test(s) ? s : null;
   },
 
   // The viewer's own day, so a rule added this evening is not dated tomorrow.
@@ -1086,12 +2289,6 @@ const OpsRoom = {
     return v.toLocaleString("en-US");
   },
 
-  pct(x) {
-    const v = Number(x);
-    if (!Number.isFinite(v)) return "0%";
-    return Math.round(v * 100) + "%";
-  },
-
   ago(iso) {
     const t = Date.parse(iso);
     if (!Number.isFinite(t)) return "";
@@ -1111,6 +2308,15 @@ const OpsRoom = {
     const d = new Date(t);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return d.getDate() + " " + months[d.getMonth()];
+  },
+
+  // A push went out at a moment, so it is shown in the clock the viewer reads.
+  stamp(iso) {
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return "";
+    const d = new Date(t);
+    const pad = (n) => (n < 10 ? "0" + n : String(n));
+    return this.dayLabel(iso) + ", " + pad(d.getHours()) + ":" + pad(d.getMinutes());
   },
 
   cronMinutes(cron) {
@@ -1133,27 +2339,31 @@ const OpsRoom = {
     return this.sanitize(String(out));
   },
 
-  // Run details are Markdown written by the agents, so the HTML marked returns
-  // is untrusted. Parse it into an inert document, drop the elements and the
-  // attributes that can run code, move the page or paint over it, unwrap
-  // anything Markdown never produces, and hand back that cleaned body. Nothing
-  // is serialised into a string on the way out: the nodes this walk inspected
-  // are the nodes the page shows, so there is no second parse that could read
-  // the markup differently from the first. Working on the parsed tree is also
-  // what closes the holes an attribute regex leaves open, such as an img tag
-  // written as src=x/onerror=1 with no space before the handler.
+  // Run details, issue details and order results are Markdown written by the
+  // agents, so the HTML marked returns is untrusted. Parse it into an inert
+  // document, drop the elements and the attributes that can run code, move the
+  // page or paint over it, unwrap anything Markdown never produces, and hand
+  // back that cleaned body. Nothing is serialised into a string on the way out:
+  // the nodes this walk inspected are the nodes the page shows, so there is no
+  // second parse that could read the markup differently from the first. Working
+  // on the parsed tree is also what closes the holes an attribute regex leaves
+  // open, such as an img tag written as src=x/onerror=1 with no space before
+  // the handler.
   sanitize(html) {
     let doc = null;
     try { doc = new DOMParser().parseFromString(String(html), "text/html"); } catch (err) { doc = null; }
     if (!doc || !doc.body) return null;
-    const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use"];
+    // "img" is on this list because the page shows no pictures at all: an image
+    // an agent wrote into its Markdown would be an outbound request made on the
+    // owner's behalf to whatever host the text named.
+    const drop = ["script", "style", "iframe", "object", "embed", "form", "base", "link", "meta", "use", "img"];
     const strip = ["style", "srcdoc", "formaction"];
     // Everything Markdown can produce, and nothing else. An element outside this
     // list is replaced by its own children rather than dropped, so its words
     // survive even though the tag does not; the drop list above still wins, and
     // takes its contents with it.
     const keep = ["p", "br", "hr", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote",
-      "pre", "code", "em", "strong", "b", "i", "a", "img", "table", "thead", "tbody", "tr", "th", "td",
+      "pre", "code", "em", "strong", "b", "i", "a", "table", "thead", "tbody", "tr", "th", "td",
       "del", "sup", "sub", "span"];
     for (const el of Array.from(doc.body.querySelectorAll("*"))) {
       const tag = String(el.localName || el.tagName).toLowerCase();
@@ -1166,9 +2376,15 @@ const OpsRoom = {
         if (name.slice(0, 2) === "on" || strip.indexOf(name) >= 0) { el.removeAttribute(attr.name); continue; }
         if (name !== "href" && name !== "src" && name !== "xlink:href") continue;
         // Browsers ignore whitespace and control characters inside a scheme, so
-        // "jav\tascript:alert(1)" runs. Take them out before the prefix check.
+        // a tab written into "javascript:" still runs. Take them out before the
+        // address is judged.
         const url = String(attr.value).replace(/[\s\u0000-\u001f\u007f]+/g, "").toLowerCase();
-        if (/^(javascript:|data:text\/html)/.test(url)) el.removeAttribute(attr.name);
+        // A list of the schemes known to be dangerous always misses one, so the
+        // address has to prove it is http or https instead, through the same
+        // check every link this page writes itself is held to. A link into the
+        // same block of Markdown is the one other thing allowed to stay.
+        if (name === "href" && url.charAt(0) === "#") continue;
+        if (!this.safeUrl(url)) el.removeAttribute(attr.name);
       }
     }
     return doc.body;
@@ -1177,17 +2393,17 @@ const OpsRoom = {
 
 window.OpsRoom = OpsRoom;
 </script>
-
 <script>
-// ---- The Clubhouse ----
-// A cross-section of the stand drawn pixel by pixel on one canvas, 160 by 232
-// logical pixels blown up by an integer SCALE. Nothing here loads a file: every
-// figure is an array of sixteen strings, one character per pixel, and every
-// number the scene shows is read from OpsRoom.state.
+// ---- The Office ----
+// A cross-section of the stand drawn pixel by pixel on one canvas, 160 by 256
+// logical pixels blown up by an integer SCALE, with the pitch across the front
+// of it. Nothing here loads a file: every figure is an array of sixteen
+// strings, one character per pixel, and every number the scene shows is read
+// from OpsRoom.state.
 
 const Clubhouse = {
   W: 160,
-  H: 232,
+  H: 256,
   SCALE: 3,
   t: 0,
   canvas: null,
@@ -1206,6 +2422,9 @@ const Clubhouse = {
   STEP_FRAMES: 48,
   HOLD_FRAMES: 32,
   FRAME_MS: 125,
+  // The index of the step in which the owner gives an order, so the pull
+  // request queue knows when to count the Groundsman's own.
+  ORDER_STEP: 12,
   step: 0,
   stepT: 0,
   playing: false,
@@ -1239,6 +2458,7 @@ const Clubhouse = {
     D: ["##.", "#.#", "#.#", "#.#", "##."],
     E: ["###", "#..", "##.", "#..", "###"],
     F: ["###", "#..", "##.", "#..", "#.."],
+    H: ["#.#", "#.#", "###", "#.#", "#.#"],
     I: ["###", ".#.", ".#.", ".#.", "###"],
     K: ["#.#", "#.#", "##.", "#.#", "#.#"],
     L: ["#..", "#..", "#..", "#..", "###"],
@@ -1440,6 +2660,24 @@ const Clubhouse = {
       "..mm....mm..",
       "..kkk..kkk..",
     ],
+    "groundsman": [
+      "...gggggg...",
+      ".gggggggggg.",
+      "..gssssssg..",
+      "..gskssksg..",
+      "..gssddssg..",
+      "....ssss....",
+      "..gggggggg..",
+      ".gggggggggg.",
+      ".gllllllllg.",
+      ".sggggggggs.",
+      "..gggggggg..",
+      "..gggggggg..",
+      "..nnnnnnnn..",
+      "..nnn..nnn..",
+      "..nn....nn..",
+      "..kkk..kkk..",
+    ],
     "session": [
       "...hhhhhh.ww",
       "..hhhhhhh.wk",
@@ -1461,20 +2699,30 @@ const Clubhouse = {
   },
 
   ROOMS: [
-    { id: "box", y: 12, label: "DIRECTORS' BOX", members: ["owner", "session"] },
-    { id: "officials", y: 54, label: "OFFICIALS", members: ["umpire", "editor"] },
-    { id: "backroom", y: 96, label: "BACKROOM", members: ["physio", "kit-manager", "steward"] },
-    { id: "front", y: 138, label: "FRONT OFFICE", members: ["analyst", "scout", "press-officer", "scorer"] },
-    { id: "basement", y: 180, label: "DB", members: [] },
+    { id: "box", y: 12, label: "DIRECTORS' BOX" },
+    { id: "officials", y: 54, label: "OFFICIALS" },
+    { id: "backroom", y: 96, label: "BACKROOM" },
+    { id: "front", y: 138, label: "FRONT OFFICE" },
+    { id: "basement", y: 180, label: "DB" },
   ],
 
-  // Where each figure stands when nothing is happening. Task 11 walks them off
-  // these marks and back again.
-  HOME_X: {
-    owner: 54, session: 98,
-    umpire: 46, editor: 88,
-    physio: 54, "kit-manager": 70, steward: 104,
-    analyst: 24, scout: 64, "press-officer": 90, scorer: 118,
+  // The floor map: where each figure stands when nothing is happening, twenty
+  // four pixels below its room's ceiling. The Groundsman is not on a floor at
+  // all. He works on the pitch across the front of the stand, so his mark sits
+  // below every other one on the scene.
+  FLOOR: {
+    owner: { room: "box", x: 54, y: 36 },
+    session: { room: "box", x: 98, y: 36 },
+    umpire: { room: "officials", x: 46, y: 78 },
+    editor: { room: "officials", x: 88, y: 78 },
+    physio: { room: "backroom", x: 54, y: 120 },
+    "kit-manager": { room: "backroom", x: 70, y: 120 },
+    steward: { room: "backroom", x: 104, y: 120 },
+    analyst: { room: "front", x: 24, y: 162 },
+    scout: { room: "front", x: 64, y: 162 },
+    "press-officer": { room: "front", x: 90, y: 162 },
+    scorer: { room: "front", x: 118, y: 162 },
+    groundsman: { room: "pitch", x: 60, y: 238 },
   },
 
   FIGURES: [],
@@ -1565,10 +2813,10 @@ const Clubhouse = {
     this.redraw();
   },
 
-  // Step 13 turns the lights out whatever the buttons say, and the preference
-  // comes back when the loop leaves it.
+  // The last step turns the lights out whatever the buttons say, and the
+  // preference comes back when the loop leaves it.
   applyNight() {
-    this.night = this.step === 12 ? true : this.nightPref;
+    this.night = this.step === this.STEPS.length - 1 ? true : this.nightPref;
   },
 
   // An integer scale keeps the pixels square. The element is capped at 480 CSS
@@ -1600,8 +2848,8 @@ const Clubhouse = {
 
   visible() {
     const room = window.OpsRoom;
-    if (room && room.active !== "clubhouse") return false;
-    const panel = document.getElementById("panel-clubhouse");
+    if (room && room.active !== "office") return false;
+    const panel = document.getElementById("panel-office");
     return !!panel && !panel.hidden;
   },
 
@@ -1738,64 +2986,53 @@ const Clubhouse = {
     for (const btn of this.figureButtons) {
       btn.setAttribute("aria-pressed", btn.getAttribute("data-figure") === id ? "true" : "false");
     }
-    this.renderClubhouseCard(id);
+    this.renderOfficeCard(id);
     this.redraw();
   },
 
-  // Name, role and the three standing facts, then what the crew member did
-  // tonight. The two of us in the dugout are not crew documents, so the Crew
-  // tab's static entries answer for them.
-  cardData(id) {
-    const crew = this.state().crew || {};
+  // Before the first run there is no crew document, so the figure list's own
+  // label stands in for the name rather than the bare id.
+  labelOf(id) {
+    for (const btn of this.figureButtons) {
+      if (btn.getAttribute("data-figure") === id) return btn.textContent || id;
+    }
+    return id;
+  },
+
+  // The card beside the canvas is the Crew section's card, built by the Crew
+  // section's own function, so the two never drift apart. The two of us in the
+  // dugout are not crew documents, so the dugout entries answer for us.
+  renderOfficeCard(id) {
+    const box = this.cardEl;
+    if (!box) return;
     const statics = typeof DUGOUT === "undefined" ? [] : DUGOUT;
     const staticKey = id === "session" ? "main-session" : id;
     for (const d of statics) {
       if (d.id !== staticKey) continue;
-      return { name: d.name, role: d.role, job: d.job, never: d.never, when: d.when, tonight: "Read Today; nothing to deploy." };
+      box.replaceChildren(OpsRoom.crewCard(d, true));
+      return;
     }
-    const c = crew[id] || {};
-    const has = (v) => OpsRoom.has(v);
-    // Before the first run there is no crew document, so the figure list's own
-    // label stands in for the name rather than the bare id.
-    let label = id;
-    for (const btn of this.figureButtons) {
-      if (btn.getAttribute("data-figure") === id) label = btn.textContent || id;
-    }
-    return {
-      name: has(c.name) ? c.name : label,
-      role: has(c.role) ? c.role : "",
-      job: has(c.job) ? c.job : "Not recorded",
-      never: has(c.never) ? c.never : "Not recorded",
-      when: has(c.when) ? c.when : "Not recorded",
-      tonight: has(c.lastHeadline) ? c.lastHeadline : "No run yet.",
-    };
-  },
-
-  renderClubhouseCard(id) {
-    const box = this.cardEl;
-    if (!box) return;
-    const h = OpsRoom.h;
-    const d = this.cardData(id);
-    const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
-    try { this.drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
-    const facts = h("dl", { class: "crew-facts" },
-      h("dt", { text: "Job" }), h("dd", { text: d.job }),
-      h("dt", { text: "Never" }), h("dd", { text: d.never }),
-      h("dt", { text: "When" }), h("dd", { text: d.when }),
-      h("dt", { text: "Tonight" }), h("dd", { text: d.tonight }));
-    box.replaceChildren(h("section", { class: "card" },
-      h("div", { class: "crew-top" }, canvas,
-        h("div", {},
-          h("div", { class: "crew-card-name", text: d.name }),
-          h("div", { class: "crew-card-role", text: d.role }))),
-      facts));
+    const crew = this.state().crew || {};
+    const c = crew[id] || { id: id, name: this.labelOf(id) };
+    box.replaceChildren(OpsRoom.crewCard(c, false));
   },
 
   // ---- the numbers, all of them from the page's own state ----
 
   state() {
     const room = window.OpsRoom;
-    return (room && room.state) || { crew: {}, issues: {}, daily: {}, status: null };
+    return (room && room.state) || { crew: {}, issues: {}, orders: {}, daily: {}, status: null };
+  },
+
+  // The Groundsman's lamp: on while an order is being carried out, dim while
+  // the queue is quiet.
+  orderRunning() {
+    const orders = this.state().orders || {};
+    for (const key of Object.keys(orders)) {
+      const o = orders[key] || {};
+      if (String(o.status || "") === "running") return true;
+    }
+    return false;
   },
 
   openIssues() {
@@ -1960,6 +3197,8 @@ const Clubhouse = {
     const step = this.STEPS[this.step] || null;
     const st = this.stepT;
     this.prBump = this.step > 5 || (this.step === 5 && st >= 32) ? 1 : 0;
+    // And the order the Groundsman collects comes back as a second one.
+    if (this.step > this.ORDER_STEP || (this.step === this.ORDER_STEP && st >= 44)) this.prBump = 2;
     this.drawSky(ctx, t);
     this.drawBuilding(ctx, t);
     this.drawBox(ctx, t);
@@ -1968,6 +3207,7 @@ const Clubhouse = {
     this.drawFront(ctx, t);
     this.drawBasement(ctx, t);
     if (step && typeof step.run === "function") step.run.call(this, st, ctx);
+    this.drawKit(ctx, t);
     this.drawFigures(ctx, t);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   },
@@ -1999,9 +3239,22 @@ const Clubhouse = {
       this.disc(ctx, 9, 28, 3);
     }
     ctx.fillStyle = c.earth;
-    ctx.fillRect(0, 178, 160, 54);
+    ctx.fillRect(0, 178, 160, 48);
     ctx.fillStyle = c.pitch;
     ctx.fillRect(0, 178, 160, 3);
+  },
+
+  // The pitch across the front of the stand, mown in stripes, where the
+  // Groundsman keeps his roller and his toolbox.
+  drawApron(ctx) {
+    const c = this.tone();
+    ctx.fillStyle = c.pitch;
+    ctx.fillRect(0, 226, 160, 30);
+    ctx.fillStyle = this.night ? "#0d2e1b" : "#27804a";
+    for (let x = 0; x < 160; x += 16) ctx.fillRect(x, 226, 8, 30);
+    ctx.fillStyle = c.pitchLine;
+    ctx.fillRect(0, 230, 160, 1);
+    this.drawText(ctx, "PITCH", 138, 233, c.pitchLine);
   },
 
   drawBuilding(ctx, t) {
@@ -2031,6 +3284,7 @@ const Clubhouse = {
     ctx.fillRect(14, 222, 132, 4);
     this.drawSign(ctx, t);
     this.drawPitch(ctx);
+    this.drawApron(ctx);
   },
 
   drawSign(ctx) {
@@ -2068,6 +3322,15 @@ const Clubhouse = {
     ctx.fillRect(116, 14, 1, 38);
     ctx.fillRect(116, 26, 22, 1);
     ctx.fillRect(116, 38, 22, 1);
+
+    // The door in the glass, onto the pitch. The Groundsman knocks on it when
+    // the owner has an order for him.
+    ctx.fillStyle = c.line;
+    ctx.fillRect(127, 38, 11, 14);
+    ctx.fillStyle = c.room;
+    ctx.fillRect(128, 39, 9, 13);
+    ctx.fillStyle = this.PAL.l;
+    ctx.fillRect(135, 45, 1, 2);
 
     ctx.fillStyle = c.line;
     ctx.fillRect(26, 22, 26, 16);
@@ -2295,6 +3558,39 @@ const Clubhouse = {
     for (let i = 0; i < 4; i += 1) {
       ctx.fillRect(26 + ((i * 28 + Math.floor(t / 2)) % 108), 211, 3, 3);
     }
+  },
+
+  // The Groundsman's kit. The roller follows him while he is on the grass and
+  // stays parked on his mark while he is away; the toolbox never moves, and
+  // the lamp over it is lit while an order is running.
+  drawKit(ctx, t) {
+    const home = this.homeOf("groundsman");
+    const p = this.pos.groundsman || home;
+    const onGrass = p.y >= home.y - 2;
+    const rx = Math.round(onGrass ? p.x : home.x) + 13;
+    const ry = home.y + 9;
+    ctx.fillStyle = this.PAL.m;
+    ctx.fillRect(rx, ry, 9, 6);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(rx, ry, 9, 1);
+    ctx.fillRect(rx, ry + 5, 9, 1);
+    ctx.fillRect(rx + 1 + (Math.floor(t / 2) % 3) * 3, ry + 1, 1, 4);
+    this.line(ctx, rx - 2, ry - 6, rx + 1, ry + 1);
+
+    const bx = home.x - 15;
+    const by = home.y + 6;
+    ctx.fillStyle = this.PAL.r;
+    ctx.fillRect(bx, by, 11, 8);
+    ctx.fillStyle = this.PAL.k;
+    ctx.fillRect(bx, by, 11, 1);
+    ctx.fillRect(bx + 4, by - 2, 3, 2);
+    ctx.fillRect(bx + 5, by - 10, 1, 8);
+    const lit = this.orderRunning();
+    ctx.fillStyle = lit ? this.PAL.y : this.PAL.m;
+    ctx.fillRect(bx + 3, by - 13, 5, 3);
+    if (!lit) return;
+    ctx.fillStyle = this.PAL.l;
+    for (let i = 0; i < 3; i += 1) ctx.fillRect(bx + 2 + i * 2, by - 9, 1, 2);
   },
 
   drawFigures(ctx, t) {
@@ -2641,6 +3937,37 @@ const Clubhouse = {
       },
     },
     {
+      at: "11:00",
+      text: "The owner gives an order; the Groundsman collects it and comes back with a pull request",
+      run(t, ctx) {
+        // Off the grass, up the front of the stand on the hoist rope, in at the
+        // box door, and back down to the pitch with the order in hand.
+        const home = this.homeOf("groundsman");
+        const alongOut = this.phase(t, 0, 10);
+        const alongBack = this.phase(t, 40, 47);
+        const upOut = this.phase(t, 10, 20);
+        const upBack = this.phase(t, 30, 40);
+        const x = home.x + (144 - home.x) * (alongOut - alongBack);
+        const y = home.y + (36 - home.y) * (upOut - upBack);
+        this.place("groundsman", x, y);
+        if (t < 10 || (t > 40 && t < 47)) this.moving.groundsman = true;
+        if (y < home.y - 1) {
+          const c = this.tone();
+          ctx.fillStyle = c.line;
+          this.line(ctx, Math.round(x) + 6, 9, Math.round(x) + 6, Math.round(y) + 2);
+        }
+        this.visit("owner", 84, t, 14, 32);
+        if (t >= 20 && t < 28) this.sheet(ctx, 138, 42);
+        if (t >= 28) {
+          const p = this.pos.groundsman;
+          this.sheet(ctx, Math.min(p.x + 12, 154), p.y + 6);
+        }
+        // The pull request card drops from the box down to the queue door.
+        const card = this.phase(t, 32, 44);
+        if (card > 0 && card < 1) this.sheet(ctx, Math.round(130 - 12 * card), Math.round(52 + 24 * card));
+      },
+    },
+    {
       at: "22:00",
       text: "Night. The lights dim. On Mondays the Steward patrols with the torch.",
       run(t, ctx) {
@@ -2661,11 +3988,10 @@ const Clubhouse = {
   ],
 };
 
-// Every figure stands on its room's floor, twenty four pixels below the ceiling.
-for (const room of Clubhouse.ROOMS) {
-  for (const id of room.members) {
-    Clubhouse.FIGURES.push({ id: id, room: room.id, home: { x: Clubhouse.HOME_X[id], y: room.y + 24 } });
-  }
+// One figure per mark on the floor map.
+for (const id of Object.keys(Clubhouse.FLOOR)) {
+  const mark = Clubhouse.FLOOR[id];
+  Clubhouse.FIGURES.push({ id: id, room: mark.room, home: { x: mark.x, y: mark.y } });
 }
 
 Clubhouse.nightPref = Clubhouse.night;
@@ -2673,10 +3999,10 @@ Clubhouse.resetPositions();
 
 // Called again on every database snapshot, so it binds once, keeps the frame
 // the day is on, and only refreshes what the new numbers changed.
-OpsRoom.renderClubhouse = function (root) {
+OpsRoom.renderOffice = function (root) {
   Clubhouse.mount(root);
   Clubhouse.redraw();
-  if (Clubhouse.selected) Clubhouse.renderClubhouseCard(Clubhouse.selected);
+  if (Clubhouse.selected) Clubhouse.renderOfficeCard(Clubhouse.selected);
   Clubhouse.autoPlay();
 };
 

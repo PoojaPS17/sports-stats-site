@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { MAX_AGE_MINUTES } from "../../scripts/lib/heartbeat";
+import { hostSection, type HostData } from "./opsHost";
 
 // Read-only checks the Ops Room's Umpire and Physio read over HTTPS, because the database only
 // accepts connections from the VM. Every section is aggregate: counts, ages, sizes and at most
@@ -294,11 +295,32 @@ export function dbHealthSection(pool: Pool) {
       `select relname as table, n_live_tup as live, n_dead_tup as dead from pg_stat_user_tables where n_live_tup + n_dead_tup > 1000 order by n_dead_tup desc limit 10`);
     const { rows: conn } = await pool.query<{ used: string; max: string }>(
       `select (select count(*) from pg_stat_activity) as used, current_setting('max_connections')::int as max`);
+    // Posture the Steward reads: the database must listen on loopback only (the firewall closes
+    // 5432, this is the second lock), and whether TLS is on. Settings only, never a password or host.
+    const { rows: settings } = await pool.query<{ listen: string; ssl: string }>(
+      `select current_setting('listen_addresses') as listen, current_setting('ssl') as ssl`);
+    // pg_stat_statements is optional on the VM; its query text carries $1 placeholders, never bound
+    // values, and is cut to 80 characters, so the public endpoint exposes shapes, not data.
+    const { rows: ext } = await pool.query<{ n: string }>(`select count(*) as n from pg_extension where extname = 'pg_stat_statements'`);
+    let slowStatements: { text: string; meanMs: number; calls: number }[] | null = null;
+    if (Number(ext[0].n) > 0) {
+      const { rows } = await pool.query<{ text: string; mean: string; calls: string }>(
+        `select left(query, 80) as text, mean_exec_time as mean, calls from pg_stat_statements
+         where calls > 10 order by mean_exec_time desc limit 5`);
+      slowStatements = rows.map((r) => ({ text: r.text, meanMs: Math.round(Number(r.mean)), calls: Number(r.calls) }));
+    }
+    const { rows: seq } = await pool.query<{ table: string; seq: string; idx: string; rows: string }>(
+      `select relname as table, seq_scan as seq, coalesce(idx_scan, 0) as idx, n_live_tup as rows from pg_stat_user_tables
+       where n_live_tup > 100000 and seq_scan > coalesce(idx_scan, 0) order by seq_scan desc limit 10`);
     return {
       sizeBytes: Number(size[0].bytes),
       largestTables: tables.map((t) => ({ table: t.table, bytes: Number(t.bytes) })),
       deadRowRatio: dead.map((d) => ({ table: d.table, live: Number(d.live), dead: Number(d.dead), ratio: Math.round((Number(d.dead) / Math.max(1, Number(d.live) + Number(d.dead))) * 1000) / 1000 })),
       connections: { used: Number(conn[0].used), max: Number(conn[0].max) },
+      listenAddresses: settings[0].listen,
+      ssl: settings[0].ssl === "on",
+      slowStatements,
+      seqScanHeavy: seq.map((s) => ({ table: s.table, seqScan: Number(s.seq), idxScan: Number(s.idx), rows: Number(s.rows) })),
     };
   });
 }
@@ -332,6 +354,7 @@ const SECTIONS: Record<string, (pool: Pool) => Promise<Section<unknown>> | Secti
   scraping: scrapingSection,
   integrity: integritySection,
   backup: () => backupSection(),
+  host: () => hostSection(),
   dbHealth: dbHealthSection,
   views: viewsSection,
 };
@@ -364,11 +387,16 @@ export interface OpsReport {
     f1SessionsNoResult: Finding;
   }>;
   backup: Section<{ present: boolean; newest: { name: string; ageHours: number; bytes: number } | null; previousBytes: number | null }>;
+  host: Section<HostData>;
   dbHealth: Section<{
     sizeBytes: number;
     largestTables: { table: string; bytes: number }[];
     deadRowRatio: { table: string; live: number; dead: number; ratio: number }[];
     connections: { used: number; max: number };
+    listenAddresses: string;
+    ssl: boolean;
+    slowStatements: { text: string; meanMs: number; calls: number }[] | null;
+    seqScanHeavy: { table: string; seqScan: number; idxScan: number; rows: number }[];
   }>;
   views: Section<{ yesterday: DayViews; today: DayViews }>;
 }
