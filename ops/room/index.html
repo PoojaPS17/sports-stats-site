@@ -1,309 +1,390 @@
 <title>Ops Room</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap">
 <style>
+/* Light palette. Every colour on the page comes from one of these. */
 :root {
-  --bg: #f3f4f8; --surface: #ffffff; --surface-muted: #eceef4; --border: #dde1ea; --border-strong: #c3cad8;
-  --text: #0b1324; --text-muted: #5a6478; --text-faint: #8b95a8;
-  --sig: #c6f135; --sig-ink: #4d7c0f; --sig-soft: #eef9c9; --sig-on: #0b1324;
-  --mast: #0b1324; --mast-2: #121c33; --mast-text: #eef1f7; --mast-muted: #9aa5bd; --mast-line: rgba(255,255,255,.08);
-  --ok: #15803d; --warn: #d97706; --fail: #b91c1c; --live: #ff3b5c;
-  --display: "Barlow Condensed", "Arial Narrow", sans-serif; --body: "Barlow", system-ui, sans-serif;
+  --bg: #f1f4fb;
+  --panel: #ffffff;
+  --panel-2: #e8edf8;
+  --line: #d6deee;
+  --text: #0f1a2e;
+  --muted: #5a6780;
+  --accent: #1d5fd6;
+  --accent-soft: #e1eafd;
+  --ok: #4f7a0c;
+  --crit: #c0241c;
+  --high: #b95c07;
+  --medium: #8d6f08;
+  --low: #64708c;
+  --warn: #a8560a;
+  --ui: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(15, 26, 46, .07);
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0b1324; --surface: #121c33; --surface-muted: #182342; --border: #24304f; --border-strong: #34426a; --text: #eef1f7; --text-muted: #9aa5bd; --text-faint: #6f7b96; --sig-ink: #c6f135; --sig-soft: #1d2a12; } }
-:root[data-theme="dark"] { --bg: #0b1324; --surface: #121c33; --surface-muted: #182342; --border: #24304f; --border-strong: #34426a; --text: #eef1f7; --text-muted: #9aa5bd; --text-faint: #6f7b96; --sig-ink: #c6f135; --sig-soft: #1d2a12; }
-body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--body); margin: 0; padding-block: 0 32px; padding-inline: 16px; }
-
-/* Tokens added on top of the site set: readable ink for the state colours in both themes. */
-:root { --ok-ink: #15803d; --warn-ink: #a35709; --fail-ink: #b91c1c; --radius: 10px; --card-shadow: 0 1px 2px rgba(11,19,36,.06); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ok-ink: #5fd88a; --warn-ink: #f2b43c; --fail-ink: #ff8d8d; --card-shadow: 0 1px 2px rgba(0,0,0,.45); } }
-:root[data-theme="dark"] { --ok-ink: #5fd88a; --warn-ink: #f2b43c; --fail-ink: #ff8d8d; --card-shadow: 0 1px 2px rgba(0,0,0,.45); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1a33; --panel: #132648; --panel-2: #0f2043; --line: #1c3561;
+    --text: #e8eefb; --muted: #94a4c6; --accent: #7cadff; --accent-soft: #15294d;
+    --ok: #c6ff00; --crit: #ff8178; --high: #ffb066; --medium: #ecd176; --low: #8c9dbe; --warn: #ffc46b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .45);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1a33; --panel: #132648; --panel-2: #0f2043; --line: #1c3561;
+  --text: #e8eefb; --muted: #94a4c6; --accent: #7cadff; --accent-soft: #15294d;
+  --ok: #c6ff00; --crit: #ff8178; --high: #ffb066; --medium: #ecd176; --low: #8c9dbe; --warn: #ffc46b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45);
+}
 
 *, *::before, *::after { box-sizing: border-box; }
-:focus-visible { outline: 2px solid var(--sig-ink); outline-offset: 2px; }
-.mast :focus-visible { outline-color: var(--sig); }
+body { background: var(--bg); color: var(--text); font: 15px/1.55 var(--ui); margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
 
-.mast { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; margin-inline: -16px; padding-inline: 16px;
-  background: var(--mast); background-image: linear-gradient(180deg, var(--mast-2), var(--mast));
-  color: var(--mast-text); border-bottom: 2px solid var(--sig); }
-.mast-in { max-width: 1080px; margin: 0 auto; display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; padding: 10px 0 6px; }
-.wordmark { font-family: var(--display); font-weight: 800; font-size: 27px; line-height: 1; letter-spacing: .05em; text-transform: uppercase; }
-.wordmark::after { content: ""; display: inline-block; width: 9px; height: 9px; background: var(--sig); margin-left: 8px; vertical-align: 2px; }
-.site { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--mast-muted); }
-.mast-status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
-.mast .dot-ok { background: var(--sig); }
-.mast .dot-fail { background: var(--live); }
-.mast .dot-none { background: var(--mast-muted); }
+/* ---- shell ---- */
+.shell { display: flex; align-items: flex-start; }
+main { flex: 1 1 auto; min-width: 0; max-width: 760px; padding-inline: 16px; padding-block: 22px 64px; }
+main h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 4px; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
 
-.tabs-scroll { max-width: 1080px; margin: 0 auto; overflow-x: auto; scrollbar-width: none; }
-.tabs-scroll::-webkit-scrollbar { display: none; }
-.tabs { display: flex; gap: 2px; min-width: max-content; }
-.tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--mast-muted);
-  font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-  padding: 9px 12px 7px; cursor: pointer; white-space: nowrap; }
-.tab:hover { color: var(--mast-text); }
-.tab[aria-selected="true"] { color: var(--mast-text); border-bottom-color: var(--sig); }
-@media (prefers-reduced-motion: no-preference) { .tab { transition: color .15s ease, border-color .15s ease; } .chev { transition: background .15s ease, border-color .15s ease; } }
-
-main { max-width: 1080px; margin: 0 auto; }
-[role="tabpanel"] { padding-top: 16px; }
-
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 13px 14px; margin: 0 0 14px; }
-.card-rows { padding-bottom: 0; }
-.card.alert { border-color: var(--fail); border-left: 4px solid var(--fail); }
-.sect { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: 14px;
-  letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); margin: 0; }
-.sect::before { content: ""; width: 9px; height: 15px; background: var(--sig); flex: none; }
-.sect .sect-note { margin-left: auto; font-weight: 600; font-size: 13px; letter-spacing: .06em; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.empty { color: var(--text-muted); margin: 8px 0 0; }
-
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint); display: inline-block; flex: none; }
-.dot-ok { background: var(--ok-ink); }
-.dot-warn { background: var(--warn-ink); }
-.dot-fail { background: var(--fail-ink); }
-.dot-none { background: var(--border-strong); }
-.dot-lg { width: 13px; height: 13px; }
-
-.banner { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; margin-top: 8px; }
-.banner-state { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; letter-spacing: .02em; }
-.is-ok { color: var(--ok-ink); }
-.is-fail { color: var(--fail-ink); }
-.banner-meta { color: var(--text-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--surface-muted);
-  border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; color: var(--text-muted); }
-.banner-time { margin-left: auto; color: var(--text-faint); font-size: 12px; }
-.pill { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em; text-transform: uppercase;
-  padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
-.pill-warn { color: var(--warn-ink); }
-
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 8px; margin-top: 10px; }
-.tile { background: var(--surface-muted); border-radius: 0 8px 8px 0; border-left: 4px solid var(--border-strong); padding: 8px 10px; }
-.tile-n { display: block; font-family: var(--display); font-weight: 800; font-size: 27px; line-height: 1; font-variant-numeric: tabular-nums; }
-.tile-l { display: block; margin-top: 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.tile-critical { border-left-color: var(--fail); } .tile-critical .tile-n { color: var(--fail-ink); }
-.tile-high { border-left-color: var(--warn); } .tile-high .tile-n { color: var(--warn-ink); }
-.tile-medium { border-left-color: var(--sig); }
-.tile-low { border-left-color: var(--border-strong); } .tile-low .tile-n { color: var(--text-muted); }
-.tile.is-zero .tile-n { color: var(--text-faint); }
-
-.crew-row { display: grid; align-items: center; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--border);
-  grid-template-columns: 10px minmax(0, 1fr) auto 28px; grid-template-areas: "dot who when chev" "pad line line line"; }
-.crew-row .dot { grid-area: dot; }
-.crew-who { grid-area: who; min-width: 0; }
-.crew-line { grid-area: line; min-width: 0; color: var(--text-muted); font-size: 14px; overflow-wrap: anywhere; }
-.crew-when { grid-area: when; color: var(--text-faint); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.chev { grid-area: chev; appearance: none; background: none; border: 1px solid var(--border); border-radius: 6px;
-  color: var(--text-muted); width: 28px; height: 28px; line-height: 1; font-size: 17px; cursor: pointer; }
-.chev:hover { background: var(--surface-muted); border-color: var(--border-strong); color: var(--text); }
-.crew-name { font-weight: 600; }
-.crew-role { color: var(--text-muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; font-family: var(--display); }
-@media (min-width: 720px) {
-  .crew-row { grid-template-columns: 10px minmax(150px, 20%) minmax(0, 1fr) auto 28px; grid-template-areas: "dot who line when chev"; }
+/* ---- sidebar ---- */
+.side { flex: none; width: 232px; background: var(--panel); border-right: 1px solid var(--line);
+  padding: 18px 14px 28px; position: sticky; top: env(safe-area-inset-top, 0px);
+  max-height: 100vh; overflow-y: auto; align-self: flex-start; }
+.side-head { display: flex; align-items: center; gap: 10px; }
+.mark { display: grid; min-width: 0; }
+.mark-sm { font-size: 11px; font-weight: 800; letter-spacing: .18em; color: var(--muted); }
+.mark-lg { font-size: 20px; font-weight: 800; line-height: 1.1; letter-spacing: -.01em; }
+.side-toggle { display: none; margin-left: auto; appearance: none; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 9px; color: var(--text); font: inherit; font-weight: 600;
+  font-size: 14px; padding: 7px 12px; cursor: pointer; }
+.side-state { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; font-size: 13px; color: var(--muted); }
+.side-sheet { display: grid; gap: 1px; }
+.side-sheet a { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px;
+  color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; }
+.side-sheet a:hover { background: var(--panel-2); }
+.side-sheet a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.side-group { margin: 14px 0 3px; padding-inline: 10px; font-size: 10px; font-weight: 800;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.badge { margin-left: auto; min-width: 22px; text-align: center; font-size: 12px; font-weight: 800;
+  font-variant-numeric: tabular-nums; border-radius: 999px; padding: 1px 7px;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+.badge.is-hot { color: var(--crit); border-color: currentColor; background: none; }
+@media (min-width: 761px) {
+  .side-sheet[hidden] { display: grid !important; }
+}
+@media (max-width: 760px) {
+  .shell { display: block; }
+  .side { width: auto; position: sticky; top: 0; max-height: none; overflow: visible;
+    border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-top, 0px)); }
+  .side-toggle { display: inline-flex; }
+  .side-state { margin-bottom: 0; }
+  .side-sheet { margin-top: 10px; }
+  main { max-width: none; }
 }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 14px; margin-top: 10px; }
-.stat-l { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.stat-v { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stat-sub { font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.rule { border: 0; border-top: 1px solid var(--border); margin: 12px 0 0; }
-.md :is(h1, h2, h3) { font-family: var(--display); letter-spacing: .02em; }
-.md pre { overflow-x: auto; background: var(--surface-muted); padding: 10px; border-radius: 8px; }
-
-/* Issues tab */
-.sev-head { margin: 18px 0 8px; }
-.sev-head:first-child { margin-top: 0; }
-.sev-head .sect-note { letter-spacing: .04em; }
-.sev-head.is-critical::before, .sev-head.is-high::before { background: var(--fail); }
-.sev-head.is-medium::before { background: var(--warn); }
-.sev-head.is-low::before { background: var(--border-strong); }
-.issue { border-left: 4px solid var(--border-strong); }
-.issue.is-critical, .issue.is-high { border-left-color: var(--fail); }
-.issue.is-medium { border-left-color: var(--warn); }
-.issue.is-low { border-left-color: var(--border-strong); }
-.issue-head { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; }
-.issue-title { font-weight: 600; overflow-wrap: anywhere; }
-.issue-meta { display: flex; align-items: baseline; gap: 2px 8px; flex-wrap: wrap; margin-top: 3px;
-  color: var(--text-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
-.issue-agent { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--text-muted); }
-.issue-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
-p.issue-text { margin: 9px 0 0; }
-.issue-fix { margin: 9px 0 0; }
-.issue-fix b { display: block; font-family: var(--display); font-weight: 800; font-size: 13px;
-  letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
-.issue-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
-.btn { appearance: none; background: var(--surface-muted); border: 1px solid var(--border-strong); border-radius: 7px;
-  color: var(--text); font: inherit; font-size: 14px; padding: 6px 12px; cursor: pointer; }
-.btn:hover:not(:disabled) { border-color: var(--sig-ink); color: var(--sig-ink); }
+/* ---- shared furniture ---- */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 15px; margin: 0 0 14px; }
+.card-rows { padding-bottom: 2px; }
+.card-alert { border-color: var(--crit); }
+.sect { display: flex; align-items: center; gap: 8px; margin: 0 0 8px;
+  font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.sect-note { margin-left: auto; font-size: 13px; font-weight: 800; letter-spacing: .02em;
+  text-transform: none; color: var(--muted); }
+.empty { color: var(--muted); margin: 6px 0 10px; font-size: 14px; }
+.sub { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.link { color: var(--accent); font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--low); display: inline-block; flex: none; }
+.dot-ok { background: var(--ok); }
+.dot-warn { background: var(--warn); }
+.dot-fail { background: var(--crit); }
+.dot-none { background: var(--line); }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+.pill { font-size: 12px; font-weight: 800; letter-spacing: .04em; padding: 1px 9px; border-radius: 999px;
+  border: 1px solid currentColor; }
+.pill-warn { color: var(--warn); }
+.pill-crit { color: var(--crit); }
+.pill-muted { color: var(--muted); }
+.chip { appearance: none; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+  color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; padding: 3px 11px; cursor: pointer; }
+.chip:hover { color: var(--text); border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.btn { appearance: none; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px;
+  color: var(--text); font: inherit; font-size: 14px; font-weight: 600; padding: 6px 12px; cursor: pointer; }
+.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .btn:disabled { opacity: .55; cursor: default; }
-.issue-notice { margin: 8px 0 0; color: var(--fail-ink); font-size: 13px; }
-.pill-fail { color: var(--fail-ink); }
-.pill-muted { color: var(--text-faint); }
-.fixed7-count { color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.fixed7 { margin-top: 18px; color: var(--text-muted); }
-.fixed7 > summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 15px;
-  letter-spacing: .06em; text-transform: uppercase; }
-.fixed-row { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; padding: 7px 0;
-  border-top: 1px solid var(--border); font-size: 14px; }
-.fixed-row:first-of-type { margin-top: 6px; }
-.fixed-title { color: var(--text); overflow-wrap: anywhere; }
-.fixed-agent, .fixed-when { color: var(--text-faint); font-size: 12px; }
-.fixed-when { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.btn-go { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+.notice { margin: 8px 0 0; color: var(--crit); font-size: 13px; }
+.chev { appearance: none; background: none; border: 1px solid var(--line); border-radius: 8px;
+  color: var(--muted); width: 28px; height: 28px; line-height: 1; font-size: 17px; cursor: pointer; flex: none; }
+.chev:hover { background: var(--panel-2); color: var(--text); }
+.readonly { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+.md { overflow-wrap: anywhere; font-size: 14px; }
+.md :is(p, ul, ol, blockquote) { margin: 7px 0; }
+.md :is(h1, h2, h3, h4) { margin: 12px 0 6px; font-size: 16px; }
+.md :is(img, table) { max-width: 100%; }
+.md pre { overflow-x: auto; background: var(--panel-2); padding: 10px; border-radius: 8px; }
+.md table { border-collapse: collapse; }
+.md :is(td, th) { border: 1px solid var(--line); padding: 3px 7px; text-align: left; }
+.scroll-x { overflow-x: auto; }
 
-/* Runs tab */
+/* ---- Today ---- */
+.statline { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; font-size: 14px; }
+.state { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 17px; }
+.is-ok { color: var(--ok); }
+.is-crit { color: var(--crit); }
+.fact { color: var(--muted); font-variant-numeric: tabular-nums; }
+.when { margin-left: auto; font-size: 12px; }
+.nudge { margin: 0 0 10px; padding: 8px 11px; border-radius: 9px; font-size: 14px; font-weight: 600;
+  color: var(--high); border: 1px solid currentColor; }
+.row { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap;
+  padding: 10px 0; border-top: 1px solid var(--line); }
+.row:first-of-type { border-top: 0; }
+.row-main { min-width: 0; flex: 1 1 220px; }
+.row-title { font-weight: 600; overflow-wrap: anywhere; }
+.row-sub { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.row-when { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.crew-name { font-weight: 800; }
+.crew-role { color: var(--muted); font-size: 13px; }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 14px; margin-top: 8px; }
+.fig-l { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.fig-v { font-size: 21px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.fig-s { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sources { margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+
+/* ---- Issues ---- */
+.sev-head { margin-top: 22px; }
+.sev-head:first-child { margin-top: 0; }
+.issue { padding-left: 11px; border-left: 4px solid var(--low); }
+.issue.is-critical { border-left-color: var(--crit); }
+.issue.is-high { border-left-color: var(--high); }
+.issue.is-medium { border-left-color: var(--medium); }
+.issue.is-low { border-left-color: var(--low); }
+.issue-head { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; width: 100%;
+  appearance: none; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer; }
+.issue-head:hover .issue-title { color: var(--accent); }
+.issue-title { font-weight: 600; overflow-wrap: anywhere; }
+.chip-agent { cursor: inherit; font-size: 12px; padding: 1px 9px; }
+.issue-meta { display: flex; gap: 3px 10px; flex-wrap: wrap; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.issue-body { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.issue-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.issue-fix { margin-top: 10px; }
+.order-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chip-queued { color: var(--muted); }
+.chip-running { color: var(--accent); border-color: var(--accent); }
+.chip-done { color: var(--ok); border-color: currentColor; }
+.chip-failed { color: var(--crit); border-color: currentColor; }
+.note-box { display: block; width: 100%; margin-top: 6px; font: inherit; font-size: 14px; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; resize: vertical; }
+.fold { margin-top: 20px; color: var(--muted); }
+.fold > summary { cursor: pointer; font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+
+/* ---- Runs ---- */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
-.chip { appearance: none; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px;
-  color: var(--text-muted); font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .06em;
-  text-transform: uppercase; padding: 5px 12px; cursor: pointer; }
-.chip:hover { color: var(--text); border-color: var(--text-faint); }
-.chip[aria-pressed="true"] { background: var(--sig-soft); border-color: var(--sig-ink); color: var(--sig-ink); }
-.run { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--card-shadow); padding: 10px 12px; margin: 0 0 10px; }
+.chip-issue { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  padding: 2px 10px; overflow-wrap: anywhere; }
+.run { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 10px 13px; margin: 0 0 10px; }
 .run > summary { cursor: pointer; }
 .run-sum { display: inline-flex; align-items: baseline; gap: 4px 9px; flex-wrap: wrap;
   max-width: calc(100% - 22px); vertical-align: top; }
 .run-sum .dot { align-self: center; }
-.run-date { color: var(--text-faint); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.run-agent { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
-.run-headline { color: var(--text-muted); overflow-wrap: anywhere; }
-.run-body { margin-top: 9px; border-top: 1px solid var(--border); padding-top: 4px; }
+.run-date { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.run-agent { font-weight: 800; }
+.run-headline { color: var(--muted); overflow-wrap: anywhere; }
+.run-body { margin-top: 9px; border-top: 1px solid var(--line); padding-top: 4px; }
 .run-issues { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
-.run-issues-label { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-muted); }
-.chip-issue { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 0;
-  text-transform: none; padding: 3px 10px; overflow-wrap: anywhere; }
-.md { overflow-wrap: anywhere; }
-.md :is(p, ul, ol, blockquote) { margin: 7px 0; }
-.md :is(h1, h2, h3, h4) { margin: 12px 0 6px; font-size: 16px; }
-.md :is(img, table) { max-width: 100%; }
-.md table { border-collapse: collapse; }
-.md :is(td, th) { border: 1px solid var(--border); padding: 3px 7px; text-align: left; }
 
-/* Crew tab */
-.crew-head { margin: 20px 0 9px; }
+/* ---- Crew ---- */
+.crew-head { margin-top: 22px; }
 .crew-head:first-child { margin-top: 0; }
-.crew-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: 12px; margin: 0 0 4px; }
+.crew-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 0 0 4px; }
 .crew-card { margin: 0; }
 .crew-card.is-click { cursor: pointer; }
-.crew-card.is-click:hover { border-color: var(--sig-ink); }
+.crew-card.is-click:hover { border-color: var(--accent); }
 .crew-top { display: flex; align-items: center; gap: 11px; }
 .avatar { width: 36px; height: 48px; flex: none; image-rendering: pixelated; background: none; }
-.crew-card-name { font-family: var(--display); font-weight: 800; font-size: 21px; line-height: 1.1;
-  letter-spacing: .02em; overflow-wrap: anywhere; }
-.crew-card-role { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .07em;
-  text-transform: uppercase; color: var(--text-muted); }
+.crew-card-name { font-size: 19px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.crew-card-role { font-size: 13px; color: var(--muted); }
 .crew-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 10px; margin: 11px 0 0; }
-.crew-facts dt { font-family: var(--display); font-weight: 800; font-size: 12px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-muted); padding-top: 3px; }
+.crew-facts dt { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); padding-top: 3px; }
 .crew-facts dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
 .crew-last { display: flex; align-items: baseline; gap: 3px 7px; flex-wrap: wrap; }
 .crew-last .dot { align-self: center; }
-.crew-ago { color: var(--text-faint); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.crew-ago { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* Rulebook tab */
-.rules { margin: 0; padding-left: 28px; }
-.rules > li::marker { font-family: var(--display); font-weight: 800; color: var(--sig-ink); }
+/* ---- Rulebook ---- */
+.rules { margin: 0; padding-left: 26px; }
+.rules > li::marker { font-weight: 800; color: var(--accent); }
+.rule-row { margin-bottom: 10px; }
 .rule-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .rule-input { display: block; width: 100%; font: inherit; font-size: 14px; color: var(--text);
-  background: var(--surface-muted); border: 1px solid var(--border-strong); border-radius: 7px;
-  padding: 8px 10px; resize: vertical; }
-.rule-label { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--text-muted); margin: 9px 0 4px; }
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; resize: vertical; }
+.rule-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); margin: 9px 0 4px; }
 .rule-add { margin-top: 16px; }
 
-/* Clubhouse tab */
+/* ---- Office ---- */
 .clubhouse { display: grid; gap: 12px; }
 .clubhouse-main { display: grid; gap: 12px; align-items: start; }
 .clubhouse-left { display: grid; gap: 10px; min-width: 0; }
-.clubhouse-stage { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--card-shadow); padding: 8px; display: flex; justify-content: center; }
+.clubhouse-stage { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 8px; display: flex; justify-content: center; }
 #clubhouse-canvas { image-rendering: pixelated; width: 100%; max-width: 480px; height: auto; display: block; cursor: pointer; }
 .clubhouse-controls { display: flex; gap: 6px; flex-wrap: wrap; }
-.clubhouse-note { margin: 0; color: var(--text-faint); font-size: 12px; }
+.clubhouse-note { margin: 0; color: var(--muted); font-size: 12px; }
 .clubhouse-caption { display: flex; align-items: baseline; gap: 5px 9px; flex-wrap: wrap; min-height: 22px; }
-.clubhouse-caption .pill { flex: none; color: var(--sig-ink); }
-.clubhouse-at { flex: none; font-family: var(--display); font-weight: 800; font-size: 15px;
-  letter-spacing: .04em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.clubhouse-caption .pill { flex: none; color: var(--accent); }
+.clubhouse-at { flex: none; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
 .clubhouse-step { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
 .clubhouse-figures { display: flex; gap: 5px; flex-wrap: wrap; }
-.clubhouse-figures .chip { font-size: 13px; padding: 4px 10px; }
-.clubhouse-figures .chip[aria-pressed="true"] { background: var(--sig-soft); border-color: var(--sig-ink); color: var(--sig-ink); }
-.clubhouse-legend { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-faint); align-self: center; margin-right: 2px; }
+.clubhouse-figures .chip { font-size: 13px; padding: 3px 10px; }
+.clubhouse-legend { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); align-self: center; margin-right: 2px; }
 #clubhouse-card:empty { display: none; }
 #clubhouse-card .card { margin: 0; }
-@media (min-width: 720px) {
-  .clubhouse-main { grid-template-columns: minmax(0, 1fr) minmax(0, 290px); }
+@media (min-width: 900px) {
+  .clubhouse-main { grid-template-columns: minmax(0, 1fr) minmax(0, 280px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .side-sheet a, .chip, .btn, .chev { transition: color .15s ease, background .15s ease, border-color .15s ease; }
 }
 </style>
 
-<div class="mast" role="banner">
-  <div class="mast-in">
-    <span class="wordmark">Ops Room</span>
-    <span class="site">sports-db.live</span>
-    <span class="mast-status"><span class="dot dot-none" id="mast-dot"></span><span id="mast-text">Checking</span></span>
-  </div>
-  <div class="tabs-scroll">
-    <nav class="tabs" role="tablist" aria-label="Ops Room sections">
-      <button type="button" class="tab" role="tab" id="tab-today" aria-controls="panel-today" aria-selected="true">Today</button>
-      <button type="button" class="tab" role="tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" tabindex="-1">Issues</button>
-      <button type="button" class="tab" role="tab" id="tab-runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Runs</button>
-      <button type="button" class="tab" role="tab" id="tab-crew" aria-controls="panel-crew" aria-selected="false" tabindex="-1">Crew</button>
-      <button type="button" class="tab" role="tab" id="tab-rules" aria-controls="panel-rules" aria-selected="false" tabindex="-1">Rulebook</button>
-      <button type="button" class="tab" role="tab" id="tab-clubhouse" aria-controls="panel-clubhouse" aria-selected="false" tabindex="-1">Clubhouse</button>
-    </nav>
-  </div>
-</div>
-
-<main>
-  <section role="tabpanel" id="panel-today" aria-labelledby="tab-today" tabindex="0"></section>
-  <section role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" tabindex="0" hidden><p class="empty">Issues</p></section>
-  <section role="tabpanel" id="panel-runs" aria-labelledby="tab-runs" tabindex="0" hidden><p class="empty">Runs</p></section>
-  <section role="tabpanel" id="panel-crew" aria-labelledby="tab-crew" tabindex="0" hidden><p class="empty">Crew</p></section>
-  <section role="tabpanel" id="panel-rules" aria-labelledby="tab-rules" tabindex="0" hidden><p class="empty">Rulebook</p></section>
-  <section role="tabpanel" id="panel-clubhouse" aria-labelledby="tab-clubhouse" tabindex="0" hidden>
-    <div class="clubhouse">
-      <div class="clubhouse-main">
-        <div class="clubhouse-left">
-          <div class="clubhouse-stage">
-            <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
-          </div>
-          <div class="clubhouse-caption" id="clubhouse-caption"></div>
-          <div class="clubhouse-controls" role="group" aria-label="Clubhouse playback">
-            <button type="button" class="chip" id="clubhouse-pause">Pause</button>
-            <button type="button" class="chip" id="clubhouse-restart">Restart</button>
-            <button type="button" class="chip" id="clubhouse-day">Day</button>
-            <button type="button" class="chip" id="clubhouse-night">Night</button>
-          </div>
-          <div class="clubhouse-figures" id="clubhouse-figures" role="group" aria-label="Choose a figure">
-            <span class="clubhouse-legend">Who</span>
-            <button type="button" class="chip" data-figure="owner">Owner</button>
-            <button type="button" class="chip" data-figure="session">Main session</button>
-            <button type="button" class="chip" data-figure="umpire">Umpire</button>
-            <button type="button" class="chip" data-figure="editor">Editor</button>
-            <button type="button" class="chip" data-figure="physio">Physio</button>
-            <button type="button" class="chip" data-figure="kit-manager">Kit Manager</button>
-            <button type="button" class="chip" data-figure="steward">Steward</button>
-            <button type="button" class="chip" data-figure="analyst">Analyst</button>
-            <button type="button" class="chip" data-figure="scout">Scout</button>
-            <button type="button" class="chip" data-figure="press-officer">Press Officer</button>
-            <button type="button" class="chip" data-figure="scorer">Scorer</button>
-          </div>
-        </div>
-        <div id="clubhouse-card"></div>
-      </div>
-      <p class="clubhouse-note">Characters are drawn in code for this private page. No official art is used. Pick a figure on the scene or from the list to read their card.</p>
+<div class="shell">
+  <nav class="side" aria-label="Ops Room sections">
+    <div class="side-head">
+      <span class="mark">
+        <span class="mark-sm">SPORTS-DB</span>
+        <span class="mark-lg">Ops Room</span>
+      </span>
+      <button type="button" class="side-toggle" id="side-toggle" aria-expanded="false" aria-controls="side-sheet">Sections</button>
     </div>
-  </section>
-</main>
+    <p class="side-state"><span class="dot dot-none" id="side-dot"></span><span id="side-state-text">Checking</span></p>
+    <div class="side-sheet" id="side-sheet" hidden>
+      <a href="#today" data-section="today">Today</a>
+      <p class="side-group">Work</p>
+      <a href="#orders" data-section="orders">Orders<span class="badge" id="badge-orders" hidden>0</span></a>
+      <a href="#issues" data-section="issues">Issues<span class="badge" id="badge-issues" hidden>0</span></a>
+      <p class="side-group">Log</p>
+      <a href="#runs" data-section="runs">Runs</a>
+      <a href="#alerts" data-section="alerts">Alerts</a>
+      <p class="side-group">Team</p>
+      <a href="#crew" data-section="crew">Crew</a>
+      <a href="#stats" data-section="stats">Stats</a>
+      <p class="side-group">Knowledge</p>
+      <a href="#rules" data-section="rules">Rulebook</a>
+      <p class="side-group">Showcase</p>
+      <a href="#office" data-section="office">Office</a>
+    </div>
+  </nav>
+
+  <main>
+    <section data-panel="today" id="panel-today">
+      <h1>Today</h1>
+      <p class="lede">What the night crew found, and what is waiting on you.</p>
+      <div id="body-today"></div>
+    </section>
+
+    <section data-panel="orders" id="panel-orders" hidden>
+      <h1>Orders</h1>
+      <p class="lede">Jobs you hand to the Groundsman, and what came back.</p>
+      <div id="body-orders"></div>
+    </section>
+
+    <section data-panel="issues" id="panel-issues" hidden>
+      <h1>Issues</h1>
+      <p class="lede">Everything the crew has found and not yet closed, worst first.</p>
+      <div id="body-issues"></div>
+    </section>
+
+    <section data-panel="runs" id="panel-runs" hidden>
+      <h1>Runs</h1>
+      <p class="lede">Every check the crew has run, with the notes they wrote.</p>
+      <div id="body-runs"></div>
+    </section>
+
+    <section data-panel="alerts" id="panel-alerts" hidden>
+      <h1>Alerts</h1>
+      <p class="lede">The pushes sent to your phone in the last 30 days.</p>
+      <div id="body-alerts"></div>
+    </section>
+
+    <section data-panel="crew" id="panel-crew" hidden>
+      <h1>Crew</h1>
+      <p class="lede">Who checks what, and when.</p>
+      <div id="body-crew"></div>
+    </section>
+
+    <section data-panel="stats" id="panel-stats" hidden>
+      <h1>Stats</h1>
+      <p class="lede">Fourteen days of readers, searches and open issues.</p>
+      <div id="body-stats"></div>
+    </section>
+
+    <section data-panel="rules" id="panel-rules" hidden>
+      <h1>Rulebook</h1>
+      <p class="lede">The house rules every agent reads before it starts.</p>
+      <div id="body-rules"></div>
+    </section>
+
+    <section data-panel="office" id="panel-office" hidden>
+      <h1>Office</h1>
+      <p class="lede">The crew at work, drawn in code. Pick a figure to read their card.</p>
+      <div id="body-office">
+        <div class="clubhouse">
+          <div class="clubhouse-main">
+            <div class="clubhouse-left">
+              <div class="clubhouse-stage">
+                <canvas id="clubhouse-canvas" role="img" aria-label="A pixel cross-section of the stand: the directors' box, the officials' room, the backroom, the front office and the basement, with one figure for every member of the crew. The scene plays the crew's day from the scrape at 04:30 to the lights going out at night."></canvas>
+              </div>
+              <div class="clubhouse-caption" id="clubhouse-caption"></div>
+              <div class="clubhouse-controls" role="group" aria-label="Playback">
+                <button type="button" class="chip" id="clubhouse-pause">Pause</button>
+                <button type="button" class="chip" id="clubhouse-restart">Restart</button>
+                <button type="button" class="chip" id="clubhouse-day">Day</button>
+                <button type="button" class="chip" id="clubhouse-night">Night</button>
+              </div>
+              <div class="clubhouse-figures" id="clubhouse-figures" role="group" aria-label="Choose a figure">
+                <span class="clubhouse-legend">Who</span>
+                <button type="button" class="chip" data-figure="owner">Owner</button>
+                <button type="button" class="chip" data-figure="session">Main session</button>
+                <button type="button" class="chip" data-figure="umpire">Umpire</button>
+                <button type="button" class="chip" data-figure="editor">Editor</button>
+                <button type="button" class="chip" data-figure="physio">Physio</button>
+                <button type="button" class="chip" data-figure="kit-manager">Kit Manager</button>
+                <button type="button" class="chip" data-figure="steward">Steward</button>
+                <button type="button" class="chip" data-figure="analyst">Analyst</button>
+                <button type="button" class="chip" data-figure="scout">Scout</button>
+                <button type="button" class="chip" data-figure="press-officer">Press Officer</button>
+                <button type="button" class="chip" data-figure="scorer">Scorer</button>
+              </div>
+            </div>
+            <div id="clubhouse-card"></div>
+          </div>
+          <p class="clubhouse-note">Characters are drawn in code for this private page. No official art is used.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script>
 if (!window.claude) window.claude = { use: async () => null };
 
+const SECTIONS = ["today", "orders", "issues", "runs", "alerts", "crew", "stats", "rules", "office"];
 const GROUPS = [["dugout", "Dugout"], ["officials", "Match officials"], ["backroom", "Backroom staff"], ["front-office", "Front office"]];
+const SEVERITIES = ["critical", "high", "medium", "low"];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Twice the 8 KB the protocol asks an agent for. Past this a run's details are
-// cut, so one runaway run cannot freeze the Runs tab.
+// cut, so one runaway run cannot freeze the page.
 const DETAILS_LIMIT = 16000;
 
 // The dugout is the two of us. Neither has a routine, so neither is a crew
@@ -311,7 +392,7 @@ const DETAILS_LIMIT = 16000;
 const DUGOUT = [
   {
     id: "owner", name: "Owner", role: "says deploy",
-    job: "Asks for the work, reads Today each morning, acknowledges what needs it, and is the only one who can say deploy.",
+    job: "Asks for the work, reads Today each morning, gives the orders, and is the only one who can say deploy.",
     never: "Deploys between 04:30 and 07:30 IST, or without purging the edge cache afterwards.",
     when: "Every morning.",
   },
@@ -323,7 +404,84 @@ const DUGOUT = [
   },
 ];
 
-// The Crew tab's face. The sprite sheet lives in the Clubhouse block below, so
+// ---- pure helpers, kept free of the page so they can be read and tested alone ----
+
+// Four ranked groups, worst first, newest sighting first inside each group, with
+// anything the owner has ignored until a future date left out. Nothing here
+// touches the page or the database.
+function rankIssues(list, now) {
+  const at = now === undefined || now === null ? Date.now() : (now instanceof Date ? now.getTime() : Number(now));
+  const groups = { critical: [], high: [], medium: [], low: [] };
+  const all = Array.isArray(list) ? list : [];
+  for (const it of all) {
+    if (!it) continue;
+    const status = String(it.status || "open");
+    if (status !== "open" && status !== "reopened" && status !== "acknowledged") continue;
+    const until = Date.parse(it.snoozedUntil);
+    if (Number.isFinite(until) && until > at) continue;
+    const sev = String(it.severity || "low").toLowerCase();
+    const into = ["critical", "high", "medium", "low"].indexOf(sev) < 0 ? "low" : sev;
+    groups[into].push(it);
+  }
+  for (const sev of ["critical", "high", "medium", "low"]) {
+    groups[sev].sort(function (a, b) {
+      const d = (Date.parse(b.lastSeen) || 0) - (Date.parse(a.lastSeen) || 0);
+      return d !== 0 ? d : String(a.title || a.key || "").localeCompare(String(b.title || b.key || ""));
+    });
+  }
+  return groups;
+}
+
+// What the owner still has to answer for: critical and high, still live, with no
+// order given, no acknowledgement and no ignore date running. Oldest first,
+// because the oldest is the one that has waited.
+function needsDecision(list, now) {
+  const at = now === undefined || now === null ? Date.now() : (now instanceof Date ? now.getTime() : Number(now));
+  const out = [];
+  const all = Array.isArray(list) ? list : [];
+  for (const it of all) {
+    if (!it) continue;
+    const sev = String(it.severity || "low").toLowerCase();
+    if (sev !== "critical" && sev !== "high") continue;
+    const status = String(it.status || "open");
+    if (status !== "open" && status !== "reopened") continue;
+    if (it.orderId) continue;
+    const until = Date.parse(it.snoozedUntil);
+    if (Number.isFinite(until) && until > at) continue;
+    out.push(it);
+  }
+  out.sort(function (a, b) { return (Date.parse(a.firstSeen) || 0) - (Date.parse(b.firstSeen) || 0); });
+  return out;
+}
+
+// An order id the owner can read back off a branch name: the local date and
+// time it was given, plus four hex characters so two orders given in the same
+// second cannot collide.
+function newOrderId(now) {
+  const d = now instanceof Date ? now : new Date();
+  const pad = function (n) { return n < 10 ? "0" + n : String(n); };
+  const stamp = String(d.getFullYear()) + pad(d.getMonth() + 1) + pad(d.getDate())
+    + "-" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+  let tail = "";
+  for (let i = 0; i < 4; i += 1) tail += "0123456789abcdef".charAt(Math.floor(Math.random() * 16));
+  return stamp + "-" + tail;
+}
+
+function buildOrder(kind, text, issueKey, createdBy, now) {
+  const d = now instanceof Date ? now : new Date();
+  return {
+    id: newOrderId(d),
+    createdAt: d.toISOString(),
+    createdBy: String(createdBy || "owner"),
+    kind: String(kind || "custom"),
+    text: String(text === null || text === undefined ? "" : text),
+    issueKey: String(issueKey === null || issueKey === undefined ? "" : issueKey),
+    status: "queued",
+    attempts: 0,
+  };
+}
+
+// The Crew section's face. The sprite sheet lives in the Office block below, so
 // this asks for it at draw time rather than at parse time.
 function drawAvatar(canvas, id) {
   const club = window.Clubhouse;
@@ -331,15 +489,19 @@ function drawAvatar(canvas, id) {
 }
 
 const OpsRoom = {
-  state: { crew: {}, issues: {}, runs: {}, status: null, daily: {}, rules: {}, dbReady: null },
+  state: { crew: {}, issues: {}, runs: {}, orders: {}, alerts: {}, daily: {}, rules: {}, status: null, dbReady: null },
   db: null,
   canWrite: true,
+  who: "owner",
   active: "today",
+  sections: SECTIONS,
+  links: [],
   filters: { runsAgent: null },
-  tabs: [],
+  expanded: {},
 
   async init() {
-    this.bindTabs();
+    this.bindNav();
+    this.route(true);
     this.render();
     let db = null;
     try { db = await claude.use("db"); } catch (err) { db = null; }
@@ -350,6 +512,7 @@ const OpsRoom = {
     // can() needs no capability declaration, and it answers null when the page
     // is opened as a plain file, which is read as "this viewer may write".
     this.canWrite = user && typeof user.can === "function" ? (user.can("data.write") ?? true) : true;
+    if (user && typeof user.name === "string" && user.name) this.who = user.name;
     if (db) this.subscribe();
     this.render();
   },
@@ -365,6 +528,8 @@ const OpsRoom = {
     db.collection("crew").onSnapshot(into("crew"), (e) => this.fail("crew", e));
     db.collection("issues").where("status", "in", ["open", "acknowledged", "reopened", "fixed"]).limit(1000).onSnapshot(into("issues"), (e) => this.fail("issues", e));
     db.collection("runs").orderBy("date", "desc").limit(300).onSnapshot(into("runs"), (e) => this.fail("runs", e));
+    db.collection("orders").orderBy("createdAt", "desc").limit(200).onSnapshot(into("orders"), (e) => this.fail("orders", e));
+    db.collection("alerts").orderBy("sentAt", "desc").limit(120).onSnapshot(into("alerts"), (e) => this.fail("alerts", e));
     db.collection("daily").orderBy("date", "desc").limit(30).onSnapshot(into("daily"), (e) => this.fail("daily", e));
     db.collection("rules").onSnapshot(into("rules"), (e) => this.fail("rules", e));
     db.doc("status/site").onSnapshot((snap) => { this.state.status = snap.exists ? snap.data() : null; this.render(); }, (e) => this.fail("status", e));
@@ -372,154 +537,206 @@ const OpsRoom = {
 
   fail(name, e) { console.warn("subscription " + name + " ended: " + (e && e.code)); },
 
-  bindTabs() {
-    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
-    this.tabs = tabs;
-    let saved = null;
-    try { saved = localStorage.getItem("opsroom.tab"); } catch (err) { saved = null; }
-    if (saved && tabs.some((t) => t.id === "tab-" + saved)) this.active = saved;
-    tabs.forEach((tab, i) => {
-      tab.addEventListener("click", () => this.setActive(this.nameOf(tab)));
-      tab.addEventListener("keydown", (ev) => {
-        let n = -1;
-        if (ev.key === "ArrowRight") n = (i + 1) % tabs.length;
-        else if (ev.key === "ArrowLeft") n = (i - 1 + tabs.length) % tabs.length;
-        else if (ev.key === "Home") n = 0;
-        else if (ev.key === "End") n = tabs.length - 1;
-        if (n < 0) return;
-        ev.preventDefault();
-        tabs[n].focus();
-        this.setActive(this.nameOf(tabs[n]));
+  // ---- routing ----
+
+  bindNav() {
+    this.links = Array.prototype.slice.call(document.querySelectorAll("[data-section]"));
+    for (const a of this.links) a.addEventListener("click", () => this.closeSheet());
+    const toggle = document.getElementById("side-toggle");
+    const sheet = document.getElementById("side-sheet");
+    if (toggle && sheet) {
+      toggle.addEventListener("click", () => {
+        const opening = sheet.hidden;
+        sheet.hidden = !opening;
+        toggle.setAttribute("aria-expanded", opening ? "true" : "false");
       });
-    });
-    this.setActive(this.active, true);
+    }
+    window.addEventListener("hashchange", () => this.route());
   },
 
-  nameOf(tab) { return tab.id.slice(4); },
+  closeSheet() {
+    const sheet = document.getElementById("side-sheet");
+    const toggle = document.getElementById("side-toggle");
+    if (!sheet || !toggle || window.innerWidth > 760) return;
+    sheet.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  },
 
-  setActive(name, quiet) {
-    this.active = name;
-    try { localStorage.setItem("opsroom.tab", name); } catch (err) { /* storage can be blocked */ }
-    for (const tab of this.tabs) {
-      const on = this.nameOf(tab) === name;
-      tab.setAttribute("aria-selected", on ? "true" : "false");
-      tab.tabIndex = on ? 0 : -1;
-      const panel = document.getElementById("panel-" + this.nameOf(tab));
-      if (panel) panel.hidden = !on;
+  route(quiet) {
+    const want = String(location.hash || "").replace(/^#/, "").toLowerCase();
+    this.nav(this.sections.indexOf(want) >= 0 ? want : "today", quiet);
+  },
+
+  nav(name, quiet) {
+    const to = this.sections.indexOf(name) >= 0 ? name : "today";
+    this.active = to;
+    for (const a of this.links) {
+      if (a.getAttribute("data-section") === to) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    }
+    for (const s of this.sections) {
+      const panel = document.getElementById("panel-" + s);
+      if (panel) panel.hidden = s !== to;
+    }
+    if (location.hash !== "#" + to) {
+      try { location.hash = "#" + to; } catch (err) { /* a file url can refuse */ }
     }
     if (!quiet) this.render();
   },
 
   render() {
-    this.renderMasthead();
-    const root = document.getElementById("panel-" + this.active);
-    if (!root) return;
+    this.renderSidebar();
     const fn = {
-      today: "renderToday", issues: "renderIssues", runs: "renderRuns",
-      crew: "renderCrew", rules: "renderRules", clubhouse: "renderClubhouse",
+      today: "renderToday", orders: "renderOrders", issues: "renderIssues", runs: "renderRuns",
+      alerts: "renderAlerts", crew: "renderCrew", stats: "renderStats", rules: "renderRules",
+      office: "renderOffice",
     }[this.active];
-    if (fn && typeof this[fn] === "function") this[fn](root);
+    const root = document.getElementById("body-" + this.active);
+    if (root && fn && typeof this[fn] === "function") this[fn](root);
   },
 
-  renderMasthead() {
-    const dot = document.getElementById("mast-dot");
-    const text = document.getElementById("mast-text");
-    if (!dot || !text) return;
+  // ---- sidebar ----
+
+  renderSidebar() {
+    const dot = document.getElementById("side-dot");
+    const text = document.getElementById("side-state-text");
     const s = this.state.status;
+    const hot = this.hotCount();
     let tone = "none";
-    let label = "No check yet";
-    if (s) {
-      tone = s.up ? "ok" : "fail";
-      label = s.up ? "Up" : "Down";
-      if (this.has(s.latencyMs)) label += " " + this.num(Math.round(Number(s.latencyMs))) + " ms";
-    } else if (this.state.dbReady === false) {
-      label = "No database";
-    }
-    dot.className = "dot dot-" + tone;
-    text.textContent = label;
+    let label = "Unknown";
+    if (!s) label = this.state.dbReady === false ? "No database" : "Unknown";
+    else if (!s.up) { tone = "fail"; label = "Down"; }
+    else if (hot > 0) { tone = "warn"; label = "Online, with notes"; }
+    else { tone = "ok"; label = "Online"; }
+    if (dot) dot.className = "dot dot-" + tone;
+    if (text) text.textContent = label;
+    this.setBadge("badge-orders", this.orderCount(), false);
+    this.setBadge("badge-issues", hot, true);
   },
+
+  setBadge(id, n, hot) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = this.num(n);
+    el.className = "badge" + (hot && n > 0 ? " is-hot" : "");
+    el.hidden = n === 0;
+  },
+
+  hotCount() {
+    let n = 0;
+    for (const it of this.issueList()) {
+      const status = String(it.status || "open");
+      if (status !== "open" && status !== "reopened") continue;
+      const sev = this.severityOf(it);
+      if (sev === "critical" || sev === "high") n += 1;
+    }
+    return n;
+  },
+
+  orderCount() {
+    let n = 0;
+    for (const o of this.orderList()) {
+      const status = String(o.status || "queued");
+      if (status === "queued" || status === "running") n += 1;
+    }
+    return n;
+  },
+
+  // ---- Today ----
 
   renderToday(root) {
-    const kids = [this.todayStatus(), this.todayCounts(), this.todayCrew(), this.todayNumbers()];
+    const kids = [];
     if (this.state.dbReady === false) {
-      kids.push(this.h("section", { class: "card alert" },
-        this.h("p", { class: "empty", text: "This view cannot reach the Ops Room database. Open the page signed in as the owner." })));
+      kids.push(this.h("section", { class: "card card-alert" },
+        this.h("p", { class: "empty", text: "This page cannot reach the Ops Room database, so every section is empty. Open it signed in as the owner." })));
     }
+    kids.push(this.todayStatus(), this.todayDecisions(), this.todayOvernight(), this.todayNumbers(), this.todayAlerts());
     root.replaceChildren(...kids);
   },
 
   todayStatus() {
     const h = this.h;
     const s = this.state.status;
-    const card = h("section", { class: "card" }, h("h2", { class: "sect" }, "Site"));
+    const card = h("section", { class: "card" }, h("h2", { class: "sect" }, "The site"));
     if (!s) {
-      card.append(h("p", { class: "empty", text: "No check yet" }));
+      card.append(h("p", { class: "empty", text: "No check yet. The Physio writes the site check into status." }));
       return card;
     }
     const up = !!s.up;
-    card.append(h("div", { class: "banner" },
-      h("span", { class: "dot dot-lg dot-" + (up ? "ok" : "fail") }),
-      h("span", { class: "banner-state " + (up ? "is-ok" : "is-fail"), text: up ? "Up" : "Down" }),
-      this.has(s.latencyMs) ? h("span", { class: "banner-meta", text: this.num(Math.round(Number(s.latencyMs))) + " ms" }) : null,
-      this.has(s.productionCommit) ? h("span", { class: "code", title: "production commit", text: String(s.productionCommit).slice(0, 7) }) : null,
-      s.deployPending ? h("span", { class: "pill pill-warn", text: "deploy pending" }) : null,
-      s.edgeStale ? h("span", { class: "pill pill-warn", text: "edge stale" }) : null,
-      this.ago(s.checkedAt) ? h("span", { class: "banner-time", text: "checked " + this.ago(s.checkedAt) }) : null,
-    ));
+    card.append(h("div", { class: "statline" },
+      h("span", { class: "state " + (up ? "is-ok" : "is-crit") },
+        h("span", { class: "dot dot-" + (up ? "ok" : "fail") }),
+        h("span", { text: up ? "Online" : "Down" })),
+      this.has(s.latencyMs) ? h("span", { class: "fact", text: this.num(Math.round(Number(s.latencyMs))) + " ms" }) : null,
+      this.has(s.productionCommit) ? h("span", { class: "code", title: "the commit production is running", text: String(s.productionCommit).slice(0, 7) }) : null,
+      s.deployPending ? h("span", { class: "pill pill-warn", text: "deploy pending" }) : h("span", { class: "fact", text: "nothing to deploy" }),
+      s.edgeStale ? h("span", { class: "pill pill-warn", text: "edge cache stale" }) : null,
+      this.ago(s.checkedAt) ? h("span", { class: "fact when", text: "checked " + this.ago(s.checkedAt) }) : null));
     return card;
   },
 
-  todayCounts() {
+  todayDecisions() {
     const h = this.h;
-    const order = ["critical", "high", "medium", "low"];
-    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
-    let total = 0;
-    for (const key of Object.keys(this.state.issues)) {
-      const it = this.state.issues[key];
-      if (it.status !== "open" && it.status !== "reopened") continue;
-      total += 1;
-      const sev = String(it.severity || "low").toLowerCase();
-      counts[order.indexOf(sev) < 0 ? "low" : sev] += 1;
+    const list = needsDecision(this.issueList());
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Needs a decision",
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) }) : null));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the issues list."
+        : "Nothing is waiting on you. Critical and high findings appear here until you give an order or acknowledge them." }));
+      return card;
     }
-    const card = h("section", { class: "card" },
-      h("h2", { class: "sect" }, "Open issues", h("span", { class: "sect-note", text: this.num(total) + " open" })));
-    const tiles = h("div", { class: "tiles" });
-    for (const sev of order) {
-      tiles.append(h("div", { class: "tile tile-" + sev + (counts[sev] === 0 ? " is-zero" : "") },
-        h("span", { class: "tile-n", text: this.num(counts[sev]) }),
-        h("span", { class: "tile-l", text: sev })));
+    let waited = 0;
+    for (const it of list) { const d = this.daysOpen(it); if (d !== null && d > 3) waited += 1; }
+    if (waited) {
+      card.append(h("p", { class: "nudge", text: this.num(waited)
+        + (waited === 1 ? " issue has" : " issues have") + " waited more than three days." }));
     }
-    card.append(tiles);
+    for (const it of list) {
+      const key = String(it.key || it.id || "");
+      const days = this.daysOpen(it);
+      const sev = this.severityOf(it);
+      card.append(h("div", { class: "row" },
+        h("span", { class: "pill pill-" + (sev === "critical" ? "crit" : "warn"), text: sev }),
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: it.title || key }),
+          h("span", { class: "row-sub", text: this.agentName(it.agent) + (days === null ? "" : ", " + this.dayCount(days) + " open") })),
+        h("button", { type: "button", class: "chev", "aria-label": "Open " + (it.title || key) + " in Issues",
+          onclick: () => this.showIssue(key) }, "›")));
+    }
     return card;
   },
 
-  todayCrew() {
+  todayOvernight() {
     const h = this.h;
-    const list = Object.keys(this.state.crew).map((k) => this.state.crew[k]);
+    const rank = { officials: 0, backroom: 1, "front-office": 2 };
+    const at = (g) => (rank[String(g)] === undefined ? 3 : rank[String(g)]);
+    const list = this.crewList();
     list.sort((a, b) => {
-      const d = this.cronMinutes(a.schedule) - this.cronMinutes(b.schedule);
+      const d = at(a.group) - at(b.group);
       return d !== 0 ? d : String(a.name || a.id).localeCompare(String(b.name || b.id));
     });
     const card = h("section", { class: "card card-rows" },
-      h("h2", { class: "sect" }, "Crew", h("span", { class: "sect-note", text: this.num(list.length) + " agents" })));
+      h("h2", { class: "sect" }, "Overnight",
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) + " agents" }) : null));
     if (!list.length) {
-      card.append(h("p", { class: "empty", text: this.state.dbReady === false ? "No crew list" : "Waiting for the crew list" }));
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the crew list." : "No crew yet. Each agent writes its own card on its first run." }));
       return card;
     }
     for (const c of list) {
-      const status = String(c.lastStatus || "none");
-      const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
-      card.append(h("div", { class: "crew-row" },
+      const tone = this.tone(c.lastStatus);
+      card.append(h("div", { class: "row" },
         h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no run yet" : tone }),
-        h("div", { class: "crew-who" },
-          h("span", { class: "crew-name", text: c.name || c.id }), " ",
-          h("span", { class: "crew-role", text: c.role || "" })),
-        h("div", { class: "crew-line", text: c.lastHeadline || "No run yet" }),
-        h("time", { class: "crew-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
-        h("button", {
-          type: "button", class: "chev", "aria-label": "Runs for " + (c.name || c.id),
-          onclick: () => { this.filters.runsAgent = c.id; this.setActive("runs"); },
-        }, "›")));
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title" },
+            h("span", { class: "crew-name", text: c.name || c.id }), " ",
+            h("span", { class: "crew-role", text: c.role || "" })),
+          h("span", { class: "row-sub", text: c.lastHeadline || "No run yet." })),
+        h("time", { class: "row-when", datetime: this.has(c.lastRunAt) ? String(c.lastRunAt) : null, text: this.dayLabel(c.lastRunAt) }),
+        h("button", { type: "button", class: "chev", "aria-label": "Open the crew card for " + (c.name || c.id),
+          onclick: () => this.nav("crew") }, "›")));
     }
     return card;
   },
@@ -531,175 +748,270 @@ const OpsRoom = {
       h("h2", { class: "sect" }, "Yesterday's numbers",
         d ? h("span", { class: "sect-note", text: this.dayLabel(d.date || d.id) }) : null));
     if (!d) {
-      card.append(h("p", { class: "empty", text: "No numbers yet" }));
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the daily readings." : "No readings yet. The Scorer and the Chrome task write the daily numbers." }));
       return card;
     }
     const top = Array.isArray(d.topGames) && d.topGames.length ? d.topGames[0] : null;
-    const country = this.topShare(d.byCountry);
-    const mobile = this.mobileShare(d.byPlatform);
-    card.append(h("div", { class: "stats" },
-      this.stat("game views", this.has(d.gameViews) ? this.num(d.gameViews) : "not reported"),
-      this.stat("top game", top ? (top.name || top.id || "unknown") : "not reported", top && this.has(top.views) ? this.num(top.views) + " views" : null),
-      this.stat("top country", country ? country.key + " " + this.pct(country.share) : "not reported", country ? this.num(country.value) + " views" : null),
-      this.stat("mobile", mobile === null ? "not reported" : this.pct(mobile))));
-    card.append(h("hr", { class: "rule" }));
-    const gsc = ["gscClicks", "gscImpressions", "gscIndexed", "gscNotIndexed"];
-    if (!gsc.some((k) => this.has(d[k]))) {
-      card.append(h("p", { class: "empty", text: "no Search Console reading yet" }));
-      return card;
+    card.append(h("div", { class: "figures" },
+      this.figure("game views", this.has(d.gameViews) ? this.num(d.gameViews) : "not read"),
+      this.figure("top game", top ? (top.name || top.id || "unknown") : "not read",
+        top && this.has(top.views) ? this.num(top.views) + " views" : null),
+      this.figure("GA4 users", this.has(d.ga4Users) ? this.num(d.ga4Users) : "not read"),
+      this.figure("Search Console clicks", this.has(d.gscClicks) ? this.num(d.gscClicks) : "not read")));
+    const read = d.readAt && typeof d.readAt === "object" ? d.readAt : null;
+    const bits = [];
+    if (read) {
+      for (const k of Object.keys(read)) {
+        const when = this.ago(read[k]);
+        if (when) bits.push(this.agentName(k) + " read " + when);
+      }
     }
-    const labels = { gscClicks: "clicks", gscImpressions: "impressions", gscIndexed: "indexed", gscNotIndexed: "not indexed" };
-    const row = h("div", { class: "stats" });
-    for (const k of gsc) row.append(this.stat(labels[k], this.has(d[k]) ? this.num(d[k]) : "not reported"));
-    card.append(row);
+    card.append(h("p", { class: "sources", text: bits.length ? bits.join(". ") + "." : "No reading time recorded." }));
     return card;
   },
 
-  stat(label, value, sub) {
+  figure(label, value, sub) {
     const h = this.h;
-    return h("div", { class: "stat" },
-      h("div", { class: "stat-l", text: label }),
-      h("div", { class: "stat-v", text: value }),
-      sub ? h("div", { class: "stat-sub", text: sub }) : null);
+    return h("div", {},
+      h("div", { class: "fig-l", text: label }),
+      h("div", { class: "fig-v", text: value }),
+      sub ? h("div", { class: "fig-s", text: sub }) : null);
   },
 
-  latestDaily() {
-    let best = null;
-    for (const key of Object.keys(this.state.daily)) {
-      const d = this.state.daily[key];
-      const k = String(d.date || d.id || key);
-      if (!best || k > String(best.date || best.id)) best = d;
+  todayAlerts() {
+    const h = this.h;
+    const list = this.alertList().slice(0, 7);
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Sent to your phone",
+        list.length ? h("span", { class: "sect-note", text: "last " + this.num(list.length) }) : null));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the alerts list." : "Nothing has been pushed yet. The Groundsman records every push it sends in alerts." }));
+      return card;
     }
-    return best;
-  },
-
-  topShare(map) {
-    if (!map || typeof map !== "object") return null;
-    let total = 0;
-    let key = null;
-    let value = 0;
-    for (const k of Object.keys(map)) {
-      const n = Number(map[k]);
-      if (!Number.isFinite(n)) continue;
-      total += n;
-      if (n > value) { value = n; key = k; }
+    for (const a of list) {
+      card.append(h("div", { class: "row" },
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: a.message || "(no message)" }),
+          h("span", { class: "row-sub", text: this.alertKind(a.kind) })),
+        h("time", { class: "row-when", datetime: this.has(a.sentAt) ? String(a.sentAt) : null, text: this.ago(a.sentAt) })));
     }
-    if (!key || total <= 0) return null;
-    return { key: key, value: value, share: value / total };
+    return card;
   },
 
-  mobileShare(map) {
-    if (!map || typeof map !== "object") return null;
-    let total = 0;
-    for (const k of Object.keys(map)) {
-      const n = Number(map[k]);
-      if (Number.isFinite(n)) total += n;
-    }
-    if (total <= 0) return null;
-    const ios = Number(map.ios) || 0;
-    const android = Number(map.android) || 0;
-    return (ios + android) / total;
+  alertKind(kind) {
+    const map = { "new-critical": "new critical findings", "new-high": "new high findings", digest: "morning digest" };
+    return map[String(kind)] || String(kind || "push");
   },
 
-  // ---- Issues tab ----
-
-  severityOf(issue) {
-    const sev = String((issue && issue.severity) || "low").toLowerCase();
-    return ["critical", "high", "medium", "low"].indexOf(sev) < 0 ? "low" : sev;
-  },
-
-  agentName(id) {
-    const c = this.state.crew[id];
-    const name = c && typeof c === "object" ? c.name || c.id : null;
-    return name ? String(name) : String(id || "unknown");
-  },
+  // ---- Issues ----
 
   renderIssues(root) {
     const h = this.h;
-    const order = ["critical", "high", "medium", "low"];
-    const live = ["open", "reopened", "acknowledged"];
-    const groups = { critical: [], high: [], medium: [], low: [] };
-    const fixed = [];
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    for (const key of Object.keys(this.state.issues)) {
-      const it = this.state.issues[key];
-      const status = String(it.status || "open");
-      if (live.indexOf(status) >= 0) {
-        groups[this.severityOf(it)].push(it);
-      } else if (status === "fixed") {
-        const t = Date.parse(it.statusChangedAt);
-        if (Number.isFinite(t) && t >= cutoff) fixed.push(it);
-      }
-    }
-    const newest = (a, b) => (Date.parse(b.lastSeen) || 0) - (Date.parse(a.lastSeen) || 0)
-      || String(a.title || "").localeCompare(String(b.title || ""));
+    const all = this.issueList();
+    const groups = rankIssues(all);
+    const labels = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
     const kids = [];
-    let open = 0;
-    for (const sev of order) {
+    if (this.db && !this.canWrite) {
+      kids.push(h("p", { class: "readonly", text: "You are signed in as a viewer, so the buttons that change an issue are hidden. The owner gives the orders." }));
+    }
+    let total = 0;
+    for (const sev of SEVERITIES) {
       const list = groups[sev];
-      if (!list.length) continue;
-      open += list.length;
-      list.sort(newest);
-      kids.push(h("h2", { class: "sect sev-head is-" + sev }, sev,
+      total += list.length;
+      kids.push(h("h2", { class: "sect sev-head is-" + sev }, labels[sev],
         h("span", { class: "sect-note", text: this.num(list.length) })));
+      if (!list.length) {
+        kids.push(h("p", { class: "empty", text: "Nothing at this level." }));
+        continue;
+      }
       for (const it of list) kids.push(this.issueCard(it));
     }
-    if (!open) kids.push(h("p", { class: "empty", text: "Nothing open. The crew reports each morning." }));
-    if (fixed.length) kids.push(this.fixedRecently(fixed));
+    if (!total) {
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the issues list." : "Nothing open. The crew reports again tonight." }));
+    }
+    kids.push(this.snoozedList(all), this.fixedRecently(all));
     root.replaceChildren(...kids);
   },
 
   issueCard(it) {
     const h = this.h;
     const key = String(it.key || it.id || "");
+    const sev = this.severityOf(it);
     const status = String(it.status || "open");
-    const card = h("section", { class: "card issue is-" + this.severityOf(it), id: "issue-" + key, tabindex: "-1" },
-      h("div", { class: "issue-head" },
-        h("span", { class: "issue-title", text: it.title || key }),
-        status === "reopened" ? h("span", { class: "pill pill-fail", text: "reopened" }) : null,
-        status === "acknowledged" ? h("span", { class: "pill pill-warn", text: "acknowledged" }) : null));
-    const bits = [];
-    const first = this.dayLabel(it.firstSeen);
-    const last = this.ago(it.lastSeen);
-    const occ = Number(it.occurrences);
-    if (first) bits.push("first seen " + first);
-    if (last) bits.push("last seen " + last);
-    if (Number.isFinite(occ) && occ > 0) bits.push(this.num(occ) + "x");
-    card.append(h("div", { class: "issue-meta" },
-      h("span", { class: "issue-agent", text: this.agentName(it.agent) }),
-      bits.length ? h("span", { text: bits.join(", ") }) : null));
-    // detail and fix are plain text written by the agents: they are never HTML.
-    if (this.has(it.detail)) card.append(h("p", { class: "issue-text", text: it.detail }));
-    if (this.has(it.fix)) card.append(h("div", { class: "issue-fix" },
-      h("b", { text: "Fix" }), h("span", { class: "issue-text", text: it.fix })));
-    // Same test as the Rulebook: a read-only viewer is not offered buttons that
-    // can only ever answer "Could not save".
-    if (this.db && this.canWrite) {
-      const notice = h("p", { class: "issue-notice", hidden: true });
-      const actions = h("div", { class: "issue-actions" });
-      if (status !== "acknowledged") actions.append(this.issueButton(key, "acknowledged", "Acknowledge", notice));
-      actions.append(this.issueButton(key, "fixed", "Mark fixed", notice));
-      card.append(actions, notice);
+    const card = h("section", { class: "card issue is-" + sev, id: "issue-" + key, tabindex: "-1" });
+    const shown = !!this.expanded[key];
+
+    const body = h("div", { class: "issue-body", hidden: !shown });
+    if (this.has(it.detail)) body.append(this.markdownBlock(it.detail));
+    if (this.has(it.fix)) {
+      body.append(h("div", { class: "issue-fix" },
+        h("div", { class: "sub", text: "Suggested fix" }),
+        h("span", { class: "issue-text", text: it.fix })));
     }
+    if (this.has(it.orderId)) body.append(this.orderRow(String(it.orderId)));
+    if (this.db && this.canWrite) {
+      const notice = h("p", { class: "notice", hidden: true });
+      body.append(this.noteBox(key, it.ownerNote, notice));
+      body.append(this.issueActions(key, status, notice), notice);
+    } else if (this.has(it.ownerNote)) {
+      body.append(h("div", { class: "issue-fix" },
+        h("div", { class: "sub", text: "Your note" }),
+        h("span", { class: "issue-text", text: it.ownerNote })));
+    }
+
+    const head = h("button", { type: "button", class: "issue-head", "aria-expanded": shown ? "true" : "false" },
+      h("span", { class: "chip chip-agent", text: this.agentName(it.agent) }),
+      h("span", { class: "issue-title", text: it.title || key }),
+      status === "reopened" ? h("span", { class: "pill pill-crit", text: "seen again" }) : null,
+      status === "acknowledged" ? h("span", { class: "pill pill-muted", text: "acknowledged" }) : null);
+    head.addEventListener("click", () => {
+      const open = !this.expanded[key];
+      this.expanded[key] = open;
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+      body.hidden = !open;
+    });
+
+    const meta = h("div", { class: "issue-meta num" });
+    const days = this.daysOpen(it);
+    if (days !== null) meta.append(h("span", { text: this.dayCount(days) + " open" }));
+    const occ = Number(it.occurrences);
+    if (Number.isFinite(occ) && occ > 0) meta.append(h("span", { text: "seen " + this.num(occ) + (occ === 1 ? " time" : " times") }));
+    if (this.ago(it.lastSeen)) meta.append(h("span", { text: "last seen " + this.ago(it.lastSeen) }));
+
+    card.append(head, meta, body);
     return card;
   },
 
-  issueButton(key, status, label, notice) {
-    return this.h("button", {
-      type: "button", class: "btn",
-      onclick: (ev) => {
-        const btn = ev.currentTarget;
-        btn.disabled = true;
-        notice.hidden = true;
-        notice.textContent = "";
-        Promise.resolve().then(() => this.setIssueStatus(key, status)).catch((err) => {
-          notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
-          notice.hidden = false;
-          btn.disabled = false;
-        });
-      },
-    }, label);
+  orderRow(orderId) {
+    const h = this.h;
+    const order = this.state.orders[orderId] || null;
+    const row = h("div", { class: "order-row" }, h("span", { class: "sub", text: "Order" }));
+    if (!order) {
+      row.append(h("span", { class: "chip chip-queued", text: "given, not picked up yet" }));
+      return row;
+    }
+    const status = String(order.status || "queued");
+    row.append(h("span", { class: "chip chip-" + status, text: this.orderLabel(order) }));
+    const pr = this.safeUrl(order.prUrl);
+    if (pr) row.append(h("a", { class: "link", href: pr, target: "_blank", rel: "noopener noreferrer", text: "Read the pull request" }));
+    const box = h("div", {}, row);
+    if (this.has(order.result)) box.append(this.markdownBlock(order.result));
+    return box;
   },
+
+  orderLabel(order) {
+    const status = String(order.status || "queued");
+    const words = { queued: "waiting", running: "in hand", done: "done", failed: "could not be done", cancelled: "cancelled" };
+    const when = this.ago(order.finishedAt || order.pickedAt || order.createdAt);
+    return String(order.kind || "order") + ", " + (words[status] || status) + (when ? ", " + when : "");
+  },
+
+  noteBox(key, value, notice) {
+    const h = this.h;
+    const area = h("textarea", { class: "note-box", rows: "2", "aria-label": "Your note on this issue" });
+    area.value = this.has(value) ? String(value) : "";
+    const save = h("button", { type: "button", class: "btn", text: "Save note" });
+    save.addEventListener("click", () => {
+      save.disabled = true;
+      notice.hidden = true;
+      notice.textContent = "";
+      Promise.resolve().then(() => this.saveNote(key, area.value.trim())).then(() => {
+        save.disabled = false;
+      }).catch((err) => {
+        notice.textContent = "Could not save your note: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        save.disabled = false;
+      });
+    });
+    return h("div", { class: "issue-fix" },
+      h("label", { class: "sub", text: "Your note" }), area,
+      h("div", { class: "actions" }, save));
+  },
+
+  issueActions(key, status, notice) {
+    const h = this.h;
+    const bar = h("div", { class: "actions" });
+    bar.append(this.actionButton("Fix", notice, () => this.orderFromIssue(key, "fix"), "btn-go"));
+    bar.append(this.actionButton("Explain", notice, () => this.orderFromIssue(key, "explain")));
+    bar.append(this.actionButton("Recheck", notice, () => this.orderFromIssue(key, "recheck")));
+    if (status !== "acknowledged") bar.append(this.actionButton("Acknowledge", notice, () => this.setIssueStatus(key, "acknowledged")));
+    for (const days of [3, 7, 30]) {
+      bar.append(this.actionButton("Ignore for " + days + " days", notice, () => this.snoozeIssue(key, days)));
+    }
+    bar.append(this.actionButton("Mark fixed", notice, () => this.setIssueStatus(key, "fixed")));
+    return bar;
+  },
+
+  actionButton(label, notice, run, extra) {
+    const btn = this.h("button", { type: "button", class: "btn" + (extra ? " " + extra : ""), text: label });
+    btn.addEventListener("click", () => {
+      btn.disabled = true;
+      notice.hidden = true;
+      notice.textContent = "";
+      Promise.resolve().then(run).catch((err) => {
+        notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
+        notice.hidden = false;
+        btn.disabled = false;
+      });
+    });
+    return btn;
+  },
+
+  snoozedList(all) {
+    const h = this.h;
+    const now = Date.now();
+    const list = [];
+    for (const it of all) {
+      const until = Date.parse(it.snoozedUntil);
+      if (Number.isFinite(until) && until > now) list.push(it);
+    }
+    list.sort((a, b) => (Date.parse(a.snoozedUntil) || 0) - (Date.parse(b.snoozedUntil) || 0));
+    const det = h("details", { class: "fold" },
+      h("summary", {}, "Ignored for now ", h("span", { class: "num", text: this.num(list.length) })));
+    if (!list.length) {
+      det.append(h("p", { class: "empty", text: "Nothing is being ignored." }));
+      return det;
+    }
+    for (const it of list) {
+      det.append(h("div", { class: "row" },
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: it.title || it.key || it.id }),
+          h("span", { class: "row-sub", text: this.agentName(it.agent) })),
+        h("span", { class: "row-when", text: "back on " + this.dayLabel(it.snoozedUntil) })));
+    }
+    return det;
+  },
+
+  fixedRecently(all) {
+    const h = this.h;
+    const cutoff = Date.now() - 7 * DAY_MS;
+    const list = [];
+    for (const it of all) {
+      if (String(it.status || "") !== "fixed") continue;
+      const t = Date.parse(it.statusChangedAt);
+      if (Number.isFinite(t) && t >= cutoff) list.push(it);
+    }
+    list.sort((a, b) => (Date.parse(b.statusChangedAt) || 0) - (Date.parse(a.statusChangedAt) || 0));
+    const det = h("details", { class: "fold" },
+      h("summary", {}, "Fixed in the last 7 days ", h("span", { class: "num", text: this.num(list.length) })));
+    if (!list.length) {
+      det.append(h("p", { class: "empty", text: "Nothing closed this week." }));
+      return det;
+    }
+    for (const it of list) {
+      det.append(h("div", { class: "row" },
+        h("span", { class: "row-main" },
+          h("span", { class: "row-title", text: it.title || it.key || it.id }),
+          h("span", { class: "row-sub", text: this.agentName(it.agent) + (it.autoResolved ? ", closed by a clean run" : "") })),
+        h("span", { class: "row-when", text: this.ago(it.statusChangedAt) })));
+    }
+    return det;
+  },
+
+  // ---- writes ----
 
   setIssueStatus(key, status) {
     const db = this.db;
@@ -711,27 +1023,99 @@ const OpsRoom = {
     });
   },
 
-  fixedRecently(fixed) {
-    const h = this.h;
-    fixed.sort((a, b) => (Date.parse(b.statusChangedAt) || 0) - (Date.parse(a.statusChangedAt) || 0));
-    const det = h("details", { class: "fixed7" },
-      h("summary", {}, "Fixed in the last 7 days ", h("span", { class: "fixed7-count", text: this.num(fixed.length) })));
-    for (const it of fixed) {
-      det.append(h("div", { class: "fixed-row" },
-        h("span", { class: "fixed-title", text: it.title || it.key || it.id }),
-        it.autoResolved ? h("span", { class: "pill pill-muted", text: "auto" }) : null,
-        h("span", { class: "fixed-agent", text: this.agentName(it.agent) }),
-        h("span", { class: "fixed-when", text: this.ago(it.statusChangedAt) })));
-    }
-    return det;
+  snoozeIssue(key, days) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("issues/" + key).update({
+      status: "acknowledged",
+      snoozedUntil: new Date(Date.now() + days * DAY_MS).toISOString(),
+      statusChangedAt: new Date().toISOString(),
+    });
   },
 
-  // ---- Runs tab ----
+  saveNote(key, text) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    return db.doc("issues/" + key).update({ ownerNote: String(text || "") });
+  },
+
+  // A new order is the one document this page creates, so it is written with
+  // set, on an id the page made, and can never land on top of something else.
+  createOrder(kind, text, issueKey) {
+    const db = this.db;
+    if (!db) return Promise.reject({ code: "no-database" });
+    const order = buildOrder(kind, text, issueKey, this.who);
+    return db.doc("orders/" + order.id).set(order).then(() => order);
+  },
+
+  orderFromIssue(key, kind) {
+    return this.createOrder(kind, "", key).then((order) =>
+      this.db.doc("issues/" + key).update({ orderId: order.id }));
+  },
+
+  // ---- Orders, Alerts and Stats: the shells the later sections fill ----
+
+  renderOrders(root) {
+    const h = this.h;
+    const list = this.orderList();
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Given so far",
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) }) : null));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the orders list."
+        : "No orders yet. Open an issue and press Fix, Explain or Recheck to hand the Groundsman a job." }));
+    } else {
+      for (const o of list) {
+        card.append(h("div", { class: "row" },
+          h("span", { class: "chip chip-" + String(o.status || "queued"), text: this.orderLabel(o) }),
+          h("span", { class: "row-main" },
+            h("span", { class: "row-title", text: this.has(o.text) ? o.text : (this.has(o.issueKey) ? o.issueKey : "(no note)") }),
+            h("span", { class: "row-sub", text: "given by " + (o.createdBy || "owner") })),
+          h("time", { class: "row-when", datetime: this.has(o.createdAt) ? String(o.createdAt) : null, text: this.ago(o.createdAt) })));
+      }
+    }
+    root.replaceChildren(card, h("p", { class: "empty", text: "The Groundsman looks for orders every hour between 08:35 and 22:35 IST. Writing an order here in your own words arrives in the next update." }));
+  },
+
+  renderAlerts(root) {
+    const h = this.h;
+    const list = this.alertList();
+    const card = h("section", { class: "card card-rows" },
+      h("h2", { class: "sect" }, "Pushes sent",
+        list.length ? h("span", { class: "sect-note", text: this.num(list.length) }) : null));
+    if (!list.length) {
+      card.append(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the alerts list." : "Nothing has been pushed yet." }));
+    } else {
+      for (const a of list) {
+        card.append(h("div", { class: "row" },
+          h("span", { class: "row-main" },
+            h("span", { class: "row-title", text: a.message || "(no message)" }),
+            h("span", { class: "row-sub", text: this.alertKind(a.kind)
+              + (Array.isArray(a.issueKeys) && a.issueKeys.length ? ", " + a.issueKeys.join(", ") : "") })),
+          h("time", { class: "row-when", datetime: this.has(a.sentAt) ? String(a.sentAt) : null, text: this.ago(a.sentAt) })));
+      }
+    }
+    root.replaceChildren(card);
+  },
+
+  renderStats(root) {
+    const h = this.h;
+    const days = this.dailyList().length;
+    root.replaceChildren(h("section", { class: "card" },
+      h("h2", { class: "sect" }, "Fourteen days"),
+      h("p", { class: "empty", text: days
+        ? "The charts arrive in the next update. " + this.num(days) + " days of readings are on file."
+        : (this.state.dbReady === false ? "Waiting for the daily readings." : "No readings yet.") })));
+  },
+
+  // ---- Runs ----
 
   renderRuns(root) {
     const h = this.h;
     const sel = this.filters.runsAgent;
-    const crew = Object.keys(this.state.crew).map((k) => this.state.crew[k]);
+    const crew = this.crewList();
     crew.sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
     const chips = h("div", { class: "chips", role: "group", "aria-label": "Show runs for one agent" },
       this.agentChip("All", null, !sel));
@@ -752,7 +1136,8 @@ const OpsRoom = {
       kids.push(this.runCard(r));
     }
     if (kids.length === 1) {
-      kids.push(h("p", { class: "empty", text: sel ? "No runs for this agent yet." : "No runs yet." }));
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the runs list." : (sel ? "No runs for this agent yet." : "No runs yet.") }));
     }
     root.replaceChildren(...kids);
   },
@@ -766,8 +1151,7 @@ const OpsRoom = {
 
   runCard(r) {
     const h = this.h;
-    const status = String(r.status || "");
-    const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+    const tone = this.tone(r.status);
     const det = h("details", { class: "run" },
       h("summary", {}, h("span", { class: "run-sum" },
         h("span", { class: "dot dot-" + tone, title: tone === "none" ? "no status" : tone }),
@@ -778,7 +1162,7 @@ const OpsRoom = {
     if (this.has(r.details)) body.append(this.markdownBlock(r.details));
     const keys = Array.isArray(r.issueKeys) ? r.issueKeys : [];
     if (keys.length) {
-      const row = h("div", { class: "run-issues" }, h("span", { class: "run-issues-label", text: "Issues" }));
+      const row = h("div", { class: "run-issues" }, h("span", { class: "sub", text: "Issues" }));
       for (const k of keys) {
         const key = String(k);
         row.append(h("button", { type: "button", class: "chip chip-issue", onclick: () => this.showIssue(key) }, key));
@@ -790,12 +1174,12 @@ const OpsRoom = {
     return det;
   },
 
-  // The one place a run's Markdown enters the page as elements. renderMarkdown
+  // The one place an agent's Markdown enters the page as elements. renderMarkdown
   // has already parsed it and dropped the scripts, event handlers and script
   // URLs; the cleaned nodes are imported as they are, never serialised back
   // into markup. The protocol asks agents for at most 8 KB of details, so a
   // block twice that size is a runaway run: it is cut rather than allowed to
-  // freeze the tab.
+  // freeze the page.
   markdownBlock(md) {
     const box = this.h("div", { class: "md" });
     const text = String(md === null || md === undefined ? "" : md);
@@ -807,21 +1191,24 @@ const OpsRoom = {
     return box;
   },
 
+  // The name the rest of the page uses for the same walk.
+  cleanMarkdown(md) { return this.markdownBlock(md); },
+
   showIssue(key) {
-    this.setActive("issues");
+    this.expanded[key] = true;
+    this.nav("issues");
     const card = document.getElementById("issue-" + key);
     if (!card) return;
     card.focus();
     card.scrollIntoView({ block: "center" });
   },
 
-  // ---- Crew tab ----
+  // ---- Crew ----
 
   renderCrew(root) {
     const h = this.h;
     const byGroup = {};
-    for (const key of Object.keys(this.state.crew)) {
-      const c = this.state.crew[key];
+    for (const c of this.crewList()) {
       // The dugout is not in the database, and a group nobody recognises would
       // otherwise drop an agent off the page, so both land in the backroom.
       const g = String(c.group || "");
@@ -842,7 +1229,8 @@ const OpsRoom = {
       kids.push(h("h2", { class: "sect crew-head" }, pair[1],
         h("span", { class: "sect-note", text: this.num(list.length) })));
       if (!list.length) {
-        kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No crew list" : "Waiting for the crew list" }));
+        kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+          ? "Waiting for the crew list." : "Nobody here yet." }));
         continue;
       }
       const grid = h("div", { class: "crew-grid" });
@@ -856,8 +1244,7 @@ const OpsRoom = {
     const h = this.h;
     const id = String(c.id || "");
     const name = String(c.name || id);
-    const status = String(c.lastStatus || "none");
-    const tone = status === "ok" || status === "warn" || status === "fail" ? status : "none";
+    const tone = this.tone(c.lastStatus);
     const canvas = h("canvas", { class: "avatar", width: "36", height: "48", "aria-hidden": "true" });
     try { drawAvatar(canvas, id); } catch (err) { /* a face is not worth a broken card */ }
     const facts = h("dl", { class: "crew-facts" });
@@ -882,7 +1269,7 @@ const OpsRoom = {
           h("div", { class: "crew-card-role", text: c.role || "" }))),
       facts);
     if (isStatic) return card;
-    const open = () => { this.filters.runsAgent = id; this.setActive("runs"); };
+    const open = () => { this.filters.runsAgent = id; this.nav("runs"); };
     card.setAttribute("role", "button");
     card.setAttribute("tabindex", "0");
     card.setAttribute("aria-label", "Runs for " + name);
@@ -895,7 +1282,7 @@ const OpsRoom = {
     return card;
   },
 
-  // ---- Rulebook tab ----
+  // ---- Rulebook ----
 
   renderRules(root) {
     const h = this.h;
@@ -907,7 +1294,8 @@ const OpsRoom = {
     const kids = [h("h2", { class: "sect" }, "House rules",
       h("span", { class: "sect-note", text: this.num(list.length) + " rules" }))];
     if (!list.length) {
-      kids.push(h("p", { class: "empty", text: this.state.dbReady === false ? "No rulebook" : "No rules yet." }));
+      kids.push(h("p", { class: "empty", text: this.state.dbReady === false
+        ? "Waiting for the rulebook." : "No rules yet." }));
     } else {
       const ol = h("ol", { class: "rules" });
       for (const r of list) ol.append(this.ruleRow(r));
@@ -921,7 +1309,7 @@ const OpsRoom = {
     const h = this.h;
     const id = String(r.id || "");
     const li = h("li", { class: "card rule-row" });
-    const notice = h("p", { class: "issue-notice", hidden: true });
+    const notice = h("p", { class: "notice", hidden: true });
     const say = (err) => {
       notice.textContent = "Could not save: " + ((err && err.code) || "unknown");
       notice.hidden = false;
@@ -965,7 +1353,7 @@ const OpsRoom = {
             remove.disabled = false;
           });
         });
-        kids.push(h("div", { class: "issue-actions" }, edit, remove, cancel));
+        kids.push(h("div", { class: "actions" }, edit, remove, cancel));
       }
       kids.push(notice);
       li.replaceChildren(...kids);
@@ -989,7 +1377,7 @@ const OpsRoom = {
           cancel.disabled = false;
         });
       });
-      li.replaceChildren(area, h("div", { class: "issue-actions" }, save, cancel), notice);
+      li.replaceChildren(area, h("div", { class: "actions" }, save, cancel), notice);
       area.focus();
     };
     show();
@@ -998,7 +1386,7 @@ const OpsRoom = {
 
   addRuleBox() {
     const h = this.h;
-    const notice = h("p", { class: "issue-notice", hidden: true });
+    const notice = h("p", { class: "notice", hidden: true });
     const area = h("textarea", { class: "rule-input", rows: "3", id: "rule-new" });
     const add = h("button", { type: "button", class: "btn", text: "Add rule" });
     add.addEventListener("click", () => {
@@ -1020,7 +1408,7 @@ const OpsRoom = {
       h("h2", { class: "sect" }, "Add a rule"),
       h("label", { class: "rule-label", for: "rule-new", text: "The rule, in one sentence" }),
       area,
-      h("div", { class: "issue-actions" }, add),
+      h("div", { class: "actions" }, add),
       notice);
   },
 
@@ -1045,6 +1433,63 @@ const OpsRoom = {
       if (Number.isFinite(n) && n > max) max = n;
     }
     return db.collection("rules").add({ text: text, order: max + 1, addedAt: this.today(), addedBy: "owner" });
+  },
+
+  // ---- small helpers ----
+
+  issueList() { return Object.keys(this.state.issues).map((k) => this.state.issues[k]); },
+
+  orderList() {
+    const list = Object.keys(this.state.orders).map((k) => this.state.orders[k]);
+    list.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+    return list;
+  },
+
+  alertList() {
+    const list = Object.keys(this.state.alerts).map((k) => this.state.alerts[k]);
+    list.sort((a, b) => (Date.parse(b.sentAt) || 0) - (Date.parse(a.sentAt) || 0));
+    return list;
+  },
+
+  crewList() { return Object.keys(this.state.crew).map((k) => this.state.crew[k]); },
+
+  dailyList() { return Object.keys(this.state.daily).map((k) => this.state.daily[k]); },
+
+  latestDaily() {
+    let best = null;
+    for (const d of this.dailyList()) {
+      if (!best || String(d.date || d.id) > String(best.date || best.id)) best = d;
+    }
+    return best;
+  },
+
+  severityOf(issue) {
+    const sev = String((issue && issue.severity) || "low").toLowerCase();
+    return SEVERITIES.indexOf(sev) < 0 ? "low" : sev;
+  },
+
+  tone(status) {
+    const s = String(status || "none");
+    return s === "ok" || s === "warn" || s === "fail" ? s : "none";
+  },
+
+  agentName(id) {
+    const c = this.state.crew[id];
+    const name = c && typeof c === "object" ? c.name || c.id : null;
+    return name ? String(name) : String(id || "unknown");
+  },
+
+  daysOpen(it) {
+    const t = Date.parse(it && it.firstSeen);
+    if (!Number.isFinite(t)) return null;
+    return Math.max(0, Math.floor((Date.now() - t) / DAY_MS));
+  },
+
+  dayCount(n) { return n === 1 ? "1 day" : this.num(n) + " days"; },
+
+  safeUrl(u) {
+    const s = String(u === null || u === undefined ? "" : u).trim();
+    return /^https?:\/\//i.test(s) ? s : null;
   },
 
   // The viewer's own day, so a rule added this evening is not dated tomorrow.
@@ -1133,15 +1578,16 @@ const OpsRoom = {
     return this.sanitize(String(out));
   },
 
-  // Run details are Markdown written by the agents, so the HTML marked returns
-  // is untrusted. Parse it into an inert document, drop the elements and the
-  // attributes that can run code, move the page or paint over it, unwrap
-  // anything Markdown never produces, and hand back that cleaned body. Nothing
-  // is serialised into a string on the way out: the nodes this walk inspected
-  // are the nodes the page shows, so there is no second parse that could read
-  // the markup differently from the first. Working on the parsed tree is also
-  // what closes the holes an attribute regex leaves open, such as an img tag
-  // written as src=x/onerror=1 with no space before the handler.
+  // Run details, issue details and order results are Markdown written by the
+  // agents, so the HTML marked returns is untrusted. Parse it into an inert
+  // document, drop the elements and the attributes that can run code, move the
+  // page or paint over it, unwrap anything Markdown never produces, and hand
+  // back that cleaned body. Nothing is serialised into a string on the way out:
+  // the nodes this walk inspected are the nodes the page shows, so there is no
+  // second parse that could read the markup differently from the first. Working
+  // on the parsed tree is also what closes the holes an attribute regex leaves
+  // open, such as an img tag written as src=x/onerror=1 with no space before
+  // the handler.
   sanitize(html) {
     let doc = null;
     try { doc = new DOMParser().parseFromString(String(html), "text/html"); } catch (err) { doc = null; }
@@ -1166,7 +1612,8 @@ const OpsRoom = {
         if (name.slice(0, 2) === "on" || strip.indexOf(name) >= 0) { el.removeAttribute(attr.name); continue; }
         if (name !== "href" && name !== "src" && name !== "xlink:href") continue;
         // Browsers ignore whitespace and control characters inside a scheme, so
-        // "jav\tascript:alert(1)" runs. Take them out before the prefix check.
+        // a tab written into "javascript:" still runs. Take them out before the
+        // prefix check.
         const url = String(attr.value).replace(/[\s\u0000-\u001f\u007f]+/g, "").toLowerCase();
         if (/^(javascript:|data:text\/html)/.test(url)) el.removeAttribute(attr.name);
       }
@@ -1177,7 +1624,6 @@ const OpsRoom = {
 
 window.OpsRoom = OpsRoom;
 </script>
-
 <script>
 // ---- The Clubhouse ----
 // A cross-section of the stand drawn pixel by pixel on one canvas, 160 by 232
@@ -1600,8 +2046,8 @@ const Clubhouse = {
 
   visible() {
     const room = window.OpsRoom;
-    if (room && room.active !== "clubhouse") return false;
-    const panel = document.getElementById("panel-clubhouse");
+    if (room && room.active !== "office") return false;
+    const panel = document.getElementById("panel-office");
     return !!panel && !panel.hidden;
   },
 
@@ -2673,7 +3119,7 @@ Clubhouse.resetPositions();
 
 // Called again on every database snapshot, so it binds once, keeps the frame
 // the day is on, and only refreshes what the new numbers changed.
-OpsRoom.renderClubhouse = function (root) {
+OpsRoom.renderOffice = function (root) {
   Clubhouse.mount(root);
   Clubhouse.redraw();
   if (Clubhouse.selected) Clubhouse.renderClubhouseCard(Clubhouse.selected);
