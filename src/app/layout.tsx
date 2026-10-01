@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
-import { Geist, Geist_Mono, Barlow_Condensed } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -13,9 +13,11 @@ import { organizationSchema, websiteSchema } from "@/lib/structuredData";
 // No `revalidate` here, and no data fetching: a value set on the root layout would cap
 // every page on the site at that interval. Each page sets its own.
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// One face for body and headlines: Plus Jakarta Sans, set in sentence case.
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -23,12 +25,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// The headline face: condensed, heavy, set uppercase. Scores and big numbers use it too.
-const barlow = Barlow_Condensed({
-  variable: "--font-barlow",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-});
 
 export const SITE_NAME = "SportsDB";
 
@@ -55,7 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${barlow.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
       // The theme-init and home-init scripts below intentionally set data-theme and
       // data-home on this element before React hydrates (reading localStorage to avoid
       // a flash of the wrong theme or the wrong hero), so the server-rendered markup and

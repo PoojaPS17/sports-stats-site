@@ -1,5 +1,5 @@
 // src/components/PerformanceCard.tsx
-import { CARD, CARD_FONT } from "@/lib/exportTheme";
+import { CARD } from "@/lib/exportTheme";
 import { cardAccentColor } from "@/lib/cardColor";
 import { PixelBall } from "./Logo";
 import { SITE_URL, X_HANDLE } from "@/lib/site";
@@ -7,7 +7,7 @@ import { LEAGUE_LABEL } from "@/lib/leagues";
 import type { PerformanceStat } from "@/lib/performanceLine";
 
 // The family registered in cardFont.ts; Satori matches fonts by this name.
-const DISPLAY = "Barlow Condensed";
+const DISPLAY = "Plus Jakarta Sans";
 
 // A card-only mirror of ExportFooter (src/components/ExportFooter.tsx), not that component itself:
 // ExportFooter's X glyph span uses `display: "inline-flex"` and its wordmark nests a span inside
@@ -56,7 +56,7 @@ export function PerformanceCard({ league, playerName, position, jersey, teamAbbr
   const accent = cardAccentColor(teamColor);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: CARD.surface, fontFamily: CARD_FONT, position: "relative" }}>
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: CARD.surface, fontFamily: DISPLAY, position: "relative" }}>
       {/* Oversized jersey number watermark, behind everything else. */}
       {jersey && (
         <div style={{ position: "absolute", top: -40, right: 20, fontFamily: DISPLAY, fontSize: 420, fontWeight: 800, color: `${accent}1a`, lineHeight: 1 }}>{jersey}</div>
@@ -80,7 +80,7 @@ export function PerformanceCard({ league, playerName, position, jersey, teamAbbr
             {teamAbbr ?? ""}
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontFamily: DISPLAY, fontSize: 52, fontWeight: 800, lineHeight: 1, textTransform: "uppercase", color: CARD.text }}>{playerName}</div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 44, fontWeight: 800, lineHeight: 1.05, letterSpacing: -1, color: CARD.text }}>{playerName}</div>
             <div style={{ display: "flex", fontSize: 18, color: CARD.textMuted, marginTop: 6 }}>
               {[position, jersey ? `#${jersey}` : null].filter(Boolean).join(" · ")}
               {opponentAbbr ? ` vs ${opponentAbbr}` : ""}

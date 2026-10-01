@@ -37,8 +37,8 @@ test("the card body mirrors the site's light tokens and the band is the fixed br
   assert.equal(CARD.loss, t.loss);
 });
 
-test("the display face is Barlow Condensed through the page's font variable", () => {
-  assert.match(CARD_DISPLAY_FONT, /^var\(--font-barlow\), "Barlow Condensed"/);
+test("the display face is Plus Jakarta Sans through the page's font variable", () => {
+  assert.match(CARD_DISPLAY_FONT, /^var\(--font-jakarta\), "Plus Jakarta Sans"/);
 });
 
 test("the footer is the navy band with the lit block, the wordmark and the domain", () => {
