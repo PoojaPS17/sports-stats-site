@@ -17,18 +17,18 @@ export default function Image() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 72,
-          background: "linear-gradient(135deg, #0b1220 0%, #16223a 100%)",
-          color: "#e8edf6",
+          background: "linear-gradient(135deg, #0b1324 0%, #121c33 100%)",
+          color: "#eef1f7",
           fontFamily: "sans-serif",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <PixelBall size={64} fill="#6ea0ff" live="#f87171" />
+          <PixelBall size={64} fill="#ffffff" live="#c6f135" />
           <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: -1 }}>SportsDB</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ fontSize: 60, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5 }}>Live scores, standings and stats</div>
-          <div style={{ fontSize: 30, color: "#9aa7bd" }}>Premier League · La Liga · NFL · NBA · IPL · Tennis · F1</div>
+          <div style={{ fontSize: 30, color: "#9aa5bd" }}>Premier League · La Liga · NFL · NBA · IPL · Tennis · F1</div>
         </div>
       </div>
     ),

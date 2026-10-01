@@ -63,7 +63,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           <div style={{ fontSize: shareTitleSize(title), fontWeight: 800, lineHeight: 1.08, letterSpacing: -1.5 }}>{title}</div>
           <div style={{ fontSize: 26, color: "#9aa5bd", lineHeight: 1.35 }}>{dek}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 22, color: "#9aa5bd", marginTop: 14 }}>
-            <PixelBall size={24} fill="#c6f135" live="#f87171" />
+            <PixelBall size={24} fill="#ffffff" live="#c6f135" />
             <span style={{ color: "#c6f135", fontWeight: 700 }}>SportsDB</span>
             {article ? <span>· {formatPublished(article.publishedAt)} · {article.readingMinutes} min read</span> : null}
           </div>
