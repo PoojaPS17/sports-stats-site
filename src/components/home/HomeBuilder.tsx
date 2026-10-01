@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { editionFor, editionNote, editionToggleLabel, startingBlocks, type Edition, type EditionContext } from "@/lib/editions";
 import { followsToBlocks } from "@/lib/followBlocks";
 import { getFollows } from "@/lib/follow";
@@ -20,47 +20,73 @@ export function HomeBuilder({ ctx, mode = "first", initial, onClose }: { ctx: Ed
   const [blank, setBlank] = useState(initial?.edition === "blank");
   const [blocks, setBlocks] = useState<HomeBlock[]>(initial?.blocks ?? []);
   const [saveError, setSaveError] = useState(false);
+  // Bumped by the SETUP_EVENT listener below whenever the stored setup becomes null (cleared via
+  // clearSetup()), so the region lookup effect re-runs and the builder repopulates its draft.
+  const [version, setVersion] = useState(0);
+  // True once the visitor has edited the draft (add/remove/move/reorder); a region response that
+  // arrives afterwards must not clobber their edits.
+  const touched = useRef(false);
 
   // First visit: nothing to show if this browser already has a setup or declined; the pre-paint
-  // script hides the hero before this runs, this keeps the DOM consistent afterwards.
+  // script hides the hero before this runs, this keeps the DOM consistent afterwards. When the
+  // setup is cleared later (clearSetup()), the builder becomes visible again, so bump `version`
+  // to re-trigger the region lookup that was skipped while it was hidden.
   useEffect(() => {
     if (mode !== "first") return;
+    // Only a later change (not this initial check) should re-run the region lookup below: a
+    // first-time visitor already has no setup, and that case is handled by the lookup effect itself.
     const check = () => setHidden(readSetup() !== null);
+    const onChange = () => {
+      const stillSet = readSetup() !== null;
+      setHidden(stillSet);
+      if (!stillSet) setVersion((v) => v + 1);
+    };
     check();
-    window.addEventListener(SETUP_EVENT, check);
-    return () => window.removeEventListener(SETUP_EVENT, check);
+    window.addEventListener(SETUP_EVENT, onChange);
+    return () => window.removeEventListener(SETUP_EVENT, onChange);
   }, [mode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     if (mode !== "first") return;
+    // A visitor who already has a setup or declined doesn't see this card at all (see `hidden`
+    // above); skip the lookup so a built or declined visitor never fires /api/region.
+    if (readSetup() !== null) return;
+    touched.current = false;
     // A Strict Mode double-invoke (or an unmount mid-request) must not let a late response
     // clobber edits the visitor made in the meantime.
     let cancelled = false;
     fetch("/api/region")
       .then((r) => r.json())
       .then((d: { country?: string | null }) => {
-        if (cancelled) return;
+        if (cancelled || touched.current) return;
         const ed = editionFor(d.country ?? null);
         setCountry(d.country ?? null);
         setEdition(ed);
         setBlocks(draft(ed, ctx));
       })
       .catch(() => {
-        if (!cancelled) setBlocks(draft(editionFor(null), ctx));
+        if (!cancelled && !touched.current) setBlocks(draft(editionFor(null), ctx));
       });
     return () => {
       cancelled = true;
     };
-  }, [mode, ctx]);
+  }, [mode, ctx, version]);
 
   const chosen = new Set(blocks.map((b) => b.id));
-  const add = (b: HomeBlock) => setBlocks((list) => (list.some((x) => x.id === b.id) || list.length >= MAX_BLOCKS ? list : [...list, b]));
-  const remove = (id: string) => setBlocks((list) => list.filter((b) => b.id !== id));
+  const add = (b: HomeBlock) => {
+    touched.current = true;
+    setBlocks((list) => (list.some((x) => x.id === b.id) || list.length >= MAX_BLOCKS ? list : [...list, b]));
+  };
+  const remove = (id: string) => {
+    touched.current = true;
+    setBlocks((list) => list.filter((b) => b.id !== id));
+  };
   // Same semantics as moveBlock in lib/homeSetup.ts, on the plain draft list this card edits
   // before there is a setup to call it on.
-  const move = (id: string, delta: -1 | 1) =>
+  const move = (id: string, delta: -1 | 1) => {
+    touched.current = true;
     setBlocks((list) => {
       const i = list.findIndex((b) => b.id === id);
       const j = i + delta;
@@ -69,9 +95,13 @@ export function HomeBuilder({ ctx, mode = "first", initial, onClose }: { ctx: Ed
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
+  };
   const { handleProps } = useDragReorder(
     blocks.map((b) => b.id),
-    (ids) => setBlocks((list) => ids.map((id) => list.find((b) => b.id === id)!).filter(Boolean)),
+    (ids) => {
+      touched.current = true;
+      setBlocks((list) => ids.map((id) => list.find((b) => b.id === id)!).filter(Boolean));
+    },
     () => {}
   );
 
@@ -121,15 +151,15 @@ export function HomeBuilder({ ctx, mode = "first", initial, onClose }: { ctx: Ed
           <BlockPalette ctx={ctx} existing={chosen} onPick={add} />
         </div>
         <div className="rounded-xl bg-[var(--bg)] p-3 text-[var(--text)] lg:col-span-2">
-          <p className="eyebrow mb-2 text-[var(--text-faint)]">Preview · {blocks.length} blocks · drag to reorder</p>
+          <p className="eyebrow mb-2 text-[var(--text-faint)]">Preview · {blocks.length} {blocks.length === 1 ? "block" : "blocks"} · drag to reorder</p>
           <ol className="flex flex-col gap-1.5">
             {blocks.map((b, i) => (
               <li key={b.id} data-drag-id={b.id} className="group flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12px] font-bold">
-                <button type="button" {...handleProps(b.id)} aria-label={`Drag to move ${b.label}`} className="text-[var(--text-faint)]">⋮⋮</button>
+                <button type="button" {...handleProps(b.id)} tabIndex={-1} aria-label={`Drag to move ${b.label}`} className="text-[var(--text-faint)]">⋮⋮</button>
                 <span className="flex-1 truncate">{b.label}</span>
                 <span className="flex gap-0.5 opacity-100 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
-                  <button type="button" onClick={() => move(b.id, -1)} disabled={i === 0} aria-label="Move up" className="rounded px-1 text-[var(--text-faint)] hover:text-[var(--text)] disabled:opacity-30">↑</button>
-                  <button type="button" onClick={() => move(b.id, 1)} disabled={i === blocks.length - 1} aria-label="Move down" className="rounded px-1 text-[var(--text-faint)] hover:text-[var(--text)] disabled:opacity-30">↓</button>
+                  <button type="button" onClick={() => move(b.id, -1)} disabled={i === 0} aria-label={`Move ${b.label} up`} className="rounded px-1 text-[var(--text-faint)] hover:text-[var(--text)] disabled:opacity-30">↑</button>
+                  <button type="button" onClick={() => move(b.id, 1)} disabled={i === blocks.length - 1} aria-label={`Move ${b.label} down`} className="rounded px-1 text-[var(--text-faint)] hover:text-[var(--text)] disabled:opacity-30">↓</button>
                 </span>
               </li>
             ))}
