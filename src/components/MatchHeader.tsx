@@ -6,7 +6,7 @@ import { FollowButton } from "./FollowButton";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { formatGameDateRange } from "@/lib/gameDay";
 import { matchupLabel, scoreLineSides } from "@/lib/gamePage";
-import { isUpcomingGame, sideScoreText } from "@/lib/gameDisplay";
+import { isUpcomingGame, sideScoreText, splitScoreText } from "@/lib/gameDisplay";
 import type { CricketTeamScorecard } from "@/lib/matchDetail";
 
 function TeamLine({
@@ -28,15 +28,22 @@ function TeamLine({
   completed: boolean;
   won: boolean;
 }) {
+  // A cricket score is a figure beside the name ("235/6", or "233" for a bowled-out side) over a small line
+  // for the rest ("44.1/50 ov, target 234", "all out") under the name: the whole string beside the name
+  // squeezed the name out of the row at phone width.
+  const parts = scoreDisplay ? splitScoreText(scoreDisplay) : null;
   return (
     <div className="flex items-center justify-between gap-3">
       <Link href={href} className="flex min-w-0 items-center gap-3 hover:text-[var(--accent)]">
         <TeamLogo name={name} logoUrl={logo} color={color} size={40} priority />
-        <span className={`truncate text-lg ${completed && won ? "font-extrabold" : "font-semibold"}`}>{name}</span>
+        <span className="min-w-0">
+          <span className={`block truncate text-lg ${completed && won ? "font-extrabold" : "font-semibold"}`}>{name}</span>
+          {completed && parts?.detail && <span className="block text-xs tabular-nums text-[var(--text-muted)]">{parts.detail}</span>}
+        </span>
       </Link>
       {completed && (score !== null || scoreDisplay) && (
         <span className={`shrink-0 tabular-nums ${won ? "text-xl font-extrabold text-[var(--text)]" : "text-lg text-[var(--text-muted)]"}`}>
-          {scoreDisplay ?? score}
+          {parts ? parts.main : score}
         </span>
       )}
     </div>

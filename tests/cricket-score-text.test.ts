@@ -38,10 +38,21 @@ test("splitScoreText: the big figure and the small detail of a cricket score", (
   assert.deepEqual(splitScoreText("194 (24.5/25 ov)"), { main: "194", detail: "24.5/25 ov" });
 });
 
-test("the match header prints the bowled-out side as 'all out'", () => {
+test("the match header keeps the figure beside the name and puts the overs, target or 'all out' on a small line under it", () => {
+  // At phone width the whole "235/6 (44.1/50 ov, target 234)" beside the name squeezed the name out of the row.
   const html = renderToStaticMarkup(createElement(MatchHeader, { league: "odi", game: odi() }));
-  assert.ok(html.includes("233 all out"), html);
-  assert.ok(html.includes("235/6 (44.1/50 ov, target 234)"));
+  assert.ok(html.includes(">235/6<"), html);
+  assert.ok(html.includes(">44.1/50 ov, target 234<"), html);
+  assert.ok(!html.includes("235/6 (44.1/50 ov, target 234)"));
+  assert.ok(html.includes(">233<"), html);
+  assert.ok(html.includes(">all out<"), html);
+  assert.ok(!html.includes("233 all out"));
+  // the detail sits under the name, inside the team link, so it comes before the figure in the markup
+  assert.ok(html.indexOf(">44.1/50 ov, target 234<") < html.indexOf(">235/6<"));
+  // a plain score has no detail line
+  const nba = renderToStaticMarkup(createElement(MatchHeader, { league: "nba", game: odi({ league: "nba", home_score: 110, away_score: 108, away_score_display: null, home_winner: true, away_winner: false, local_date: null }) }));
+  assert.ok(nba.includes(">110<"));
+  assert.ok(!nba.includes("all out"));
 });
 
 test("the spotlight card puts both cricket sides on the small line, the bowled-out side as 'all out'", () => {
