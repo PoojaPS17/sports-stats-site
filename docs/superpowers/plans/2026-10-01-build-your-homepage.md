@@ -747,8 +747,8 @@ Expected: `# fail 0`.
 
 - [ ] **Step 10: Check that no old-brand colour is left anywhere in the app**
 
-Run: `grep -rn "1d4ed8\|6ea0ff\|f87171\|fb7185\|0b1220\|16223a" src tests || echo CLEAN`
-Expected: `CLEAN`. (Task 1 step 7 removed them from the share images; this task from the cards. Any hit is a miss: fix it with the matching token from `CARD` or the share-image mapping in Task 1.)
+Run: `grep -rn "1d4ed8\|6ea0ff\|f87171\|fb7185\|0b1220\|16223a" src tests | grep -v "zone-1" || echo CLEAN`
+Expected: `CLEAN`. (`--zone-1: #6ea0ff` in `globals.css` is the dark-mode standings-zone colour, not a brand colour, and stays.) (Task 1 step 7 removed them from the share images; this task from the cards. Any hit is a miss: fix it with the matching token from `CARD` or the share-image mapping in Task 1.)
 
 Run: `npx tsc --noEmit && npm run lint`
 Expected: no errors.
