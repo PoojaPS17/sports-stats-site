@@ -48,7 +48,7 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
         disabled={on}
         onClick={() => onPick(b)}
         aria-pressed={on}
-        className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-bold transition ${
+        className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-bold transition ${
           on
             ? "border-transparent bg-[var(--sig)] text-[var(--sig-on)]"
             : dark
