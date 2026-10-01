@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditionContext } from "@/lib/editions";
 import type { HomeBlock } from "@/lib/blockTypes";
 import { heroLine, type LoadedBlock } from "@/lib/homeHeroLine";
-import { addBlock, clearSetup, isSetup, moveBlock, readSetup, removeBlock, reorderBlocks, SETUP_EVENT, writeSetup, type HomeSetup } from "@/lib/homeSetup";
+import { addBlock, clearSetup, decodeSetup, isSetup, moveBlock, newSetup, readSetup, removeBlock, reorderBlocks, SETUP_EVENT, writeSetup, type HomeSetup } from "@/lib/homeSetup";
 import { BlockFrame } from "./BlockFrame";
 import { BlockPalette } from "./BlockPalette";
 import { BuiltHero } from "./BuiltHero";
@@ -34,6 +34,15 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
       setSetup(isSetup(s) ? s : null);
       document.documentElement.dataset.homeReady = "1";
     };
+    const encoded = new URLSearchParams(window.location.search).get("setup");
+    if (encoded) {
+      const incoming = decodeSetup(encoded);
+      const existing = readSetup();
+      if (incoming && (!isSetup(existing) || window.confirm("Replace the homepage saved on this device with the one from this link?"))) {
+        writeSetup(newSetup(incoming.edition, incoming.country, incoming.blocks));
+      }
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     read();
     window.addEventListener(SETUP_EVENT, read);
     window.addEventListener("storage", read);
