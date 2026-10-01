@@ -6,7 +6,7 @@ import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { Kickoff } from "./Kickoff";
 import { formatGameDate } from "@/lib/gameDay";
-import { gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
+import { gameAccessibleLabel, isUpcomingGame, sideScoreText } from "@/lib/gameDisplay";
 import { scoreLineSides } from "@/lib/gamePage";
 
 function TeamRow({
@@ -32,7 +32,9 @@ function TeamRow({
 }) {
   // A plain integer score ("119") sits fine on the same line as the team name. A long
   // compound score (cricket's "161/5 (18/20 ov, target 156)") was forcing the name to
-  // truncate to a couple of letters to make room — give it its own line instead.
+  // truncate to a couple of letters to make room — give it its own line instead. Every
+  // cricket score arrives as a display string (sideScoreText), so a bowled-out side,
+  // "233 all out", takes that line too rather than the big numeral.
   const isLongScore = Boolean(scoreDisplay);
   const loser = completed && !won;
   // A game in play shows its running score too.
@@ -80,7 +82,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         logo={game.away_logo}
         color={game.away_color}
         score={game.away_score}
-        scoreDisplay={game.away_score_display}
+        scoreDisplay={sideScoreText(league, game.away_score, game.away_score_display, game.completed)}
         completed={game.completed}
         live={live}
         won={awayWon}
@@ -93,7 +95,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         logo={game.home_logo}
         color={game.home_color}
         score={game.home_score}
-        scoreDisplay={game.home_score_display}
+        scoreDisplay={sideScoreText(league, game.home_score, game.home_score_display, game.completed)}
         completed={game.completed}
         live={live}
         won={homeWon}

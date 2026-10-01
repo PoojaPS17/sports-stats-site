@@ -3,6 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { isCalledOff } from "@/lib/gameStatus";
 import { teamHex } from "@/lib/teamColor";
 import type { GameRow, League } from "@/lib/queries";
+import { sideScoreText } from "@/lib/gameDisplay";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
@@ -51,8 +52,8 @@ export function SpotlightCard({ game }: { game: GameRow }) {
   // first; the NBA and NFL list the visitors first.
   const order = scoreLineSides(league, game);
   const teams = {
-    away: <Team name={teamDisplayName(game.away_name)} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />,
-    home: <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />,
+    away: <Team name={teamDisplayName(game.away_name)} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={sideScoreText(league, game.away_score, game.away_score_display, game.completed)} completed={game.completed} won={awayWon} />,
+    home: <Team name={teamDisplayName(game.home_name)} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={sideScoreText(league, game.home_score, game.home_score_display, game.completed)} completed={game.completed} won={homeWon} />,
   };
 
   const c1 = teamHex(order[0] === "home" ? game.home_color : game.away_color, "var(--mast-2)");

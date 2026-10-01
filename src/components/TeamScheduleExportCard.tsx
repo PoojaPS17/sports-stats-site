@@ -5,7 +5,7 @@ import { ExportFooter } from "./ExportFooter";
 import { ExportMore, capRows } from "./ExportShell";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
-import { scheduleRowHeading } from "@/lib/gameDisplay";
+import { scheduleRowHeading, sideScoreText } from "@/lib/gameDisplay";
 import { scoreLineSides } from "@/lib/gamePage";
 
 function ScheduleRow({ league, game }: { league: League; game: GameRow }) {
@@ -15,8 +15,8 @@ function ScheduleRow({ league, game }: { league: League; game: GameRow }) {
   // first; the NBA and NFL list the visitors first.
   const order = scoreLineSides(league, game);
   const lines = {
-    away: <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} />,
-    home: <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} />,
+    away: <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={sideScoreText(league, game.away_score, game.away_score_display, game.completed)} completed={game.completed} won={awayWon} />,
+    home: <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={sideScoreText(league, game.home_score, game.home_score_display, game.completed)} completed={game.completed} won={homeWon} />,
   };
 
   return (

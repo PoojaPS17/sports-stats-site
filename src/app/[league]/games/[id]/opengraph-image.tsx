@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { PixelBall } from "@/components/Logo";
 import { isLeague, isCricketLeague, LEAGUE_LABEL, getGameByEspnId, getGameDetails } from "@/lib/queries";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
-import { finishedNoScoreNote, shareImageModel } from "@/lib/gameDisplay";
+import { finishedNoScoreNote, shareImageModel, sideScoreText, splitScoreText } from "@/lib/gameDisplay";
 import { formatGameDate } from "@/lib/gameDay";
 import { resolveTeamLogo } from "@/lib/teamLogos";
 import { verifyLogoUrl } from "@/lib/verifyImageUrl";
@@ -17,7 +17,10 @@ export const revalidate = 300;
 // (expireTime in next.config.ts), which would show a stale score on the share image. The window
 // above still sets the default for the cached fetches inside this render.
 
+// A cricket score is a big figure ("235/6", or "233" for a bowled-out side) over a small line for the rest
+// ("44.1/50 ov, target 234", "all out"): the whole string at this size wrapped past the card's edge.
 function Side({ name, logo, score, muted }: { name: string; logo: string | null; score: string | null; muted: boolean }) {
+  const parts = score !== null ? splitScoreText(score) : null;
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, width: 380 }}>
       {logo ? (
@@ -26,7 +29,8 @@ function Side({ name, logo, score, muted }: { name: string; logo: string | null;
         <div style={{ width: 170, height: 170, borderRadius: 85, background: "#1b2640" }} />
       )}
       <div style={{ fontSize: 34, fontWeight: 700, textAlign: "center", color: muted ? "#9aa5bd" : "#eef1f7" }}>{name}</div>
-      {score !== null && <div style={{ fontSize: 96, fontWeight: 800, color: muted ? "#9aa5bd" : "#eef1f7" }}>{score}</div>}
+      {parts && <div style={{ fontSize: 96, fontWeight: 800, lineHeight: 1, color: muted ? "#9aa5bd" : "#eef1f7" }}>{parts.main}</div>}
+      {parts?.detail && <div style={{ fontSize: 28, fontWeight: 600, color: "#9aa5bd" }}>{parts.detail}</div>}
     </div>
   );
 }
@@ -63,8 +67,8 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   ]);
 
   const sides = {
-    away: <Side name={game.away_name} logo={awayLogo} score={played ? String(game.away_score_display ?? game.away_score) : null} muted={played && !awayWon} />,
-    home: <Side name={game.home_name} logo={homeLogo} score={played ? String(game.home_score_display ?? game.home_score) : null} muted={played && !homeWon} />,
+    away: <Side name={game.away_name} logo={awayLogo} score={played ? sideScoreText(game.league, game.away_score, game.away_score_display, true) ?? String(game.away_score) : null} muted={played && !awayWon} />,
+    home: <Side name={game.home_name} logo={homeLogo} score={played ? sideScoreText(game.league, game.home_score, game.home_score_display, true) ?? String(game.home_score) : null} muted={played && !homeWon} />,
   };
 
   return new ImageResponse(

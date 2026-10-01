@@ -1,5 +1,6 @@
 import { ExportTeamLine } from "./ExportTeamLine";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
+import { sideScoreText } from "@/lib/gameDisplay";
 import { CARD } from "@/lib/exportTheme";
 import { gameCalledOffLabel } from "@/lib/gameStatus";
 import { formatGameDateRange } from "@/lib/gameDay";
@@ -20,10 +21,10 @@ export function MatchScoreHeader({ league, game, scorecard }: { league: League; 
   const finished = finishedPillLabel(league, game);
   const lines = {
     away: (
-      <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} showScore={showScore} />
+      <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={sideScoreText(league, game.away_score, game.away_score_display, game.completed)} completed={game.completed} won={awayWon} showScore={showScore} />
     ),
     home: (
-      <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} showScore={showScore} />
+      <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={sideScoreText(league, game.home_score, game.home_score_display, game.completed)} completed={game.completed} won={homeWon} showScore={showScore} />
     ),
   };
   // Cricket lists the side that batted first first; football the home side; the NBA and NFL the visitors.
