@@ -8,6 +8,7 @@ import {
   getPlayerBySlug,
   getPlayerLog,
   getStandings,
+  getStandingsBySeason,
   getTeamBySlug,
   getTeamGamesBySeason,
   getTeamSeasons,
@@ -160,7 +161,10 @@ async function loadStandings(league: League, label: string, href: string): Promi
 async function loadSeriesStandings(seriesId: string): Promise<StandingsBlockData | null> {
   const series = await getCricketSeries(seriesId);
   if (!series?.league || !hasStandings(series.league)) return null;
-  return loadStandings(series.league, series.name, `/cricket/series/${seriesId}`);
+  // A series carries its own season; use that season's table (not whatever is most recent on
+  // file) so an ended series still shows the table it actually played.
+  const rows = series.season !== null ? await getStandingsBySeason(series.league, series.season) : await getStandings(series.league);
+  return rows.length ? tableFrom(series.league, rows, series.name, `/cricket/series/${seriesId}`) : null;
 }
 
 async function loadPlayerForm(league: League, slug: string): Promise<PlayerFormBlockData | null> {
