@@ -56,10 +56,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${barlow.variable} h-full antialiased`}
-      // The theme-init script below intentionally sets data-theme on this element
-      // before React hydrates (reading localStorage to avoid a flash of the wrong
-      // theme), so the server-rendered markup and the pre-hydration DOM legitimately
-      // differ here — the standard next-themes-style fix is to suppress just this.
+      // The theme-init and home-init scripts below intentionally set data-theme and
+      // data-home on this element before React hydrates (reading localStorage to avoid
+      // a flash of the wrong theme or the wrong hero), so the server-rendered markup and
+      // the pre-hydration DOM legitimately differ here — the standard next-themes-style
+      // fix is to suppress just this.
       suppressHydrationWarning
     >
       <head>
@@ -67,6 +68,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`try {
             var t = localStorage.getItem('theme');
             if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+          } catch (e) {}`}
+        </Script>
+        <Script id="home-init" strategy="beforeInteractive">
+          {`try {
+            var h = JSON.parse(localStorage.getItem('sportsdb-home') || 'null');
+            var fromLink = /[?&]setup=/.test(location.search);
+            if (fromLink || (h && h.v === 1 && Array.isArray(h.blocks) && h.blocks.length)) document.documentElement.dataset.home = 'built';
+            else if (h && h.v === 1 && h.declined) document.documentElement.dataset.home = 'collapsed';
           } catch (e) {}`}
         </Script>
       </head>
