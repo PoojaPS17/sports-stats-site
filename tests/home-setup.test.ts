@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   addBlock,
+  clearSetup,
   decodeSetup,
   encodeSetup,
   isSetup,
@@ -10,8 +11,11 @@ import {
   newSetup,
   normaliseBlocks,
   parseStored,
+  readSetup,
   removeBlock,
   reorderBlocks,
+  writeDeclined,
+  writeSetup,
   type HomeSetup,
 } from "../src/lib/homeSetup";
 import { blockId, type HomeBlock } from "../src/lib/blockTypes";
@@ -91,4 +95,11 @@ test("list edits are pure and respect the limit", () => {
   assert.deepEqual(reorderBlocks(added, ["standings:epl", "live"]).blocks.map((b) => b.id), ["standings:epl", "live", "player-form:ipl:virat-kohli"]);
   const full = newSetup("IN", "IN", Array.from({ length: 12 }, (_, i) => ({ id: "", type: "player-form" as const, params: { league: "nba", player: `p-${i}` }, label: `P ${i}: last five` })));
   assert.equal(addBlock(full, kohli), full);
+});
+
+test("storage functions are no-ops outside a browser (no window)", () => {
+  assert.doesNotThrow(() => writeSetup(newSetup("world", null, [])));
+  assert.doesNotThrow(() => writeDeclined());
+  assert.doesNotThrow(() => clearSetup());
+  assert.equal(readSetup(), null);
 });

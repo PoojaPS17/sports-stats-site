@@ -100,6 +100,7 @@ export function readSetup(): Stored | null {
 }
 
 function store(value: Stored): boolean {
+  if (typeof window === "undefined") return false;
   let saved = false;
   try {
     window.localStorage.setItem(SETUP_KEY, JSON.stringify(value));
@@ -121,6 +122,7 @@ export function writeDeclined(): boolean {
 }
 
 export function clearSetup() {
+  if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(SETUP_KEY);
   } catch {}
