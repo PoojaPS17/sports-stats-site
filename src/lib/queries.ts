@@ -1,6 +1,6 @@
 import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
-import { CALLED_OFF } from "./gameStatus";
+import { CALLED_OFF, isGameCalledOff } from "./gameStatus";
 import { dayTimeZone } from "./gameDay";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
@@ -173,6 +173,23 @@ export async function getRecentAndUpcoming(league: League, daysBack = 2, daysFor
     [league, daysBack, daysForward]
   );
   return rows;
+}
+
+/**
+ * Kickoff of the earliest fixture still to be played: unfinished, in the future and not called off ("called off" is
+ * the site's one definition, isGameCalledOff, applied here rather than restated in SQL, so a game the cards show as
+ * postponed never counts as the next matchday). With `season`, only that season's fixtures; without, any season's,
+ * which is what tells a league on a break from one between seasons.
+ */
+export async function getNextFixtureDate(league: League, season?: number): Promise<string | null> {
+  const { rows } = await pool.query(
+    `select date, completed, status_state, status_detail from games
+     where league = $1 and ($2::int is null or season_year = $2) and completed = false and date > now()
+     order by date asc`,
+    [league, season ?? null]
+  );
+  const next = rows.find((g) => !isGameCalledOff(g));
+  return next ? new Date(next.date).toISOString() : null;
 }
 
 // The last results of one season, newest first — the closing games of a season that

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LEAGUE_LABEL, leagueNameWithArticle, formatSeasonLabel } from "@/lib/queries";
+import { LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
+import { breakLine } from "@/lib/breakLine";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { NewsCard } from "@/components/NewsCard";
@@ -91,13 +92,13 @@ export default async function HomePage() {
           {blocks}
           {home.offSeason.length > 0 && (
             <section className="sm:col-span-2">
-              <SectionHeader description="Nothing scheduled in the next few days">Between seasons</SectionHeader>
+              <SectionHeader description="Nothing scheduled in the next few days">{home.offSeason.every((s) => s.resumesOn === null) ? "Between seasons" : "Nothing on this week"}</SectionHeader>
               <ul className="card divide-y divide-[var(--border)] overflow-hidden">
-                {home.offSeason.map(({ league, lastSeason }) => (
+                {home.offSeason.map(({ league, lastSeason, resumesOn }) => (
                   <li key={league} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
                     <span>
                       <span className="font-semibold">{LEAGUE_LABEL[league]}</span>
-                      <span className="text-[var(--text-muted)]"> · {leagueNameWithArticle(league, true)} is between seasons</span>
+                      <span className="text-[var(--text-muted)]"> · {breakLine(league, resumesOn)}</span>
                     </span>
                     <span className="flex gap-4 font-semibold text-[var(--accent)]">
                       <Link href={lastSeason !== null ? `/${league}/standings/${lastSeason}` : `/${league}/standings`} className="hover:underline">
