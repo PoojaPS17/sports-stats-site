@@ -6,7 +6,8 @@ import { TeamLogo } from "./TeamLogo";
 import { StatusPill } from "./StatusPill";
 import { Kickoff } from "./Kickoff";
 import { formatGameDate } from "@/lib/gameDay";
-import { gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
+import { cricketScoreText, gameAccessibleLabel, isUpcomingGame } from "@/lib/gameDisplay";
+import { isCricketLeague } from "@/lib/leagues";
 import { scoreLineSides } from "@/lib/gamePage";
 
 function TeamRow({
@@ -19,6 +20,7 @@ function TeamRow({
   completed,
   live = false,
   won,
+  cricket,
 }: {
   name: string;
   abbr: string | null;
@@ -29,11 +31,16 @@ function TeamRow({
   completed: boolean;
   live?: boolean;
   won: boolean;
+  cricket: boolean;
 }) {
   // A plain integer score ("119") sits fine on the same line as the team name. A long
   // compound score (cricket's "161/5 (18/20 ov, target 156)") was forcing the name to
-  // truncate to a couple of letters to make room — give it its own line instead.
-  const isLongScore = Boolean(scoreDisplay);
+  // truncate to a couple of letters to make room — give it its own line instead. Every
+  // cricket score takes that line, so a bowled-out side ("233 all out", which arrives as a
+  // plain total) does not sit in the big numeral beside the name while the chasing side's
+  // "235/6 (44.1/50 ov, target 234)" sits below it.
+  const lineText = cricket ? cricketScoreText(score, scoreDisplay, completed) : scoreDisplay;
+  const isLongScore = Boolean(lineText);
   const loser = completed && !won;
   // A game in play shows its running score too.
   const showScore = completed || live;
@@ -56,7 +63,7 @@ function TeamRow({
       </span>
       {showScore && isLongScore && (
         <span className={`pl-[36px] text-xs tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
-          {scoreDisplay}
+          {lineText}
         </span>
       )}
     </div>
@@ -72,6 +79,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   // Cricinfo lists the side that batted first first (a list card has no scorecard, so the score lines decide);
   // football lists the home side first, as BBC and ESPN.com do; the NBA and NFL list the visitors first.
   const order = scoreLineSides(league, game);
+  const cricket = isCricketLeague(league);
   const rows = {
     away: (
       <TeamRow
@@ -84,6 +92,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         completed={game.completed}
         live={live}
         won={awayWon}
+        cricket={cricket}
       />
     ),
     home: (
@@ -97,6 +106,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
         completed={game.completed}
         live={live}
         won={homeWon}
+        cricket={cricket}
       />
     ),
   };

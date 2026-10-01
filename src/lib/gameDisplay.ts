@@ -103,6 +103,18 @@ export function gameAccessibleLabel(
   return off ? `${label}, ${off.toLowerCase()}` : label;
 }
 
+/**
+ * A cricket side's score as a card prints it. ESPN (and the Cricsheet importer, which mirrors it) gives a
+ * bowled-out innings as a plain total, "233", with no display string: on a finished match that is "233 all out",
+ * which is what a reader expects next to the other side's "235/6 (44.1/50 ov, target 234)". Any other innings
+ * keeps its display string, and one still in progress with a plain total prints the runs alone.
+ */
+export function cricketScoreText(score: number | null, display: string | null, completed: boolean): string | null {
+  if (display) return display;
+  if (score == null) return null;
+  return completed ? `${score} all out` : String(score);
+}
+
 /** The status line of one tile on a scoreboard image: result, live detail, kickoff (in the league's day zone, labelled), or why a called-off game is off. */
 export function scoreboardTileStatus(league: League, g: StatusFields & StageFields & Pick<GameRow, "date" | "local_date">, withDate: boolean): string {
   const off = gameCalledOffLabel(g);
