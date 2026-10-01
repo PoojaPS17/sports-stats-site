@@ -2336,7 +2336,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Test: `tests/follow-blocks.test.ts`
 
 **Interfaces:**
-- Produces: `followToBlock(item)`, `searchResultToBlock(result)`, `followsToBlocks(items)`; `paletteGroups(ctx): { name: string; blocks: HomeBlock[] }[]`; `useBlocksData(blocks): Record<string, BlockState>` with `BlockState = { status: "loading" | "ok" | "empty" | "error"; data: BlockPayload | null }`; `useDragReorder(ids, onReorder, onDrop)` → `{ handleProps(id), containerProps }`; `BlockPalette({ ctx, existing, onPick, onClose })`.
+- Produces: `followToBlock(item)`, `searchResultToBlock(result)`, `followsToBlocks(items)`; `paletteGroups(ctx): { name: string; blocks: HomeBlock[] }[]`; `useBlocksData(blocks): Record<string, BlockState>` with `BlockState = { status: "loading" | "ok" | "empty" | "error"; data: BlockPayload | null }`; `useDragReorder(ids, onReorder, onDrop)` → `{ handleProps(id) }`; `BlockPalette({ ctx, existing, onPick, dark? })`.
 
 - [ ] **Step 1: Write the failing test**
 
