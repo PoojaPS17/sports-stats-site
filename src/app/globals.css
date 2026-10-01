@@ -710,39 +710,6 @@ a.card:hover,
   display: none;
 }
 
-/* When the chips overflow, the track carries two copies and slides one copy's width, so
-   the line moves continuously (the old marquee). Hover or focus holds it; reduced motion,
-   or chips that fit, leave it a plain swipeable strip. */
-.strip-moving {
-  overflow: hidden;
-}
-
-.strip-track {
-  display: flex;
-  align-items: stretch;
-  flex: 0 0 auto;
-}
-
-.strip-moving .strip-track {
-  animation: strip-marquee var(--strip-duration, 60s) linear infinite;
-}
-
-.strip-moving:hover .strip-track,
-.strip-moving:focus-within .strip-track {
-  animation-play-state: paused;
-}
-
-@keyframes strip-marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .strip-moving .strip-track {
-    animation: none;
-  }
-}
-
 .strip-chip {
   display: flex;
   flex: 0 0 auto;
