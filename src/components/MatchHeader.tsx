@@ -6,7 +6,7 @@ import { FollowButton } from "./FollowButton";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
 import { formatGameDateRange } from "@/lib/gameDay";
 import { matchupLabel, scoreLineSides } from "@/lib/gamePage";
-import { isUpcomingGame } from "@/lib/gameDisplay";
+import { isUpcomingGame, sideScoreText } from "@/lib/gameDisplay";
 import type { CricketTeamScorecard } from "@/lib/matchDetail";
 
 function TeamLine({
@@ -61,7 +61,7 @@ export function MatchHeader({ league, game, scorecard }: { league: League; game:
         logo={game.away_logo}
         color={game.away_color}
         score={game.away_score}
-        scoreDisplay={game.away_score_display}
+        scoreDisplay={sideScoreText(league, game.away_score, game.away_score_display, game.completed)}
         completed={game.completed}
         won={awayWon}
       />
@@ -73,7 +73,7 @@ export function MatchHeader({ league, game, scorecard }: { league: League; game:
         logo={game.home_logo}
         color={game.home_color}
         score={game.home_score}
-        scoreDisplay={game.home_score_display}
+        scoreDisplay={sideScoreText(league, game.home_score, game.home_score_display, game.completed)}
         completed={game.completed}
         won={homeWon}
       />

@@ -1,7 +1,7 @@
 import { ExportTeamLine } from "./ExportTeamLine";
 import { ExportShell, ExportTitle, ExportMore, capRows } from "./ExportShell";
 import { isCricketLeague, type GameRow, type League } from "@/lib/queries";
-import { scoreboardTileStatus } from "@/lib/gameDisplay";
+import { scoreboardTileStatus, sideScoreText } from "@/lib/gameDisplay";
 import { scoreLineSides } from "@/lib/gamePage";
 import { teamDisplayName } from "@/lib/teamName";
 import { CARD } from "@/lib/exportTheme";
@@ -19,8 +19,8 @@ function Tile({ league, game, withDate }: { league: League; game: GameRow; withD
   // first; the NBA and NFL list the visitors first.
   const order = scoreLineSides(league, game);
   const lines = {
-    away: <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={game.away_score_display} completed={game.completed} won={awayWon} showScore={showScore} />,
-    home: <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={game.home_score_display} completed={game.completed} won={homeWon} showScore={showScore} />,
+    away: <ExportTeamLine name={game.away_name} logo={game.away_logo} color={game.away_color} score={game.away_score} scoreDisplay={sideScoreText(league, game.away_score, game.away_score_display, game.completed)} completed={game.completed} won={awayWon} showScore={showScore} />,
+    home: <ExportTeamLine name={game.home_name} logo={game.home_logo} color={game.home_color} score={game.home_score} scoreDisplay={sideScoreText(league, game.home_score, game.home_score_display, game.completed)} completed={game.completed} won={homeWon} showScore={showScore} />,
   };
   return (
     <div style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 12, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>

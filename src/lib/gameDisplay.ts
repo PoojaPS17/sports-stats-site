@@ -82,8 +82,8 @@ export function gameAccessibleLabel(
   const home = teamDisplayName(game.home_name);
   const away = teamDisplayName(game.away_name);
   if (game.completed && !off) {
-    const homeScore = game.home_score_display ?? game.home_score ?? "";
-    const awayScore = game.away_score_display ?? game.away_score ?? "";
+    const homeScore = sideScoreText(league, game.home_score, game.home_score_display, true) ?? game.home_score ?? "";
+    const awayScore = sideScoreText(league, game.away_score, game.away_score_display, true) ?? game.away_score ?? "";
     const parts = { home: `${home} ${homeScore}`, away: `${away} ${awayScore}` };
     // A card has no scorecard, so the two team ids (which only a scorecard is matched against) may be absent.
     const [first, second] = scoreLineSides(league, { ...game, league, home_team_espn_id: game.home_team_espn_id ?? "", away_team_espn_id: game.away_team_espn_id ?? "" });
@@ -104,15 +104,27 @@ export function gameAccessibleLabel(
 }
 
 /**
- * A cricket side's score as a card prints it. ESPN (and the Cricsheet importer, which mirrors it) gives a
- * bowled-out innings as a plain total, "233", with no display string: on a finished match that is "233 all out",
- * which is what a reader expects next to the other side's "235/6 (44.1/50 ov, target 234)". Any other innings
- * keeps its display string, and one still in progress with a plain total prints the runs alone.
+ * A side's score string as every surface prints it (cards, match header, spotlight, downloadable cards, share
+ * image). ESPN (and the Cricsheet importer, which mirrors it) gives a bowled-out cricket innings as a plain
+ * total, "233", with no display string: on a finished match that is "233 all out", which is what a reader
+ * expects next to the other side's "235/6 (44.1/50 ov, target 234)", and it keeps every cricket score on the
+ * same line style instead of one side in the big numeral football and the NBA use. Any other cricket innings
+ * keeps its display string; one still in progress with a plain total prints the runs alone. A plain-score
+ * league gets its display string back unchanged (null), so its big numeral is untouched.
  */
-export function cricketScoreText(score: number | null, display: string | null, completed: boolean): string | null {
-  if (display) return display;
+export function sideScoreText(league: League, score: number | null, display: string | null, completed: boolean): string | null {
+  if (display || !isCricketLeague(league)) return display;
   if (score == null) return null;
   return completed ? `${score} all out` : String(score);
+}
+
+/** A score string split for a big-figure layout: "235/6 (44.1/50 ov, target 234)" is 235/6 over a small "44.1/50 ov, target 234"; "233 all out" is 233 over "all out". */
+export function splitScoreText(text: string): { main: string; detail: string | null } {
+  const paren = text.match(/^(.*?)\s*\((.*)\)\s*$/);
+  if (paren) return { main: paren[1], detail: paren[2] };
+  const allOut = text.match(/^(\d+)\s+(all out)$/);
+  if (allOut) return { main: allOut[1], detail: allOut[2] };
+  return { main: text, detail: null };
 }
 
 /** The status line of one tile on a scoreboard image: result, live detail, kickoff (in the league's day zone, labelled), or why a called-off game is off. */
