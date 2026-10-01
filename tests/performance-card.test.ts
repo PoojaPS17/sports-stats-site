@@ -58,3 +58,10 @@ test("footer parity: ends with the same navy band, wordmark and handle every oth
   assert.ok(html.includes("sportsdblive")); // X_HANDLE
   assert.ok(!html.includes("#1d4ed8"), "the old blue is gone");
 });
+
+test("a stat with a null delta renders its value and no comparison chip", () => {
+  const stats = baseProps.stats.map((s) => ({ ...s, delta: null }));
+  const html = renderToStaticMarkup(createElement(PerformanceCard, { ...baseProps, stats }));
+  assert.ok(html.includes("34"));
+  assert.ok(!html.includes("vs season avg"), "no delta text when every delta is null");
+});
