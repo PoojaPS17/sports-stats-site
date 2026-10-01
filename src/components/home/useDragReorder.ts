@@ -7,6 +7,9 @@ import { useCallback, useEffect, useRef } from "react";
 export function useDragReorder(ids: string[], onReorder: (ids: string[]) => void, onDrop: () => void) {
   const dragging = useRef<string | null>(null);
   const order = useRef(ids);
+  // The order last sent to onReorder, so hovering the same gap repeatedly (or a pointer move
+  // that lands on the same computed order) doesn't re-emit and re-render for nothing.
+  const lastEmitted = useRef<string>(ids.join("|"));
 
   useEffect(() => {
     order.current = ids;
@@ -20,6 +23,9 @@ export function useDragReorder(ids: string[], onReorder: (ids: string[]) => void
       if (!over || over === from) return;
       const next = order.current.filter((i) => i !== from);
       next.splice(order.current.indexOf(over), 0, from);
+      const key = next.join("|");
+      if (key === lastEmitted.current) return;
+      lastEmitted.current = key;
       onReorder(next);
     },
     [onReorder]
@@ -38,10 +44,23 @@ export function useDragReorder(ids: string[], onReorder: (ids: string[]) => void
     [onDrop, onPointerMove]
   );
 
+  // Removes any listeners a drag left attached (component unmounted mid-drag) and restores the
+  // text-selection style so an interrupted drag never leaves the page selection-locked.
+  useEffect(
+    () => () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      document.body.style.userSelect = "";
+    },
+    [onPointerMove, end]
+  );
+
   const handleProps = (id: string) => ({
     onPointerDown: (e: React.PointerEvent) => {
       e.preventDefault();
       dragging.current = id;
+      lastEmitted.current = order.current.join("|");
       document.body.style.userSelect = "none";
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", end);

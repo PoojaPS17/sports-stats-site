@@ -40,7 +40,9 @@ export function useBlocksData(blocks: HomeBlock[]): Record<string, BlockState> {
     }
   }, []);
 
-  const ids = blocks.map((b) => b.id).join("|");
+  // Sorted so a reorder (same ids, different order) doesn't change this key and refetch; only an
+  // add or remove (a different id set) should.
+  const ids = [...blocks.map((b) => b.id)].sort().join("|");
   useEffect(() => {
     for (const block of blocksRef.current) {
       setStates((s) => (s[block.id] ? s : { ...s, [block.id]: { status: "loading", data: null } }));
