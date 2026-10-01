@@ -15,6 +15,7 @@ import {
   readSetup,
   removeBlock,
   reorderBlocks,
+  SETUP_KEY,
   writeDeclined,
   writeSetup,
   type HomeSetup,
@@ -119,4 +120,30 @@ test("storage functions are no-ops outside a browser (no window)", () => {
   assert.doesNotThrow(() => writeDeclined());
   assert.doesNotThrow(() => clearSetup());
   assert.equal(readSetup(), null);
+});
+
+test("writeSetup drops a block normaliseBlocks would reject", () => {
+  const store: Record<string, string> = {};
+  const fakeWindow = {
+    localStorage: {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete store[k];
+      },
+    },
+    dispatchEvent: () => {},
+  };
+  (globalThis as { window?: unknown }).window = fakeWindow;
+  try {
+    const bad = { id: "x", type: "news", params: {}, label: "News" } as unknown as HomeBlock;
+    const s: HomeSetup = { ...newSetup("world", null, [live]), blocks: [live, bad] };
+    writeSetup(s);
+    const stored = JSON.parse(store[SETUP_KEY]);
+    assert.deepEqual(stored.blocks.map((b: { id: string }) => b.id), ["live"]);
+  } finally {
+    delete (globalThis as { window?: unknown }).window;
+  }
 });

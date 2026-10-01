@@ -114,7 +114,7 @@ function store(value: Stored): boolean {
 }
 
 export function writeSetup(setup: HomeSetup): boolean {
-  return store({ ...setup, updatedAt: Date.now() });
+  return store({ ...setup, blocks: normaliseBlocks(setup.blocks) ?? [], updatedAt: Date.now() });
 }
 
 export function writeDeclined(): boolean {
