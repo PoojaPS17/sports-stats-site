@@ -33,7 +33,7 @@ function leagueLinks(league: League) {
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-[var(--header-border)] bg-[var(--mast)] text-[var(--mast-muted)]">
+    <footer className="band-deep mt-auto border-t border-[var(--band-deep-line)] text-[var(--mast-muted)]">
       <div className="container-x flex flex-col gap-8 py-10">
         <div className="flex flex-col gap-3">
           <Link href="/" className="flex items-center gap-2 text-[var(--mast-text)]">

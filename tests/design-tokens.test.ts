@@ -14,10 +14,11 @@ test("the light :root block defines the signature, masthead and display-font tok
     assert.match(rootBlock, new RegExp(token.replace(/[-]/g, "\\-")), token);
   }
   assert.match(rootBlock, /--volt:\s*#c6f135/i, "Volt is kept as a fixed token");
-  assert.match(rootBlock, /--sig:\s*#1e3a8a/i, "the light theme's signature colour is navy ink");
-  assert.match(rootBlock, /--sig-ink:\s*#1e3a8a/i);
+  assert.match(rootBlock, /--sig:\s*#1470af/i, "the light theme's signature colour is the store blue");
+  assert.match(rootBlock, /--sig-ink:\s*#1470af/i);
   assert.match(rootBlock, /--sig-on:\s*#ffffff/i);
-  assert.match(rootBlock, /--mast:\s*#f7f5f0/i, "light bands are paper, the same as the page");
+  assert.match(rootBlock, /--mast:\s*#ffffff/i, "light bands are white");
+  assert.match(rootBlock, /--band-deep:\s*#0d2b57/i, "the scores strip and footer sit on the deep navy band");
 });
 
 test("--accent is remapped to the signature ink so existing components inherit it", () => {
@@ -37,8 +38,10 @@ test("the dark theme makes Volt the signature colour and the ink, in both the me
   }
 });
 
-test("Barlow Condensed is loaded in the root layout and exposed as --font-display", () => {
-  assert.match(layout, /Barlow_Condensed\(/);
-  assert.match(layout, /variable:\s*"--font-barlow"/);
-  assert.match(css, /--font-display:\s*var\(--font-barlow\)/);
+test("Plus Jakarta Sans is loaded in the root layout and serves as both the body and the display face", () => {
+  assert.match(layout, /Plus_Jakarta_Sans\(/);
+  assert.match(layout, /variable:\s*"--font-jakarta"/);
+  assert.match(css, /--font-display:\s*var\(--font-jakarta\)/);
+  assert.match(css, /--font-sans:\s*var\(--font-jakarta\)/);
+  assert.doesNotMatch(layout, /Barlow_Condensed|Geist\(/);
 });

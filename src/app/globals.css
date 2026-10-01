@@ -2,52 +2,60 @@
 
 /* ---------------------------------------------------------------------------
    Design tokens
-   Light theme (paper and navy ink) is the default; the dark theme (near-black and Volt)
+   Light theme (white, ink and the store blue) is the default; the dark theme (near-black and Volt)
    lives in the two blocks below (system preference, then the explicit data-theme toggle,
    which always wins).
 --------------------------------------------------------------------------- */
 :root {
-  --bg: #f7f5f0;
-  --surface: #fffdf9;
-  --surface-muted: #efece4;
-  --surface-hover: #f3f0e9;
-  --border: #e3dfd4;
-  --border-strong: #c9c4b8;
-  --text: #141a2b;
-  --text-muted: #5d6373;
-  --text-faint: #8c9099;
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --surface-muted: #eaf2fa;
+  --surface-hover: #f3f7fb;
+  --border: #b8d4ec;
+  --border-strong: #8fb8dc;
+  --text: #060640;
+  --text-muted: #4a4a72;
+  --text-faint: #646488;
 
   /* The brand pair, fixed in both themes: Volt on navy is what the icons, share images,
-     downloadable cards and the neutral article tile are drawn in. */
+     downloadable cards' footer and the neutral article tile are drawn in. */
   --volt: #c6f135;
   --navy: #0b1324;
   --navy-2: #121c33;
 
-  /* The signature colour per theme: deep navy ink on paper in the light theme, Volt in the
-     dark theme. Components use --sig for the accent and --sig-on for text placed on it. */
-  --sig: #1e3a8a;
-  --sig-ink: #1e3a8a;
-  --sig-soft: #e4e9f7;
+  /* The signature colour per theme: the store blue on white in the light theme, Volt in
+     the dark theme. Components use --sig for the accent and --sig-on for text placed on it. */
+  --sig: #1470af;
+  --sig-ink: #1470af;
+  --sig-soft: #eaf2fa;
   --sig-on: #ffffff;
 
-  /* The bands: masthead, scores strip, hero, article header, footer. Paper in the light
-     theme, near-black in the dark one, so the two themes read as different materials. */
-  --mast: #f7f5f0;
-  --mast-2: #efece4;
-  --mast-text: #141a2b;
-  --mast-muted: #5d6373;
-  --mast-line: rgba(20, 26, 43, 0.12);
-  --hero-wash: 8%;
+  /* The bands: masthead, hero, article header. White in the light theme, near-black in the
+     dark one, so the two themes read as different materials. */
+  --mast: #ffffff;
+  --mast-2: #eaf2fa;
+  --mast-text: #060640;
+  --mast-muted: #4a4a72;
+  --mast-line: rgba(6, 6, 64, 0.12);
+  --hero-wash: 10%;
+
+  /* The deep band: the scores strip and the footer. Deep navy with white text in the light
+     theme (the one dark element on the page), a raised surface in the dark theme. */
+  --band-deep: #0d2b57;
+  --band-deep-text: #ffffff;
+  --band-deep-muted: #a9c4e4;
+  --band-deep-link: #9cc7ea;
+  --band-deep-line: rgba(255, 255, 255, 0.14);
 
   /* Legacy names, kept so every existing component inherits the identity. */
   --accent: var(--sig-ink);
-  --accent-hover: #172e6e;
+  --accent-hover: #0f5688;
   --accent-soft: var(--sig-soft);
   --accent-foreground: var(--sig-on);
   --accent-2: #d97706;
 
-  --win: #15803d;
-  --loss: #b91c1c;
+  --win: #006717;
+  --loss: #ba0329;
   --draw: #64748b;
   --live: #ff3b5c;
 
@@ -59,13 +67,13 @@
   --header-bg: var(--mast);
   --header-text: var(--mast-text);
   --header-text-muted: var(--mast-muted);
-  --header-border: #e3dfd4;
-  --header-hover-bg: rgba(20, 26, 43, 0.06);
+  --header-border: var(--border);
+  --header-hover-bg: rgba(6, 6, 64, 0.06);
 
   --pill-live-bg: #e11d48; /* deeper than --live so 0.68rem white text clears AA */
   --pill-live-text: #ffffff;
-  --pill-final-bg: #ebe8e0;
-  --pill-final-text: #4a5063;
+  --pill-final-bg: #e6edf5;
+  --pill-final-text: #4a4a72;
   --pill-upcoming-bg: var(--sig-soft);
   --pill-upcoming-text: var(--sig-ink);
   --pill-feature-bg: #dcfce7;
@@ -74,10 +82,10 @@
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
 
-  --shadow-card: 0 1px 2px rgba(20, 26, 43, 0.05), 0 8px 24px -12px rgba(20, 26, 43, 0.16);
+  --shadow-card: 0 1px 2px rgba(0, 23, 67, 0.06), 0 8px 24px -12px rgba(0, 23, 67, 0.16);
   --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
 
-  --font-display: var(--font-barlow);
+  --font-display: var(--font-jakarta);
   --header-h: 3.75rem;
 }
 
@@ -97,7 +105,7 @@
   --color-mast-2: var(--mast-2);
   --color-mast-text: var(--mast-text);
   --color-mast-muted: var(--mast-muted);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
 }
@@ -125,6 +133,12 @@
     --mast-muted: #9aa5bd;
     --mast-line: rgba(255, 255, 255, 0.08);
     --hero-wash: 18%;
+
+    --band-deep: #0f1420;
+    --band-deep-text: #eef1f7;
+    --band-deep-muted: #9aa5bd;
+    --band-deep-link: var(--sig);
+    --band-deep-line: rgba(255, 255, 255, 0.08);
 
     --accent: var(--sig);
     --accent-hover: #d8f766;
@@ -176,6 +190,12 @@
   --mast-muted: #9aa5bd;
   --mast-line: rgba(255, 255, 255, 0.08);
   --hero-wash: 18%;
+
+  --band-deep: #0f1420;
+  --band-deep-text: #eef1f7;
+  --band-deep-muted: #9aa5bd;
+  --band-deep-link: var(--sig);
+  --band-deep-line: rgba(255, 255, 255, 0.08);
 
   --accent: var(--sig);
   --accent-hover: #d8f766;
@@ -277,27 +297,26 @@ table {
 
 .page-title {
   font-family: var(--font-display);
-  font-size: 2.25rem;
-  line-height: 0.95;
+  font-size: 2rem;
+  line-height: 1.05;
   font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
+  letter-spacing: -0.02em;
   color: var(--text);
   text-wrap: balance;
 }
 
 @media (min-width: 640px) {
   .page-title {
-    font-size: 2.75rem;
+    font-size: 2.5rem;
   }
 }
 
-/* Headline face for any heading or big number. */
+/* Headline face for any heading or big number: the body face, heavy and tight, sentence case. */
 .display {
   font-family: var(--font-display);
-  text-transform: uppercase;
-  line-height: 1;
+  line-height: 1.05;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 /* Small caps label above a title. Colour is set where it's used (the signature colour on a
@@ -314,6 +333,18 @@ table {
 .band {
   background: var(--mast);
   color: var(--mast-text);
+}
+
+/* The deep band (scores strip, footer): the band tokens inside it resolve to the deep
+   palette, so the chips and columns need no colours of their own. */
+.band-deep {
+  background: var(--band-deep);
+  color: var(--band-deep-text);
+  --sig: var(--band-deep-link);
+  --mast-text: var(--band-deep-text);
+  --mast-muted: var(--band-deep-muted);
+  --mast-line: var(--band-deep-line);
+  --header-hover-bg: rgba(255, 255, 255, 0.07);
 }
 
 .band .eyebrow:not(.eyebrow-quiet) {
@@ -679,6 +710,39 @@ a.card:hover,
   display: none;
 }
 
+/* When the chips overflow, the track carries two copies and slides one copy's width, so
+   the line moves continuously (the old marquee). Hover or focus holds it; reduced motion,
+   or chips that fit, leave it a plain swipeable strip. */
+.strip-moving {
+  overflow: hidden;
+}
+
+.strip-track {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+}
+
+.strip-moving .strip-track {
+  animation: strip-marquee var(--strip-duration, 60s) linear infinite;
+}
+
+.strip-moving:hover .strip-track,
+.strip-moving:focus-within .strip-track {
+  animation-play-state: paused;
+}
+
+@keyframes strip-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip-moving .strip-track {
+    animation: none;
+  }
+}
+
 .strip-chip {
   display: flex;
   flex: 0 0 auto;
@@ -689,6 +753,7 @@ a.card:hover,
   padding: 0 1rem;
   border-right: 1px solid var(--mast-line);
   font-size: 12px;
+  line-height: 1.25;
   color: var(--mast-text);
 }
 
@@ -707,6 +772,7 @@ a.card:hover,
   gap: 0.75rem;
   color: var(--mast-muted);
   font-size: 10px;
+  line-height: 1.2;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -738,7 +804,7 @@ a.card:hover,
 .art {
   position: relative;
   overflow: hidden;
-  color: var(--mast-text);
+  color: #ffffff;
   container-type: inline-size;
 }
 
@@ -748,7 +814,7 @@ a.card:hover,
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, color-mix(in srgb, var(--mast) 62%, transparent), transparent 70%);
+  background: linear-gradient(to top, color-mix(in srgb, var(--navy) 62%, transparent), transparent 70%);
   pointer-events: none;
 }
 
