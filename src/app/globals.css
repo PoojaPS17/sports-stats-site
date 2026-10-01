@@ -701,9 +701,14 @@ a.card:hover,
 /* ---------------------------------------------------------------------------
    Scores strip under the masthead
 --------------------------------------------------------------------------- */
+/* Swipes land on a whole chip, and the chip cut by the right edge fades out instead of
+   showing half a result. */
 .strip-scroll {
   scrollbar-width: none;
   padding-left: 1rem;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 1rem;
+  mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
 }
 
 .strip-scroll::-webkit-scrollbar {
@@ -713,6 +718,7 @@ a.card:hover,
 .strip-chip {
   display: flex;
   flex: 0 0 auto;
+  scroll-snap-align: start;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
