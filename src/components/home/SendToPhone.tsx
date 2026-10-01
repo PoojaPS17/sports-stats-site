@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { encodeSetup, type HomeSetup } from "@/lib/homeSetup";
 
 // Carries the setup to another device with no login: the setup travels inside the link
@@ -8,6 +8,12 @@ import { encodeSetup, type HomeSetup } from "@/lib/homeSetup";
 // share sheet; everything else copies the link and says so.
 export function SendToPhone({ setup }: { setup: HomeSetup }) {
   const [copied, setCopied] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+  }, []);
+
   const send = async () => {
     const url = `${window.location.origin}/?setup=${encodeSetup(setup)}`;
     if (navigator.share) {
@@ -21,7 +27,8 @@ export function SendToPhone({ setup }: { setup: HomeSetup }) {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setCopied(false), 2000);
     } catch {
       window.prompt("Copy this link to open your homepage on another device", url);
     }

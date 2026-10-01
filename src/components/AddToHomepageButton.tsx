@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FollowItem } from "@/lib/follow";
 import { followToBlock } from "@/lib/followBlocks";
 import { addBlock, hasBlock, isSetup, newSetup, readSetup, SETUP_EVENT, writeSetup } from "@/lib/homeSetup";
@@ -11,10 +11,17 @@ type Item = Omit<FollowItem, "addedAt">;
 // "Add to my homepage" beside the follow button on team, player and series pages. Adds the
 // matching block to the setup saved in this browser (or starts one), and says so.
 export function AddToHomepageButton({ item }: { item: Item }) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- item is a fresh object each render; these fields are what followToBlock reads
-  const block = useMemo(() => followToBlock(item), [item.kind, item.league, item.refId, item.label]);
+  const block = useMemo(
+    () => followToBlock({ kind: item.kind, league: item.league, refId: item.refId, label: item.label }),
+    [item.kind, item.league, item.refId, item.label]
+  );
   const [onPage, setOnPage] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+  }, []);
 
   useEffect(() => {
     if (!block) return;
@@ -45,7 +52,8 @@ export function AddToHomepageButton({ item }: { item: Item }) {
     const s = readSetup();
     writeSetup(isSetup(s) ? addBlock(s, block) : newSetup("blank", null, [block]));
     setJustAdded(true);
-    window.setTimeout(() => setJustAdded(false), 2000);
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setJustAdded(false), 2000);
   };
 
   return (

@@ -41,7 +41,9 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
       if (incoming && (!isSetup(existing) || window.confirm("Replace the homepage saved on this device with the one from this link?"))) {
         writeSetup(newSetup(incoming.edition, incoming.country, incoming.blocks));
       }
-      window.history.replaceState({}, "", window.location.pathname);
+      const u = new URL(window.location.href);
+      u.searchParams.delete("setup");
+      window.history.replaceState({}, "", u.pathname + u.search + u.hash);
     }
     read();
     window.addEventListener(SETUP_EVENT, read);
