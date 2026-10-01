@@ -14,6 +14,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ type: string }>
   if (!isBlockType(type)) return NextResponse.json({ error: "unknown block type" }, { status: 400 });
   const check = validateBlockParams(type, Object.fromEntries(new URL(req.url).searchParams.entries()));
   if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
-  const block = await loadBlock(type, check.params);
+  let block;
+  try {
+    block = await loadBlock(type, check.params);
+  } catch (err) {
+    // A DB blip or similar must not become an uncacheable storm of 500s: log it, answer with an
+    // empty block under the same short, revalidatable cache the type would normally get.
+    console.error("block route", type, err);
+    return NextResponse.json({ block: null, fetchedAt: new Date().toISOString() }, { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } });
+  }
   return NextResponse.json({ block, fetchedAt: new Date().toISOString() }, { headers: { "Cache-Control": cacheHeader(type) } });
 }
