@@ -30,6 +30,10 @@
 |---|---|
 | `src/components/Logo.tsx` | The lit-block mark (`PixelBall`, `LogoMark`) and the Barlow `Wordmark` |
 | `src/app/logo-512.png/route.tsx` | The 512px brand PNG, generated (replaces `public/logo-512.png`) |
+| `src/lib/exportTheme.ts` | The downloadable cards' fixed light palette, mirroring the site's light tokens, and the display face |
+| `src/lib/cardFont.ts` | + Barlow Condensed ExtraBold for the server-rendered player card |
+| `src/components/ExportFooter.tsx` | The navy brand band every downloadable card ends with, and `ExportWordmark` |
+| `src/components/PerformanceCard.tsx` | The server-rendered NBA/NFL player card, same band and faces in Satori's subset |
 | `src/lib/blockTypes.ts` | Block type names, `HomeBlock`, `blockId`, and every block's payload type (shared by server and client, no DB imports) |
 | `src/lib/blockParams.ts` | Parameter validation per type and the cache lifetime table (pure) |
 | `src/lib/editions.ts` | Country → edition, starting blocks, edition copy (pure) |
@@ -209,6 +213,18 @@ import { LogoMark, Wordmark } from "./Logo";
 
 - [ ] **Step 7: Move the icons and share images onto navy and Volt**
 
+First swap the share images' old blue-grey palette for the masthead tokens in one pass (background, text, muted text, the blue link colour becomes Volt):
+
+```bash
+cd /Users/ps/Claude/sports-stats-site/worktrees/build-your-homepage && sed -i '' \
+  -e 's/#0b1220/#0b1324/g' -e 's/#16223a/#121c33/g' -e 's/#e8edf6/#eef1f7/g' -e 's/#9aa7bd/#9aa5bd/g' \
+  -e 's/#6b788f/#6b7890/g' -e 's/#233047/#1b2640/g' -e 's/#6ea0ff/#c6f135/g' \
+  src/app/opengraph-image.tsx "src/app/[league]/games/[id]/opengraph-image.tsx" \
+  "src/app/[league]/teams/[slug]/opengraph-image.tsx" "src/app/f1/events/[id]/opengraph-image.tsx" \
+  "src/app/[league]/games/[id]/players/[slug]/opengraph-image.tsx" && git diff --stat
+```
+Expected: five files changed. Then make the edits below by hand (the mark lines still carry the old rose `#f87171` until you replace them).
+
 `src/app/icon.tsx`, replace the element and the comment:
 
 ```tsx
@@ -263,7 +279,7 @@ In the other four share images replace the `PixelBall` line, keeping each file's
 - `src/app/[league]/games/[id]/opengraph-image.tsx:95` → `<PixelBall size={28} fill="#ffffff" live="#c6f135" />`
 - `src/app/f1/events/[id]/opengraph-image.tsx:44` → `<PixelBall size={28} fill="#ffffff" live="#c6f135" />`
 
-`ExportFooter.tsx` and `PerformanceCard.tsx` pass their own card palette and need no change.
+`ExportFooter.tsx` and `PerformanceCard.tsx` read their own card palette; Task 1B moves them.
 
 - [ ] **Step 8: Generate the 512px logo from the same geometry**
 
@@ -319,6 +335,443 @@ git add -A && git commit -m "Move the brand to the lit-block mark on navy and Vo
 Four blocks, one lit, replace the 5×5 pixel ball in the header, the tab and
 home-screen icons, the generated 512px logo and the five share images. The
 wordmark is set in Barlow Condensed with DB in Volt.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 1B: The downloadable cards and the player card on the new brand
+
+Every "Share image / Download image" button on the site (`ImageActions`, 38 pages) renders one of 28 card components off-screen in a fixed light palette and captures it with `html-to-image`; the NBA/NFL player card (`PerformanceCard`) is instead drawn on the server by `next/og` (Satori) for the `/card` route and the player share image. All of them read colours from one file, `src/lib/exportTheme.ts`, and end with `ExportFooter` (or the card's Satori-safe mirror of it). This task moves that palette to the site's light tokens, sets titles and scores in Barlow Condensed, and turns the footer into the navy masthead band with the lit block and the wordmark.
+
+**Files:**
+- Modify: `src/lib/exportTheme.ts` (whole file), `src/lib/cardFont.ts` (whole file), `src/components/ExportFooter.tsx` (whole file), `src/components/PerformanceCard.tsx` (whole file)
+- Modify: `src/components/ExportShell.tsx:9-11,32`, `src/components/ExportTeamLine.tsx:36`, `src/components/StandingsExportCard.tsx:13`
+- Create: `assets/fonts/BarlowCondensed-ExtraBold.ttf` (downloaded, OFL licence), `tests/export-theme.test.ts`
+- Test: `tests/export-theme.test.ts`, `tests/performance-card.test.ts:52-56`, `tests/card-font.test.ts:5-16`
+
+**Interfaces:**
+- Consumes: `PixelBall` from Task 1 (`fill`, `live` as plain colours).
+- Produces: `CARD` gains `sig`, `mast`, `mastText`, `mastMuted`; new export `CARD_DISPLAY_FONT: string`; `ExportFooter({ context, inset = 24, radius = 16 })`; `ExportWordmark({ size = 18 })` from `@/components/ExportFooter`; `CARD_FONTS` has a third entry `{ name: "Barlow Condensed", weight: 800 }`.
+
+- [ ] **Step 1: Vendor the display face for the server-rendered card**
+
+Satori cannot use the font `next/font` serves to the browser (woff2, loaded at build time), so the player card needs its own TTF. Barlow Condensed is published under the SIL Open Font License, so a copy can live in the repo beside the two Inter subsets.
+
+Run:
+```bash
+cd /Users/ps/Claude/sports-stats-site/worktrees/build-your-homepage && curl -fsSL -o assets/fonts/BarlowCondensed-ExtraBold.ttf "https://github.com/google/fonts/raw/main/ofl/barlowcondensed/BarlowCondensed-ExtraBold.ttf" && ls -l assets/fonts && file assets/fonts/BarlowCondensed-ExtraBold.ttf
+```
+Expected: three `.ttf` files; the new one reports `TrueType Font data` and is under 120 KB.
+
+- [ ] **Step 2: Write the failing tests**
+
+Create `tests/export-theme.test.ts`:
+
+```ts
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CARD, CARD_DISPLAY_FONT } from "../src/lib/exportTheme";
+import { ExportFooter } from "../src/components/ExportFooter";
+import { SITE_URL } from "../src/lib/site";
+
+// The light-theme tokens from globals.css, name → value, read from the first `:root {` block.
+function lightTokens(): Record<string, string> {
+  const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
+  const start = css.indexOf(":root {");
+  const block = css.slice(start, css.indexOf("}", start));
+  const out: Record<string, string> = {};
+  for (const m of block.matchAll(/--([a-z0-9-]+):\s*([^;]+);/g)) out[m[1]] = m[2].trim();
+  return out;
+}
+
+test("the card palette mirrors the site's light tokens", () => {
+  const t = lightTokens();
+  assert.equal(CARD.bg, t.bg);
+  assert.equal(CARD.surface, t.surface);
+  assert.equal(CARD.border, t.border);
+  assert.equal(CARD.text, t.text);
+  assert.equal(CARD.textMuted, t["text-muted"]);
+  assert.equal(CARD.textFaint, t["text-faint"]);
+  assert.equal(CARD.accent, t["sig-ink"]);
+  assert.equal(CARD.accentSoft, t["sig-soft"]);
+  assert.equal(CARD.sig, t.sig);
+  assert.equal(CARD.mast, t.mast);
+  assert.equal(CARD.mastText, t["mast-text"]);
+  assert.equal(CARD.mastMuted, t["mast-muted"]);
+  assert.equal(CARD.win, t.win);
+  assert.equal(CARD.loss, t.loss);
+});
+
+test("the display face is Barlow Condensed through the page's font variable", () => {
+  assert.match(CARD_DISPLAY_FONT, /^var\(--font-barlow\), "Barlow Condensed"/);
+});
+
+test("the footer is the navy band with the lit block, the wordmark and the domain", () => {
+  const html = renderToStaticMarkup(createElement(ExportFooter, { context: "Test card" }));
+  assert.match(html, /background:#0b1324/);
+  assert.equal((html.match(/<rect /g) ?? []).length, 4);
+  assert.match(html, /x="21" y="7" width="12" height="12" rx="3" fill="#c6f135"/);
+  assert.match(html, /Sports<span style="color:#c6f135">DB<\/span>/);
+  assert.ok(html.includes(SITE_URL.replace(/^https?:\/\//, "")));
+  assert.ok(html.includes("Test card"));
+  assert.ok(!html.includes("#1d4ed8"), "the old blue is gone");
+});
+```
+
+In `tests/performance-card.test.ts` replace the last test (lines 52-56) with:
+
+```ts
+test("footer parity: ends with the same navy band, wordmark and handle every other card on the site uses", () => {
+  const html = renderToStaticMarkup(createElement(PerformanceCard, baseProps));
+  assert.match(html, /Sports<\/span><span style="color:#c6f135">DB<\/span>/);
+  assert.match(html, /background:#0b1324/);
+  assert.ok(html.includes("sportsdblive")); // X_HANDLE
+  assert.ok(!html.includes("#1d4ed8"), "the old blue is gone");
+});
+```
+
+In `tests/card-font.test.ts` replace the first test (lines 5-16) with:
+
+```ts
+test("the card font bundle has regular and bold Inter plus the display face, well under the ImageResponse 500KB ceiling", () => {
+  assert.equal(CARD_FONTS.length, 3);
+  const weights = CARD_FONTS.map((f) => f.weight).sort();
+  assert.deepEqual(weights, [400, 700, 800]);
+  for (const f of CARD_FONTS) {
+    assert.equal(f.name, f.weight === 800 ? "Barlow Condensed" : "Inter");
+    assert.equal(f.style, "normal");
+    assert.ok(f.data.byteLength > 0, "font file must not be empty");
+  }
+  const total = CARD_FONTS.reduce((sum, f) => sum + f.data.byteLength, 0);
+  assert.ok(total < 300_000, `combined font size ${total} bytes is too large for a 500KB ImageResponse budget shared with JSX/CSS`);
+});
+```
+
+- [ ] **Step 3: Run the tests to verify they fail**
+
+Run: `npx tsx --test tests/export-theme.test.ts tests/performance-card.test.ts tests/card-font.test.ts`
+Expected: FAIL. The palette test fails on `CARD.accent` (`#1d4ed8` is not `#4d7c0f`), `CARD_DISPLAY_FONT` and `CARD.sig` are undefined, the footer test finds no navy background, the player-card footer test finds no wordmark span, and the font test counts 2 fonts.
+
+- [ ] **Step 4: Replace `src/lib/exportTheme.ts`**
+
+```ts
+// Fixed light palette for downloadable card images. Deliberately hard-coded rather
+// than the CSS custom properties the rest of the site uses: an exported PNG is
+// looked at outside the page (shared, embedded, printed) and must look the same
+// regardless of the viewer's site theme, so it can't inherit --text/--surface,
+// which flip to dark values under prefers-color-scheme. Mirrors the site's own
+// light-mode tokens (globals.css :root) so the card still reads as "this site";
+// tests/export-theme.test.ts checks the two stay in step.
+export const CARD = {
+  bg: "#f3f4f8",
+  surface: "#ffffff",
+  border: "#dde1ea",
+  text: "#0b1324",
+  textMuted: "#5a6478",
+  textFaint: "#8b95a8",
+  /** Volt's readable ink on a white surface (--sig-ink). Volt itself only goes on navy. */
+  accent: "#4d7c0f",
+  accentSoft: "#eef9c9",
+  sig: "#c6f135",
+  /** The masthead band (--mast) and its text, for the footer every card ends with. */
+  mast: "#0b1324",
+  mastText: "#eef1f7",
+  mastMuted: "#9aa5bd",
+  win: "#15803d",
+  loss: "#b91c1c",
+} as const;
+
+export const CARD_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+// The headline face for titles, scores and the wordmark. The cards are captured inside
+// the page, where next/font defines --font-barlow, so the variable resolves to the
+// self-hosted Barlow Condensed. (The server-rendered player card names the family
+// directly: see PerformanceCard and cardFont.ts.)
+export const CARD_DISPLAY_FONT = 'var(--font-barlow), "Barlow Condensed", "Arial Narrow", sans-serif';
+```
+
+- [ ] **Step 5: Replace `src/lib/cardFont.ts`**
+
+```ts
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+// Read once at module scope (next/og docs: "The font doesn't depend on request
+// data, so read it once at module scope") — assets/fonts holds two Inter
+// weights (400/700) locally subsetted with the `subset-font` package (see
+// scripts/subset-card-fonts note in tests/card-font.test.ts and the task-1
+// fix report) to cover printable ASCII (U+0020-U+007E) plus the full Latin-1
+// Supplement + Latin Extended-A Unicode block (U+00A0-U+017F), and the full
+// Barlow Condensed ExtraBold (OFL) that the site's headlines use, for the card's
+// title, score and wordmark.
+const regular = readFileSync(join(process.cwd(), "assets/fonts/Inter-Regular.ttf"));
+const bold = readFileSync(join(process.cwd(), "assets/fonts/Inter-Bold.ttf"));
+const display = readFileSync(join(process.cwd(), "assets/fonts/BarlowCondensed-ExtraBold.ttf"));
+
+export const CARD_FONTS: { name: string; data: Buffer; weight: 400 | 700 | 800; style: "normal" }[] = [
+  { name: "Inter", data: regular, weight: 400, style: "normal" },
+  { name: "Inter", data: bold, weight: 700, style: "normal" },
+  { name: "Barlow Condensed", data: display, weight: 800, style: "normal" },
+];
+```
+
+- [ ] **Step 6: Replace `src/components/ExportFooter.tsx`**
+
+```tsx
+import { PixelBall } from "./Logo";
+import { SITE_URL, X_HANDLE } from "@/lib/site";
+import { CARD, CARD_DISPLAY_FONT } from "@/lib/exportTheme";
+
+/** "SPORTSDB" for the cards: the site's wordmark as inline styles, DB in Volt. */
+export function ExportWordmark({ size = 18 }: { size?: number }) {
+  return (
+    <span style={{ fontFamily: CARD_DISPLAY_FONT, fontWeight: 800, textTransform: "uppercase", fontSize: size, lineHeight: 1, letterSpacing: "0.01em", color: CARD.mastText }}>
+      Sports<span style={{ color: CARD.sig }}>DB</span>
+    </span>
+  );
+}
+
+// The bottom bar every downloadable card ends with: the site's navy masthead with the lit
+// block, the wordmark and the domain, so an image that circulates off-site still points
+// home, plus what the card is and when it was generated. `inset` is the card's padding and
+// `radius` its corner radius: the band bleeds to the card's edges and keeps its corners.
+export function ExportFooter({ context, inset = 24, radius = 16 }: { context: string; inset?: number; radius?: number }) {
+  const domain = SITE_URL.replace(/^https?:\/\//, "");
+  const stamp = `${new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", hourCycle: "h23" })} UTC`;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "8px 16px",
+        margin: `20px -${inset}px -${inset}px`,
+        padding: `12px ${inset}px`,
+        borderRadius: `0 0 ${radius}px ${radius}px`,
+        background: CARD.mast,
+        color: CARD.mastText,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+        <PixelBall size={18} fill={CARD.mastText} live={CARD.sig} />
+        <ExportWordmark size={18} />
+        <span style={{ fontSize: 12, color: CARD.mastMuted }}>{domain}</span>
+        <span style={{ fontSize: 12, color: CARD.mastMuted }}>·</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: CARD.mastMuted }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill={CARD.mastText} aria-hidden="true">
+            <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+          </svg>
+          @{X_HANDLE}
+        </span>
+      </div>
+      <div style={{ fontSize: 11, color: CARD.mastMuted, whiteSpace: "nowrap" }}>
+        {context} · {stamp}
+      </div>
+    </div>
+  );
+}
+```
+
+The three cards that place `ExportFooter` themselves (`TeamScheduleExportCard`, `TeamRosterExportCard`, `PlayerExportCard`) use the same 24px padding and 16px radius as `ExportShell`, so the defaults fit all of them.
+
+- [ ] **Step 7: Titles and scores in the display face**
+
+In `src/components/ExportShell.tsx` change the import and `ExportLabel` (lines 4 and 9-11):
+
+```tsx
+import { CARD, CARD_DISPLAY_FONT } from "@/lib/exportTheme";
+```
+```tsx
+export function ExportLabel({ children }: { children: ReactNode }) {
+  return <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: CARD.accent }}>{children}</div>;
+}
+```
+
+and the title line in `ExportTitle` (line 32):
+
+```tsx
+      <div style={{ marginTop: top ? 6 : 0, fontFamily: CARD_DISPLAY_FONT, fontWeight: 800, textTransform: "uppercase", fontSize: 32, lineHeight: 1, color: CARD.text }}>{title}</div>
+```
+
+In `src/components/ExportTeamLine.tsx` change the import and the score span (line 36):
+
+```tsx
+import { CARD, CARD_DISPLAY_FONT } from "@/lib/exportTheme";
+```
+```tsx
+        <span style={{ fontFamily: CARD_DISPLAY_FONT, fontSize: 22, lineHeight: 1, fontWeight: won ? 800 : 600, color: won ? CARD.text : CARD.textMuted, whiteSpace: "nowrap" }}>
+```
+
+In `src/components/StandingsExportCard.tsx` line 13, the first zone takes the site's `--zone-1`:
+
+```tsx
+const ZONE_COLOR: Record<string, string> = { "zone-1": "#2563eb", "zone-2": "#d97706", "zone-3": "#dc2626", "zone-4": "#0f766e" };
+```
+
+- [ ] **Step 8: Replace `src/components/PerformanceCard.tsx`**
+
+Satori (the `/card` route) accepts only flex layouts, inline styles, no `inline-flex`, no `<table>`, no `<img>`; this file keeps to that subset, which also renders identically in a browser.
+
+```tsx
+// src/components/PerformanceCard.tsx
+import { CARD, CARD_FONT } from "@/lib/exportTheme";
+import { cardAccentColor } from "@/lib/cardColor";
+import { PixelBall } from "./Logo";
+import { SITE_URL, X_HANDLE } from "@/lib/site";
+import { LEAGUE_LABEL } from "@/lib/leagues";
+import type { PerformanceStat } from "@/lib/performanceLine";
+
+// The family registered in cardFont.ts; Satori matches fonts by this name.
+const DISPLAY = "Barlow Condensed";
+
+// A card-only mirror of ExportFooter (src/components/ExportFooter.tsx), not that component itself:
+// ExportFooter's X glyph span uses `display: "inline-flex"` and its wordmark nests a span inside
+// text, both of which Satori rejects. Same band, same colours, flex only, handle as plain text.
+function PerformanceCardFooter({ context }: { context: string }) {
+  const domain = SITE_URL.replace(/^https?:\/\//, "");
+  const stamp = `${new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", hourCycle: "h23" })} UTC`;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 40px", background: CARD.mast, color: CARD.mastText }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <PixelBall size={22} fill={CARD.mastText} live={CARD.sig} />
+        <div style={{ display: "flex", fontFamily: DISPLAY, fontWeight: 800, fontSize: 22, lineHeight: 1, textTransform: "uppercase" }}>
+          <span style={{ color: CARD.mastText }}>Sports</span><span style={{ color: CARD.sig }}>DB</span>
+        </div>
+        <span style={{ fontSize: 15, color: CARD.mastMuted }}>{domain}</span>
+        <span style={{ fontSize: 15, color: CARD.mastMuted }}>·</span>
+        <span style={{ fontSize: 15, color: CARD.mastMuted }}>@{X_HANDLE}</span>
+      </div>
+      <div style={{ display: "flex", fontSize: 14, color: CARD.mastMuted }}>
+        {context} · {stamp}
+      </div>
+    </div>
+  );
+}
+
+export interface PerformanceCardProps {
+  league: "nba" | "nfl";
+  playerName: string;
+  position: string | null;
+  jersey: string | null;
+  teamAbbr: string | null;
+  teamColor: string | null;
+  opponentAbbr: string | null;
+  resultLetter: "W" | "L" | null;
+  teamScore: number | null;
+  opponentScore: number | null;
+  date: string;
+  stageLabel: string | null;
+  stats: PerformanceStat[];
+}
+
+// Flexbox and inline styles only — this subset renders identically in Satori (ImageResponse,
+// the card route) and a real browser, per design doc §1. No <table>, no CSS grid, no <img>.
+export function PerformanceCard({ league, playerName, position, jersey, teamAbbr, teamColor, opponentAbbr, resultLetter, teamScore, opponentScore, date, stageLabel, stats }: PerformanceCardProps) {
+  const accent = cardAccentColor(teamColor);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: CARD.surface, fontFamily: CARD_FONT, position: "relative" }}>
+      {/* Oversized jersey number watermark, behind everything else. */}
+      {jersey && (
+        <div style={{ position: "absolute", top: -40, right: 20, fontFamily: DISPLAY, fontSize: 420, fontWeight: 800, color: `${accent}1a`, lineHeight: 1 }}>{jersey}</div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 15, color: CARD.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: 2 }}>
+          <span>{LEAGUE_LABEL[league]}</span>
+          <span>·</span>
+          <span>{date}</span>
+          {stageLabel && (
+            <>
+              <span>·</span>
+              <span>{stageLabel}</span>
+            </>
+          )}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 20 }}>
+          <div style={{ display: "flex", width: 64, height: 64, borderRadius: 32, background: accent, color: CARD.surface, alignItems: "center", justifyContent: "center", fontFamily: DISPLAY, fontSize: 24, fontWeight: 800 }}>
+            {teamAbbr ?? ""}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 52, fontWeight: 800, lineHeight: 1, textTransform: "uppercase", color: CARD.text }}>{playerName}</div>
+            <div style={{ display: "flex", fontSize: 18, color: CARD.textMuted, marginTop: 6 }}>
+              {[position, jersey ? `#${jersey}` : null].filter(Boolean).join(" · ")}
+              {opponentAbbr ? ` vs ${opponentAbbr}` : ""}
+            </div>
+          </div>
+        </div>
+
+        {resultLetter && teamScore != null && opponentScore != null && (
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14, fontFamily: DISPLAY, fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+            <span style={{ color: resultLetter === "W" ? CARD.win : CARD.loss }}>{resultLetter}</span>
+            <span style={{ color: CARD.text }}>
+              {teamScore}-{opponentScore}
+            </span>
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 28 }}>
+          {stats.map((s) => (
+            <div key={s.key} style={{ display: "flex", flexDirection: "column", background: CARD.bg, borderRadius: 12, padding: "14px 18px", minWidth: 130 }}>
+              <span style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 800, lineHeight: 1, color: accent }}>{s.value}</span>
+              <span style={{ fontSize: 13, color: CARD.textMuted, marginTop: 6 }}>{s.label}</span>
+              {s.delta && <span style={{ fontSize: 12, color: CARD.textFaint, marginTop: 4 }}>{s.delta}</span>}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flex: 1 }} />
+      </div>
+      <PerformanceCardFooter context={`${LEAGUE_LABEL[league]} · Player card`} />
+    </div>
+  );
+}
+```
+
+- [ ] **Step 9: Run the tests to verify they pass, then the whole suite**
+
+Run: `npx tsx --test tests/export-theme.test.ts tests/performance-card.test.ts tests/card-font.test.ts tests/card-color.test.ts`
+Expected: PASS, all tests (the card-colour tests still pass: the fallback is simply the new accent).
+
+Run: `npm test 2>&1 | tail -5`
+Expected: `# fail 0`.
+
+- [ ] **Step 10: Check that no old-brand colour is left anywhere in the app**
+
+Run: `grep -rn "1d4ed8\|6ea0ff\|f87171\|fb7185\|0b1220\|16223a" src tests || echo CLEAN`
+Expected: `CLEAN`. (Task 1 step 7 removed them from the share images; this task from the cards. Any hit is a miss: fix it with the matching token from `CARD` or the share-image mapping in Task 1.)
+
+Run: `npx tsc --noEmit && npm run lint`
+Expected: no errors.
+
+- [ ] **Step 11: Look at the cards**
+
+Start the dev server (`preview_start {name: "home-builder"}`, the `.claude/launch.json` entry from Task 1) and:
+
+1. Open `http://localhost:3011/nba/standings`. Run in the page with `javascript_tool`: `document.querySelectorAll('div[aria-hidden="true"]').forEach(d => { if (d.style.left === '-99999px') d.style.left = '0'; })` so the off-screen export card is visible, then screenshot. Expect: white card, the title in uppercase condensed type, the eyebrow in green ink, the navy band at the bottom with four blocks (top-right lime), "SPORTSDB" with DB in lime, the domain and the handle.
+2. Open a finished game page (`/epl` → any result → the match page) and do the same: the score header's numbers are in the condensed face.
+3. Open `http://localhost:3011/nba/games/<id>/players/<slug>/card?format=og` for a player from that game's box score (the "Share image" link on a player's row gives the exact path). Expect the same band and faces rendered by the server.
+
+Take one screenshot of each for the task record.
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add -A && git commit -m "Put the downloadable cards and the player card on the new brand
+
+The export palette now mirrors the site's light tokens (Volt ink accent, navy
+masthead), titles and scores are set in Barlow Condensed, and every card ends
+with the navy band carrying the lit block and the wordmark. The server-rendered
+player card gets Barlow Condensed ExtraBold as a vendored OFL font.
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```

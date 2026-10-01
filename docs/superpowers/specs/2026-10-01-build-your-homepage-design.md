@@ -245,6 +245,21 @@ colours; `LogoMark` is unchanged in signature.
 - The four `opengraph-image.tsx` files: mark in white and Volt; the root one drops its blue/red
   colours.
 - `public/logo-512.png` is regenerated from the same geometry on the navy tile.
+- The five `opengraph-image.tsx` files also drop the old blue-grey palette (`#0b1220`, `#16223a`,
+  `#e8edf6`, `#9aa7bd`, `#6ea0ff`) for `--mast`, `--mast-2`, `--mast-text`, `--mast-muted` and Volt.
+- The downloadable cards carry the same brand. Every "Share image / Download image" button
+  (`ImageActions`, 38 pages) captures one of 28 card components that read their colours from
+  `src/lib/exportTheme.ts` and end with `ExportFooter`; the NBA/NFL player card (`PerformanceCard`,
+  the `/card` route and the player share image) is drawn on the server by Satori with its own
+  footer. `CARD` moves to the site's light tokens (`--sig-ink` as the accent, `--text`, `--border`,
+  `--bg`; a test keeps the two in step), titles, scores and stat values are set in Barlow Condensed
+  800 uppercase, the eyebrow is in the accent ink, and the footer becomes the navy masthead band
+  with the lit block, "SPORTSDB" (DB in Volt), the domain, the handle and the timestamp. In the
+  page the cards use the `--font-barlow` variable `next/font` defines; the server-rendered card
+  gets Barlow Condensed ExtraBold as a vendored OFL TTF in `assets/fonts`, registered beside the two
+  Inter subsets. Team colours still take precedence for a team's own accent where they clear the
+  contrast check; the fallback is the Volt ink. The old brand's blue and rose (`#1d4ed8`, `#6ea0ff`,
+  `#f87171`) leave the codebase.
 
 ### Error handling
 
@@ -288,7 +303,11 @@ New: `src/lib/editions.ts`, `src/lib/homeSetup.ts`, `src/lib/homeHeroLine.ts`, `
 
 Changed: `src/app/page.tsx`, `src/app/layout.tsx`, `src/app/globals.css`, `src/app/api/region/route.ts`,
 `src/components/Logo.tsx`, `src/components/Nav.tsx`, `src/components/FollowButton.tsx`,
-`src/app/icon.tsx`, `src/app/apple-icon.tsx`, the four `opengraph-image.tsx`, `public/logo-512.png`.
+`src/app/icon.tsx`, `src/app/apple-icon.tsx`, the five `opengraph-image.tsx`, `public/logo-512.png`,
+`src/lib/exportTheme.ts`, `src/lib/cardFont.ts`, `src/components/ExportFooter.tsx`,
+`src/components/ExportShell.tsx`, `src/components/ExportTeamLine.tsx`, `src/components/PerformanceCard.tsx`,
+`src/components/StandingsExportCard.tsx`; new `assets/fonts/BarlowCondensed-ExtraBold.ttf` and
+`tests/export-theme.test.ts`.
 
 Removed: `src/components/MyFollows.tsx`, `src/app/api/follows/games/route.ts` (only `MyFollows` used it),
 `src/app/favicon.ico`.
