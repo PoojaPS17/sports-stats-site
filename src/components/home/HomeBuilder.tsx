@@ -187,7 +187,7 @@ export function HomeBuilder({ ctx, mode = "first", initial, onClose }: { ctx: Ed
     <div className="flex flex-col gap-8">
       <div>
         <p className="eyebrow">Your homepage, your rules</p>
-        <h1 className="display mt-2 max-w-4xl text-[44px] leading-[0.95] sm:text-[64px] lg:text-[84px]">
+        <h1 className="display mt-2 max-w-4xl text-[34px] sm:text-[48px] lg:text-[60px]">
           Build the sports page <span className="text-[var(--sig)]">you keep looking for.</span>
         </h1>
         <p className="mt-4 max-w-2xl text-[16px] text-[var(--mast-muted)] sm:text-[18px]">

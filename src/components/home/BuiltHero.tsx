@@ -10,7 +10,7 @@ export function BuiltHero({ setup, headline, sub, liveCount, onEdit }: { setup: 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-3">
           <p className="eyebrow">Your homepage · {today} · {setup.blocks.length} blocks</p>
-          <h1 className="display max-w-4xl text-[36px] leading-[0.95] sm:text-[52px] lg:text-[64px]">{headline}</h1>
+          <h1 className="display max-w-4xl text-[30px] sm:text-[40px] lg:text-[50px]">{headline}</h1>
           {sub && <p className="max-w-2xl text-[15px] text-[var(--mast-muted)] sm:text-[16px]">{sub}</p>}
         </div>
         <div className="flex flex-wrap gap-2">

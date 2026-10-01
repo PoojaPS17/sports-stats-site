@@ -2,12 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CARD_FONTS } from "../src/lib/cardFont";
 
-test("the card font bundle has regular and bold Inter plus the display face, well under the ImageResponse 500KB ceiling", () => {
+test("the card font bundle is Plus Jakarta Sans in regular, bold and extra bold, well under the ImageResponse 500KB ceiling", () => {
   assert.equal(CARD_FONTS.length, 3);
   const weights = CARD_FONTS.map((f) => f.weight).sort();
   assert.deepEqual(weights, [400, 700, 800]);
   for (const f of CARD_FONTS) {
-    assert.equal(f.name, f.weight === 800 ? "Barlow Condensed" : "Inter");
+    assert.equal(f.name, "Plus Jakarta Sans");
     assert.equal(f.style, "normal");
     assert.ok(f.data.byteLength > 0, "font file must not be empty");
   }
@@ -117,7 +117,7 @@ test("both CARD_FONTS entries embed the Latin Extended-A glyphs the design spec'
     for (const [label, codepoint] of Object.entries(requiredCodepoints)) {
       assert.ok(
         hasGlyphForCodepoint(font.data, codepoint),
-        `Inter weight ${font.weight} is missing a glyph for ${label} (needed for names like Dončić, Vučević, Şengün)`,
+        `Plus Jakarta Sans weight ${font.weight} is missing a glyph for ${label} (needed for names like Dončić, Vučević, Şengün)`,
       );
     }
   }

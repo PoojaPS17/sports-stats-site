@@ -29,7 +29,7 @@ export function ExportTitle({ league, eyebrow, title, subtitle }: { league?: Lea
   return (
     <div>
       {top && <ExportLabel>{top}</ExportLabel>}
-      <div style={{ marginTop: top ? 6 : 0, fontFamily: CARD_DISPLAY_FONT, fontWeight: 800, textTransform: "uppercase", fontSize: 32, lineHeight: 1, color: CARD.text }}>{title}</div>
+      <div style={{ marginTop: top ? 6 : 0, fontFamily: CARD_DISPLAY_FONT, fontWeight: 800, fontSize: 28, lineHeight: 1.1, letterSpacing: -0.5, color: CARD.text }}>{title}</div>
       {subtitle && <div style={{ marginTop: 6, fontSize: 13, color: CARD.textMuted, lineHeight: 1.4 }}>{subtitle}</div>}
     </div>
   );

@@ -48,10 +48,10 @@ export function LogoMark({ size = 30 }: { size?: number }) {
   return <PixelBall size={size} fill="currentColor" live="var(--sig)" />;
 }
 
-/** "SPORTSDB" in the display face, DB in Volt. Inherits the surrounding text colour for "Sports". */
+/** "SPORTSDB" in the display face (the one place it stays uppercase), DB in the signature colour. Inherits the surrounding text colour for "Sports". */
 export function Wordmark({ size = 26, className = "" }: { size?: number; className?: string }) {
   return (
-    <span className={`display leading-none tracking-[0.01em] ${className}`} style={{ fontSize: size }}>
+    <span className={`display uppercase leading-none tracking-[0.01em] ${className}`} style={{ fontSize: size }}>
       Sports<span className="text-[var(--sig)]">DB</span>
     </span>
   );
