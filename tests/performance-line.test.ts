@@ -61,11 +61,35 @@ test("NFL: passing headline stats read the same sum-aggregated specs the player 
   assert.equal(passYds.delta, "+62 vs season avg");
 });
 
-test("a stat with no season line (first game of a season with only this one row) has a null delta, not a crash", () => {
+test("the only recorded game of a season has no delta: the season average would be this game compared with itself", () => {
   const row = nbaRow();
   const profile = buildProfile("nba", [row]);
   const line = performanceLine("nba", row, profile);
-  // Averaged against itself, the delta is +0 — assert it's present and zero, not null, proving no divide-by-zero/NaN.
-  const pts = line.find((s) => s.key === "pts")!;
-  assert.equal(pts.delta, "+0 vs season avg");
+  for (const s of line) assert.equal(s.delta, null, `${s.key} should have no delta`);
+});
+
+test("NFL: the only recorded game of a season has no delta either (the sum-aggregated path)", () => {
+  const row = nflRow();
+  const profile = buildProfile("nfl", [row]);
+  const line = performanceLine("nfl", row, profile);
+  assert.ok(line.length > 0);
+  for (const s of line) assert.equal(s.delta, null, `${s.key} should have no delta`);
+});
+
+test("a second recorded game in the season brings the delta back", () => {
+  const row = nbaRow();
+  const other = nbaRow({ game_espn_id: "g2", stats: { box: { MIN: "30", PTS: "26", REB: "8", AST: "6", STL: "1", BLK: "1", TO: "2", FG: "9-18", "3PT": "2-6", FT: "6-7", "+/-": "+1" } } });
+  const profile = buildProfile("nba", [row, other]);
+  const line = performanceLine("nba", row, profile);
+  // Season average is (34 + 26) / 2 = 30, so this game is +4.
+  assert.equal(line.find((s) => s.key === "pts")!.delta, "+4 vs season avg");
+});
+
+test("a delta that rounds to zero is never written as \"-0\"", () => {
+  const row = nbaRow(); // 34 points
+  // Two other games at 34 and 35: the average is 34.33, so this game is 0.33 under it and rounds to 0.
+  const others = [34, 35].map((pts, i) => nbaRow({ game_espn_id: `o${i}`, stats: { box: { MIN: "30", PTS: String(pts), REB: "8", AST: "6", STL: "1", BLK: "1", TO: "2", FG: "9-18", "3PT": "2-6", FT: "6-7", "+/-": "+1" } } }));
+  const profile = buildProfile("nba", [row, ...others]);
+  const line = performanceLine("nba", row, profile);
+  assert.equal(line.find((s) => s.key === "pts")!.delta, "+0 vs season avg");
 });

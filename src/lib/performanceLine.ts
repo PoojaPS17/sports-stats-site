@@ -33,11 +33,14 @@ function seasonAverage(spec: StatSpec, seasonLine: Line, seasonGames: number): n
   return seasonGames > 0 ? v / seasonGames : null;
 }
 
-function deltaLabel(gameValue: number | null, avg: number | null, spec: StatSpec): string | null {
-  if (gameValue == null || avg == null) return null;
+// No delta when this is the season's only recorded game: the "average" would be this game compared
+// with itself, and every chip would read "+0 vs season avg" (every Week 1 card, every opener).
+function deltaLabel(gameValue: number | null, avg: number | null, spec: StatSpec, seasonGames: number): string | null {
+  if (gameValue == null || avg == null || seasonGames < 2) return null;
   const diff = gameValue - avg;
-  const sign = diff >= 0 ? "+" : "-";
   const magnitude = Number.isInteger(gameValue) ? Math.round(Math.abs(diff)).toLocaleString("en-US") : formatStat(spec, Math.abs(diff));
+  // A shortfall that rounds away to nothing is "+0", never "-0".
+  const sign = diff < 0 && Number(magnitude.replace(/,/g, "")) !== 0 ? "-" : "+";
   return `${sign}${magnitude} vs season avg`;
 }
 
@@ -53,7 +56,7 @@ function formatCardValue(spec: StatSpec, v: number | null): string {
 function statFor(spec: StatSpec, row: PlayerLogRow, seasonLine: Line, seasonGames: number): PerformanceStat {
   const gameValue = spec.value(row.stats);
   const avg = seasonAverage(spec, seasonLine, seasonGames);
-  return { key: spec.key, label: spec.label, title: spec.title, value: formatCardValue(spec, gameValue), delta: deltaLabel(gameValue, avg, spec) };
+  return { key: spec.key, label: spec.label, title: spec.title, value: formatCardValue(spec, gameValue), delta: deltaLabel(gameValue, avg, spec, seasonGames) };
 }
 
 function nbaLine(row: PlayerLogRow, profile: PlayerProfile): PerformanceStat[] {
