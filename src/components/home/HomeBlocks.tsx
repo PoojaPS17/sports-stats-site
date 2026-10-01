@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditionContext } from "@/lib/editions";
 import type { HomeBlock } from "@/lib/blockTypes";
 import { heroLine, type LoadedBlock } from "@/lib/homeHeroLine";
-import { addBlock, clearSetup, decodeSetup, isSetup, moveBlock, newSetup, readSetup, removeBlock, reorderBlocks, SETUP_EVENT, writeSetup, type HomeSetup } from "@/lib/homeSetup";
+import { addBlock, applyHomeAttribute, clearSetup, decodeSetup, isSetup, moveBlock, newSetup, readSetup, removeBlock, reorderBlocks, SETUP_EVENT, writeSetup, type HomeSetup } from "@/lib/homeSetup";
 import { BlockFrame } from "./BlockFrame";
 import { BlockPalette } from "./BlockPalette";
 import { BuiltHero } from "./BuiltHero";
@@ -31,6 +31,7 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
   useEffect(() => {
     const read = () => {
       const s = readSetup();
+      applyHomeAttribute(s);
       setSetup(isSetup(s) ? s : null);
       document.documentElement.dataset.homeReady = "1";
     };

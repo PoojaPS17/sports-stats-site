@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   addBlock,
+  applyHomeAttribute,
   clearSetup,
   decodeSetup,
   encodeSetup,
@@ -95,6 +96,22 @@ test("list edits are pure and respect the limit", () => {
   assert.deepEqual(reorderBlocks(added, ["standings:epl", "live"]).blocks.map((b) => b.id), ["standings:epl", "live", "player-form:ipl:virat-kohli"]);
   const full = newSetup("IN", "IN", Array.from({ length: 12 }, (_, i) => ({ id: "", type: "player-form" as const, params: { league: "nba", player: `p-${i}` }, label: `P ${i}: last five` })));
   assert.equal(addBlock(full, kohli), full);
+});
+
+test("applyHomeAttribute sets built, collapsed or removes data-home", () => {
+  const dataset: Record<string, string> = {};
+  (globalThis as { document?: unknown }).document = { documentElement: { dataset } };
+  try {
+    const s = newSetup("world", null, [live]);
+    applyHomeAttribute(s);
+    assert.equal(dataset.home, "built");
+    applyHomeAttribute({ v: 1, declined: true });
+    assert.equal(dataset.home, "collapsed");
+    applyHomeAttribute(null);
+    assert.equal("home" in dataset, false);
+  } finally {
+    delete (globalThis as { document?: unknown }).document;
+  }
 });
 
 test("storage functions are no-ops outside a browser (no window)", () => {
