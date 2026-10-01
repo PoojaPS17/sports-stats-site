@@ -50,9 +50,16 @@ export async function loadBlock(type: BlockType, params: Record<string, string>)
   }
 }
 
+const LIVE_CARDS = 6;
+
+// "Up to six live cards" total (spec), games first, then cricket, then tennis, each list capped
+// by what's left in the budget rather than by its own fixed size.
 async function loadLive(): Promise<LiveBlockData> {
   const home = await getHomeData();
-  return { games: home.liveGames.slice(0, 6), cricket: home.liveCricket.slice(0, 6), tennis: home.liveTennis.slice(0, 4) };
+  const games = home.liveGames.slice(0, LIVE_CARDS);
+  const cricket = home.liveCricket.slice(0, Math.max(0, LIVE_CARDS - games.length));
+  const tennis = home.liveTennis.slice(0, Math.max(0, LIVE_CARDS - games.length - cricket.length));
+  return { games, cricket, tennis };
 }
 
 // pg hands back a Date for an uncast timestamp column (see memory: "pg dates are not strings"), so every
