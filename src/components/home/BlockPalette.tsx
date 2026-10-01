@@ -15,6 +15,7 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
   const [results, setResults] = useState<HomeBlock[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
     const q = query.trim();
     if (q.length < 2) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -24,10 +25,18 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
     const id = window.setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(q)}`)
         .then((r) => r.json())
-        .then((d: { results: SearchResult[] }) => setResults(d.results.map(searchResultToBlock).filter((b): b is HomeBlock => b !== null).slice(0, 6)))
-        .catch(() => setResults([]));
+        .then((d: { results: SearchResult[] }) => {
+          if (cancelled) return;
+          setResults(d.results.map(searchResultToBlock).filter((b): b is HomeBlock => b !== null).slice(0, 6));
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        });
     }, 250);
-    return () => window.clearTimeout(id);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
   }, [query]);
 
   const chip = (b: HomeBlock) => {
