@@ -6,38 +6,28 @@ import { SITE_URL, X_HANDLE } from "@/lib/site";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import type { PerformanceStat } from "@/lib/performanceLine";
 
-// A card-only mirror of ExportFooter (src/components/ExportFooter.tsx), not that component itself.
-// ExportFooter's X/Twitter glyph span uses `display: "inline-flex"`, which Satori (next/og's
-// ImageResponse, used by the card route) rejects outright ("Allowed values: flex | block | contents |
-// none | -webkit-box") — confirmed by running the route's test against the real renderer, not assumed.
-// ExportFooter itself is left untouched since every other downloadable card on the site depends on its
-// current, working, html-to-image-rendered (real-browser) form; this drops the icon and prints the
-// handle as plain text instead, which needs no flex context at all. See task-5-report.md.
+// The family registered in cardFont.ts; Satori matches fonts by this name.
+const DISPLAY = "Barlow Condensed";
+
+// A card-only mirror of ExportFooter (src/components/ExportFooter.tsx), not that component itself:
+// ExportFooter's X glyph span uses `display: "inline-flex"` and its wordmark nests a span inside
+// text, both of which Satori rejects. Same band, same colours, flex only, handle as plain text.
 function PerformanceCardFooter({ context }: { context: string }) {
   const domain = SITE_URL.replace(/^https?:\/\//, "");
   const stamp = `${new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}, ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", hourCycle: "h23" })} UTC`;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: "8px 16px",
-        marginTop: 20,
-        paddingTop: 16,
-        borderTop: `1px solid ${CARD.border}`,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
-        <PixelBall size={20} fill={CARD.accent} live={CARD.loss} />
-        <span style={{ fontSize: 14, fontWeight: 800, color: CARD.text }}>SportsDB</span>
-        <span style={{ fontSize: 13, color: CARD.textFaint }}>{domain}</span>
-        <span style={{ fontSize: 13, color: CARD.textFaint }}>·</span>
-        <span style={{ fontSize: 13, color: CARD.textFaint }}>@{X_HANDLE}</span>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 40px", background: CARD.mast, color: CARD.mastText }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <PixelBall size={22} fill={CARD.mastText} live={CARD.sig} />
+        <div style={{ display: "flex", fontFamily: DISPLAY, fontWeight: 800, fontSize: 22, lineHeight: 1, textTransform: "uppercase" }}>
+          <span style={{ color: CARD.mastText }}>Sports</span><span style={{ color: CARD.sig }}>DB</span>
+        </div>
+        <span style={{ fontSize: 15, color: CARD.mastMuted }}>{domain}</span>
+        <span style={{ fontSize: 15, color: CARD.mastMuted }}>·</span>
+        <span style={{ fontSize: 15, color: CARD.mastMuted }}>@{X_HANDLE}</span>
       </div>
-      <div style={{ display: "flex", fontSize: 12, color: CARD.textFaint, whiteSpace: "nowrap" }}>
+      <div style={{ display: "flex", fontSize: 14, color: CARD.mastMuted }}>
         {context} · {stamp}
       </div>
     </div>
@@ -66,57 +56,59 @@ export function PerformanceCard({ league, playerName, position, jersey, teamAbbr
   const accent = cardAccentColor(teamColor);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: CARD.surface, fontFamily: CARD_FONT, padding: 40, position: "relative" }}>
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: CARD.surface, fontFamily: CARD_FONT, position: "relative" }}>
       {/* Oversized jersey number watermark, behind everything else. */}
       {jersey && (
-        <div style={{ position: "absolute", top: -40, right: 20, fontSize: 340, fontWeight: 700, color: `${accent}1a`, lineHeight: 1 }}>{jersey}</div>
+        <div style={{ position: "absolute", top: -40, right: 20, fontFamily: DISPLAY, fontSize: 420, fontWeight: 800, color: `${accent}1a`, lineHeight: 1 }}>{jersey}</div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, color: CARD.textMuted, fontWeight: 700 }}>
-        <span>{LEAGUE_LABEL[league]}</span>
-        <span>·</span>
-        <span>{date}</span>
-        {stageLabel && (
-          <>
-            <span>·</span>
-            <span>{stageLabel}</span>
-          </>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 15, color: CARD.accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: 2 }}>
+          <span>{LEAGUE_LABEL[league]}</span>
+          <span>·</span>
+          <span>{date}</span>
+          {stageLabel && (
+            <>
+              <span>·</span>
+              <span>{stageLabel}</span>
+            </>
+          )}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 20 }}>
+          <div style={{ display: "flex", width: 64, height: 64, borderRadius: 32, background: accent, color: CARD.surface, alignItems: "center", justifyContent: "center", fontFamily: DISPLAY, fontSize: 24, fontWeight: 800 }}>
+            {teamAbbr ?? ""}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 52, fontWeight: 800, lineHeight: 1, textTransform: "uppercase", color: CARD.text }}>{playerName}</div>
+            <div style={{ display: "flex", fontSize: 18, color: CARD.textMuted, marginTop: 6 }}>
+              {[position, jersey ? `#${jersey}` : null].filter(Boolean).join(" · ")}
+              {opponentAbbr ? ` vs ${opponentAbbr}` : ""}
+            </div>
+          </div>
+        </div>
+
+        {resultLetter && teamScore != null && opponentScore != null && (
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14, fontFamily: DISPLAY, fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+            <span style={{ color: resultLetter === "W" ? CARD.win : CARD.loss }}>{resultLetter}</span>
+            <span style={{ color: CARD.text }}>
+              {teamScore}-{opponentScore}
+            </span>
+          </div>
         )}
-      </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 20 }}>
-        <div style={{ display: "flex", width: 64, height: 64, borderRadius: 32, background: accent, color: CARD.surface, alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700 }}>
-          {teamAbbr ?? ""}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 28 }}>
+          {stats.map((s) => (
+            <div key={s.key} style={{ display: "flex", flexDirection: "column", background: CARD.bg, borderRadius: 12, padding: "14px 18px", minWidth: 130 }}>
+              <span style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 800, lineHeight: 1, color: accent }}>{s.value}</span>
+              <span style={{ fontSize: 13, color: CARD.textMuted, marginTop: 6 }}>{s.label}</span>
+              {s.delta && <span style={{ fontSize: 12, color: CARD.textFaint, marginTop: 4 }}>{s.delta}</span>}
+            </div>
+          ))}
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 40, fontWeight: 700, color: CARD.text }}>{playerName}</div>
-          <div style={{ display: "flex", fontSize: 18, color: CARD.textMuted, marginTop: 4 }}>
-            {[position, jersey ? `#${jersey}` : null].filter(Boolean).join(" · ")}
-            {opponentAbbr ? ` vs ${opponentAbbr}` : ""}
-          </div>
-        </div>
+
+        <div style={{ display: "flex", flex: 1 }} />
       </div>
-
-      {resultLetter && teamScore != null && opponentScore != null && (
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12 }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: resultLetter === "W" ? CARD.win : CARD.loss }}>{resultLetter}</span>
-          <span style={{ fontSize: 22, fontWeight: 700, color: CARD.text }}>
-            {teamScore}-{opponentScore}
-          </span>
-        </div>
-      )}
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 28 }}>
-        {stats.map((s) => (
-          <div key={s.key} style={{ display: "flex", flexDirection: "column", background: CARD.bg, borderRadius: 12, padding: "14px 18px", minWidth: 130 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: accent }}>{s.value}</span>
-            <span style={{ fontSize: 13, color: CARD.textMuted, marginTop: 2 }}>{s.label}</span>
-            {s.delta && <span style={{ fontSize: 12, color: CARD.textFaint, marginTop: 4 }}>{s.delta}</span>}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", flex: 1 }} />
       <PerformanceCardFooter context={`${LEAGUE_LABEL[league]} · Player card`} />
     </div>
   );

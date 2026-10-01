@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { ExportFooter } from "./ExportFooter";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
-import { CARD } from "@/lib/exportTheme";
+import { CARD, CARD_DISPLAY_FONT } from "@/lib/exportTheme";
 
 /** Long lists on a card stop here, then say how many more there are on the site. */
 export const EXPORT_ROW_LIMIT = 25;
 
 export function ExportLabel({ children }: { children: ReactNode }) {
-  return <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: CARD.textMuted }}>{children}</div>;
+  return <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: CARD.accent }}>{children}</div>;
 }
 
 // The frame every section image shares: white card, whatever header the section needs,
@@ -29,7 +29,7 @@ export function ExportTitle({ league, eyebrow, title, subtitle }: { league?: Lea
   return (
     <div>
       {top && <ExportLabel>{top}</ExportLabel>}
-      <div style={{ marginTop: top ? 4 : 0, fontSize: 26, fontWeight: 800, lineHeight: 1.15, color: CARD.text }}>{title}</div>
+      <div style={{ marginTop: top ? 6 : 0, fontFamily: CARD_DISPLAY_FONT, fontWeight: 800, textTransform: "uppercase", fontSize: 32, lineHeight: 1, color: CARD.text }}>{title}</div>
       {subtitle && <div style={{ marginTop: 6, fontSize: 13, color: CARD.textMuted, lineHeight: 1.4 }}>{subtitle}</div>}
     </div>
   );

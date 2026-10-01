@@ -10,7 +10,7 @@ import { cricketPlayed, hasCricketTies, qualifierLegend, showQualifiers } from "
 import { computedWinPct, isSoccer, type ComputedTableRow } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 
-const ZONE_COLOR: Record<string, string> = { "zone-1": "#1d4ed8", "zone-2": "#d97706", "zone-3": "#dc2626", "zone-4": "#0f766e" };
+const ZONE_COLOR: Record<string, string> = { "zone-1": "#2563eb", "zone-2": "#d97706", "zone-3": "#dc2626", "zone-4": "#0f766e" };
 
 function logo(name: string, url: string | null, color: string | null) {
   return <TeamLogo name={teamDisplayName(name)} logoUrl={url} color={color} size={22} />;
