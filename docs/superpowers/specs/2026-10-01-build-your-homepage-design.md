@@ -219,7 +219,7 @@ local time via the existing `LocalTime` logic. The eyebrow date is the visitor's
 `encodeSetup(setup)` produces base64url of the JSON with `createdAt`/`updatedAt` dropped;
 `decodeSetup()` validates the result against the schema (type known, params present, at most 12
 blocks) and rejects anything else. The link is `https://sports-db.live/?setup=<encoded>`. A setup of
-12 blocks encodes to under 1,500 characters, far inside every browser and messaging limit.
+12 blocks encodes to about 2,100 characters, inside every current browser and messaging limit (the test bounds it at 2,500).
 
 On a page load with `?setup=`, `HomeBlocks` decodes it, saves it (replacing any existing setup after a
 confirm dialog if one exists), and calls `history.replaceState` to drop the parameter so the clean

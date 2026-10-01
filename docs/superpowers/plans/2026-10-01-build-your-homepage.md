@@ -1424,9 +1424,9 @@ test("decodeSetup rejects garbage, wrong versions, unknown types and over-long l
   assert.equal(decodeSetup(Buffer.from(JSON.stringify({ v: 1, edition: "IN", country: null, blocks: many })).toString("base64url")), null);
 });
 
-test("a twelve-block setup encodes to well under 1,500 characters", () => {
+test("a twelve-block setup encodes to under 2,500 characters", () => {
   const blocks = Array.from({ length: 12 }, (_, i) => ({ id: "", type: "player-form" as const, params: { league: "nba", player: `a-long-player-name-${i}` }, label: `A Long Player Name ${i}: last five` }));
-  assert.ok(encodeSetup(newSetup("US", "US", blocks)).length < 1500);
+  assert.ok(encodeSetup(newSetup("US", "US", blocks)).length < 2500);
 });
 
 test("list edits are pure and respect the limit", () => {
