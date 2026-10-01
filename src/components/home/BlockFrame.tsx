@@ -45,7 +45,7 @@ export function BlockFrame({
       aria-label={block.label}
     >
       <header className="flex items-center gap-2">
-        <button type="button" {...handleProps} aria-label={`Drag to move ${block.label}`} className="text-[var(--text-faint)] hover:text-[var(--text)]">
+        <button type="button" {...handleProps} tabIndex={-1} aria-label={`Drag to move ${block.label}`} className="text-[var(--text-faint)] hover:text-[var(--text)]">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
           </svg>

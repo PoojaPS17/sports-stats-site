@@ -76,6 +76,15 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
     }
   );
 
+  useEffect(() => {
+    if (!adding) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAdding(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [adding]);
+
   if (!setup) return null;
 
   const onPick = (b: HomeBlock) => {
