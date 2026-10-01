@@ -13,9 +13,11 @@ test("the light :root block defines the signature, masthead and display-font tok
   for (const token of ["--sig:", "--sig-ink:", "--sig-soft:", "--sig-on:", "--mast:", "--mast-2:", "--mast-text:", "--mast-muted:", "--font-display:"]) {
     assert.match(rootBlock, new RegExp(token.replace(/[-]/g, "\\-")), token);
   }
-  assert.match(rootBlock, /--sig:\s*#c6f135/i, "Volt is the signature colour");
-  assert.match(rootBlock, /--sig-ink:\s*#4d7c0f/i);
-  assert.match(rootBlock, /--mast:\s*#0b1324/i);
+  assert.match(rootBlock, /--volt:\s*#c6f135/i, "Volt is kept as a fixed token");
+  assert.match(rootBlock, /--sig:\s*#1e3a8a/i, "the light theme's signature colour is navy ink");
+  assert.match(rootBlock, /--sig-ink:\s*#1e3a8a/i);
+  assert.match(rootBlock, /--sig-on:\s*#ffffff/i);
+  assert.match(rootBlock, /--mast:\s*#f7f5f0/i, "light bands are paper, the same as the page");
 });
 
 test("--accent is remapped to the signature ink so existing components inherit it", () => {
@@ -24,9 +26,15 @@ test("--accent is remapped to the signature ink so existing components inherit i
   assert.match(rootBlock, /--header-bg:\s*var\(--mast\)/);
 });
 
-test("the dark theme makes Volt itself the ink, in both the media block and the explicit toggle", () => {
-  const darkBlocks = css.match(/--sig-ink:\s*var\(--sig\)/g) ?? [];
-  assert.ok(darkBlocks.length >= 2, `expected the dark ink remap twice (media + data-theme), found ${darkBlocks.length}`);
+test("the dark theme makes Volt the signature colour and the ink, in both the media block and the explicit toggle", () => {
+  for (const [label, re] of [
+    ["signature", /--sig:\s*var\(--volt\)/g],
+    ["ink", /--sig-ink:\s*var\(--sig\)/g],
+    ["masthead", /--mast:\s*#07090f/g],
+  ] as const) {
+    const n = (css.match(re) ?? []).length;
+    assert.ok(n >= 2, `expected the dark ${label} remap twice (media + data-theme), found ${n}`);
+  }
 });
 
 test("Barlow Condensed is loaded in the root layout and exposed as --font-display", () => {

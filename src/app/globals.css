@@ -2,36 +2,46 @@
 
 /* ---------------------------------------------------------------------------
    Design tokens
-   Light theme is the default; dark overrides live in the two blocks below
-   (system preference, then the explicit data-theme toggle which always wins).
+   Light theme (paper and navy ink) is the default; the dark theme (near-black and Volt)
+   lives in the two blocks below (system preference, then the explicit data-theme toggle,
+   which always wins).
 --------------------------------------------------------------------------- */
 :root {
-  --bg: #f3f4f8;
-  --surface: #ffffff;
-  --surface-muted: #eceef4;
-  --surface-hover: #f5f6fa;
-  --border: #dde1ea;
-  --border-strong: #c3cad8;
-  --text: #0b1324;
-  --text-muted: #5a6478;
-  --text-faint: #8b95a8;
+  --bg: #f7f5f0;
+  --surface: #fffdf9;
+  --surface-muted: #efece4;
+  --surface-hover: #f3f0e9;
+  --border: #e3dfd4;
+  --border-strong: #c9c4b8;
+  --text: #141a2b;
+  --text-muted: #5d6373;
+  --text-faint: #8c9099;
 
-  /* The signature colour (Volt) and its readable ink on light surfaces. */
-  --sig: #c6f135;
-  --sig-ink: #4d7c0f;
-  --sig-soft: #eef9c9;
-  --sig-on: #0b1324;
+  /* The brand pair, fixed in both themes: Volt on navy is what the icons, share images,
+     downloadable cards and the neutral article tile are drawn in. */
+  --volt: #c6f135;
+  --navy: #0b1324;
+  --navy-2: #121c33;
 
-  /* The dark bands: masthead, scores strip, hero, article header, footer. Same in both themes. */
-  --mast: #0b1324;
-  --mast-2: #121c33;
-  --mast-text: #eef1f7;
-  --mast-muted: #9aa5bd;
-  --mast-line: rgba(255, 255, 255, 0.08);
+  /* The signature colour per theme: deep navy ink on paper in the light theme, Volt in the
+     dark theme. Components use --sig for the accent and --sig-on for text placed on it. */
+  --sig: #1e3a8a;
+  --sig-ink: #1e3a8a;
+  --sig-soft: #e4e9f7;
+  --sig-on: #ffffff;
+
+  /* The bands: masthead, scores strip, hero, article header, footer. Paper in the light
+     theme, near-black in the dark one, so the two themes read as different materials. */
+  --mast: #f7f5f0;
+  --mast-2: #efece4;
+  --mast-text: #141a2b;
+  --mast-muted: #5d6373;
+  --mast-line: rgba(20, 26, 43, 0.12);
+  --hero-wash: 8%;
 
   /* Legacy names, kept so every existing component inherits the identity. */
   --accent: var(--sig-ink);
-  --accent-hover: #3f6a0a;
+  --accent-hover: #172e6e;
   --accent-soft: var(--sig-soft);
   --accent-foreground: var(--sig-on);
   --accent-2: #d97706;
@@ -49,13 +59,13 @@
   --header-bg: var(--mast);
   --header-text: var(--mast-text);
   --header-text-muted: var(--mast-muted);
-  --header-border: #1b2640;
-  --header-hover-bg: rgba(255, 255, 255, 0.07);
+  --header-border: #e3dfd4;
+  --header-hover-bg: rgba(20, 26, 43, 0.06);
 
   --pill-live-bg: #e11d48; /* deeper than --live so 0.68rem white text clears AA */
   --pill-live-text: #ffffff;
-  --pill-final-bg: #e8ebf2;
-  --pill-final-text: #46516a;
+  --pill-final-bg: #ebe8e0;
+  --pill-final-text: #4a5063;
   --pill-upcoming-bg: var(--sig-soft);
   --pill-upcoming-text: var(--sig-ink);
   --pill-feature-bg: #dcfce7;
@@ -64,7 +74,7 @@
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
 
-  --shadow-card: 0 1px 2px rgba(11, 19, 36, 0.05), 0 8px 24px -12px rgba(11, 19, 36, 0.18);
+  --shadow-card: 0 1px 2px rgba(20, 26, 43, 0.05), 0 8px 24px -12px rgba(20, 26, 43, 0.16);
   --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
 
   --font-display: var(--font-barlow);
@@ -94,18 +104,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0f1c;
-    --surface: #111a2c;
-    --surface-muted: #182238;
-    --surface-hover: #1b2740;
-    --border: #24304a;
-    --border-strong: #34425e;
+    --bg: #07090f;
+    --surface: #0f1420;
+    --surface-muted: #161c2b;
+    --surface-hover: #1a2132;
+    --border: #1f2738;
+    --border-strong: #2e3850;
     --text: #e9edf6;
     --text-muted: #9aa6bf;
     --text-faint: #6b7890;
 
+    --sig: var(--volt);
     --sig-ink: var(--sig);
     --sig-soft: #23301a;
+    --sig-on: #0b1324;
+
+    --mast: #07090f;
+    --mast-2: #0f1420;
+    --mast-text: #eef1f7;
+    --mast-muted: #9aa5bd;
+    --mast-line: rgba(255, 255, 255, 0.08);
+    --hero-wash: 18%;
 
     --accent: var(--sig);
     --accent-hover: #d8f766;
@@ -122,7 +141,7 @@
     --zone-3: #f87171;
     --zone-4: #2dd4bf;
 
-    --header-border: #1b2640;
+    --header-border: #1f2738;
     --header-hover-bg: rgba(255, 255, 255, 0.07);
 
     --pill-final-bg: #1b2740;
@@ -136,18 +155,27 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0a0f1c;
-  --surface: #111a2c;
-  --surface-muted: #182238;
-  --surface-hover: #1b2740;
-  --border: #24304a;
-  --border-strong: #34425e;
+  --bg: #07090f;
+  --surface: #0f1420;
+  --surface-muted: #161c2b;
+  --surface-hover: #1a2132;
+  --border: #1f2738;
+  --border-strong: #2e3850;
   --text: #e9edf6;
   --text-muted: #9aa6bf;
   --text-faint: #6b7890;
 
+  --sig: var(--volt);
   --sig-ink: var(--sig);
   --sig-soft: #23301a;
+  --sig-on: #0b1324;
+
+  --mast: #07090f;
+  --mast-2: #0f1420;
+  --mast-text: #eef1f7;
+  --mast-muted: #9aa5bd;
+  --mast-line: rgba(255, 255, 255, 0.08);
+  --hero-wash: 18%;
 
   --accent: var(--sig);
   --accent-hover: #d8f766;
@@ -164,7 +192,7 @@
   --zone-3: #f87171;
   --zone-4: #2dd4bf;
 
-  --header-border: #1b2640;
+  --header-border: #1f2738;
   --header-hover-bg: rgba(255, 255, 255, 0.07);
 
   --pill-final-bg: #1b2740;
@@ -272,7 +300,8 @@ table {
   font-weight: 800;
 }
 
-/* Small caps label above a title. Colour is set where it's used (Volt on a band, ink on a surface). */
+/* Small caps label above a title. Colour is set where it's used (the signature colour on a
+   band, ink on a surface); `.eyebrow-quiet` keeps the faint text colour even inside a band. */
 .eyebrow {
   font-size: 11px;
   font-weight: 700;
@@ -287,11 +316,15 @@ table {
   color: var(--mast-text);
 }
 
-.band .eyebrow {
+.band .eyebrow:not(.eyebrow-quiet) {
   color: var(--sig);
 }
 
-/* The homepage hero: a faint Volt wash top-right. */
+.eyebrow-quiet {
+  color: var(--text-faint);
+}
+
+/* The homepage hero: a faint wash of the signature colour top-right (strength per theme). */
 .band-hero {
   position: relative;
   overflow: hidden;
@@ -301,7 +334,7 @@ table {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sig) 18%, transparent), transparent 70%);
+  background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sig) var(--hero-wash), transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -738,7 +771,7 @@ a.card:hover,
 .art-nfl { background: linear-gradient(120deg, #013369, #d50a0a 140%); }
 .art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
 .art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); }
-.art-neutral { background: linear-gradient(120deg, var(--mast-2), var(--mast) 90%); }
+.art-neutral { background: linear-gradient(120deg, var(--navy-2), var(--navy) 90%); }
 
 /* Index cards carry data-topic-card; the topic chosen on <html> hides every other card. */
 :root[data-topic="football"] [data-topic-card]:not([data-topic-card="football"]),

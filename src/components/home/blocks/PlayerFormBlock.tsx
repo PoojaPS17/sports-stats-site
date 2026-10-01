@@ -19,7 +19,7 @@ export function PlayerFormBlock({ data }: { data: PlayerFormBlockData }) {
               href={g.href}
               title={`${g.display} v ${g.opponent}`}
               style={{ height: `${Math.max(8, ((g.value ?? 0) / max) * 100)}%` }}
-              className={`flex-1 rounded-sm ${i === arr.length - 1 ? "bg-[var(--sig-ink)]" : "bg-[var(--sig)]"}`}
+              className={`flex-1 rounded-sm ${i === arr.length - 1 ? "bg-[var(--sig)]" : "bg-[var(--sig)] opacity-45"}`}
             />
           ))}
         </div>

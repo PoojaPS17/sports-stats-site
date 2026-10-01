@@ -1,22 +1,24 @@
-// Fixed light palette for downloadable card images. Deliberately hard-coded rather
+// Fixed palette for downloadable card images. Deliberately hard-coded rather
 // than the CSS custom properties the rest of the site uses: an exported PNG is
 // looked at outside the page (shared, embedded, printed) and must look the same
 // regardless of the viewer's site theme, so it can't inherit --text/--surface,
-// which flip to dark values under prefers-color-scheme. Mirrors the site's own
-// light-mode tokens (globals.css :root) so the card still reads as "this site";
+// which flip to dark values under prefers-color-scheme. The body mirrors the
+// site's light-mode tokens (globals.css :root, paper and navy ink) so the card
+// still reads as "this site"; the footer band is the fixed brand pair (--navy,
+// --volt) that the icons and share images use, whatever the theme.
 // tests/export-theme.test.ts checks the two stay in step.
 export const CARD = {
-  bg: "#f3f4f8",
-  surface: "#ffffff",
-  border: "#dde1ea",
-  text: "#0b1324",
-  textMuted: "#5a6478",
-  textFaint: "#8b95a8",
-  /** Volt's readable ink on a white surface (--sig-ink). Volt itself only goes on navy. */
-  accent: "#4d7c0f",
-  accentSoft: "#eef9c9",
+  bg: "#f7f5f0",
+  surface: "#fffdf9",
+  border: "#e3dfd4",
+  text: "#141a2b",
+  textMuted: "#5d6373",
+  textFaint: "#8c9099",
+  /** The light theme's signature ink (--sig-ink). Volt itself only goes on navy. */
+  accent: "#1e3a8a",
+  accentSoft: "#e4e9f7",
   sig: "#c6f135",
-  /** The masthead band (--mast) and its text, for the footer every card ends with. */
+  /** The navy band (--navy) and its text, for the footer every card ends with. */
   mast: "#0b1324",
   mastText: "#eef1f7",
   mastMuted: "#9aa5bd",

@@ -17,7 +17,7 @@ function lightTokens(): Record<string, string> {
   return out;
 }
 
-test("the card palette mirrors the site's light tokens", () => {
+test("the card body mirrors the site's light tokens and the band is the fixed brand navy", () => {
   const t = lightTokens();
   assert.equal(CARD.bg, t.bg);
   assert.equal(CARD.surface, t.surface);
@@ -27,10 +27,12 @@ test("the card palette mirrors the site's light tokens", () => {
   assert.equal(CARD.textFaint, t["text-faint"]);
   assert.equal(CARD.accent, t["sig-ink"]);
   assert.equal(CARD.accentSoft, t["sig-soft"]);
-  assert.equal(CARD.sig, t.sig);
-  assert.equal(CARD.mast, t.mast);
-  assert.equal(CARD.mastText, t["mast-text"]);
-  assert.equal(CARD.mastMuted, t["mast-muted"]);
+  // The footer band is the fixed brand pair, not the theme's band, so a paper light theme
+  // still ends every card on navy with a Volt mark.
+  assert.equal(CARD.sig, t.volt);
+  assert.equal(CARD.mast, t.navy);
+  assert.equal(CARD.mastText, "#eef1f7");
+  assert.equal(CARD.mastMuted, "#9aa5bd");
   assert.equal(CARD.win, t.win);
   assert.equal(CARD.loss, t.loss);
 });

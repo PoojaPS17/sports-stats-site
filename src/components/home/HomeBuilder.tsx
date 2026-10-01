@@ -151,7 +151,7 @@ export function HomeBuilder({ ctx, mode = "first", initial, onClose }: { ctx: Ed
           <BlockPalette ctx={ctx} existing={chosen} onPick={add} />
         </div>
         <div className="rounded-xl bg-[var(--bg)] p-3 text-[var(--text)] lg:col-span-2">
-          <p className="eyebrow mb-2 text-[var(--text-faint)]">Preview · {blocks.length} {blocks.length === 1 ? "block" : "blocks"} · drag to reorder</p>
+          <p className="eyebrow eyebrow-quiet mb-2">Preview · {blocks.length} {blocks.length === 1 ? "block" : "blocks"} · drag to reorder</p>
           <ol className="flex flex-col gap-1.5">
             {blocks.map((b, i) => (
               <li key={b.id} data-drag-id={b.id} className="group flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12px] font-bold">
