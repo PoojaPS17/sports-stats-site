@@ -1,5 +1,6 @@
 import {
   getMostRecentPlayedSeason,
+  getNextFixtureDate,
   getSeasonPlayoffGames,
   getSeasonLastResults,
   getStandingsBySeason,
@@ -18,8 +19,6 @@ import {
 } from "./queries";
 import { summarizePlayoffs, type PlayoffResult } from "./seasonSummary";
 import { tableComplete } from "./standingsOrder";
-import { pool } from "./db";
-import { isGameCalledOff } from "./gameStatus";
 
 // What a league hub shows while nothing is scheduled: the season just played, in
 // three glances — how it ended (the final or the last round), the final table, and
@@ -57,22 +56,6 @@ export interface OffseasonRecap {
  */
 export function seasonIsOver(s: { cup: boolean; finalPlayed: boolean; domesticTableComplete: boolean; hasFutureFixture: boolean }): boolean {
   return (s.cup && s.finalPlayed) || s.domesticTableComplete || !s.hasFutureFixture;
-}
-
-/**
- * Kickoff of the earliest fixture of a season still to be played: unfinished, in the future and not called off. "Called
- * off" is the site's one definition (isGameCalledOff, on the stored status), applied here rather than restated in SQL,
- * so a game the cards and pills show as postponed never keeps the hub saying the season is in progress.
- */
-async function getNextFixtureDate(league: League, season: number): Promise<string | null> {
-  const { rows } = await pool.query(
-    `select date, completed, status_state, status_detail from games
-     where league = $1 and season_year = $2 and completed = false and date > now()
-     order by date asc`,
-    [league, season]
-  );
-  const next = rows.find((g) => !isGameCalledOff(g));
-  return next ? new Date(next.date).toISOString() : null;
 }
 
 export async function getOffseasonRecap(league: League): Promise<OffseasonRecap | null> {

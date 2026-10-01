@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
-import { LEAGUES, type League, getRecentAndUpcoming, getFeaturedGames, getNews, getMostRecentPlayedSeason, type GameRow, type NewsArticle } from "@/lib/queries";
+import { LEAGUES, type League, getRecentAndUpcoming, getFeaturedGames, getNews, getMostRecentPlayedSeason, getNextFixtureDate, type GameRow, type NewsArticle } from "@/lib/queries";
 import { getLiveGames, getUpcomingGames, getNextF1Event } from "@/lib/homeFeed";
 import { getOffseasonRecap } from "@/lib/offseason";
 import { snapshotFromRecap, type LeagueSnapshotData } from "@/lib/leagueSnapshot";
@@ -89,8 +89,12 @@ const readNews = unstable_cache(
 
 const readSeasonFacts = unstable_cache(
   async () => {
-    const [f1, seasons] = await Promise.all([getNextF1Event(7), Promise.all(SECTION_LEAGUES.map(async (l) => [l, await getMostRecentPlayedSeason(l)] as const))]);
-    return { f1, lastSeason: Object.fromEntries(seasons) as Partial<Record<League, number | null>> };
+    const [f1, seasons, resumes] = await Promise.all([
+      getNextF1Event(7),
+      Promise.all(SECTION_LEAGUES.map(async (l) => [l, await getMostRecentPlayedSeason(l)] as const)),
+      Promise.all(SECTION_LEAGUES.map(async (l) => [l, await getNextFixtureDate(l)] as const)),
+    ]);
+    return { f1, lastSeason: Object.fromEntries(seasons) as Partial<Record<League, number | null>>, resumesOn: Object.fromEntries(resumes) as Partial<Record<League, string | null>> };
   },
   ["home-season-facts"],
   { revalidate: TIER.SEASON }
@@ -152,8 +156,8 @@ export interface HomeData {
   featured: GameRow[];
   /** League blocks with something on, most active first. */
   sections: HomeSection[];
-  /** Leagues between seasons, with the last season that was played. */
-  offSeason: { league: League; lastSeason: number | null }[];
+  /** Leagues with nothing on this week: on a break (`resumesOn` is the next kickoff) or between seasons (null), with the last season played. */
+  offSeason: { league: League; lastSeason: number | null; resumesOn: string | null }[];
   news: NewsArticle[];
 }
 
@@ -209,7 +213,7 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
   for (const s of fixtures.sections) {
     const games = refresh(s.games);
     if (games.length === 0) {
-      offSeason.push({ league: s.league, lastSeason: facts.lastSeason[s.league] ?? null });
+      offSeason.push({ league: s.league, lastSeason: facts.lastSeason[s.league] ?? null, resumesOn: facts.resumesOn[s.league] ?? null });
       continue;
     }
     const liveCount = games.filter((g) => g.status_state === "in").length;

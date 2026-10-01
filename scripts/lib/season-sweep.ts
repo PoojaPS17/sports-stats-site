@@ -13,8 +13,10 @@ import { upsertEvent } from "./games";
 
 export const SWEEP_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
-const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 2_000;
+// ESPN's cricket API fails in storms that last minutes ("timeout occurred waiting for core endpoint"), so the
+// waits lengthen: a season is given up on only after some forty seconds of trying.
+const RETRY_DELAYS_MS = [2_000, 10_000, 30_000];
+const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export interface SweepDeps {
@@ -59,7 +61,7 @@ export async function sweepSeason(league: League, season: number, deps: SweepDep
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     }
-    if (attempt < MAX_ATTEMPTS) await deps.sleep(RETRY_DELAY_MS);
+    if (attempt < MAX_ATTEMPTS) await deps.sleep(RETRY_DELAYS_MS[attempt - 1]);
   }
   const ids = best.map((ev) => String(ev.id));
   const { rows } = ids.length ? await pool.query(`select espn_id from games where league = $1 and espn_id = any($2::text[])`, [league, ids]) : { rows: [] };
@@ -77,6 +79,15 @@ export async function sweepSeason(league: League, season: number, deps: SweepDep
   const { rows: now } = missingIds.length ? await pool.query(`select count(*)::int as n from games where league = $1 and espn_id = any($2::text[])`, [league, missingIds]) : { rows: [{ n: 0 }] };
   const added: number = now[0].n;
   return { league, season, listed, missing: missing.length, added, ...(error ? { error } : {}) };
+}
+
+/**
+ * Whether the sweep should fail its job. One competition ESPN would not serve is reported in its line and healed by
+ * the next day's run; failing the whole daily unit for it hid the steps that did run. Only a sweep that could read
+ * nothing at all (every season an error with no matches listed: ESPN down) is a failure worth the alarm.
+ */
+export function sweepFailed(results: readonly SeasonSweep[]): boolean {
+  return results.length > 0 && results.every((r) => r.error !== undefined && r.listed === 0);
 }
 
 /** The previous and the current season: a competition that spans a new year is listed under either. */
