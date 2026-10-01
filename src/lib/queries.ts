@@ -967,6 +967,41 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
   };
 }
 
+export interface CricketInningsRow {
+  game_espn_id: string;
+  date: string;
+  opponent_name: string;
+  runs: number | null;
+  balls_faced: number | null;
+  not_out: boolean | null;
+  wickets: number | null;
+  conceded: number | null;
+}
+
+/** A cricketer's most recent innings, newest first: one row per innings with a batting or bowling line. */
+export async function getCricketRecentInnings(league: League, playerEspnId: string, limit = 5): Promise<CricketInningsRow[]> {
+  const { rows } = await pool.query(
+    `select pgs.game_espn_id,
+            to_char(g.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
+            case when g.home_team_espn_id = pgs.team_espn_id then away.name else home.name end as opponent_name,
+            (inn->'batting'->>'runs')::int as runs,
+            (inn->'batting'->>'ballsFaced')::int as balls_faced,
+            (inn->'batting'->>'notOut')::boolean as not_out,
+            (inn->'bowling'->>'wickets')::int as wickets,
+            (inn->'bowling'->>'conceded')::int as conceded
+     from player_game_stats pgs
+     join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+     join teams home on home.league = g.league and home.espn_id = g.home_team_espn_id
+     join teams away on away.league = g.league and away.espn_id = g.away_team_espn_id
+     ${CRICKET_INNINGS}
+     where pgs.league = $1 and pgs.player_espn_id = $2 and (inn->'batting' is not null or inn->'bowling' is not null)
+     order by g.date desc
+     limit $3`,
+    [league, playerEspnId, limit]
+  );
+  return rows;
+}
+
 export type CricketSplitDimension = "team" | "opponent" | "venue";
 
 export const CRICKET_SPLIT_DIMENSIONS: { key: CricketSplitDimension; label: string }[] = [
