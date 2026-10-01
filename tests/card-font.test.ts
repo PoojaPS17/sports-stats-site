@@ -2,12 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CARD_FONTS } from "../src/lib/cardFont";
 
-test("the card font bundle has a regular and a bold Inter weight, well under the ImageResponse 500KB ceiling", () => {
-  assert.equal(CARD_FONTS.length, 2);
+test("the card font bundle has regular and bold Inter plus the display face, well under the ImageResponse 500KB ceiling", () => {
+  assert.equal(CARD_FONTS.length, 3);
   const weights = CARD_FONTS.map((f) => f.weight).sort();
-  assert.deepEqual(weights, [400, 700]);
+  assert.deepEqual(weights, [400, 700, 800]);
   for (const f of CARD_FONTS) {
-    assert.equal(f.name, "Inter");
+    assert.equal(f.name, f.weight === 800 ? "Barlow Condensed" : "Inter");
     assert.equal(f.style, "normal");
     assert.ok(f.data.byteLength > 0, "font file must not be empty");
   }

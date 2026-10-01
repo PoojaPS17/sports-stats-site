@@ -7,7 +7,7 @@ export const contentType = "image/png";
 
 export default function AppleIcon() {
   return new ImageResponse(
-    <PixelBall size={180} fill="#ffffff" live="#fb7185" background="#1d4ed8" backgroundRadius={0} inset={0.66} />,
+    <PixelBall size={180} fill="#ffffff" live="#c6f135" background="#0b1324" backgroundRadius={0} inset={0.66} />,
     size
   );
 }

@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LEAGUE_LABEL, leagueNameWithArticle, SOCCER_LEAGUES, formatSeasonLabel } from "@/lib/queries";
+import { LEAGUE_LABEL, leagueNameWithArticle, formatSeasonLabel } from "@/lib/queries";
 import { GameCard } from "@/components/GameCard";
 import { AdSlot } from "@/components/AdSlot";
 import { NewsCard } from "@/components/NewsCard";
 import { SectionHeader } from "@/components/SectionHeader";
-import { SpotlightCard, pickSpotlight } from "@/components/SpotlightCard";
 import { HomeCricket } from "@/components/HomeCricket";
 import { HomeLive } from "@/components/HomeLive";
-import { MyFollows } from "@/components/MyFollows";
 import { StoryCard } from "@/components/StoryCard";
 import { LeagueSnapshot } from "@/components/LeagueSnapshot";
 import { getHomeData, type HomeSection } from "@/lib/homeData";
 import { listArticles } from "@/lib/beyondTheScoreline";
 import { absoluteUrl } from "@/lib/site";
+import { HomeBuilder } from "@/components/home/HomeBuilder";
+import { HomeBlocks } from "@/components/home/HomeBlocks";
+import { CollapsedBar } from "@/components/home/CollapsedBar";
+import { getEditionContext } from "@/lib/editionContext";
 
 // Title, description and share card come from the root layout. The canonical lives here and not
 // in the layout, so no page can inherit the home address by accident.
@@ -23,17 +25,6 @@ export const metadata: Metadata = { alternates: { canonical: absoluteUrl("/") } 
 // behind the page is cached in longer tiers (see getHomeData) so each regeneration
 // costs only the live ESPN reads.
 export const revalidate = 10;
-
-// One pill per sport (football's competitions are the sport's front doors); cricket
-// and tennis open on the whole sport, not one competition or tour.
-const QUICK_LINKS: { label: string; href: string }[] = [
-  ...SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` })),
-  { label: "NFL", href: "/nfl" },
-  { label: "NBA", href: "/nba" },
-  { label: "Cricket", href: "/cricket/series" },
-  { label: "Tennis", href: "/tennis" },
-  { label: "F1", href: "/f1" },
-];
 
 function LeagueBlock({ section }: { section: HomeSection }) {
   const { league, games, liveCount, snapshot } = section;
@@ -70,10 +61,8 @@ function LeagueBlock({ section }: { section: HomeSection }) {
 }
 
 export default async function HomePage() {
-  const home = await getHomeData();
-  const spotlight = pickSpotlight(home.featured);
+  const [home, editionContext] = await Promise.all([getHomeData(), getEditionContext()]);
   const beyondTheScorelineArticles = listArticles().slice(0, 3);
-  const liveTotal = home.liveGames.length + home.liveCricket.length + home.liveTennis.length;
 
   // League blocks most active first; the cricket block ranks by its own live count
   // (a full day of internationals outranks a league with nothing on). Leagues
@@ -85,51 +74,15 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <section className="band band-hero bleed -mt-6 py-9 sm:py-11">
-        <div className="grid gap-8 lg:grid-cols-5 lg:items-center">
-          <div className="flex flex-col gap-5 lg:col-span-3">
-            <div>
-              <p className="eyebrow">Football · Cricket · NFL · NBA · Tennis · F1</p>
-              <h1 className="display mt-2 max-w-3xl text-[44px] leading-[0.95] sm:text-[64px] lg:text-[80px]">
-                Live scores. <span className="text-[var(--sig)]">The full record</span> behind them.
-              </h1>
-              <p className="mt-4 max-w-xl text-[16px] text-[var(--mast-muted)]">
-                Open any match for the scorecard or box score, any player for their game log, any team for every season back to
-                2015. Cricket goes back further: the IPL from its first season in 2008, World Cups to 1975.
-              </p>
-            </div>
-            <ul className="flex flex-wrap gap-2" aria-label="Browse by competition">
-              {liveTotal > 0 && (
-                <li>
-                  <a href="#live" className="inline-flex items-center gap-2 rounded-full bg-[var(--sig)] px-3.5 py-1.5 text-sm font-bold text-[var(--sig-on)]">
-                    <span className="live-dot bg-[var(--sig-on)]!" aria-hidden />
-                    {liveTotal} live now
-                  </a>
-                </li>
-              )}
-              {QUICK_LINKS.map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="inline-flex items-center rounded-full border border-[var(--mast-line)] px-3.5 py-1.5 text-sm font-semibold text-[var(--mast-text)] transition hover:border-[var(--sig)] hover:text-[var(--sig)]"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {spotlight && (
-            <div className="lg:col-span-2">
-              <SpotlightCard game={spotlight} />
-            </div>
-          )}
-        </div>
+      <section className="home-builder-hero band band-hero bleed -mt-6 py-9 sm:py-11" suppressHydrationWarning>
+        <HomeBuilder ctx={editionContext} />
       </section>
+      <CollapsedBar />
+      <div className="home-skeleton" aria-hidden />
+      <HomeBlocks ctx={editionContext} />
+      <h2 className="home-else display text-[28px] text-[var(--text)]">Everything else is still here</h2>
 
       <HomeLive data={home} />
-
-      <MyFollows />
 
       <AdSlot label="Homepage" />
 

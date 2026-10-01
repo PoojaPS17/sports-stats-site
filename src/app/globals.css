@@ -751,3 +751,30 @@ a.card:hover,
 :root[data-topic="neutral"] [data-topic-card]:not([data-topic-card="neutral"]) {
   display: none;
 }
+
+/* Build-your-homepage states, keyed on <html data-home> set before first paint (app/layout.tsx) and
+   data-home-ready set by HomeBlocks once it has read the setup. */
+.home-skeleton,
+.home-collapsed-bar,
+.home-else {
+  display: none;
+}
+:root[data-home="built"] .home-builder-hero,
+:root[data-home="collapsed"] .home-builder-hero {
+  display: none;
+}
+:root[data-home="built"] .home-skeleton {
+  display: block;
+  height: 26rem;
+  margin-top: -1.5rem;
+  background: linear-gradient(var(--mast), var(--mast) 11rem, var(--bg) 11rem);
+}
+:root[data-home="built"][data-home-ready] .home-skeleton {
+  display: none;
+}
+:root[data-home="built"] .home-else {
+  display: block;
+}
+:root[data-home="collapsed"] .home-collapsed-bar {
+  display: flex;
+}

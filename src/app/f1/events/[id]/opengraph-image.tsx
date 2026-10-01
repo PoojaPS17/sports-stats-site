@@ -16,7 +16,7 @@ export function generateStaticParams() {
   return [];
 }
 
-const BG = "linear-gradient(135deg, #0b1220 0%, #16223a 100%)";
+const BG = "linear-gradient(135deg, #0b1324 0%, #121c33 100%)";
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
@@ -29,7 +29,7 @@ function Frame({ children }: { children: React.ReactNode }) {
         justifyContent: "space-between",
         padding: 56,
         background: BG,
-        color: "#e8edf6",
+        color: "#eef1f7",
         fontFamily: "sans-serif",
       }}
     >
@@ -40,8 +40,8 @@ function Frame({ children }: { children: React.ReactNode }) {
 
 function Footer() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 26, color: "#6ea0ff", fontWeight: 700 }}>
-      <PixelBall size={28} fill="#6ea0ff" live="#f87171" />
+    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 26, color: "#c6f135", fontWeight: 700 }}>
+      <PixelBall size={28} fill="#ffffff" live="#c6f135" />
       SportsDB
     </div>
   );
@@ -53,11 +53,11 @@ const PLACE_COLOR = ["#f0c14b", "#c6ced9", "#cd8a52"];
 function PodiumRow({ place, driver, constructor }: { place: number; driver: string; constructor: string | null }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 54, height: 54, borderRadius: 27, background: PLACE_COLOR[place - 1], color: "#0b1220", fontSize: 30, fontWeight: 800 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 54, height: 54, borderRadius: 27, background: PLACE_COLOR[place - 1], color: "#0b1324", fontSize: 30, fontWeight: 800 }}>
         {place}
       </div>
       <div style={{ display: "flex", flex: 1, fontSize: 40, fontWeight: 700 }}>{driver}</div>
-      {constructor && <div style={{ display: "flex", fontSize: 26, color: "#9aa7bd", textTransform: "uppercase", letterSpacing: 2 }}>{constructor}</div>}
+      {constructor && <div style={{ display: "flex", fontSize: 26, color: "#9aa5bd", textTransform: "uppercase", letterSpacing: 2 }}>{constructor}</div>}
     </div>
   );
 }
@@ -74,7 +74,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const event = await getF1Event(id);
   if (!event) {
     return new ImageResponse(
-      <div style={{ width: "100%", height: "100%", background: "#0b1220", color: "#e8edf6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>,
+      <div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>,
       size
     );
   }
@@ -93,15 +93,15 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   return new ImageResponse(
     (
       <Frame>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: "#9aa7bd", textTransform: "uppercase", letterSpacing: 3 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: "#9aa5bd", textTransform: "uppercase", letterSpacing: 3 }}>
           <span>Formula 1</span>
           <span>{status.kind === "called-off" && status.label ? `${status.label} · ${when}` : when}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", fontSize: 58, fontWeight: 800 }}>{`${year} ${event.name}`}</div>
-          {event.circuit_name && <div style={{ display: "flex", fontSize: 30, color: "#9aa7bd" }}>{event.circuit_name}</div>}
-          {where && <div style={{ display: "flex", fontSize: 26, color: "#6b788f" }}>{where}</div>}
+          {event.circuit_name && <div style={{ display: "flex", fontSize: 30, color: "#9aa5bd" }}>{event.circuit_name}</div>}
+          {where && <div style={{ display: "flex", fontSize: 26, color: "#6b7890" }}>{where}</div>}
         </div>
 
         {podium.length > 0 ? (
@@ -114,7 +114,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           // Nothing invented for a weekend with no classification yet: the card says which state it is
           // in and stops there, the way a fixture card carries no score. A called-off weekend says so
           // in the header already, so this line stays empty rather than repeating the word.
-          <div style={{ display: "flex", fontSize: 34, color: "#6b788f", fontWeight: 700 }}>
+          <div style={{ display: "flex", fontSize: 34, color: "#6b7890", fontWeight: 700 }}>
             {status.kind === "called-off" ? "" : status.kind === "live" ? "Race weekend under way" : "Race weekend"}
           </div>
         )}

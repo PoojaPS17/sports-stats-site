@@ -3,7 +3,8 @@ import { LocalTime } from "@/components/LocalTime";
 import { ESTIMATED, ESTIMATED_TITLE, setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
 import { displayCountry } from "@/lib/tennisCountry";
 import { formatTournamentRange, TENNIS_ZONE, tournamentInPlay } from "@/lib/tennisDates";
-import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType, type TennisMatch, type TennisSide, type TennisTournament } from "@/lib/tennis";
+import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType } from "@/lib/tennisCompetitions";
+import type { TennisMatch, TennisSide, TennisTournament } from "@/lib/tennis";
 
 /* ------------------------------------------------------------------------ */
 /* Small pieces                                                              */

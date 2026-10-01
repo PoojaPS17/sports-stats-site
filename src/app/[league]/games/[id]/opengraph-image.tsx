@@ -23,10 +23,10 @@ function Side({ name, logo, score, muted }: { name: string; logo: string | null;
       {logo ? (
         <img src={logo} width={170} height={170} alt="" style={{ objectFit: "contain" }} />
       ) : (
-        <div style={{ width: 170, height: 170, borderRadius: 85, background: "#233047" }} />
+        <div style={{ width: 170, height: 170, borderRadius: 85, background: "#1b2640" }} />
       )}
-      <div style={{ fontSize: 34, fontWeight: 700, textAlign: "center", color: muted ? "#9aa7bd" : "#e8edf6" }}>{name}</div>
-      {score !== null && <div style={{ fontSize: 96, fontWeight: 800, color: muted ? "#9aa7bd" : "#e8edf6" }}>{score}</div>}
+      <div style={{ fontSize: 34, fontWeight: 700, textAlign: "center", color: muted ? "#9aa5bd" : "#eef1f7" }}>{name}</div>
+      {score !== null && <div style={{ fontSize: 96, fontWeight: 800, color: muted ? "#9aa5bd" : "#eef1f7" }}>{score}</div>}
     </div>
   );
 }
@@ -36,7 +36,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const { league, id } = await params;
   const game = isLeague(league) ? await getGameByEspnId(league, id) : null;
   if (!game) {
-    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1220", color: "#e8edf6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
+    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
   }
   const off = gameCalledOffLabel(game);
   const played = !off && game.completed && game.home_score != null && game.away_score != null;
@@ -77,22 +77,22 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 56,
-          background: "linear-gradient(135deg, #0b1220 0%, #16223a 100%)",
-          color: "#e8edf6",
+          background: "linear-gradient(135deg, #0b1324 0%, #121c33 100%)",
+          color: "#eef1f7",
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: "#9aa7bd", textTransform: "uppercase", letterSpacing: 3 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: "#9aa5bd", textTransform: "uppercase", letterSpacing: 3 }}>
           <span>{isLeague(league) ? LEAGUE_LABEL[league] : ""}</span>
           <span>{status ? `${status} · ${when}` : when}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {sides[order[0]]}
-          <div style={{ display: "flex", justifyContent: "center", textAlign: "center", ...(note ? { width: 280, fontSize: 28, color: "#9aa7bd" } : { fontSize: 40, color: "#6b788f" }), fontWeight: 700 }}>{played ? "" : (note ?? "vs")}</div>
+          <div style={{ display: "flex", justifyContent: "center", textAlign: "center", ...(note ? { width: 280, fontSize: 28, color: "#9aa5bd" } : { fontSize: 40, color: "#6b7890" }), fontWeight: 700 }}>{played ? "" : (note ?? "vs")}</div>
           {sides[order[1]]}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 26, color: "#6ea0ff", fontWeight: 700 }}>
-          <PixelBall size={28} fill="#6ea0ff" live="#f87171" />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 26, color: "#c6f135", fontWeight: 700 }}>
+          <PixelBall size={28} fill="#ffffff" live="#c6f135" />
           SportsDB
         </div>
       </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LEAGUE_LABEL, SOCCER_LEAGUES, hasStandings, type League } from "@/lib/queries";
-import { LogoMark } from "./Logo";
+import { LogoMark, Wordmark } from "./Logo";
 
 const LEAGUE_SECTIONS: { label: string; suffix: string }[] = [
   { label: "Scores", suffix: "" },
@@ -36,9 +36,9 @@ export function Footer() {
     <footer className="mt-auto border-t border-[var(--header-border)] bg-[var(--mast)] text-[var(--mast-muted)]">
       <div className="container-x flex flex-col gap-8 py-10">
         <div className="flex flex-col gap-3">
-          <Link href="/" className="flex items-center gap-2 text-[17px] font-extrabold tracking-tight text-[var(--mast-text)]">
+          <Link href="/" className="flex items-center gap-2 text-[var(--mast-text)]">
             <LogoMark size={26} />
-            SportsDB
+            <Wordmark size={22} />
           </Link>
           <p className="max-w-lg text-sm leading-relaxed text-[var(--mast-muted)]">
             Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with season-by-season history for every
