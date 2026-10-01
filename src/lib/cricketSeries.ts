@@ -1,41 +1,15 @@
 import { pool } from "./db";
-import { isLeague, type League } from "./leagues";
+import { isLeague } from "./leagues";
 import { featuredMatchSql, featuredSeriesSql, isFeaturedCricket } from "./cricketFeatured";
 import { CALLED_OFF } from "./gameStatus";
 import { baseSeriesId, editionLabel, isEditionKey, seriesHasPlaySql } from "./cricketSeriesKey";
+import type { SeriesKind } from "./cricketSeriesDisplay";
+import { SERIES_KIND_LABEL, formatSeriesDates } from "./cricketSeriesDisplay";
+import type { CricketSeries, CricketSeriesMatch } from "./cricketSeriesTypes";
 
-export type SeriesKind = "international" | "womens-international" | "domestic" | "womens-domestic" | "other";
-
-export const SERIES_KIND_LABEL: Record<SeriesKind, string> = {
-  international: "International",
-  "womens-international": "Women's international",
-  domestic: "Domestic",
-  "womens-domestic": "Women's domestic",
-  other: "Youth, A-team and other",
-};
-
-export interface CricketSeries {
-  espn_id: string;
-  name: string;
-  short_name: string | null;
-  abbreviation: string | null;
-  is_tournament: boolean;
-  kind: SeriesKind;
-  formats: string[];
-  season: number | null;
-  start_date: string | null;
-  end_date: string | null;
-  match_count: number;
-  completed_count: number;
-  /** Matches ESPN closed without playing (postponed, cancelled...): not finished, and not still to be played. */
-  called_off_count: number;
-  live_count: number;
-  teams: { id: string; name: string; abbreviation: string | null; logo: string | null }[];
-  /** The SportsDB competition this series is, when it is one (IPL, World Cups, ...). */
-  league: League | null;
-  /** Headline cricket (see cricketFeatured.ts): listed in live and upcoming, not only through the picker. */
-  featured: boolean;
-}
+export type { SeriesKind } from "./cricketSeriesDisplay";
+export { SERIES_KIND_LABEL, formatSeriesDates } from "./cricketSeriesDisplay";
+export type { CricketSeries, SeriesSide, CricketSeriesMatch } from "./cricketSeriesTypes";
 
 const KIND_RANK: Record<SeriesKind, number> = { international: 0, "womens-international": 1, domestic: 2, "womens-domestic": 3, other: 4 };
 
@@ -46,35 +20,6 @@ export function byPriority(a: CricketSeriesMatch, b: CricketSeriesMatch): number
     KIND_RANK[a.series_kind ?? "other"] - KIND_RANK[b.series_kind ?? "other"] ||
     a.date.localeCompare(b.date)
   );
-}
-
-export interface SeriesSide {
-  id: string;
-  name: string;
-  abbreviation: string | null;
-  score: string | null;
-  winner: boolean;
-  logo: string | null;
-}
-
-export interface CricketSeriesMatch {
-  espn_id: string;
-  series_espn_id: string;
-  series_name: string;
-  series_kind: SeriesKind | null;
-  date: string;
-  name: string;
-  short_name: string | null;
-  description: string | null;
-  class_card: string | null;
-  /** ESPN's international class: 1 Test, 2 ODI, 3 T20I, 8-10 the women's equivalents, "0" for everything else. */
-  international_class_id: string | null;
-  status_state: "pre" | "in" | "post" | null;
-  status_summary: string | null;
-  home: SeriesSide | null;
-  away: SeriesSide | null;
-  /** SportsDB league holding this match's stored scorecard, when one exists. */
-  scorecard_league: League | null;
 }
 
 const SERIES_LEAGUE_SQL = `
@@ -262,16 +207,3 @@ export async function searchCricketSeries(query: string, limit = 8): Promise<Cri
   }));
 }
 
-/** "Sep 11 – 27, 2026", "Jan 3 – Dec 16, 2026" or a single day; null without a start date. */
-export function formatSeriesDates(start: string | null, end: string | null): string | null {
-  if (!start) return null;
-  const s = new Date(start);
-  const e = end ? new Date(end) : s;
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
-  const sameMonth = s.getUTCMonth() === e.getUTCMonth() && s.getUTCFullYear() === e.getUTCFullYear();
-  const sameDay = s.toISOString().slice(0, 10) === e.toISOString().slice(0, 10);
-  if (sameDay) return s.toLocaleDateString("en-US", { ...opts, year: "numeric" });
-  // A season that spans the new year names both years, or "Nov 26 – Dec 6, 2026" reads as eleven days.
-  if (s.getUTCFullYear() !== e.getUTCFullYear()) return `${s.toLocaleDateString("en-US", { ...opts, year: "numeric" })} – ${e.toLocaleDateString("en-US", { ...opts, year: "numeric" })}`;
-  return `${s.toLocaleDateString("en-US", opts)} – ${sameMonth ? e.getUTCDate() : e.toLocaleDateString("en-US", opts)}, ${e.getUTCFullYear()}`;
-}

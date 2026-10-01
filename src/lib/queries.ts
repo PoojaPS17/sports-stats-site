@@ -1,6 +1,6 @@
 import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
-import { CALLED_OFF } from "./gameStatus";
+import { CALLED_OFF, isGameCalledOff } from "./gameStatus";
 import { dayTimeZone } from "./gameDay";
 import { isCricketLeague } from "./leagues";
 import type { League } from "./leagues";
@@ -173,6 +173,23 @@ export async function getRecentAndUpcoming(league: League, daysBack = 2, daysFor
     [league, daysBack, daysForward]
   );
   return rows;
+}
+
+/**
+ * Kickoff of the earliest fixture still to be played: unfinished, in the future and not called off ("called off" is
+ * the site's one definition, isGameCalledOff, applied here rather than restated in SQL, so a game the cards show as
+ * postponed never counts as the next matchday). With `season`, only that season's fixtures; without, any season's,
+ * which is what tells a league on a break from one between seasons.
+ */
+export async function getNextFixtureDate(league: League, season?: number): Promise<string | null> {
+  const { rows } = await pool.query(
+    `select date, completed, status_state, status_detail from games
+     where league = $1 and ($2::int is null or season_year = $2) and completed = false and date > now()
+     order by date asc`,
+    [league, season ?? null]
+  );
+  const next = rows.find((g) => !isGameCalledOff(g));
+  return next ? new Date(next.date).toISOString() : null;
 }
 
 // The last results of one season, newest first — the closing games of a season that
@@ -965,6 +982,41 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
     fiveWicketHauls: Number(r.five_fors),
     catches: Number(r.catches),
   };
+}
+
+export interface CricketInningsRow {
+  game_espn_id: string;
+  date: string;
+  opponent_name: string;
+  runs: number | null;
+  balls_faced: number | null;
+  not_out: boolean | null;
+  wickets: number | null;
+  conceded: number | null;
+}
+
+/** A cricketer's most recent innings, newest first: one row per innings with a batting or bowling line. */
+export async function getCricketRecentInnings(league: League, playerEspnId: string, limit = 5): Promise<CricketInningsRow[]> {
+  const { rows } = await pool.query(
+    `select pgs.game_espn_id,
+            to_char(g.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
+            case when g.home_team_espn_id = pgs.team_espn_id then away.name else home.name end as opponent_name,
+            (inn->'batting'->>'runs')::int as runs,
+            (inn->'batting'->>'ballsFaced')::int as balls_faced,
+            (inn->'batting'->>'notOut')::boolean as not_out,
+            (inn->'bowling'->>'wickets')::int as wickets,
+            (inn->'bowling'->>'conceded')::int as conceded
+     from player_game_stats pgs
+     join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+     join teams home on home.league = g.league and home.espn_id = g.home_team_espn_id
+     join teams away on away.league = g.league and away.espn_id = g.away_team_espn_id
+     ${CRICKET_INNINGS}
+     where pgs.league = $1 and pgs.player_espn_id = $2 and (inn->'batting' is not null or inn->'bowling' is not null)
+     order by g.date desc
+     limit $3`,
+    [league, playerEspnId, limit]
+  );
+  return rows;
 }
 
 export type CricketSplitDimension = "team" | "opponent" | "venue";

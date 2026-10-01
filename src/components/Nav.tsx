@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS, isNavItemActive } from "@/lib/nav";
-import { LogoMark } from "./Logo";
+import { LogoMark, Wordmark } from "./Logo";
 import { NavDropdown } from "./NavDropdown";
 import { MobileMenu } from "./MobileMenu";
 import { SearchBar } from "./SearchBar";
@@ -20,7 +20,7 @@ export function Nav() {
       <div className="container-x flex h-[var(--header-h)] items-center gap-1.5">
         <Link href="/" className="mr-3 flex shrink-0 items-center gap-2.5 text-[var(--mast-text)]" aria-label="SportsDB home">
           <LogoMark size={30} />
-          <span className="text-[19px] font-extrabold tracking-tight">SportsDB</span>
+          <Wordmark size={26} />
         </Link>
 
         <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">

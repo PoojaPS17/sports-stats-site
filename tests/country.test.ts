@@ -78,3 +78,14 @@ test("region: unknown country is the cautious answer (consent required)", async 
   assert.equal(await consentRequired({ "cf-ipcountry": "XX" }), true);
   assert.equal(await consentRequired({ "cf-ipcountry": "T1" }), true);
 });
+
+test("GET /api/region returns the country next to the consent flag", async () => {
+  const res = await GET(new Request("http://localhost/api/region", { headers: { "cf-ipcountry": "IN" } }));
+  assert.deepEqual(await res.json(), { consentRequired: false, country: "IN" });
+  assert.equal(res.headers.get("cache-control"), "private, no-store");
+});
+
+test("GET /api/region reports null with no usable header, and still asks for consent", async () => {
+  const res = await GET(new Request("http://localhost/api/region"));
+  assert.deepEqual(await res.json(), { consentRequired: true, country: null });
+});

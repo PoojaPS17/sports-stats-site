@@ -5,6 +5,7 @@ import { article as kabaddiGoldenSweepAsianGames } from "@/content/beyondTheScor
 import { article as manCityGuiltyVerdict115Charges } from "@/content/beyondTheScoreline/man-city-guilty-verdict-115-charges";
 import { article as barcelonaRecordSevenMatchWinStreak } from "@/content/beyondTheScoreline/barcelona-record-seven-match-win-streak";
 import { article as kane100BundesligaGoalsRecord } from "@/content/beyondTheScoreline/kane-100-bundesliga-goals-record";
+import { article as bayern67MatchdayReignEnds } from "@/content/beyondTheScoreline/bayern-67-matchday-reign-ends";
 
 export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "tennis" | "neutral";
 
@@ -67,6 +68,7 @@ export const ARTICLES: BeyondTheScorelineArticle[] = [
   manCityGuiltyVerdict115Charges,
   barcelonaRecordSevenMatchWinStreak,
   kane100BundesligaGoalsRecord,
+  bayern67MatchdayReignEnds,
 ];
 
 assertUniqueSlugs(ARTICLES);

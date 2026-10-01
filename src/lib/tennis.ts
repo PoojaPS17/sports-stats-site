@@ -1,10 +1,13 @@
 import { pool } from "./db";
 import type { Tour } from "./tennisTours";
+import type { CompetitionType } from "./tennisCompetitions";
 import { easternDateSql, TENNIS_ZONE } from "./tennisDates";
 import { rankingAsOf } from "./tennisRankings";
 
 export type { Tour } from "./tennisTours";
 export { TOURS, TOUR_LABEL, isTour } from "./tennisTours";
+export type { CompetitionType } from "./tennisCompetitions";
+export { COMPETITION_LABEL, COMPETITION_ORDER } from "./tennisCompetitions";
 
 /* ------------------------------------------------------------------------ */
 /* Rankings                                                                  */
@@ -47,21 +50,6 @@ export async function getTennisRankingsAsOf(tour: Tour): Promise<{ week: number 
 /* ------------------------------------------------------------------------ */
 /* Matches                                                                   */
 /* ------------------------------------------------------------------------ */
-
-export type CompetitionType = "mens-singles" | "womens-singles" | "mens-doubles" | "womens-doubles" | "mixed-doubles" | "team-cup";
-
-export const COMPETITION_LABEL: Record<CompetitionType, string> = {
-  "mens-singles": "Men's Singles",
-  "womens-singles": "Women's Singles",
-  "mens-doubles": "Men's Doubles",
-  "womens-doubles": "Women's Doubles",
-  "mixed-doubles": "Mixed Doubles",
-  // Davis Cup, United Cup...: ESPN files the singles and the doubles rubbers of a tie under this one type.
-  "team-cup": "Team Cup",
-};
-
-// Display order within a tournament: singles first, then the doubles draws.
-export const COMPETITION_ORDER: CompetitionType[] = ["mens-singles", "womens-singles", "mens-doubles", "womens-doubles", "mixed-doubles", "team-cup"];
 
 export interface TennisSet {
   games: number;

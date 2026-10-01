@@ -1,6 +1,6 @@
 // Client-side "follow" list for the personalized homepage. There is no login system
 // on the site, so follows live in this browser's localStorage rather than an account —
-// see MyFollows for the homepage section that reads this back.
+// see components/home/HomeBuilder.tsx, which seeds a visitor's homepage blocks from this.
 export type FollowKind = "team" | "player" | "game" | "series" | "tournament";
 
 export type FollowItem = {
@@ -15,9 +15,9 @@ export type FollowItem = {
 };
 
 const STORAGE_KEY = "sportsdb-follows";
-// Fired on this tab whenever the list changes, so every FollowButton/MyFollows
-// instance on the page updates without a shared React tree ("storage" alone only
-// fires in *other* tabs).
+// Fired on this tab whenever the list changes, so every FollowButton instance and the
+// homepage builder update without a shared React tree ("storage" alone only fires in
+// *other* tabs).
 export const FOLLOWS_EVENT = "sportsdb:follows-changed";
 // Follows accumulate indefinitely otherwise (old games never get "unfollowed").
 const MAX_FOLLOWS = 200;

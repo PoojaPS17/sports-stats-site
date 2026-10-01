@@ -11,7 +11,7 @@ export function BundesligaTopPointsChart({ data, asOf }: { data: BundesligaPoint
   const max = Math.max(1, ...data.map((r) => r.points));
   return (
     <div className="card px-4 py-3">
-      <p className="text-xs font-semibold text-[var(--text)]">Bundesliga table, top of the pile</p>
+      <p className="text-xs font-semibold text-[var(--text)]">Bundesliga table, top of the pack</p>
       <p className="text-[11px] text-[var(--text-faint)]">Points after matchday 4, as of {asOf}.</p>
       <div className="mt-3 flex flex-col gap-2">
         {data.map((r) => (

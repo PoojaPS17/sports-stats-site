@@ -1,20 +1,34 @@
-// Fixed light palette for downloadable card images. Deliberately hard-coded rather
+// Fixed palette for downloadable card images. Deliberately hard-coded rather
 // than the CSS custom properties the rest of the site uses: an exported PNG is
 // looked at outside the page (shared, embedded, printed) and must look the same
 // regardless of the viewer's site theme, so it can't inherit --text/--surface,
-// which flip to dark values under prefers-color-scheme. Mirrors the site's own
-// light-mode tokens (globals.css :root) so the card still reads as "this site."
+// which flip to dark values under prefers-color-scheme. The body mirrors the
+// site's light-mode tokens (globals.css :root, off-white and blue ink) so the card
+// still reads as "this site"; the footer band is the fixed brand pair (--navy,
+// --volt) that the icons and share images use, whatever the theme.
+// tests/export-theme.test.ts checks the two stay in step.
 export const CARD = {
-  bg: "#f4f6fa",
+  bg: "#fafaf7",
   surface: "#ffffff",
-  border: "#e1e6ef",
-  text: "#0f172a",
-  textMuted: "#5b6577",
-  textFaint: "#8a94a6",
-  accent: "#1d4ed8",
-  accentSoft: "#e6eeff",
-  win: "#15803d",
-  loss: "#b91c1c",
+  border: "#b8d4ec",
+  text: "#060640",
+  textMuted: "#4a4a72",
+  textFaint: "#646488",
+  /** The light theme's signature ink (--sig-ink). Volt itself only goes on navy. */
+  accent: "#1470af",
+  accentSoft: "#eaf2fa",
+  sig: "#c6f135",
+  /** The navy band (--navy) and its text, for the footer every card ends with. */
+  mast: "#0b1324",
+  mastText: "#eef1f7",
+  mastMuted: "#9aa5bd",
+  win: "#006717",
+  loss: "#ba0329",
 } as const;
 
-export const CARD_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+// One face for everything, Plus Jakarta Sans. The cards are captured inside the page,
+// where next/font defines --font-jakarta, so the variable resolves to the self-hosted
+// font. (The server-rendered player card names the family directly: see
+// PerformanceCard and cardFont.ts.)
+export const CARD_FONT = 'var(--font-jakarta), "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+export const CARD_DISPLAY_FONT = CARD_FONT;

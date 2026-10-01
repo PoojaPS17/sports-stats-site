@@ -1,6 +1,6 @@
 import { TeamLogo } from "./TeamLogo";
 import { teamDisplayName } from "@/lib/teamName";
-import { CARD } from "@/lib/exportTheme";
+import { CARD, CARD_DISPLAY_FONT } from "@/lib/exportTheme";
 
 // A team + score row shared by TeamStatsExportCard and TeamScheduleExportCard - the
 // live-page equivalents (GameCard, MatchHeader) truncate long names to fit a
@@ -33,7 +33,7 @@ export function ExportTeamLine({
         <span style={{ fontSize: 14, fontWeight: loser ? 500 : 700, color: loser ? CARD.textMuted : CARD.text }}>{teamDisplayName(name)}</span>
       </div>
       {showScore && (score !== null || scoreDisplay) && (
-        <span style={{ fontSize: 15, fontWeight: won ? 800 : 500, color: won ? CARD.text : CARD.textMuted, whiteSpace: "nowrap" }}>
+        <span style={{ fontFamily: CARD_DISPLAY_FONT, fontSize: 22, lineHeight: 1, fontWeight: won ? 800 : 600, color: won ? CARD.text : CARD.textMuted, whiteSpace: "nowrap" }}>
           {scoreDisplay ?? score}
         </span>
       )}

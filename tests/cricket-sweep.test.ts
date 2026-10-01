@@ -114,7 +114,7 @@ test("a half-hydrated season (bare {} entries) is asked again with the cache byp
 test("a season that never hydrates still adds the matches it has, and is reported", async () => {
   const { deps, calls } = fake(() => ({ events: [wbblEvent("1494526", "Final, Women's Big Bash League at Hobart, Dec 13 2025"), {}] }));
   const out = await sweep.sweepSeason("wbbl", 2025, deps);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 4);
   assert.equal(out.added, 1);
   assert.match(out.error ?? "", /1 of 2 matches had content/);
 });
@@ -159,4 +159,27 @@ test("the daily jobs run the sweep: package script, VM job and the manual workfl
   const step = yml.slice(yml.indexOf("- name: Fill missing cricket competition games"));
   assert.match(step.slice(0, step.indexOf("\n\n")), /continue-on-error: true/, "a failed sweep must not skip the steps after it");
   assert.match(step.slice(0, step.indexOf("\n\n")), /if: github\.event\.schedule == '7 6 \* \* \*' \|\| github\.event_name == 'workflow_dispatch'[\s\S]*DATABASE_URL: \$\{\{ secrets\.DATABASE_URL \}\}[\s\S]*run: npm run sweep:cricket-seasons/);
+});
+
+// ESPN's cricket API times out in storms lasting minutes ("timeout occurred waiting for core endpoint",
+// Sep 26 and Oct 1 2026, 06:11 to 06:22 UTC); three attempts two seconds apart never outlast one, and a
+// single competition's failure then marked the whole daily unit failed although every other step ran.
+test("a request that keeps failing is retried on a lengthening schedule before it is reported", async () => {
+  const waits: number[] = [];
+  const base = fake(() => new Error("timeout occurred waiting for core endpoint"));
+  const deps = { ...(base.deps as object), sleep: async (ms: number) => { waits.push(ms); } } as never;
+  const out = await sweep.sweepSeason("ipl", 2026, deps);
+  assert.equal(out.error, "timeout occurred waiting for core endpoint");
+  assert.deepEqual(waits, [2_000, 10_000, 30_000], "four attempts: two seconds, ten, then thirty between them");
+  assert.equal(base.calls.length, 4);
+});
+
+test("the sweep fails the job only when it could read no competition at all", () => {
+  const ok = { league: "ipl", season: 2026, listed: 70, missing: 0, added: 0 } as const;
+  const timedOut = { league: "bbl", season: 2026, listed: 0, missing: 0, added: 0, error: "timeout occurred waiting for core endpoint" } as const;
+  const halfHydrated = { league: "wpl", season: 2026, listed: 22, missing: 1, added: 1, error: "20 of 22 matches had content" } as const;
+  assert.equal(sweep.sweepFailed([ok, timedOut, halfHydrated]), false, "one competition's timeout is logged, not a failed unit");
+  assert.equal(sweep.sweepFailed([ok, halfHydrated]), false);
+  assert.equal(sweep.sweepFailed([timedOut, { ...timedOut, league: "wbbl" }]), true, "nothing could be read: ESPN is down, say so");
+  assert.equal(sweep.sweepFailed([]), false);
 });

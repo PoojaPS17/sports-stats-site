@@ -1,18 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { athleteHeight, athleteSchema, athleteWeight, blogPostingSchema, breadcrumbSchema, cricketSeriesMatchSchema, gameSchema, organizationSchema, teamSchema, tennisPlayerSchema } from "../src/lib/structuredData";
 import type { GameRow } from "../src/lib/queries";
 import { SITE_URL } from "../src/lib/site";
+import { GET as getLogoPng } from "../src/app/logo-512.png/route";
 
 // The Organization logo was /icon.png, which does not exist (Next serves the generated icon at a
-// hashed address), so Google's logo fetch got a 404. A file under public/ is served at its own path.
-test("the Organization logo is a real, square, sufficiently large PNG under public/", () => {
+// hashed address), so Google's logo fetch got a 404. logo-512.png is a route handler at its own
+// literal, stable path (not a hashed metadata-icon address), generated from the mark's own
+// geometry so it can never drift from the header.
+test("the Organization logo is a real, square, sufficiently large PNG at its own stable route", async () => {
   const logo = organizationSchema().logo;
   assert.ok(logo.startsWith(`${SITE_URL}/`), `${logo} is on the site's own origin`);
-  const file = new URL(`../public${logo.slice(SITE_URL.length)}`, import.meta.url);
-  assert.ok(existsSync(file), `${logo} must exist as ${file.pathname}`);
-  const png = readFileSync(file);
+  assert.equal(logo, `${SITE_URL}/logo-512.png`, "must point at the generated route's literal path");
+  const png = Buffer.from(await getLogoPng().arrayBuffer());
   assert.equal(png.subarray(1, 4).toString(), "PNG");
   const width = png.readUInt32BE(16);
   const height = png.readUInt32BE(20);

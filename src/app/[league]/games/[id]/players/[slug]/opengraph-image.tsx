@@ -22,7 +22,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const { league, id, slug } = await params;
   const data = await loadPerformanceCardData(league, id, slug);
   if (!data) {
-    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1220", color: "#e8edf6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
+    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
   }
   return new ImageResponse(buildPerformanceCardElement(data), { ...size, fonts: CARD_FONTS });
 }

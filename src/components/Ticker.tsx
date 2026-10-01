@@ -34,7 +34,7 @@ export function Ticker() {
   const { items, updatedAt } = data;
 
   return (
-    <div className="border-b border-[var(--header-border)] bg-[var(--mast-2)] text-[var(--mast-text)]">
+    <div className="band-deep border-b border-[var(--band-deep-line)]">
       <div className="container-x flex h-[52px] items-stretch gap-0 px-0! sm:px-0!">
         <div className="strip-scroll flex min-w-0 flex-1 items-stretch overflow-x-auto" role="region" aria-label="Latest scores">
           {items.map((chip, i) => (

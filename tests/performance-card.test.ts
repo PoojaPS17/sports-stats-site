@@ -51,8 +51,17 @@ test("a null stageLabel renders no stage segment, but does not crash", () => {
   assert.ok(html.length > 0);
 });
 
-test("footer parity: ends with the same ExportFooter every other card on the site uses", () => {
+test("footer parity: ends with the same navy band, wordmark and handle every other card on the site uses", () => {
   const html = renderToStaticMarkup(createElement(PerformanceCard, baseProps));
-  assert.ok(html.includes("SportsDB"));
+  assert.match(html, /Sports<\/span><span style="color:#c6f135">DB<\/span>/);
+  assert.match(html, /background:#0b1324/);
   assert.ok(html.includes("sportsdblive")); // X_HANDLE
+  assert.ok(!html.includes("#1d4ed8"), "the old blue is gone");
+});
+
+test("a stat with a null delta renders its value and no comparison chip", () => {
+  const stats = baseProps.stats.map((s) => ({ ...s, delta: null }));
+  const html = renderToStaticMarkup(createElement(PerformanceCard, { ...baseProps, stats }));
+  assert.ok(html.includes("34"));
+  assert.ok(!html.includes("vs season avg"), "no delta text when every delta is null");
 });

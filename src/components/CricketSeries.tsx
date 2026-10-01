@@ -3,7 +3,8 @@ import { teamDisplayName } from "@/lib/teamName";
 import { LocalTime } from "@/components/LocalTime";
 import { TeamLogo } from "@/components/TeamLogo";
 import { LEAGUE_LABEL } from "@/lib/leagues";
-import { formatSeriesDates, SERIES_KIND_LABEL, type CricketSeries, type CricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
+import { formatSeriesDates, SERIES_KIND_LABEL } from "@/lib/cricketSeriesDisplay";
+import type { CricketSeries, CricketSeriesMatch, SeriesSide } from "@/lib/cricketSeriesTypes";
 import { normalizeStage } from "@/lib/stage";
 import { classifyCricketMatch, seriesMatchesToPlay } from "@/lib/cricketMatchStatus";
 

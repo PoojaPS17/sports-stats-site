@@ -240,6 +240,9 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 //   - tennis, cricket and F1 have their own day rules and are out of this change (tennis already
 //     uses America/New_York of its own accord; cricket and F1 pass timeZone: "UTC" explicitly)
 //   - LocalTime is the one component that is meant to render in the visitor's zone, after hydration
+//   - BuiltHero and HomeBlocks are "use client" homepage-builder components that likewise render
+//     in the visitor's own zone client-side (today's date, and a fixture's day/time in heroLine) —
+//     see lib/homeHeroLine.ts, which takes the zone-aware formatters from its caller for this reason
 //   - ExportFooter stamps the moment the picture was made, not a game's date
 //   - PerformanceCard's own footer mirrors ExportFooter's stamp for the same reason (Satori/next-og
 //     rejects ExportFooter's own `display: inline-flex` glyph span, so the card route cannot use
@@ -248,6 +251,8 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 //   - gameDay.ts is where the zone is decided
 const ALLOWLIST = new Set([
   "src/components/LocalTime.tsx",
+  "src/components/home/BuiltHero.tsx",
+  "src/components/home/HomeBlocks.tsx",
   "src/components/ExportFooter.tsx",
   "src/components/PerformanceCard.tsx",
   "src/components/Footer.tsx",

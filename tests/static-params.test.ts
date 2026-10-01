@@ -26,6 +26,7 @@ function expireTime(): number {
 // Reasons a route module under a dynamic segment is allowed to have no generateStaticParams.
 // Anything not listed here must have one.
 const DYNAMIC_ON_PURPOSE: Record<string, string> = {
+  "api/block/[type]/route.ts": "reads the block type and its query params from the request and sets its own Cache-Control per type (lib/blockParams.ts) rather than a static revalidate window",
   "[league]/games/[id]/page.tsx": "live match state; a cached render is up to 5 minutes old and its pre-state render ships no LiveRefresh timer",
   "[league]/games/[id]/opengraph-image.tsx": "draws the live score",
   "[league]/games/[id]/players/[slug]/card/route.ts": "reads ?format from the request and sets its own cache-control per game (5 min fresh, a day once settled) rather than a static revalidate window",
