@@ -16,7 +16,7 @@
 - `AGENTS.md`: before writing any Next.js code, read the relevant guide under `node_modules/next/dist/docs/` (route handlers, `use client`, metadata image routes). This Next version differs from training data.
 - The homepage must stay ISR (`revalidate = 10`) and must never read a cookie or header to render. All personalisation is client-side.
 - Every block fetch is a GET whose URL fully describes the block, with `Cache-Control: public, s-maxage=<per type>, stale-while-revalidate=<4×>`. Lifetimes: live 30, team-next 60, standings 900, series-standings 900, player-form 900, f1-drivers 3600, bts 3600 seconds.
-- No photos. New components use tokens only: `var(--sig)`, `var(--sig-ink)`, `var(--sig-soft)`, `var(--sig-on)`, `var(--mast)`, `var(--mast-text)`, `var(--mast-muted)`, `var(--mast-line)`, `var(--surface)`, `var(--border)`, `var(--text)`, `var(--text-muted)`, the `.display`, `.eyebrow`, `.card`, `.pill`, `.pill-live`, `.live-dot`, `.band`, `.band-hero`, `.bleed` classes.
+- No photos. New components use only the site's tokens and classes from `globals.css` (never a raw colour), for example `var(--sig)`, `var(--sig-ink)`, `var(--sig-soft)`, `var(--sig-on)`, `var(--mast)`, `var(--mast-text)`, `var(--mast-muted)`, `var(--mast-line)`, `var(--surface)`, `var(--border)`, `var(--text)`, `var(--text-muted)`, the `.display`, `.eyebrow`, `.card`, `.pill`, `.pill-live`, `.live-dot`, `.band`, `.band-hero`, `.bleed` classes.
 - Copy is verbatim from the spec's "Copy" table. Block names use plain words and a colon ("Kohli: last five"), never a middle dot.
 - Storage key `sportsdb-home`, event `sportsdb:home-changed`, at most 12 blocks, setup version `v: 1`.
 - Every write button shows visible success feedback ("Added", "Link copied") for two seconds.
