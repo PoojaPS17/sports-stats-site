@@ -7,6 +7,7 @@ const SPORT_LINKS: { label: string; href: string }[] = [
   ...SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` })),
   { label: "NFL", href: "/nfl" },
   { label: "NBA", href: "/nba" },
+  { label: "MLB", href: "/mlb" },
   { label: "Cricket", href: "/cricket/series" },
   { label: "Tennis", href: "/tennis" },
   { label: "F1", href: "/f1" },

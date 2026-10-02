@@ -7,7 +7,7 @@ import { article as barcelonaRecordSevenMatchWinStreak } from "@/content/beyondT
 import { article as kane100BundesligaGoalsRecord } from "@/content/beyondTheScoreline/kane-100-bundesliga-goals-record";
 import { article as bayern67MatchdayReignEnds } from "@/content/beyondTheScoreline/bayern-67-matchday-reign-ends";
 
-export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "tennis" | "neutral";
+export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "mlb" | "tennis" | "neutral";
 
 /**
  * The generated "picture" of an article: its key number on a sport-coloured panel. This is the

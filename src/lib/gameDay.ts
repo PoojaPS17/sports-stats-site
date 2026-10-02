@@ -16,8 +16,10 @@
 // evening, which would resolve to an empty day. Nothing does today; the league home page selects
 // games by instant and only labels them by day.
 
-/** Leagues whose calendar day is the US Eastern one. */
-const EASTERN_DAY_LEAGUES = ["nfl", "nba"];
+/** Leagues whose calendar day is the US Eastern one: the three US team sports (see US_SPORTS in
+ * leagues.ts). A 7.10 pm first pitch in Seattle is 02:10 UTC the next day, so baseball needs this
+ * as much as the NBA does. Kept as plain strings, because callers pass a raw `games.league` value. */
+const EASTERN_DAY_LEAGUES = ["nfl", "nba", "mlb"];
 
 /**
  * The time zone a league's calendar day is measured in: US Eastern for the NFL and the NBA, UTC for

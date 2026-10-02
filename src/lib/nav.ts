@@ -28,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "NFL", href: "/nfl" },
   { label: "NBA", href: "/nba" },
+  { label: "MLB", href: "/mlb", overflow: true },
   {
     label: "Cricket",
     picker: "cricket-series",

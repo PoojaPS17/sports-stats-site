@@ -209,6 +209,10 @@ const ELO_BASE = 1500;
 export const ELO_PARAMS: Record<string, { k: number; homeAdvantage: number; seasonCarry: number; marginScale: number }> = {
   nba: { k: 20, homeAdvantage: 90, seasonCarry: 0.75, marginScale: 10 },
   nfl: { k: 24, homeAdvantage: 55, seasonCarry: 0.67, marginScale: 7 },
+  // Baseball: 162 games of near-coin-flips. A single result says very little, so k is the smallest on
+  // the site; home advantage is about 54% of games, the lowest of any major sport; and a blowout is
+  // weak evidence, so the margin barely counts. Rosters carry over, but 162 games regress a lot.
+  mlb: { k: 6, homeAdvantage: 25, seasonCarry: 0.7, marginScale: 2 },
   epl: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   laliga: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   bundesliga: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },

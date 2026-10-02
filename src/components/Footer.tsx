@@ -41,15 +41,16 @@ export function Footer() {
             <Wordmark size={22} />
           </Link>
           <p className="max-w-lg text-sm leading-relaxed text-[var(--mast-muted)]">
-            Live scores, standings and player stats for football, the NFL, NBA, cricket, tennis and F1, with season-by-season history for every
-            team and player.
+            Live scores, standings and player stats for football, the NFL, NBA, MLB, cricket, tennis and F1, with season-by-season history for
+            every team and player.
           </p>
         </div>
-        {/* Seven columns of similar depth, so no one sport runs the page long. */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
+        {/* Eight columns of similar depth, so no one sport runs the page long. */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8">
           <Column title="Football" links={SOCCER_LEAGUES.map((l) => ({ label: LEAGUE_LABEL[l], href: `/${l}` }))} />
           <Column title="NFL" links={leagueLinks("nfl")} />
           <Column title="NBA" links={leagueLinks("nba")} />
+          <Column title="MLB" links={leagueLinks("mlb")} />
           <Column
             title="Cricket"
             links={[

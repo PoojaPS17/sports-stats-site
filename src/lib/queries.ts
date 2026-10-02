@@ -538,6 +538,9 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
     { column: "rushing_yards", label: "Rushing Yards", unit: "YDS" },
     { column: "receiving_yards", label: "Receiving Yards", unit: "YDS" },
   ],
+  // Baseball's boards need their own player_season_stats columns (a batting average and an ERA are
+  // not totals), which arrive with the MLB season-stats loader; empty until then.
+  mlb: [],
   epl: [
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },
