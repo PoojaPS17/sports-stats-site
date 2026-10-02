@@ -332,7 +332,8 @@ const MLB_CATEGORY_SPECS: Record<string, StatSpec[]> = {
   ],
   pitching: [
     { key: "p_outs", label: "Outs", title: "Outs recorded", value: outsOf, agg: "sum", log: false, table: false },
-    { key: "ip", label: "IP", title: "Innings pitched", value: (s) => { const o = outsOf(s); return o === null ? null : inningsFromOuts(o); }, agg: "sum", derived: (l) => (l.p_outs == null ? null : inningsFromOuts(l.p_outs)), decimals: 1 },
+    // Always one decimal, even on a whole number: six innings is "6.0", and "6.1" is six and a third.
+    { key: "ip", label: "IP", title: "Innings pitched", value: (s) => { const o = outsOf(s); return o === null ? null : inningsFromOuts(o); }, agg: "sum", derived: (l) => (l.p_outs == null ? null : inningsFromOuts(l.p_outs)), format: (v) => v.toFixed(1) },
     { key: "p_h", label: "H", title: "Hits allowed", value: pit("H"), agg: "sum" },
     { key: "p_r", label: "R", title: "Runs allowed", value: pit("R"), agg: "sum" },
     { key: "er", label: "ER", title: "Earned runs", value: pit("ER"), agg: "sum" },

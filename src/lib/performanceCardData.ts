@@ -1,6 +1,6 @@
 import { createElement, type ReactElement } from "react";
 import { isLeague, getGameByEspnId, getPlayerBySlug, getPlayerLog, getPlayerReportedGames, getPlayerEspnSeasons, type GameRow, type League, type PlayerRow } from "./queries";
-import { buildStagedProfile, playerSport, type PlayerLogRow, type PlayerProfile, type StagedProfile } from "./playerProfile";
+import { buildStagedProfile, playerSport, type PlayerLogRow, type PlayerProfile, type PlayerSport, type StagedProfile } from "./playerProfile";
 import type { GameStage } from "./gameStage";
 import { performanceLine, type PerformanceStat } from "./performanceLine";
 import { PerformanceCard } from "@/components/PerformanceCard";
@@ -12,7 +12,7 @@ import { formatGameDate } from "./gameDay";
  * the card route's 404. Phase 1/2 was NBA and NFL only. This one array is the source of both the
  * type and the runtime check, so the two can never disagree.
  */
-export const PERFORMANCE_CARD_LEAGUES = ["nba", "nfl"] as const;
+export const PERFORMANCE_CARD_LEAGUES = ["nba", "nfl", "mlb"] as const;
 export type PerformanceCardLeague = (typeof PERFORMANCE_CARD_LEAGUES)[number];
 const SUPPORTED_LEAGUES = new Set<string>(PERFORMANCE_CARD_LEAGUES);
 
@@ -26,6 +26,9 @@ const SUPPORTED_LEAGUES = new Set<string>(PERFORMANCE_CARD_LEAGUES);
 export function supportsPerformanceCards(league: League): league is PerformanceCardLeague {
   return SUPPORTED_LEAGUES.has(league);
 }
+
+/** The same check over a `PlayerSport`: every card league's sport has the league's own name. */
+const isCardSport = (sport: PlayerSport | null): sport is PerformanceCardLeague => sport !== null && SUPPORTED_LEAGUES.has(sport);
 
 // Reuses queries.ts's own PlayerRow (what getPlayerBySlug actually returns) rather than declaring a
 // second, narrower type of the same name — that would either silently shadow the real one or, if
@@ -48,18 +51,16 @@ export interface PerformanceCardData {
 // null wherever that route would 404, so the route, the page and its opengraph-image can never
 // disagree about which pairs exist. No caller repeats this validation.
 export async function loadPerformanceCardData(league: string, id: string, slug: string): Promise<PerformanceCardData | null> {
-  if (!isLeague(league) || !SUPPORTED_LEAGUES.has(league)) return null;
-  if (league !== "nba" && league !== "nfl") return null; // narrows for tsc, unreachable at runtime (see above)
+  if (!isLeague(league) || !supportsPerformanceCards(league)) return null;
 
   const [game, player] = await Promise.all([getGameByEspnId(league, id), getPlayerBySlug(league, slug)]);
   if (!game || !player) return null;
 
+  // Each card league's sport has the league's own name, but `playerSport` is still asked rather than
+  // assumed, because it is the source of truth for which spec set a profile is built from. The guard
+  // is unreachable at runtime and is what satisfies `PerformanceCardData.sport` for tsc.
   const sport = playerSport(league);
-  if (!sport) return null; // unreachable at runtime; SUPPORTED_LEAGUES already guarantees nba/nfl
-  // playerSport()'s real signature returns PlayerSport ("soccer" | "nfl" | "nba") for the full League
-  // union, so tsc can't narrow it to "nba" | "nfl" just because `league` already is — same class of
-  // gap as the `league` narrowing above. Unreachable at runtime; satisfies PerformanceCardData.sport.
-  if (sport !== "nba" && sport !== "nfl") return null;
+  if (!isCardSport(sport)) return null;
 
   const [log, reportedGames, espnSeasons] = await Promise.all([getPlayerLog(league, player.espn_id), getPlayerReportedGames(league, player.espn_id), getPlayerEspnSeasons(league, player.espn_id)]);
   const row = log.find((r) => r.game_espn_id === id);
