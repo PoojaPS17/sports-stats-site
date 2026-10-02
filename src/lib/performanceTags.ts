@@ -37,7 +37,17 @@ const ELIGIBLE_STATS: Record<PlayerSport, { key: string; label: string; read: (r
     { key: "punts", label: "PUNTS", read: (r) => cell(r.stats, "punting", "NO") },
     // fg_pct, rush_avg, punt_avg deliberately absent — all carry a `rate` property in playerProfile.ts.
   ],
-  soccer: [], // out of scope this plan — never called with sport "soccer" (loadPerformanceCardData only ever resolves nba/nfl)
+  // Counting achievements only, as above: a batting average and an ERA carry a `rate` or are `derived`
+  // in playerProfile.ts, and an ERA is better when it is lower, which "Season high" would read backwards.
+  // Runs and hits allowed are a pitcher's bad days, so they are not here either.
+  mlb: [
+    { key: "h", label: "H", read: (r) => cell(r.stats, "batting", "H") },
+    { key: "hr", label: "HR", read: (r) => cell(r.stats, "batting", "HR") },
+    { key: "rbi", label: "RBI", read: (r) => cell(r.stats, "batting", "RBI") },
+    { key: "r", label: "R", read: (r) => cell(r.stats, "batting", "R") },
+    { key: "p_k", label: "K", read: (r) => cell(r.stats, "pitching", "K") },
+  ],
+  soccer: [], // out of scope this plan — never called with sport "soccer" (loadPerformanceCardData only ever resolves the US sports)
 };
 
 export function performanceTags(row: PlayerLogRow, priorRows: PlayerLogRow[], sport: PlayerSport, seasonComplete: boolean): string[] {

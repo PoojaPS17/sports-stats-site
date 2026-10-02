@@ -137,8 +137,17 @@ async function storedBoard(league: League, season: number, column: string, limit
 // A box-score cell as a number, or null when it is not one: the SQL twin of `cell()` in playerProfile.ts for a plain figure.
 const asNumber = (raw: string) => `(case when ${raw} ~ '^-?[0-9]+(\\.[0-9]+)?$' then (${raw})::numeric end)`;
 
+/**
+ * The sports whose boards are summed from stored box scores. Baseball is not one of them: its boards
+ * are a batting average and an ERA as much as they are home runs, and neither is a sum of per-game
+ * cells, so an MLB board reads ESPN's stored season rows (see `getLeaderBoard`). Narrowing the type
+ * here rather than adding an unused `mlb` arm below is what keeps that decision from rotting into a
+ * dead measures list somebody later believes in.
+ */
+type BoxSport = Exclude<PlayerSport, "mlb">;
+
 /** The figures summed per player and club, per sport: every board of the sport reads its own from one query. */
-const MEASURES: Record<PlayerSport, { key: string; category: string; label: string }[]> = {
+const MEASURES: Record<BoxSport, { key: string; category: string; label: string }[]> = {
   soccer: [{ key: "goals", category: "match", label: "G" }, { key: "assists", category: "match", label: "A" }],
   nfl: [
     { key: "passing", category: "passing", label: "YDS" },
@@ -150,7 +159,7 @@ const MEASURES: Record<PlayerSport, { key: string; category: string; label: stri
 
 /** SQL twin of each sport's `played` test in playerProfile.ts, over the raw cells of a row (`r`): a soccer
  * appearance, an NBA row with a numeric MIN or points, every NFL row. (The sitemap keeps the same twin for its own query.) */
-function playedSql(sport: PlayerSport): string {
+function playedSql(sport: BoxSport): string {
   if (sport === "soccer") return `${asNumber("r.raw_app")} = 1`;
   if (sport === "nba") return `(coalesce(r.raw_min, '') ~ '^[0-9]+([.][0-9]+)?$' or coalesce(${asNumber("r.raw_pts")}, 0) > 0)`;
   return "true";
@@ -174,7 +183,7 @@ const inFlight = new Map<string, Promise<Stint[]>>();
 /** One row per player and club for the season's completed regular-season games (the stage the player page's regular
  * table sums): the counted rows' figures and the date of the first one. The Leaders page asks for a sport's boards at
  * once, so concurrent callers for the same season share one query. */
-function seasonStints(league: League, season: number, sport: PlayerSport): Promise<Stint[]> {
+function seasonStints(league: League, season: number, sport: BoxSport): Promise<Stint[]> {
   const key = `${league}:${season}`;
   const running = inFlight.get(key);
   if (running) return running;
@@ -183,7 +192,7 @@ function seasonStints(league: League, season: number, sport: PlayerSport): Promi
   return promise;
 }
 
-async function loadSeasonStints(league: League, season: number, sport: PlayerSport): Promise<Stint[]> {
+async function loadSeasonStints(league: League, season: number, sport: BoxSport): Promise<Stint[]> {
   // The season's games first (games_league_season_idx), then their rows by the primary key (league, game_espn_id): the
   // cost follows the season, not the league's whole history in player_game_stats.
   const { rows: games } = await pool.query(`select espn_id, date, home_team_espn_id as home, away_team_espn_id as away from games where league = $1 and season_year = $2 and completed and stage in ('regular', 'other')`, [league, season]);

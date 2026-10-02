@@ -92,13 +92,17 @@ export interface TeamPlayerBox {
   categories: PlayerStatCategory[];
 }
 
-// NBA/NFL: boxscore.players[team].statistics[category].athletes[] (parallel to category.labels[])
+// NBA/NFL/MLB: boxscore.players[team].statistics[category].athletes[] (parallel to category.labels[])
+const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
+
 export function parseAmericanPlayerBox(data: any): TeamPlayerBox[] {
   return (data.boxscore?.players ?? []).map((group: any) => ({
     teamId: group.team?.id,
     teamName: group.team?.displayName ?? group.team?.name,
     categories: (group.statistics ?? []).map((cat: any) => ({
-      name: cat.text ?? cat.name,
+      // Baseball's two categories have neither `text` nor `name`; only `type` ("batting", "pitching"),
+      // which is a table heading once it is capitalised.
+      name: cat.text ?? cat.name ?? (typeof cat.type === "string" ? titleCase(cat.type) : undefined),
       labels: cat.labels ?? [],
       rows: (cat.athletes ?? [])
         .filter((a: any) => a.athlete)

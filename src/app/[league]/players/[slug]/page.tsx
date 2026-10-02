@@ -373,7 +373,9 @@ export default async function PlayerPage({
               {regularNoBoxScore > 0 && <>{NBA_REGULAR_SEASON_FOOTNOTE} </>}
               {sport === "nfl"
                 ? "Playoff games are shown separately; preseason and Pro Bowl games are listed in the game log but not counted, matching ESPN."
-                : "Playoff and play-in games are shown separately; preseason, All-Star and NBA Cup final games are listed in the game log but not counted, matching ESPN."}
+                : sport === "mlb"
+                  ? "Postseason games are shown separately; spring training and the All-Star game are listed in the game log but not counted, matching ESPN."
+                  : "Playoff and play-in games are shown separately; preseason, All-Star and NBA Cup final games are listed in the game log but not counted, matching ESPN."}
             </p>
           ) : (
             <p className="text-[11px] text-[var(--text-faint)]">
