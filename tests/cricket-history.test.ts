@@ -99,7 +99,7 @@ test("a non-cricket history keeps its Pct column", async () => {
 test("every cricket league's team compare redirects to its players' compare; other leagues are unchanged", async () => {
   // Asked of `isCricketLeague` rather than of a hand-kept list of everything else: that list meant a
   // new non-cricket league (MLB) silently joined "cricket" and was expected to redirect.
-  const cricket = ALL_LEAGUES.filter(isCricketLeague);
+  const cricket = ALL_LEAGUES.filter((l) => isCricketLeague(l));
   assert.ok(cricket.includes("ipl") && cricket.includes("wbbl") && cricket.includes("test"), `cricket leagues: ${cricket.join(",")}`);
   for (const league of cricket) {
     let digest = "";

@@ -16,7 +16,7 @@ import { pool } from "./lib/db";
 //   --file:  reuse a saved SPARQL result ([{sport, espn, img}]) instead of querying
 
 const SPORT_LEAGUES: Record<string, string[]> = {
-  soccer: ["epl", "laliga", "bundesliga", "seriea", "ucl"],
+  soccer: ["epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi"],
   nba: ["nba"],
   nfl: ["nfl"],
   mlb: ["mlb"],

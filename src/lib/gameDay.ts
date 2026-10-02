@@ -5,7 +5,8 @@
 // Monday) on Monday, Thursday night football on Friday, and about a third of NBA games (tip-off
 // after 8 pm ET) a day late — on the scores-by-date page, in player game logs and on the game page.
 // Soccer (epl, laliga, bundesliga, seriea, ucl) matched ESPN on the UTC date on every date checked,
-// so everything that is not the NFL or the NBA keeps its UTC day.
+// so everything that is not the NFL, the NBA or MLS keeps its UTC day. MLS kicks off in US evenings
+// like the NBA, so a 7.30 pm Pacific game would otherwise file under the next day.
 //
 // Everything that shows or groups by a game's day goes through here, so the same game can never
 // appear under two different days on two different pages. This module is pure — it imports no
@@ -17,12 +18,12 @@
 // games by instant and only labels them by day.
 
 /** Leagues whose calendar day is the US Eastern one: the three US team sports (see US_SPORTS in
- * leagues.ts). A 7.10 pm first pitch in Seattle is 02:10 UTC the next day, so baseball needs this
+ * leagues.ts) and MLS. A 7.10 pm first pitch in Seattle is 02:10 UTC the next day, so baseball needs this
  * as much as the NBA does. Kept as plain strings, because callers pass a raw `games.league` value. */
-const EASTERN_DAY_LEAGUES = ["nfl", "nba", "mlb"];
+const EASTERN_DAY_LEAGUES = ["nfl", "nba", "mlb", "mls"];
 
 /**
- * The time zone a league's calendar day is measured in: US Eastern for the NFL and the NBA, UTC for
+ * The time zone a league's calendar day is measured in: US Eastern for the NFL, the NBA, MLB and MLS, UTC for
  * every other competition. Takes a plain string so a raw `games.league` value works as well as a
  * `League`; an unknown league is UTC.
  */

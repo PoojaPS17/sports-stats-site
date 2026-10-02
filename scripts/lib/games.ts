@@ -1,6 +1,6 @@
 import { pool } from "./db";
 import { normalizeStage } from "../../src/lib/stage";
-import { isCricketLeague, isCupCompetition, slugify, type League } from "./espn";
+import { hasKnockoutRounds, isCricketLeague, isCupCompetition, slugify, type League } from "./espn";
 import { resolveCricketWinner } from "../../src/lib/cricketResult";
 import { isNeverPlayed } from "../../src/lib/gameStatus";
 import { upsertTeam } from "./teams";
@@ -85,7 +85,7 @@ export function parseStageFields(league: League, ev: any): { seasonType: number 
 // even for an ordinary cricket match (every one of a team's 14 league games looked
 // identical). Pull whatever real stage/round info each sport actually exposes instead.
 export function parseRound(league: League, ev: any): string | null {
-  if (isCupCompetition(league)) return parseCupRound(ev);
+  if (hasKnockoutRounds(league)) return parseCupRound(ev);
   // Cricket: `description` reads like "Qualifier 1 (N), Indian Premier League at
   // Chennai, May 23 2023" for a playoff match, or "69th Match (D/N), Indian Premier
   // League at Mumbai, May 21 2023" for an ordinary league one — shorten the latter to
@@ -172,13 +172,28 @@ const CUP_STAGE_LABELS: Record<string, string> = {
   quarterfinals: "Quarterfinals",
   semifinals: "Semifinals",
   final: "Final",
+  "mls-cup": "MLS Cup",
 };
+
+// MLS tags its playoff games by conference and round: "eastern-conference-playoffs---round-one" on the
+// scoreboard, "Eastern Conference Playoffs - Round One" on a team's schedule. One short form, "East Round
+// One", which the week hub reads the way it reads the NBA's "East 1st Round" (the conference drops and
+// "Finals" becomes "Conference Finals").
+const MLS_ROUNDS: Record<string, string> = { "wild-card": "Wild Card", "round-one": "Round One", semifinals: "Semifinals", final: "Finals" };
+function mlsStage(slug: string): string | null {
+  const m = slug.match(/^(eastern|western)-conference-playoffs-+(.+)$/);
+  if (!m) return null;
+  const round = MLS_ROUNDS[m[2]] ?? m[2].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return `${m[1] === "eastern" ? "East" : "West"} ${round}`;
+}
 
 function parseCupRound(ev: any): string | null {
   const fromName = typeof ev.seasonType?.name === "string" ? slugify(ev.seasonType.name) : null;
   const fromSlug = typeof ev.season?.slug === "string" ? ev.season.slug : null;
-  const slug = fromSlug && (CUP_LEAGUE_STAGES.has(fromSlug) || CUP_STAGE_LABELS[fromSlug]) ? fromSlug : (fromName ?? fromSlug);
+  const slug = fromSlug && (CUP_LEAGUE_STAGES.has(fromSlug) || CUP_STAGE_LABELS[fromSlug] || mlsStage(fromSlug)) ? fromSlug : (fromName ?? fromSlug);
   if (!slug || CUP_LEAGUE_STAGES.has(slug)) return null;
+  const mls = mlsStage(slug);
+  if (mls) return mls;
   // An unrecognised stage is still a stage (shown as given), unless it is plainly a
   // season name ("2026-27-uefa-champions-league"), which means the feed gave no stage.
   if (!CUP_STAGE_LABELS[slug] && /\d{4}/.test(slug)) return null;

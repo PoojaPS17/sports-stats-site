@@ -1,7 +1,7 @@
+import { POSTSEASON_PREFIX } from "../../src/lib/espnSeason";
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
-
-import { mlbCategoryKind, postseasonCategoriesOf, postseasonRows, seasonGamesPlayed, seasonRow, seasonWindowStart } from "./season-row";
+import { mlbCategoryKind, postseasonCategoriesOf, postseasonRows, seasonGamesPlayed, seasonRow, seasonWindowStart, soccerPostseasonRow } from "./season-row";
 
 // Which of a category's rows a season stores (ESPN's Totals row for a traded player, and the
 // league filter for soccer), and an NFL season's games played (ESPN's own GP, summed over a traded
@@ -112,6 +112,13 @@ async function upsertOneSeason(
   // NBA: ESPN's postseason line for the season (when the player had one) is stored in the same JSON under its own keys,
   // so every regular-season key above stays exactly as it was and no schema change is needed.
   Object.assign(out, postseasonRows(postseasonCategories, seasonYear));
+  // MLS: the feed's playoffs row for the season sits in the same sport-wide response, so it is stored the same way.
+  if (leagueSlug) {
+    for (const category of categories) {
+      const playoffs = soccerPostseasonRow(category, seasonYear, leagueSlug);
+      if (playoffs) out[`${POSTSEASON_PREFIX}${categoryKey(category)}`] = playoffs;
+    }
+  }
 
   // NBA's games played came from its `averages` category above; soccer stays null. NFL's is ESPN's
   // own GP (the site's box-score rows list only players with a stat line, so counting them undercounts).
@@ -165,6 +172,10 @@ const SOCCER_LEAGUE_SLUG: Partial<Record<League, string>> = {
   bundesliga: "ger.1",
   seriea: "ita.1",
   ucl: "uefa.champions",
+  ligue1: "fra.1",
+  europa: "uefa.europa",
+  mls: "usa.1",
+  saudi: "ksa.1",
 };
 
 export async function upsertPlayerSeasonStats(

@@ -241,15 +241,15 @@ export function integritySection(pool: Pool) {
     const orphanSeasonStats = await finding(
       `select s.league, s.player_espn_id as espn_id from player_season_stats s left join players p on p.league = s.league and p.espn_id = s.player_espn_id
        where p.espn_id is null`, g);
-    // For the four football leagues: wins + losses + draws may not exceed a 38-match season, and a row
-    // with points set must have points equal to 3 * wins + draws.
+    // For the domestic football leagues: wins + losses + draws may not exceed a 38-match season (MLS plays
+    // 34), and a row with points set must have points equal to 3 * wins + draws.
     // For MLB the rule is its own: a 162-game season (163 with a tie-breaker), and no ties at all —
     // extra innings decide every game, so a draw on a baseball row is a sign the ingest read the wrong
     // stat. Baseball has no points column, so nothing is checked against one.
     const standingsSumMismatch = await finding(
       `select league, team_espn_id as espn_id from standings
        where wins is not null and losses is not null
-         and ((league in ('epl','laliga','bundesliga','seriea')
+         and ((league in ('epl','laliga','bundesliga','seriea','ligue1','mls','saudi')
                and ((wins + losses + coalesce(draws, 0)) > 38 or (points is not null and points <> 3 * wins + coalesce(draws, 0))))
            or (league = 'mlb' and ((wins + losses) > 163 or coalesce(draws, 0) <> 0)))`, g);
     // Only a league that has actually played in the window counts as in season: a pre-season fixture

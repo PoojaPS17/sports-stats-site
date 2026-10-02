@@ -13,7 +13,7 @@ export function paletteGroups(ctx: EditionContext): PaletteGroup[] {
   const featured = ctx.featuredCricketSeries ? [seriesStandingsBlock(ctx.featuredCricketSeries)] : [];
   return [
     { name: "Cricket", blocks: [...featured, standingsBlock("ipl"), ...ctx.cricketSides.slice(0, 10).map(cricketSideBlock)] },
-    { name: "Football", blocks: [standingsBlock("epl"), standingsBlock("ucl"), standingsBlock("laliga"), standingsBlock("bundesliga"), standingsBlock("seriea")] },
+    { name: "Football", blocks: [standingsBlock("epl"), standingsBlock("ucl"), standingsBlock("laliga"), standingsBlock("bundesliga"), standingsBlock("seriea"), standingsBlock("ligue1"), standingsBlock("europa"), standingsBlock("mls"), standingsBlock("saudi")] },
     { name: "US sports", blocks: [standingsBlock("nfl"), standingsBlock("nba"), standingsBlock("mlb")] },
     { name: "More", blocks: [liveBlock(), f1Block(), btsBlock()] },
   ].map((g) => ({ ...g, blocks: dedupe(g.blocks) }));

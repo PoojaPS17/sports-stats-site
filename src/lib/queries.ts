@@ -16,7 +16,7 @@ import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 
 export type { League } from "./leagues";
 export { sortStandings } from "./standingsOrder";
-export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, isFirstClassCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, hasTies, isCupCompetition, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
+export { LEAGUES, CRICKET_LEAGUES, INTERNATIONAL_CRICKET, SOCCER_LEAGUES, ALL_LEAGUES, LEAGUE_LABEL, isLeague, isCricketLeague, isInternationalCricket, isFirstClassCricket, hasStandings, hasNewsFeed, formatSeasonLabel, isSoccerLeague, hasTies, isCupCompetition, hasKnockoutRounds, UCL_LEAGUE_PHASE_FROM, leagueNameWithArticle } from "./leagues";
 
 export interface GameRow {
   league: League;
@@ -586,8 +586,24 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },
   ],
+  ligue1: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
+  mls: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
+  saudi: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
   // Summed from box scores (see scripts/lib/boxscore-season-stats.ts).
   ucl: [
+    { column: "goals", label: "Goals", unit: "GLS" },
+    { column: "assists", label: "Assists", unit: "AST" },
+  ],
+  europa: [
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },
   ],
