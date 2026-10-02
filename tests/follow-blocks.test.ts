@@ -38,6 +38,6 @@ test("the palette has four groups and uses the context for cricket sides and the
   assert.ok(cricket.includes("T20 World Cup standings"));
   assert.ok(cricket.includes("India: next three"));
   assert.ok(cricket.includes("IPL standings"));
-  assert.deepEqual(groups[2].blocks.map((b) => b.label), ["NFL standings", "NBA standings"]);
+  assert.deepEqual(groups[2].blocks.map((b) => b.label), ["NFL standings", "NBA standings", "MLB standings"]);
   assert.deepEqual(groups[3].blocks.map((b) => b.label), ["Live in your blocks", "F1: driver standings", "Beyond the Scoreline"]);
 });

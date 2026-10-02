@@ -181,4 +181,7 @@ export const SOCCER_CARDS_NOTE = "Cards as reported by ESPN; occasional omission
  * (measured against NBA.com); the NFL's is generic, since the lag is not measured there. Soccer gets none. */
 export const ROSTER_SOURCE_NOTE = "Roster as listed by ESPN; camp and two-way signings appear when ESPN adds them.";
 export const NFL_ROSTER_SOURCE_NOTE = "Roster as listed by ESPN; recent signings appear when ESPN adds them.";
-export const rosterSourceNote = (league: League): string | undefined => (league === "nba" ? ROSTER_SOURCE_NOTE : league === "nfl" ? NFL_ROSTER_SOURCE_NOTE : undefined);
+// Baseball's lag is the same shape as the NFL's — a call-up appears when ESPN adds it — so it takes the
+// generic wording rather than the NBA's, which names camp and two-way signings baseball does not have.
+export const rosterSourceNote = (league: League): string | undefined =>
+  league === "nba" ? ROSTER_SOURCE_NOTE : league === "nfl" || league === "mlb" ? NFL_ROSTER_SOURCE_NOTE : undefined;
