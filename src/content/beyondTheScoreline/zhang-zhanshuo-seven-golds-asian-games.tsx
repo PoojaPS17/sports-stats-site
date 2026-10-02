@@ -44,8 +44,8 @@ export const article: BeyondTheScorelineArticle = {
       />
       <p>
         The number that stands out most is not the medal count but the clock. Zhang&rsquo;s winning time in the 400m
-        freestyle, 3 minutes 41.28 seconds, was an Asian Games record and only 1.30 seconds slower than the world
-        record of 3:39.98 held by Germany&rsquo;s Lukas Martens. A continental sweep built largely on distance
+        freestyle, 3 minutes 41.28 seconds, was an Asian Games record and only 1.32 seconds slower than the world
+        record of 3:39.96 held by Germany&rsquo;s Lukas Märtens. A continental sweep built largely on distance
         freestyle would mean little if the times weren&rsquo;t competitive on the clock that actually matters, and
         Zhang&rsquo;s was.
       </p>
