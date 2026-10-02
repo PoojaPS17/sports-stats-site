@@ -14,9 +14,12 @@ function extractAmericanSports(data: any): PlayerStats {
     const teamId: string = group.team.id;
     for (const category of group.statistics ?? []) {
       const labels: string[] = category.labels ?? [];
-      // The NFL feed names each category (passing, rushing, ...); the NBA feed has a
-      // single unnamed box score per team, stored under "box".
-      const name: string = category.name ?? "box";
+      // The NFL feed names each category (passing, rushing, ...); the NBA feed has a single unnamed
+      // box score per team, stored under "box". Baseball has two categories per team and names
+      // *neither*: `name` is absent and only `type` says which is the batting line and which the
+      // pitching one. Reading `name` alone would put both under "box" and let the pitching line
+      // overwrite the batting one, so `type` is the fallback before "box" is.
+      const name: string = category.name ?? category.type ?? "box";
       for (const row of category.athletes ?? []) {
         // NBA: players who did not play still appear (with empty stats and a reason).
         if (row.didNotPlay || !row.stats?.length) continue;

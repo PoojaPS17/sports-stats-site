@@ -5,10 +5,18 @@ import { isSoccerLeague } from "@/lib/queries";
 import { sideScoreText } from "@/lib/gameDisplay";
 import { scoreLineHomeFirst } from "@/lib/gamePage";
 
-function periodLabels(league: League, n: number): string[] {
+/**
+ * The column headings of the score-by-period table: halves in football, quarters and overtimes in the
+ * NFL and NBA — and plain innings numbers in baseball, where extras simply keep counting (a twelfth
+ * inning is the 12th, not "OT3") and a game stopped by rain has fewer than nine.
+ * Exported for tests/mlb-box-score.test.ts.
+ */
+export function periodLabels(league: League, n: number): string[] {
   const soccer = isSoccerLeague(league);
+  const innings = league === "mlb";
   return Array.from({ length: n }, (_, i) => {
     if (soccer) return i === 0 ? "1H" : i === 1 ? "2H" : `ET${i - 1}`;
+    if (innings) return String(i + 1);
     return i < 4 ? `Q${i + 1}` : n - 4 === 1 ? "OT" : `OT${i - 3}`;
   });
 }

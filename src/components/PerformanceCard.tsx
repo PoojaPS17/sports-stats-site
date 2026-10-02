@@ -5,6 +5,7 @@ import { PixelBall } from "./Logo";
 import { SITE_URL, X_HANDLE } from "@/lib/site";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import type { PerformanceStat } from "@/lib/performanceLine";
+import type { PerformanceCardLeague } from "@/lib/performanceCardData";
 
 // The family registered in cardFont.ts; Satori matches fonts by this name.
 const DISPLAY = "Plus Jakarta Sans";
@@ -35,7 +36,7 @@ function PerformanceCardFooter({ context }: { context: string }) {
 }
 
 export interface PerformanceCardProps {
-  league: "nba" | "nfl";
+  league: PerformanceCardLeague;
   playerName: string;
   position: string | null;
   jersey: string | null;

@@ -5,7 +5,7 @@ import type { GameRow } from "./queries";
 import { dayTimeZone, dayZoneLabel, formatGameDate, formatGameTime, gameDayIso } from "./gameDay";
 import type { CricketTeamScorecard } from "./matchDetail";
 import { gameCalledOffLabel, isGameCalledOff, isTimeTbd } from "./gameStatus";
-import { isCricketLeague, LEAGUE_LABEL } from "./leagues";
+import { isCricketLeague, isUsSport, LEAGUE_LABEL } from "./leagues";
 import { teamDisplayName } from "./teamName";
 import { finishedLabel, finishedPillLabel, normalizeStage, overtimeFinal } from "./stage";
 import { scoreLineHomeFirst, scoreLineSides } from "./gamePage";
@@ -159,7 +159,7 @@ export function finishedNoScoreNote(g: Pick<GameRow, "completed" | "home_score" 
  */
 export function scoresDayDescription(league: League, dayLabel: string, games: (StatusFields & Pick<GameRow, "home_score" | "away_score">)[]): string {
   const label = LEAGUE_LABEL[league];
-  const american = league === "nba" || league === "nfl";
+  const american = isUsSport(league);
   const noun = american ? "game" : "match";
   const nouns = american ? "games" : "matches";
   const finished = games.filter((g) => g.completed && !isGameCalledOff(g)).length;

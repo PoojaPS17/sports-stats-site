@@ -69,6 +69,33 @@ export const STAT_GLOSSARY: Record<string, string> = {
   PTS: "Points",
   DD2: "Double-doubles",
   TD3: "Triple-doubles",
+  // Baseball. AB, R, H, RBI, HR, BB and K are the batting line; IP onwards the pitching one. A code
+  // the two sports share keeps the wording it already had ("AVG" is an average in both).
+  "H-AB": "Hits / at bats",
+  AB: "At bats",
+  R: "Runs",
+  H: "Hits",
+  RBI: "Runs batted in",
+  HR: "Home runs",
+  BB: "Walks",
+  K: "Strikeouts",
+  SO: "Strikeouts",
+  "#P": "Pitches seen",
+  OBP: "On-base percentage",
+  SLG: "Slugging percentage",
+  OPS: "On-base plus slugging",
+  "2B": "Doubles",
+  "3B": "Triples",
+  SB: "Stolen bases",
+  CS: "Caught stealing",
+  HBP: "Hit by pitch",
+  IP: "Innings pitched",
+  ER: "Earned runs",
+  ERA: "Earned run average",
+  WHIP: "Walks and hits per inning pitched",
+  "PC-ST": "Pitches thrown / strikes",
+  PC: "Pitch count",
+  // SV is already above: a save means the same thing in both sports' lines.
 };
 
 export function statTitle(code: string): string | undefined {

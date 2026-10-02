@@ -1,6 +1,6 @@
 // Copy for the NFL player pages, which show ESPN's games played but total stats from the box scores, and for the
 // NBA player pages, where ESPN's box scores have no stat line for some games.
-import { formatSeasonLabel, HISTORY_START, isSoccerLeague, LEAGUE_LABEL, type League } from "./leagues";
+import { formatSeasonLabel, HISTORY_START, isSoccerLeague, isUsSport, LEAGUE_LABEL, type League } from "./leagues";
 import type { GamesSource } from "./playerProfile";
 
 const NFL_REGULAR_SEASON_ESPN_NOTE =
@@ -131,7 +131,7 @@ export interface CareerWording {
  * Left out, the note always shows. Only the leagues whose player pages total from box scores that begin at HISTORY_START (NBA,
  * NFL, soccer) say "since"; cricket totals are whole careers (Cricsheet, ESPN) and keep the plain wording. */
 export function careerWording(league: League, split: boolean, firstSeason?: number | null): CareerWording {
-  const boxScoreLeague = league === "nba" || league === "nfl" || isSoccerLeague(league);
+  const boxScoreLeague = isUsSport(league) || isSoccerLeague(league);
   const since = boxScoreLeague ? formatSeasonLabel(league, HISTORY_START[league] ?? null) : null;
   const label = LEAGUE_LABEL[league];
   if (!since) {
@@ -181,4 +181,7 @@ export const SOCCER_CARDS_NOTE = "Cards as reported by ESPN; occasional omission
  * (measured against NBA.com); the NFL's is generic, since the lag is not measured there. Soccer gets none. */
 export const ROSTER_SOURCE_NOTE = "Roster as listed by ESPN; camp and two-way signings appear when ESPN adds them.";
 export const NFL_ROSTER_SOURCE_NOTE = "Roster as listed by ESPN; recent signings appear when ESPN adds them.";
-export const rosterSourceNote = (league: League): string | undefined => (league === "nba" ? ROSTER_SOURCE_NOTE : league === "nfl" ? NFL_ROSTER_SOURCE_NOTE : undefined);
+// Baseball's lag is the same shape as the NFL's — a call-up appears when ESPN adds it — so it takes the
+// generic wording rather than the NBA's, which names camp and two-way signings baseball does not have.
+export const rosterSourceNote = (league: League): string | undefined =>
+  league === "nba" ? ROSTER_SOURCE_NOTE : league === "nfl" || league === "mlb" ? NFL_ROSTER_SOURCE_NOTE : undefined;

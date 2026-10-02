@@ -3,6 +3,7 @@ import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportTitle, ExportGroup, ExportTable, EXPORT_ROW_LIMIT, capRows, ExportMore, type ExportCell } from "./ExportShell";
 import { formatSeasonLabel, type League } from "@/lib/queries";
 import { isSoccer } from "@/lib/analytics";
+import { isUsSport } from "@/lib/leagues";
 import type { SeasonProjection } from "@/lib/simulator";
 import { CARD } from "@/lib/exportTheme";
 import { formatGameDate } from "@/lib/gameDay";
@@ -23,7 +24,7 @@ function prob(p: number, negative: boolean): ExportCell {
 
 export function ProjectionTableExportCard({ league, proj, title, subtitle }: { league: League; proj: SeasonProjection; title: string; subtitle: string }) {
   const soccer = isSoccer(league);
-  const grouped = league === "nfl" || league === "nba";
+  const grouped = isUsSport(league);
   const groups = grouped ? [...new Set(proj.teams.map((t) => t.conference ?? "League"))] : ["all"];
   const headers = ["Now", `Proj. ${soccer ? "Pts" : "W"}`, "Range", "Avg pos", ...proj.columns.map((c) => c.label)];
   const tables = groups.map((g) => {

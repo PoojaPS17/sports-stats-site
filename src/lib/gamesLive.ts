@@ -12,6 +12,7 @@ const LIVE_REVALIDATE = 10;
 const SCOREBOARD_PATH: Partial<Record<League, string>> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
+  mlb: "baseball/mlb",
   epl: "soccer/eng.1",
   laliga: "soccer/esp.1",
   bundesliga: "soccer/ger.1",

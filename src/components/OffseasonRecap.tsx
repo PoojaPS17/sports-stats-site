@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { OffseasonRecap as Recap } from "@/lib/offseason";
-import { leagueNameWithArticle, type League } from "@/lib/leagues";
+import { isUsSport, leagueNameWithArticle, type League } from "@/lib/leagues";
 import { formatGameDate } from "@/lib/gameDay";
 import { snapshotFromRecap } from "@/lib/leagueSnapshot";
 import { GameCard } from "./GameCard";
@@ -17,7 +17,7 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
   // A season with fixtures still to come is in progress: it says when the next matchday is, never that it ended.
   const inSeason = !recap.seasonOver;
   const next = recap.nextFixtureOn ? formatGameDate(recap.nextFixtureOn, league, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : null;
-  const dayWord = league === "nba" || league === "nfl" ? "game day" : "matchday";
+  const dayWord = isUsSport(league) ? "game day" : "matchday";
   const closingTitle = inSeason ? "Latest results" : recap.playoffs.length > 0 ? `How the ${recap.seasonLabel} ${noun} ended` : `Final results of ${recap.seasonLabel}`;
 
   return (

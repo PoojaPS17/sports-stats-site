@@ -6,14 +6,15 @@
 import { EspnSeasons, type EspnSeasonTotals } from "./espnSeason";
 import type { GameStage } from "./gameStage";
 import { isSoccerLeague, type League } from "./leagues";
-import { kickerPoints, passerRating } from "./playerDerived";
+import { battingAverage, earnedRunAverage, inningsFromOuts, kickerPoints, outsFromInnings, passerRating } from "./playerDerived";
 
-export type PlayerSport = "soccer" | "nfl" | "nba";
+export type PlayerSport = "soccer" | "nfl" | "nba" | "mlb";
 
 export function playerSport(league: League): PlayerSport | null {
   if (isSoccerLeague(league)) return "soccer";
   if (league === "nfl") return "nfl";
   if (league === "nba") return "nba";
+  if (league === "mlb") return "mlb";
   return null;
 }
 
@@ -77,6 +78,8 @@ export interface StatSpec {
    * or split line's value, from the line's other columns. `value` stays the per-game figure for the game log. */
   derived?: (line: Line) => number | null;
   decimals?: number;
+  /** A figure whose conventional spelling `decimals` cannot give: a batting average as ".291", never "0.291". */
+  format?: (v: number) => string;
   /** Show as a game-log column (default true). */
   log?: boolean;
   /** Show in the season and career tables (default true). */
@@ -296,9 +299,81 @@ function nbaProfile(): SportProfile {
   };
 }
 
+// ---------------------------------------------------------------------------
+// MLB — two categories, "batting" and "pitching", and a player gets the columns of the one(s) he has
+// figures in, the way an NFL player gets his categories'. A two-way player gets both, so no key is
+// shared between them: the pitching line's hits are `p_h`, the batting line's `h`.
+//
+// Two figures are not sums of their cells. A batting average is hits over at bats (`rate`), never the
+// mean of per-game averages. Innings pitched are counted in outs (`p_outs`, hidden), because "5.2" is
+// five and two thirds and the printed figures cannot be added; `ip` and `era` are then `derived` from
+// the finished totals, exactly as the NFL's passer rating is.
+//
+// ESPN's own AVG and ERA cells in a box score are the player's SEASON figures after that game, not the
+// game's, so the per-game `value` recomputes both from the game's own line instead of reading them.
+// ---------------------------------------------------------------------------
+const rate3 = (v: number) => v.toFixed(3).replace(/^0\./, ".");
+const era2 = (v: number) => v.toFixed(2);
+const bat = (label: string) => (s: Stats) => cell(s, "batting", label);
+const pit = (label: string) => (s: Stats) => cell(s, "pitching", label);
+const outsOf = (s: Stats) => outsFromInnings(s.pitching?.IP);
+
+const MLB_CATEGORY_SPECS: Record<string, StatSpec[]> = {
+  batting: [
+    { key: "gs", label: "GS", title: "Games started", value: bat("GS"), agg: "sum", log: false },
+    { key: "ab", label: "AB", title: "At bats", value: bat("AB"), agg: "sum" },
+    { key: "r", label: "R", title: "Runs", value: bat("R"), agg: "sum" },
+    { key: "h", label: "H", title: "Hits", value: bat("H"), agg: "sum", headline: true },
+    { key: "hr", label: "HR", title: "Home runs", value: bat("HR"), agg: "sum", headline: true },
+    { key: "rbi", label: "RBI", title: "Runs batted in", value: bat("RBI"), agg: "sum", headline: true },
+    { key: "bb", label: "BB", title: "Walks", value: bat("BB"), agg: "sum" },
+    { key: "k", label: "K", title: "Strikeouts", value: bat("K"), agg: "sum" },
+    { key: "avg", label: "AVG", title: "Batting average", value: (s) => battingAverage(cell(s, "batting", "H") ?? 0, cell(s, "batting", "AB") ?? 0), agg: "avg", rate: { num: "h", den: "ab" }, format: rate3 },
+  ],
+  pitching: [
+    { key: "p_outs", label: "Outs", title: "Outs recorded", value: outsOf, agg: "sum", log: false, table: false },
+    // Always one decimal, even on a whole number: six innings is "6.0", and "6.1" is six and a third.
+    { key: "ip", label: "IP", title: "Innings pitched", value: (s) => { const o = outsOf(s); return o === null ? null : inningsFromOuts(o); }, agg: "sum", derived: (l) => (l.p_outs == null ? null : inningsFromOuts(l.p_outs)), format: (v) => v.toFixed(1) },
+    { key: "p_h", label: "H", title: "Hits allowed", value: pit("H"), agg: "sum" },
+    { key: "p_r", label: "R", title: "Runs allowed", value: pit("R"), agg: "sum" },
+    { key: "er", label: "ER", title: "Earned runs", value: pit("ER"), agg: "sum" },
+    { key: "p_bb", label: "BB", title: "Walks allowed", value: pit("BB"), agg: "sum" },
+    { key: "p_k", label: "K", title: "Strikeouts", value: pit("K"), agg: "sum", headline: true },
+    { key: "p_hr", label: "HR", title: "Home runs allowed", value: pit("HR"), agg: "sum" },
+    { key: "era", label: "ERA", title: "Earned run average", value: (s) => { const o = outsOf(s); return o === null ? null : earnedRunAverage(cell(s, "pitching", "ER") ?? 0, o); }, agg: "avg", derived: (l) => (l.p_outs == null || l.er == null ? null : earnedRunAverage(l.er, l.p_outs)), format: era2, headline: true },
+  ],
+};
+const MLB_CATEGORY_ORDER = ["batting", "pitching"];
+
+function mlbProfile(rows: PlayerLogRow[]): SportProfile {
+  const counts = new Map<string, number>();
+  for (const r of rows) for (const cat of Object.keys(r.stats)) counts.set(cat, (counts.get(cat) ?? 0) + 1);
+  // A category earns columns when it appears in at least a tenth of the player's games — a position
+  // player's one mop-up inning does not make him a pitcher — or is the most common one, so every
+  // player has at least one set of columns. The same rule the NFL's categories use.
+  const most = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const active = MLB_CATEGORY_ORDER.filter((cat) => cat === most || (counts.get(cat) ?? 0) >= Math.max(1, rows.length / 10));
+  const specs = (active.length > 0 ? active : ["batting"]).flatMap((cat) => MLB_CATEGORY_SPECS[cat]);
+  const pitcher = (most ?? "batting") === "pitching";
+  return {
+    sport: "mlb",
+    specs,
+    gamesLabel: "GP",
+    // Outs first for a pitcher (a long outing is the achievement), hits for a batter.
+    rank: pitcher
+      ? (r) => [outsOf(r.stats) ?? 0, cell(r.stats, "pitching", "K") ?? 0, -(cell(r.stats, "pitching", "ER") ?? 0)]
+      : (r) => [cell(r.stats, "batting", "H") ?? 0, cell(r.stats, "batting", "HR") ?? 0, cell(r.stats, "batting", "RBI") ?? 0],
+    rankNote: pitcher ? "Ranked by innings pitched, then strikeouts, then fewest earned runs." : "Ranked by hits, then home runs, then runs batted in.",
+    form: pitcher ? { label: "Strikeouts", value: (r) => cell(r.stats, "pitching", "K") } : { label: "Hits", value: (r) => cell(r.stats, "batting", "H") },
+    // ESPN's MLB box score lists only players who took part, like its NFL one.
+    played: () => true,
+  };
+}
+
 export function sportProfile(sport: PlayerSport, rows: PlayerLogRow[]): SportProfile {
   if (sport === "soccer") return soccerProfile(rows);
   if (sport === "nfl") return nflProfile(rows);
+  if (sport === "mlb") return mlbProfile(rows);
   return nbaProfile();
 }
 
@@ -386,6 +461,7 @@ function noStatLine(specs: StatSpec[]): Line {
 
 export function formatStat(spec: StatSpec, v: number | null | undefined): string {
   if (v === null || v === undefined) return "–";
+  if (spec.format) return spec.format(v);
   const d = spec.decimals ?? 0;
   if (d > 0) return v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
   return Number.isInteger(v) ? v.toLocaleString("en-US") : v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -936,6 +1012,24 @@ const POSITION_NAMES: Record<PlayerSport, Record<string, string>> = {
   soccer: { G: "Goalkeeper", D: "Defender", M: "Midfielder", F: "Forward" },
   nba: { G: "Guard", F: "Forward", C: "Center", PG: "Point guard", SG: "Shooting guard", SF: "Small forward", PF: "Power forward" },
   nfl: {},
+  mlb: {
+    P: "Pitcher",
+    SP: "Starting pitcher",
+    RP: "Relief pitcher",
+    C: "Catcher",
+    "1B": "First baseman",
+    "2B": "Second baseman",
+    "3B": "Third baseman",
+    SS: "Shortstop",
+    LF: "Left fielder",
+    CF: "Center fielder",
+    RF: "Right fielder",
+    OF: "Outfielder",
+    IF: "Infielder",
+    DH: "Designated hitter",
+    PH: "Pinch hitter",
+    PR: "Pinch runner",
+  },
 };
 
 export function positionLabel(sport: PlayerSport | null, position: string | null | undefined): string | null {

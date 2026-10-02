@@ -142,9 +142,18 @@ alter table games add column if not exists note text;
 -- games only: they leave out preseason, play-in, All-Star and the NBA Cup final. A game with no
 -- known type falls back to the old `round is null` reading so nothing changes until it is typed.
 -- Generated, so it can never drift from the columns it is derived from.
-alter table games add column if not exists stage text generated always as (
-  case
-    when league not in ('nba', 'nfl') then case when round is null then 'regular' else 'other' end
+-- A stored generated column cannot be altered in place, and this file is re-run on every deploy
+-- (`npm run migrate`), so `add column if not exists` would silently keep an out-of-date expression
+-- forever: the NBA and NFL were in the list before baseball joined it, and an MLB row would have
+-- been classified by the `round is null` fallback, counting spring training as the regular season.
+-- The definition lives in one place below and the column is dropped and re-added whenever the stored
+-- expression no longer matches it. Nothing depends on the column (no index, no view), and re-adding
+-- it rewrites the table once, which is seconds on a few hundred thousand games.
+do $$
+declare
+  wanted constant text :=
+    $def$case
+    when league not in ('nba', 'nfl', 'mlb') then case when round is null then 'regular' else 'other' end
     when competition_type in ('ALLSTAR', 'CC') then 'excluded'
     when season_type = 1 then 'excluded'
     when season_type = 2 then 'regular'
@@ -152,8 +161,29 @@ alter table games add column if not exists stage text generated always as (
     when season_type = 5 then 'playin'
     when round is null then 'regular'
     else 'playoffs'
-  end
-) stored;
+  end$def$;
+  current_def text;
+begin
+  select pg_get_expr(d.adbin, d.adrelid)
+    into current_def
+    from pg_attribute a
+    join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+   where a.attrelid = 'games'::regclass and a.attname = 'stage' and a.attgenerated = 's';
+  -- Compared on the expression's own meaning, not its text: Postgres re-prints a generation
+  -- expression in its own canonical form (it adds casts and parentheses), so the two are checked by
+  -- asking the database whether they are the same expression, via a throwaway generated column.
+  if current_def is not null then
+    execute format('alter table games add column stage__check text generated always as (%s) stored', wanted);
+    if (select pg_get_expr(d.adbin, d.adrelid) from pg_attribute a join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+         where a.attrelid = 'games'::regclass and a.attname = 'stage__check') = current_def then
+      alter table games drop column stage__check;
+      return;
+    end if;
+    alter table games drop column stage__check;
+    alter table games drop column stage;
+  end if;
+  execute format('alter table games add column stage text generated always as (%s) stored', wanted);
+end $$;
 
 -- The local calendar day(s) of a cricket match. `date` is a UTC instant, which for a Test starting
 -- 10.30 in Melbourne (23:30 UTC the day before) or a morning game in the Big Bash lands on the wrong
@@ -200,6 +230,22 @@ alter table player_season_stats add column if not exists assists int;
 -- Games played that season (NBA "GP"), so per-game leader boards can apply the
 -- usual qualifying threshold instead of ranking a ten-game injury season first.
 alter table player_season_stats add column if not exists games_played int;
+-- Baseball's leader-board figures, read out of ESPN's batting and pitching categories the way
+-- pts_avg and passing_yards are read out of the NBA's and NFL's. Two of the five are rates, not
+-- totals, which is why MLB boards come from these stored rows rather than being summed from box
+-- scores at read time like the NBA's and NFL's (see src/lib/leaderQueries.ts).
+--   batting_avg numeric: ".291" is 0.291, three decimals.
+--   era numeric: earned runs per nine innings, and the one board that reads lowest first.
+--   innings_pitched numeric: the printed figure ("199.1" is 199 innings and one out), used as the
+--   ERA board's qualifying threshold. Not a quantity to do arithmetic on — see outsFromInnings in
+--   src/lib/playerDerived.ts for the unit the player pages total innings in.
+alter table player_season_stats add column if not exists home_runs int;
+alter table player_season_stats add column if not exists rbi int;
+alter table player_season_stats add column if not exists batting_avg numeric;
+alter table player_season_stats add column if not exists strikeouts int;
+alter table player_season_stats add column if not exists era numeric;
+alter table player_season_stats add column if not exists pitching_wins int;
+alter table player_season_stats add column if not exists innings_pitched numeric;
 
 create index if not exists player_season_stats_pts_idx on player_season_stats (league, season, pts_avg desc nulls last);
 create index if not exists player_season_stats_reb_idx on player_season_stats (league, season, reb_avg desc nulls last);
@@ -209,6 +255,12 @@ create index if not exists player_season_stats_rush_idx on player_season_stats (
 create index if not exists player_season_stats_recv_idx on player_season_stats (league, season, receiving_yards desc nulls last);
 create index if not exists player_season_stats_goals_idx on player_season_stats (league, season, goals desc nulls last);
 create index if not exists player_season_stats_assists_idx on player_season_stats (league, season, assists desc nulls last);
+create index if not exists player_season_stats_hr_idx on player_season_stats (league, season, home_runs desc nulls last);
+create index if not exists player_season_stats_rbi_idx on player_season_stats (league, season, rbi desc nulls last);
+create index if not exists player_season_stats_batting_avg_idx on player_season_stats (league, season, batting_avg desc nulls last);
+create index if not exists player_season_stats_strikeouts_idx on player_season_stats (league, season, strikeouts desc nulls last);
+-- Ascending: the ERA board reads lowest first.
+create index if not exists player_season_stats_era_idx on player_season_stats (league, season, era asc nulls last);
 
 create table if not exists news_articles (
   league text not null,
@@ -263,6 +315,12 @@ alter table standings add column if not exists rank int;
 -- is not, because ESPN's note then still describes last year's places. Filled by `npm run backfill:standings`.
 alter table standings add column if not exists zone text;
 
+-- Baseball: ESPN's `clincher` letter for the row, as sent — "y" a division clinched, "x" a playoff
+-- berth, "w" a wild card, "z" or "*" the best record, "e" eliminated (see clinchLabel in
+-- src/lib/standingsZones.ts). Stored raw rather than interpreted, so a letter the site has no wording
+-- for yet is kept and simply not shown. Null for a row the feed marks with nothing, and for sports
+-- whose tables carry no such marker.
+alter table standings add column if not exists clinched text;
 -- Cricket: ESPN's `qualified` stat ("Y") on a team through to the playoffs or the next stage. Only the
 -- qualifiers carry it, so null means not known; filled by `npm run backfill:standings <league>`.
 alter table standings add column if not exists qualified boolean;

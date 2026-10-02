@@ -62,11 +62,15 @@ function parseWeather(ev: any): { display: string | null; temperature: number | 
 }
 
 // ESPN's season type sits in a different field per feed: the scoreboard's `season.type`, the team
-// schedule's `seasonType.type` (1 preseason, 2 regular, 3 post, 5 play-in). Soccer leagues put a
-// large competition-specific id there instead, so the value is only meaningful (and only stored)
-// for the NBA and NFL. The competition abbreviation (STD, ALLSTAR, CC, playoff rounds) is on both.
+// schedule's `seasonType.type` (1 preseason, 2 regular, 3 post, and 5 for the NBA's play-in alone).
+// Soccer leagues put a large competition-specific id there instead, so the value is only meaningful
+// (and only stored) for the three US sports, where it is the generated `games.stage` column's one
+// input. The competition abbreviation (STD, ALLSTAR, CC, playoff rounds) is on both feeds.
+//
+// MLB's feed has exactly this shape: a spring-training game is season type 1, the postseason is 3,
+// and the All-Star game's competition abbreviation is ALLSTAR like the NBA's and the Pro Bowl's.
 export function parseStageFields(league: League, ev: any): { seasonType: number | null; competitionType: string | null } {
-  if (league !== "nba" && league !== "nfl") return { seasonType: null, competitionType: null };
+  if (league !== "nba" && league !== "nfl" && league !== "mlb") return { seasonType: null, competitionType: null };
   const raw = ev.seasonType?.type ?? ev.season?.type;
   const abbreviation = ev.competitions?.[0]?.type?.abbreviation;
   return {

@@ -6,7 +6,7 @@ import { formatSeasonLabel, type League } from "@/lib/queries";
 import { formatStat, type PlayerLogRow, type PlayerProfile } from "@/lib/playerProfile";
 import { fmtDate, ResultChip } from "./PlayerStatsShared";
 import { ImageActions } from "./ImageActions";
-import { performancePagePath } from "@/lib/performanceCardData";
+import { performancePagePath, supportsPerformanceCards } from "@/lib/performanceCardData";
 
 /** The game's non-zero figures across the sport's log columns, e.g. "2 G · 1 A · 5 SOT". */
 export function statLine(profile: PlayerProfile, row: PlayerLogRow): string {
@@ -19,7 +19,7 @@ export function statLine(profile: PlayerProfile, row: PlayerLogRow): string {
 }
 
 export function PlayerBestGames({ league, slug, profile }: { league: League; slug: string; profile: PlayerProfile }) {
-  const showCardShare = league === "nba" || league === "nfl";
+  const showCardShare = supportsPerformanceCards(league);
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {profile.best.map((row, i) => (

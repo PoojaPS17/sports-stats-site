@@ -39,11 +39,12 @@ test("a national side or featured series missing from the context is left out, n
   assert.deepEqual(labels, ["Live in your blocks", "Premier League standings", "F1: driver standings", "Beyond the Scoreline"]);
 });
 
-test("USA starts with the NFL and NBA, Germany with the Bundesliga, World with football", () => {
+test("USA starts with the NFL, NBA and MLB, Germany with the Bundesliga, World with football", () => {
   assert.deepEqual(startingBlocks(editionFor("US"), ctx).map((b) => b.label), [
     "Live in your blocks",
     "NFL standings",
     "NBA standings",
+    "MLB standings",
     "MLS standings",
     "Premier League standings",
     "Champions League standings",

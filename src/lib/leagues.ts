@@ -6,6 +6,7 @@
 export type League =
   | "nba"
   | "nfl"
+  | "mlb"
   | "epl"
   | "ipl"
   | "bbl"
@@ -47,13 +48,25 @@ export const INTERNATIONAL_CRICKET: League[] = ["test", "odi", "t20i", "wodi", "
 export function isFirstClassCricket(league: League): boolean {
   return league === "test";
 }
+// The US team sports: a preseason, a regular season and a postseason, each tagged by ESPN's own
+// `season.type`, a US Eastern calendar day (gameDay.ts), conferences split into divisions, and the
+// visitors named first in a matchup. Everything that used to read `league === "nfl" || league === "nba"`
+// asks this instead, so the third of them cannot be forgotten in one place and remembered in another.
+export const US_SPORTS: League[] = ["nfl", "nba", "mlb"];
+export function isUsSport(league: League): boolean {
+  return (US_SPORTS as string[]).includes(league);
+}
 // The domestic leagues first, then the two UEFA cups, then MLS and the Saudi Pro League (added
 // 2026-10 for Messi's and Ronaldo's clubs; their history starts in 2023, when the two arrived).
 export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi"];
-export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "test", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i", "laliga", "bundesliga", "seriea", "ucl", "ligue1", "europa", "mls", "saudi"];
+// MLB is deliberately not one of the four always-active leagues above: it is in season from March to
+// October only, so a permanent homepage section would read "no games scheduled" all winter. It is
+// reached from the menu, the footer and the US edition's blocks instead.
+export const ALL_LEAGUES: League[] = [...LEAGUES, "mlb", "bbl", "cwc", "t20wc", "test", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i", "laliga", "bundesliga", "seriea", "ucl", "ligue1", "europa", "mls", "saudi"];
 export const LEAGUE_LABEL: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
+  mlb: "MLB",
   epl: "Premier League",
   ipl: "IPL",
   bbl: "Big Bash League",
@@ -82,6 +95,7 @@ export const LEAGUE_LABEL: Record<League, string> = {
 export const LEAGUE_SHORT: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
+  mlb: "MLB",
   epl: "EPL",
   ipl: "IPL",
   bbl: "BBL",
@@ -145,6 +159,7 @@ export function hasNewsFeed(league: League): boolean {
 export function scheduleWords(league: League): { upcoming: string; heading: string; start: string } {
   if (league === "nba") return { upcoming: "games", heading: "Schedule", start: "tip-off times" };
   if (league === "nfl") return { upcoming: "games", heading: "Schedule", start: "kickoff times" };
+  if (league === "mlb") return { upcoming: "games", heading: "Schedule", start: "first pitch times" };
   if ((CRICKET_LEAGUES as string[]).includes(league)) return { upcoming: "fixtures", heading: "Fixtures", start: "start times" };
   return { upcoming: "fixtures", heading: "Fixtures", start: "kick-off times" };
 }
@@ -214,6 +229,9 @@ export const HISTORY_START: Partial<Record<League, number>> = {
   saudi: 2023,
   nba: 2015,
   nfl: 2015,
+  // The newest league starts at 2023, not 2015: three seasons is the history the owner asked for, and
+  // a decade of baseball would be 24,000 games and a quarter of a million box-score rows.
+  mlb: 2023,
 };
 
 // ESPN labels a season by its *ending* year for NBA ("2023" = the 2022-23 season) but

@@ -9,7 +9,7 @@ import { upsertEvent } from "./lib/games";
 import { scopedLeagues } from "./lib/scope";
 import { INDEXNOW_ORIGIN, submitToIndexNow } from "../src/lib/indexnow";
 
-const LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi", "nfl", "nba"];
+const LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi", "nfl", "nba", "mlb"];
 const REQUEST_DELAY_MS = 120;
 
 function sleep(ms: number) {

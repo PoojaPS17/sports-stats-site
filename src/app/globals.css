@@ -81,6 +81,7 @@
 
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
+  --mlb-accent: #bf0d3e;
 
   --shadow-card: 0 1px 2px rgba(0, 23, 67, 0.06), 0 8px 24px -12px rgba(0, 23, 67, 0.16);
   --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
@@ -809,6 +810,7 @@ a.card:hover,
 .art-asian-games { background: linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 140%); }
 .art-nfl { background: linear-gradient(120deg, #013369, #d50a0a 140%); }
 .art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
+.art-mlb { background: linear-gradient(120deg, #bf0d3e, #041e42 110%); }
 .art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); }
 .art-neutral { background: linear-gradient(120deg, var(--navy-2), var(--navy) 90%); }
 
@@ -819,6 +821,7 @@ a.card:hover,
 :root[data-topic="asian-games"] [data-topic-card]:not([data-topic-card="asian-games"]),
 :root[data-topic="nfl"] [data-topic-card]:not([data-topic-card="nfl"]),
 :root[data-topic="nba"] [data-topic-card]:not([data-topic-card="nba"]),
+:root[data-topic="mlb"] [data-topic-card]:not([data-topic-card="mlb"]),
 :root[data-topic="tennis"] [data-topic-card]:not([data-topic-card="tennis"]),
 :root[data-topic="neutral"] [data-topic-card]:not([data-topic-card="neutral"]) {
   display: none;

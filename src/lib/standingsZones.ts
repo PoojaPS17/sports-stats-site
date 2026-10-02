@@ -197,6 +197,30 @@ export function relegationSummary<T extends StandingRow>(league: League, standin
   return { relegated: standings.slice(-down), playoff: twoDown && standings.length > down ? [standings[standings.length - down - 1]] : [] };
 }
 
+/**
+ * What ESPN's clinch letter on a baseball row means, for the marker's tooltip and the table's legend.
+ * The letters are MLB's own shorthand, printed beside a team in every newspaper table: `y` a division
+ * won, `x` a postseason place, `w` a wild card, `z` or `*` the best record in the league. `e` is the
+ * other end of it — eliminated from contention.
+ *
+ * A letter with no wording here returns null and is shown as nothing: the raw letter is stored
+ * (standings.clinched) so a new one is kept rather than lost, but a guess at its meaning would be
+ * worse than silence.
+ */
+const CLINCH_LABEL: Record<string, string> = {
+  y: "Clinched division",
+  x: "Clinched playoff berth",
+  w: "Clinched wild card",
+  z: "Clinched best record",
+  "*": "Clinched best record",
+  e: "Eliminated",
+};
+
+export function clinchLabel(letter: string | null | undefined): string | null {
+  const key = letter?.trim().toLowerCase();
+  return key ? CLINCH_LABEL[key] ?? null : null;
+}
+
 /** The number of clubs in each domestic league's table, which the positional rules above assume. */
 export const DOMESTIC_TABLE_SIZE: Partial<Record<League, number>> = { epl: 20, laliga: 20, seriea: 20, bundesliga: 18, ligue1: 18, saudi: 18 };
 

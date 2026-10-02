@@ -97,6 +97,8 @@ test("a non-cricket history keeps its Pct column", async () => {
 /* ---- /[league]/compare ---- */
 
 test("every cricket league's team compare redirects to its players' compare; other leagues are unchanged", async () => {
+  // Asked of `isCricketLeague` rather than of a hand-kept list of everything else: that list meant a
+  // new non-cricket league (MLB) silently joined "cricket" and was expected to redirect.
   const cricket = ALL_LEAGUES.filter((l) => isCricketLeague(l));
   assert.ok(cricket.includes("ipl") && cricket.includes("wbbl") && cricket.includes("test"), `cricket leagues: ${cricket.join(",")}`);
   for (const league of cricket) {
@@ -108,7 +110,7 @@ test("every cricket league's team compare redirects to its players' compare; oth
     }
     assert.equal(digest, `NEXT_REDIRECT;replace;/${league}/compare/players;307;`, league);
   }
-  for (const league of ["nba", "nfl", "epl"]) {
+  for (const league of ["nba", "nfl", "mlb", "epl"]) {
     const result = await outcome(() => ComparePage.default(params({ league })));
     assert.ok(typeof result === "object" && "value" in result && isValidElement(result.value), `${league} still renders its team compare: ${JSON.stringify(result, (_k, v) => (v instanceof Error ? v.message : v))}`);
   }

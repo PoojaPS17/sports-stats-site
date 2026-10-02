@@ -50,6 +50,9 @@ function deltaLabel(gameValue: number | null, avg: number | null, spec: StatSpec
 // formatStat's native one-decimal rendering.
 function formatCardValue(spec: StatSpec, v: number | null): string {
   if (v == null) return "–";
+  // A spec that spells its own figure out (baseball's ".600" average, "2.38" ERA, "6.0" innings) keeps
+  // doing so on a whole number too: six innings pitched is "6.0", never "6".
+  if (spec.format) return formatStat(spec, v);
   return Number.isInteger(v) ? v.toLocaleString("en-US") : formatStat(spec, v);
 }
 
@@ -76,6 +79,35 @@ function nbaLine(row: PlayerLogRow, profile: PlayerProfile): PerformanceStat[] {
   return [...simple.filter((s) => NBA_KEYS.includes(s.key as (typeof NBA_KEYS)[number])), ...pairs];
 }
 
+// A baseball card is the box-score line of the half of the game the player took part in: a batter's
+// is AB, R, H, HR, RBI, BB, K and his average for the game; a pitcher's is IP, H, R, ER, BB, K and his
+// ERA for it. Spelled out here rather than taken from `headline`, for the same reason the NBA's keys
+// are: the career strip's headline subset is a different, smaller set (three figures, not seven).
+//
+// Which of the two a player gets is already decided by `mlbProfile` from his own row history, so a
+// card can never disagree with his page about whether he is a pitcher. A two-way player has both sets
+// of specs, and the keys below pick his batting line out of them — the hitting is what a card is for —
+// plus the pitching figures a reader would miss if they were left out.
+const MLB_BATTING_KEYS = ["ab", "r", "h", "hr", "rbi", "bb", "k", "avg"] as const;
+const MLB_PITCHING_KEYS = ["ip", "p_h", "p_r", "er", "p_bb", "p_k", "era"] as const;
+// A two-way player's card leads with his batting line and adds only what his pitching says in three
+// figures, rather than fourteen cells nobody reads on a share image.
+const MLB_TWO_WAY_EXTRA_KEYS = ["ip", "er", "era"] as const;
+
+function mlbLine(row: PlayerLogRow, profile: PlayerProfile): PerformanceStat[] {
+  const bySpecKey = new Map(profile.profile.specs.map((s) => [s.key, s]));
+  const seasonLine = seasonLineFor(row, profile);
+  const seasonEntry = profile.seasons.find((s) => s.season === row.season_year);
+  const seasonGames = seasonEntry?.recorded ?? profile.rows.length;
+  const bats = bySpecKey.has("avg");
+  const pitches = bySpecKey.has("era");
+  const keys: readonly string[] = bats && pitches ? [...MLB_BATTING_KEYS, ...MLB_TWO_WAY_EXTRA_KEYS] : bats ? MLB_BATTING_KEYS : MLB_PITCHING_KEYS;
+  return keys.flatMap((key) => {
+    const spec = bySpecKey.get(key);
+    return spec ? [statFor(spec, row, seasonLine, seasonGames)] : [];
+  });
+}
+
 function nflLine(row: PlayerLogRow, profile: PlayerProfile): PerformanceStat[] {
   const seasonLine = seasonLineFor(row, profile);
   const seasonEntry = profile.seasons.find((s) => s.season === row.season_year);
@@ -89,5 +121,6 @@ function nflLine(row: PlayerLogRow, profile: PlayerProfile): PerformanceStat[] {
 export function performanceLine(sport: PlayerSport, row: PlayerLogRow, profile: PlayerProfile): PerformanceStat[] {
   if (sport === "nba") return nbaLine(row, profile);
   if (sport === "nfl") return nflLine(row, profile);
-  throw new Error(`performanceLine: unsupported sport "${sport}" — phase 1 is NBA and NFL only`);
+  if (sport === "mlb") return mlbLine(row, profile);
+  throw new Error(`performanceLine: unsupported sport "${sport}" — cards exist for the US sports only`);
 }

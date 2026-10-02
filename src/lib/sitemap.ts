@@ -11,6 +11,7 @@ import { countedMeetingSql, supportsInjuryTracker, supportsScoreAnalytics } from
 import { h2hPath } from "./h2h";
 import { supportsProjections } from "./simulator";
 import { playerSport } from "./playerProfile";
+import { PERFORMANCE_CARD_LEAGUES } from "./performanceCardData";
 import { noStatLineGameSql } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { gameDayIso } from "./gameDay";
@@ -21,9 +22,10 @@ type Entry = MetadataRoute.Sitemap[number];
 // Leagues whose players have season-by-season pages (the ones with game logs).
 const SEASON_PAGE_LEAGUES = ALL_LEAGUES.filter((l) => playerSport(l) !== null);
 
-// Leagues the performance-card page exists for (nba/nfl only — same set as
-// SUPPORTED_LEAGUES in the card route and loadPerformanceCardData).
-const PERFORMANCE_CARD_LEAGUES: League[] = ["nba", "nfl"];
+// Leagues the performance-card page exists for. Taken from the card loader's own list rather than
+// repeated here, so the sitemap cannot list a page the route 404s, or miss one it serves — which is
+// exactly what a second hand-kept copy of ["nba", "nfl"] invited.
+const CARD_LEAGUES: League[] = [...PERFORMANCE_CARD_LEAGUES];
 
 export const SITEMAP_IDS: string[] = [
   "core",
@@ -34,7 +36,7 @@ export const SITEMAP_IDS: string[] = [
   ...ALL_LEAGUES.flatMap((l) => [`teams-${l}`, `players-${l}`, `games-${l}`]),
   ...LEAGUES.filter((l) => supportsMatchweeks(l)).map((l) => `weeks-${l}`),
   ...ALL_LEAGUES.filter((l) => supportsScoreAnalytics(l)).map((l) => `h2h-${l}`),
-  ...PERFORMANCE_CARD_LEAGUES.map((l) => `performances-${l}`),
+  ...CARD_LEAGUES.map((l) => `performances-${l}`),
 ];
 
 const entry = (path: string, changeFrequency: Entry["changeFrequency"], priority: number, lastModified?: string | Date | null): Entry => ({
@@ -322,6 +324,6 @@ export async function sitemapEntries(id: string): Promise<Entry[]> {
   if (kind === "games") return games(league);
   if (kind === "weeks") return supportsMatchweeks(league) ? weeks(league) : [];
   if (kind === "h2h") return supportsScoreAnalytics(league) ? h2h(league) : [];
-  if (kind === "performances") return PERFORMANCE_CARD_LEAGUES.includes(league) ? performances(league) : [];
+  if (kind === "performances") return CARD_LEAGUES.includes(league) ? performances(league) : [];
   return [];
 }

@@ -6,7 +6,7 @@ import { rebuildSeasonStatsFromBoxScores, seasonStatsFromBoxScores } from "./lib
 import { isLiveTick, scopedLeagues } from "./lib/scope";
 import { detailsFromSummary, storeGameDetails } from "./lib/game-details";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi"];
+const LEAGUES: League[] = ["nba", "nfl", "mlb", "epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi"];
 
 async function processGame(league: League, game: { espn_id: string; home_team_espn_id: string; away_team_espn_id: string }, touched: Map<string, string>) {
   const data = await fetchSummary(league, game.espn_id);

@@ -54,6 +54,12 @@ export async function fetchPlayerLog(db: Pick<Pool, "query">, league: League, pl
  * regular-season row can be that postseason game): that rule is applied in `buildStagedProfile`, which sees the rows,
  * not here. */
 export async function fetchReportedGames(db: Pick<Pool, "query">, league: League, playerEspnId: string): Promise<ReportedGames> {
+  // MLB is deliberately not here, although its season stats carry `games_played` too. ESPN's MLB box
+  // scores list every player who took part, the way its NFL ones list every player with a stat line,
+  // but the undercount this reconciles has not been measured for baseball — and a reconciliation
+  // against an unmeasured gap invents games. An MLB player's games are the box-score rows he has, and
+  // his page says exactly that. To change that, measure the gap first — which means giving
+  // scripts/audit-player-totals.ts an MLB arm, since its AuditLeague is the NBA and NFL only today.
   if (league !== "nfl" && league !== "nba") return new ReportedGames();
   const { rows } = await db.query<{ season: number; games_played: number; categories: unknown; passing_yards: number | null; rushing_yards: number | null; receiving_yards: number | null }>(
     `select season, games_played, categories, passing_yards, rushing_yards, receiving_yards from player_season_stats

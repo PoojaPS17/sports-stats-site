@@ -61,6 +61,8 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
     boards = categories.map((c, i) => ({ label: c.label, unit: c.unit, rows: lists[i].rows, omitted: lists[i].omitted }));
     if (isCupCompetition(league)) note = "Summed from the box score of every match on record for the season, knockout rounds included.";
     if (league === "nba") note = "Per-game averages, for players who have appeared in at least 70% of the games played so far (the NBA's qualifying rule).";
+    if (league === "mlb")
+      note = "ESPN's season figures. The batting average board needs 70% of the games played so far, and the ERA board 60% of the innings pitched, so a short season cannot top either; the ERA board reads lowest first.";
   }
 
   return (

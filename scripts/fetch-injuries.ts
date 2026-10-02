@@ -9,7 +9,7 @@ import { fetchInjuries, type League } from "./lib/espn";
 import { recordRun } from "./lib/heartbeat";
 import { replaceLeagueInjuries } from "./lib/injuries";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga"];
+const LEAGUES: League[] = ["nba", "nfl", "mlb", "epl", "laliga"];
 
 async function main() {
   let failed = 0;

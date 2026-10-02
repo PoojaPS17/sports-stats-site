@@ -1,6 +1,6 @@
 import { cricketSummaryPaths, fetchCricketSummaryVia, type CricketSummaryOptions } from "../../src/lib/cricketSummary";
 
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "wpl" | "wbbl" | "wcwc" | "wt20wc" | "laliga" | "bundesliga" | "seriea" | "ucl" | "ligue1" | "europa" | "mls" | "saudi";
+export type League = "nba" | "nfl" | "mlb" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "wpl" | "wbbl" | "wcwc" | "wt20wc" | "laliga" | "bundesliga" | "seriea" | "ucl" | "ligue1" | "europa" | "mls" | "saudi";
 
 // Cricket competition ids: IPL 8048, Big Bash League 8044, ICC Cricket World Cup
 // (ODI) 8039, ICC Men's T20 World Cup 8604, Women's Premier League 21282, Women's
@@ -10,6 +10,7 @@ export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "
 export const SPORT_PATH: Record<League, string> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
+  mlb: "baseball/mlb",
   epl: "soccer/eng.1",
   ipl: "cricket/8048",
   bbl: "cricket/8044",
@@ -129,10 +130,12 @@ export function fetchScoreboardBySeason(league: League, season: number, options:
 // (the "since 2014-15" wording of a player's totals); it is re-exported here for the loaders.
 export { HISTORY_START } from "../../src/lib/leagues";
 
-// `level=3` asks for the division-level groups (conference → division → teams) that
-// the NFL table is conventionally shown in; the default response stops at conferences.
-function standingsLevel(league: League): string {
-  return league === "nfl" ? "level=3" : "";
+// `level=3` asks for the division-level groups (conference → division → teams) that the NFL and MLB
+// tables are conventionally shown in; the default response stops at conferences. Baseball's nesting
+// is American League / National League → East, Central, West, so without this an MLB response is two
+// fifteen-team tables nobody prints. Exported for tests/mlb-ingest.test.ts.
+export function standingsLevel(league: League): string {
+  return league === "nfl" || league === "mlb" ? "level=3" : "";
 }
 
 export function fetchStandings(league: League) {
@@ -217,6 +220,7 @@ export async function fetchCurrentSeasonYear(league: League): Promise<number | n
 const CORE_LEAGUE_PATH: Record<League, string> = {
   nba: "basketball/leagues/nba",
   nfl: "football/leagues/nfl",
+  mlb: "baseball/leagues/mlb",
   epl: "soccer/leagues/eng.1",
   laliga: "soccer/leagues/esp.1",
   bundesliga: "soccer/leagues/ger.1",

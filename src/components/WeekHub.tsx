@@ -159,9 +159,15 @@ export async function WeekHub({
 
       <WeekStrip league={league} weeks={weeks} active={week.index} season={season} isCurrentSeason={isCurrentSeason} />
 
-      {!week.numbered && (
+      {/* See WeekIndex below: a month is a deliberate grouping, not a failed reconstruction. */}
+      {!week.numbered && league !== "mlb" && (
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
           Official {noun.toLowerCase()} numbers are not published for this season, so games are grouped by the dates they were played rather than numbered.
+        </p>
+      )}
+      {league === "mlb" && (
+        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
+          Baseball plays almost every day from late March to the end of September and numbers no weeks, so games are grouped by calendar month, then by postseason round.
         </p>
       )}
       {league === "nba" && !week.playoff && (
@@ -345,9 +351,16 @@ export function WeekIndex({ league, season, weeks, seasons, isCurrentSeason }: {
           </div>
         )}
       </PageHeader>
-      {!numbered && (
+      {/* MLB's groups are months on purpose (see monthGroups in matchweeks.ts), not a reconstruction
+          that failed, so the generic note below would be untrue of them. */}
+      {!numbered && league !== "mlb" && (
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
           Official {noun.toLowerCase()} numbers are not published for this season, so rounds are listed by the dates they were played.
+        </p>
+      )}
+      {league === "mlb" && (
+        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
+          Baseball plays almost every day from late March to the end of September and numbers no weeks, so games are grouped by calendar month, then by postseason round.
         </p>
       )}
       {league === "nba" && weeks.length > 0 && (

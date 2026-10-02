@@ -3,7 +3,7 @@
 // (postponed, cancelled, abandoned, suspended) must not read like a preview of a match that will be played: no
 // "pre-match win probability", no "going into this game", no season averages "coming into" it, no broadcast slot.
 import { gameCalledOffLabel, isGameCalledOff, isNeverPlayed } from "./gameStatus";
-import { isCricketLeague, isFirstClassCricket, isSoccerLeague, LEAGUE_LABEL, type League } from "./leagues";
+import { isCricketLeague, isFirstClassCricket, isSoccerLeague, isUsSport, LEAGUE_LABEL, type League } from "./leagues";
 import { teamDisplayName } from "./teamName";
 import { scoreLineOrder } from "./cricketOrder";
 import type { CricketTeamScorecard } from "./matchDetail";
@@ -16,7 +16,7 @@ interface Status {
 
 /** "Chelsea at Arsenal" order: the NFL and NBA name the visitors first, football and cricket the home side first. */
 export function gameSides(league: League, game: { home_name: string; away_name: string }): { first: string; second: string; awayFirst: boolean } {
-  const awayFirst = league === "nfl" || league === "nba";
+  const awayFirst = isUsSport(league);
   return awayFirst ? { first: game.away_name, second: game.home_name, awayFirst } : { first: game.home_name, second: game.away_name, awayFirst };
 }
 
@@ -58,7 +58,7 @@ export function matchupLabel(league: League, game: { home_name: string; away_nam
 const offWord = (game: Status): string | null => gameCalledOffLabel(game)?.toLowerCase() ?? null;
 
 /** The US leagues say "game"; football and cricket say "match", as the rest of their copy does. */
-const noun = (league: League): string => (league === "nfl" || league === "nba" ? "game" : "match");
+const noun = (league: League): string => (isUsSport(league) ? "game" : "match");
 
 /**
  * True for a game that was never played: postponed or cancelled. An abandoned or suspended game may have been

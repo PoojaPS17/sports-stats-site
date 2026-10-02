@@ -1,6 +1,6 @@
 import type { ArtPalette, BeyondTheScorelineArticle } from "./beyondTheScoreline";
 
-export const ART_PALETTES: readonly ArtPalette[] = ["football", "cricket", "f1", "asian-games", "nfl", "nba", "tennis", "neutral"];
+export const ART_PALETTES: readonly ArtPalette[] = ["football", "cricket", "f1", "asian-games", "nfl", "nba", "mlb", "tennis", "neutral"];
 
 const SPORT_LABEL: Record<ArtPalette, string> = {
   football: "Football",
@@ -9,6 +9,7 @@ const SPORT_LABEL: Record<ArtPalette, string> = {
   "asian-games": "Asian Games",
   nfl: "NFL",
   nba: "NBA",
+  mlb: "MLB",
   tennis: "Tennis",
   neutral: "Beyond the Scoreline",
 };
@@ -26,6 +27,7 @@ export const ART_GRADIENT: Record<ArtPalette, string> = {
   "asian-games": "linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 100%)",
   nfl: "linear-gradient(120deg, #013369, #d50a0a 100%)",
   nba: "linear-gradient(120deg, #c9082a, #17408b 100%)",
+  mlb: "linear-gradient(120deg, #bf0d3e, #041e42 100%)",
   tennis: "linear-gradient(120deg, #c8f135, #1f6f3a 100%)",
   neutral: "linear-gradient(120deg, #121c33, #0b1324 90%)",
 };
@@ -51,6 +53,7 @@ const TAG_PALETTE: [RegExp, ArtPalette][] = [
   [/^(cricket|ipl|bbl|wpl|odi|t20|test-cricket|world-cup-cricket)/, "cricket"],
   [/^(nfl|super-bowl)/, "nfl"],
   [/^(nba|basketball)/, "nba"],
+  [/^(mlb|baseball|world-series)/, "mlb"],
   [/^(tennis|atp|wta|grand-slam)/, "tennis"],
   [/^(football|soccer|premier-league|la-liga|laliga|bundesliga|serie-a|seriea|ligue-1|ligue1|champions-league|europa-league|europa|ucl|epl|mls|major-league-soccer|saudi|inter-miami|al-nassr|messi|ronaldo|psg|man-city|arsenal|liverpool|barcelona|real-madrid)/, "football"],
 ];

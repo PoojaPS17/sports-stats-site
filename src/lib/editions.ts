@@ -99,7 +99,7 @@ export function startingBlocks(edition: Edition, ctx: EditionContext): HomeBlock
     case "cricket-first":
       return [liveBlock(), ...sideBlock, ...seriesBlock, standingsBlock("epl"), f1Block(), btsBlock()];
     case "us":
-      return [liveBlock(), standingsBlock("nfl"), standingsBlock("nba"), standingsBlock("mls"), standingsBlock("epl"), standingsBlock("ucl"), btsBlock()];
+      return [liveBlock(), standingsBlock("nfl"), standingsBlock("nba"), standingsBlock("mlb"), standingsBlock("mls"), standingsBlock("epl"), standingsBlock("ucl"), btsBlock()];
     case "uk":
       return [liveBlock(), standingsBlock("epl"), standingsBlock("ucl"), ...sideBlock, f1Block(), btsBlock()];
     case "cricket-south":

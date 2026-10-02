@@ -10,7 +10,7 @@ import { formatGameDate, gameDayIso } from "./gameDay";
 import { isRegularSeasonGame } from "./gameStage";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
-import { hasKnockoutRounds, isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
+import { hasKnockoutRounds, isCupCompetition, isQualifyingRound, isSoccerLeague, isUsSport, type League } from "./leagues";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 
@@ -32,14 +32,14 @@ export interface Matchweek {
 }
 
 export function supportsMatchweeks(league: League): boolean {
-  return isSoccerLeague(league) || league === "nfl" || league === "nba";
+  return isSoccerLeague(league) || isUsSport(league);
 }
 
 export function weekNoun(league: League): string {
-  return isCupCompetition(league) ? "Matchday" : isSoccer(league) ? "Matchweek" : "Week";
+  return isCupCompetition(league) ? "Matchday" : isSoccer(league) ? "Matchweek" : league === "mlb" ? "Month" : "Week";
 }
 
-/** URL segment: /epl/matchweek, /ucl/matchday, /nfl/week (all served by the matchweek route via rewrites). */
+/** URL segment: /epl/matchweek, /ucl/matchday, /nfl/week, /mlb/week (all served by the matchweek route via rewrites). */
 function weekSegment(league: League): string {
   return isCupCompetition(league) ? "matchday" : isSoccer(league) ? "matchweek" : "week";
 }
@@ -91,16 +91,24 @@ function fmtRange(league: League, start: string, end: string): string {
 
 // Normalise the feed's per-conference, per-game playoff labels into one round:
 // "AFC Wild Card Playoffs" / "NFC Wild Card Playoffs" → "Wild Card";
-// "East 1st Round - Game 3" → "First Round"; "West Finals - Game 5" → "Conference Finals".
+// "East 1st Round - Game 3" → "First Round"; "West Finals - Game 5" → "Conference Finals";
+// "NL Wild Card - Game 3" → "Wild Card"; "AL Championship Series" → "Championship Series".
 // A cup's stages have no conference: "Semifinals - 2nd Leg" → "Semifinals", and the
 // Champions League's "Knockout Playoffs" keeps its name.
-function playoffRoundLabel(round: string): string {
-  const conference = /^(AFC|NFC|East|West)\b/i.test(round);
+// Exported for tests/mlb-ingest.test.ts, which holds the four baseball rounds.
+export function playoffRoundLabel(round: string): string {
+  const conference = /^(AFC|NFC|East|West|AL|NL)\b/i.test(round);
   const r = round
     .replace(/\s*-\s*(Game\s*\d+|(1st|2nd)\s+Leg)$/i, "")
-    .replace(/^(AFC|NFC|East|West)\s+/i, "")
+    .replace(/^(AFC|NFC|East|West|AL|NL)\s+/i, "")
     .replace(/(?<!knockout)\s+Playoffs$/i, "")
     .trim();
+  // Baseball's rounds are already their own names once the league prefix is off, and both halves of
+  // the bracket play the same round, so they are not "Conference" anything. Checked before the
+  // championship rule below, which would otherwise call an ALCS game a Conference Championship.
+  if (/^(wild card|division series|championship series|world series)$/i.test(r)) {
+    return r.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
   if (/championship/i.test(r)) return "Conference Championships";
   if (/^1st round$/i.test(r)) return "First Round";
   if (/^semifinals$/i.test(r)) return conference ? "Conference Semifinals" : "Semifinals";
@@ -140,6 +148,46 @@ function playoffGroups(playoffs: GameRow[]): { label: string; shortLabel: string
   }
   const ordered = [...byRound.entries()].sort((a, b) => new Date(a[1][0].date).getTime() - new Date(b[1][0].date).getTime());
   return ordered.map(([label, gs]) => ({ label, shortLabel: label.replace("Conference Championships", "Conf. Champ."), games: gs, playoff: true }));
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/**
+ * A 162-game regular season grouped by its calendar months, in the league's own day zone (see
+ * gameDay.ts), so a 10.05 pm Eastern game on 30 April is an April game and not a May one.
+ *
+ * March is folded into April: a season opens in the last days of March, and two or three games are
+ * not a month of baseball — MLB and ESPN both bill them as opening week of the season proper. The
+ * group then reads "March/April", which is true of it, rather than "April", which would not be.
+ *
+ * `numbered` is false on every group: a month is not a round number, and the hub must not print
+ * "Month 3" for July.
+ */
+function monthGroups(league: League, regular: GameRow[]): { label: string; shortLabel: string; games: GameRow[]; playoff: boolean; numbered: boolean }[] {
+  const byMonth = new Map<string, GameRow[]>();
+  for (const g of regular) {
+    const day = gameDayIso(g.date, league);
+    // "2026-03" is filed under "2026-04", so March's opening games sit with April's.
+    const month = Number(day.slice(5, 7));
+    const key = `${day.slice(0, 4)}-${String(month === 3 ? 4 : month).padStart(2, "0")}`;
+    if (!byMonth.has(key)) byMonth.set(key, []);
+    byMonth.get(key)!.push(g);
+  }
+  return [...byMonth.keys()]
+    .sort()
+    .map((key) => {
+      const games = byMonth.get(key)!.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const month = Number(key.slice(5, 7));
+      const opening = month === 4 && games.some((g) => gameDayIso(g.date, league).slice(5, 7) === "03");
+      const name = MONTH_NAMES[month - 1];
+      return {
+        label: opening ? "March/April" : name,
+        shortLabel: opening ? "Mar/Apr" : name.slice(0, 3),
+        games,
+        playoff: false,
+        numbered: false,
+      };
+    });
 }
 
 export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
@@ -288,6 +336,15 @@ export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
   // Week buckets for the regular season, then playoff rounds in date order.
   // The play-in, preseason and other games that do not count belong to neither.
   const regular = sorted.filter(isRegularSeasonGame);
+  // Baseball is grouped by calendar month rather than by week: 162 games would make about 27
+  // interchangeable "Week 14"s, and nothing in the feed numbers them, while the sport itself talks in
+  // months ("a big May", "September baseball"). The months come first, the postseason rounds after.
+  if (league === "mlb") {
+    return finish([
+      ...monthGroups(league, regular),
+      ...playoffGroups(sorted.filter((g) => g.stage === "playoffs" || ((!g.stage || g.stage === "other") && Boolean(g.round)))),
+    ]);
+  }
   // A row typed "other" (or with no stage) that carries a round is a playoff row, as it was before
   // stages existed; regular, play-in and excluded rows never are.
   const playoffs = sorted.filter((g) => g.stage === "playoffs" || ((!g.stage || g.stage === "other") && Boolean(g.round)));

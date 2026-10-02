@@ -101,10 +101,10 @@ test("relegation: none in MLS, two plus a play-off in Ligue 1, three in the Saud
   assert.deepEqual([ksa.relegated.length, ksa.playoff.length], [3, 0]);
 });
 
-test("editions: the USA gets an MLS table after the NBA, Saudi Arabia leads with its league, France with Ligue 1", () => {
+test("editions: the USA gets MLB and MLS tables after the NBA, Saudi Arabia leads with its league, France with Ligue 1", () => {
   const ctx = { cricketSides: [], featuredCricketSeries: null };
   const us = startingBlocks(editionFor("US"), ctx).map((b) => b.label);
-  assert.deepEqual(us.slice(0, 4), ["Live in your blocks", "NFL standings", "NBA standings", "MLS standings"]);
+  assert.deepEqual(us.slice(0, 5), ["Live in your blocks", "NFL standings", "NBA standings", "MLB standings", "MLS standings"]);
   assert.equal(editionFor("SA").name, "Saudi Arabia");
   assert.equal(startingBlocks(editionFor("SA"), ctx)[1].label, "Saudi Pro League standings");
   assert.equal(editionFor("FR").domesticLeague, "ligue1");

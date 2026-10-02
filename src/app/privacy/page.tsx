@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       <p>
         {SITE_NAME} is operated independently. It is not owned by, affiliated with, endorsed by or connected to any
         league, club, federation, broadcaster, betting company or data provider, including ESPN, UEFA, the Premier League, the Bundesliga, Serie A, Ligue 1, Major League Soccer, the Saudi Pro League,
-        LaLiga, the National Football League, the National Basketball Association, the Board of Control for Cricket in
+        LaLiga, the National Football League, the National Basketball Association, Major League Baseball, the Board of Control for Cricket in
         India, the ATP, the WTA or Formula 1.
       </p>
 

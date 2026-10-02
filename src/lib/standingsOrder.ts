@@ -11,7 +11,7 @@
 //     becomes a point-differential sort and puts 8-9 Baltimore above 10-7 Pittsburgh.
 //   - Anything else keeps the old keys.
 // A rank is only ever compared between rows of the same table (same conference/group), never across.
-import { isCricketLeague, isSoccerLeague, type League } from "./leagues";
+import { isCricketLeague, isSoccerLeague, isUsSport, type League } from "./leagues";
 
 /** The columns a position is worked out from; a StandingRow has all of them. */
 export interface RankableStanding {
@@ -41,7 +41,7 @@ const usesEspnRank = (league: League) => isSoccerLeague(league) || isCricketLeag
 // Cricket points tables split teams level on points by wins (IPL, WPL and the World Cups) or, in the
 // Big Bash leagues, by net run rate first. Only read when a row has no ESPN rank.
 const netRunRateBeforeWins = (league: League) => league === "bbl" || league === "wbbl";
-export const usesRecordOrder = (league: League) => league === "nfl" || league === "nba";
+export const usesRecordOrder = (league: League) => isUsSport(league);
 
 const num = (v: string | number | null | undefined): number | null => {
   if (v === null || v === undefined || v === "") return null;

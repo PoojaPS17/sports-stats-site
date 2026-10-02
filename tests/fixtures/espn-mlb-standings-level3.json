@@ -1,0 +1,2083 @@
+{
+ "name": "Major League Baseball",
+ "season": {
+  "year": 2027,
+  "startDate": "2027-02-18T08:00Z",
+  "endDate": "2027-12-11T07:59Z",
+  "displayName": "2027"
+ },
+ "children": [
+  {
+   "id": "7",
+   "name": "American League",
+   "abbreviation": "AL",
+   "children": [
+    {
+     "id": "1",
+     "name": "American League East",
+     "abbreviation": "ALE",
+     "standings": {
+      "entries": [
+       {
+        "team": {
+         "id": "10",
+         "abbreviation": "NYY",
+         "displayName": "New York Yankees"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "11"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "4"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "3.7"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.6"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "y"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "+0.9"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.569"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "4.5"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "161"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.584"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "68"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "4"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "+138"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "12.5"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "601"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "739"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "W1"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".578"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "93"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "4.5"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "34"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "46"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "6"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "-8"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "34"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "47"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "93-68"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "46-34"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "47-34"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "29-22"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "66-47"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "5-5"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "2",
+         "abbreviation": "BOS",
+         "displayName": "Boston Red Sox"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "4"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "7"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "3.8"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.3"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "y"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "+0.5"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.481"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "11"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.526"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "75"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "5"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "+78"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "6.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "611"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "689"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "L1"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".537"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "87"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "11"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "40"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "41"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "12"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "-2"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "35"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "46"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "87-75"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "41-40"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "46-35"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "25-27"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "60-54"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "5-5"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "1",
+         "abbreviation": "BAL",
+         "displayName": "Baltimore Orioles"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "8"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "8"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "4.6"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.5"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "e"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "-0.1"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.431"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "18.5"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "161"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.513"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "82"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "8"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "-21"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "-1.5"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "739"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "718"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "L1"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".491"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "79"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "18.5"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "42"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "39"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "20"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "9"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "40"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "40"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "79-82"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "39-42"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "40-40"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "22-29"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "58-55"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "6-4"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "14",
+         "abbreviation": "TOR",
+         "displayName": "Toronto Blue Jays"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "7"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "6"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "4.3"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.0"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "e"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "-0.3"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.481"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "19"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.482"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "83"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "9"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "-46"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "-2.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "694"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "648"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "W1"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".488"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "79"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "19"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "39"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "42"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "20"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "9"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "44"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "37"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "79-83"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "42-39"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "37-44"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "25-27"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "55-59"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "4-6"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "30",
+         "abbreviation": "TB",
+         "displayName": "Tampa Bay Rays"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "6"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "8"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "4.0"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.5"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "*"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "+0.5"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.538"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "-"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.623"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "64"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "1"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "+86"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "17.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "650"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "736"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "L1"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".605"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "98"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "-"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "26"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "55"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "-3"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "-13"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "38"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "43"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "98-64"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "55-26"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "43-38"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "28-24"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "71-43"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "5-5"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "8",
+   "name": "National League",
+   "abbreviation": "NL",
+   "children": [
+    {
+     "id": "6",
+     "name": "National League West",
+     "abbreviation": "NLW",
+     "standings": {
+      "entries": [
+       {
+        "team": {
+         "id": "25",
+         "abbreviation": "SD",
+         "displayName": "San Diego Padres"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "4"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "7"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "4.2"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.5"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "y"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "+0.3"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.615"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "9"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.544"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "71"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "4"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "+41"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "10.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "681"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "722"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "W2"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".562"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "91"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "9"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "30"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "51"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "10"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "-2"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "41"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "40"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "91-71"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "51-30"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "40-41"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "32-20"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "62-52"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "8-2"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "19",
+         "abbreviation": "LAD",
+         "displayName": "Los Angeles Dodgers"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "1"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "6"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "3.7"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.9"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "x"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "+1.2"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.635"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "-"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.605"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "62"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "2"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "+201"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "19.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "600"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "801"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "W3"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".617"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "100"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "-"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "30"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "51"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "-8"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "-11"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "100.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "32"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "49"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "100-62"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "51-30"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "49-32"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "33-19"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "69-45"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "8-2"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "29",
+         "abbreviation": "ARI",
+         "displayName": "Arizona Diamondbacks"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "8"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "9"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "4.5"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.6"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "e"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "+0.1"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.615"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "14"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.544"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "76"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "7"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "+9"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "5.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "730"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "739"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "L2"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".531"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "86"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "14"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "36"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "45"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "15"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "4"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "40"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "41"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "86-76"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "45-36"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "41-40"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "32-20"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "62-52"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "6-4"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "26",
+         "abbreviation": "SF",
+         "displayName": "San Francisco Giants"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "7"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "7"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "4.7"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.1"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "e"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "-0.6"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.327"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "35"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.430"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "97"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "14"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "-91"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "-16.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "760"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "669"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "L5"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".401"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "65"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "35"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "44"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "37"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "36"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "25"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "53"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "28"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "65-97"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "37-44"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "28-53"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "17-35"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "49-65"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "2-8"
+         }
+        ]
+       },
+       {
+        "team": {
+         "id": "27",
+         "abbreviation": "COL",
+         "displayName": "Colorado Rockies"
+        },
+        "stats": [
+         {
+          "name": "OTLosses",
+          "type": "otlosses",
+          "displayValue": "7"
+         },
+         {
+          "name": "OTWins",
+          "type": "otwins",
+          "displayValue": "3"
+         },
+         {
+          "name": "avgPointsAgainst",
+          "type": "avgpointsagainst",
+          "displayValue": "5.8"
+         },
+         {
+          "name": "avgPointsFor",
+          "type": "avgpointsfor",
+          "displayValue": "4.6"
+         },
+         {
+          "name": "clincher",
+          "type": "clincher",
+          "displayValue": "e"
+         },
+         {
+          "name": "differential",
+          "type": "differential",
+          "displayValue": "-1.2"
+         },
+         {
+          "name": "divisionWinPercent",
+          "type": "divisionwinpercent",
+          "displayValue": "0.308"
+         },
+         {
+          "name": "gamesBehind",
+          "type": "gamesbehind",
+          "displayValue": "42"
+         },
+         {
+          "name": "gamesPlayed",
+          "type": "gamesplayed",
+          "displayValue": "162"
+         },
+         {
+          "name": "leagueWinPercent",
+          "type": "leaguewinpercent",
+          "displayValue": "0.333"
+         },
+         {
+          "name": "losses",
+          "type": "losses",
+          "displayValue": "104"
+         },
+         {
+          "name": "playoffSeed",
+          "type": "playoffseed",
+          "displayValue": "15"
+         },
+         {
+          "name": "pointDifferential",
+          "type": "pointdifferential",
+          "displayValue": "-192"
+         },
+         {
+          "name": "points",
+          "type": "points",
+          "displayValue": "-23.0"
+         },
+         {
+          "name": "pointsAgainst",
+          "type": "pointsagainst",
+          "displayValue": "944"
+         },
+         {
+          "name": "pointsFor",
+          "type": "pointsfor",
+          "displayValue": "752"
+         },
+         {
+          "name": "streak",
+          "type": "streak",
+          "displayValue": "L1"
+         },
+         {
+          "name": "ties",
+          "type": "ties",
+          "displayValue": "0"
+         },
+         {
+          "name": "winPercent",
+          "type": "winpercent",
+          "displayValue": ".358"
+         },
+         {
+          "name": "wins",
+          "type": "wins",
+          "displayValue": "58"
+         },
+         {
+          "name": "divisionGamesBehind",
+          "type": "divisiongamesbehind",
+          "displayValue": "42"
+         },
+         {
+          "name": "divisionPercent",
+          "type": "divisionpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "divisionTied",
+          "type": "divisiontied",
+          "displayValue": ""
+         },
+         {
+          "name": "homeLosses",
+          "type": "homelosses",
+          "displayValue": "49"
+         },
+         {
+          "name": "homeTies",
+          "type": "hometies",
+          "displayValue": "0"
+         },
+         {
+          "name": "homeWins",
+          "type": "homewins",
+          "displayValue": "32"
+         },
+         {
+          "name": "magicNumberDivision",
+          "type": "magicnumberdivision",
+          "displayValue": "43"
+         },
+         {
+          "name": "magicNumberWildcard",
+          "type": "magicnumberwildcard",
+          "displayValue": "32"
+         },
+         {
+          "name": "playoffPercent",
+          "type": "playoffpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "roadLosses",
+          "type": "roadlosses",
+          "displayValue": "55"
+         },
+         {
+          "name": "roadTies",
+          "type": "roadties",
+          "displayValue": "0"
+         },
+         {
+          "name": "roadWins",
+          "type": "roadwins",
+          "displayValue": "26"
+         },
+         {
+          "name": "wildCardPercent",
+          "type": "wildcardpercent",
+          "displayValue": "0.0%"
+         },
+         {
+          "name": "overall",
+          "type": "total",
+          "displayValue": "58-104"
+         },
+         {
+          "name": "Home",
+          "type": "home",
+          "displayValue": "32-49"
+         },
+         {
+          "name": "Road",
+          "type": "road",
+          "displayValue": "26-55"
+         },
+         {
+          "name": "Intradivision",
+          "type": "intradivision",
+          "displayValue": "16-36"
+         },
+         {
+          "name": "Intraleague",
+          "type": "intraleague",
+          "displayValue": "38-76"
+         },
+         {
+          "name": "Last Ten Games",
+          "type": "lasttengames",
+          "displayValue": "2-8"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
