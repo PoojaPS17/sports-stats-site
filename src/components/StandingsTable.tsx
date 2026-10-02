@@ -6,7 +6,7 @@ import { hasTies } from "@/lib/leagues";
 import { cricketPlayed, hasCricketTies, qualifierLegend, showQualifiers } from "@/lib/cricketStandings";
 import type { StandingRow, League } from "@/lib/queries";
 import { notStarted } from "@/lib/standingsOrder";
-import { zonesFor } from "@/lib/standingsZones";
+import { clinchLabel, zonesFor } from "@/lib/standingsZones";
 
 function StreakCell({ streak }: { streak: string | null }) {
   if (!streak) return <span className="text-[var(--text-faint)]">—</span>;
@@ -16,12 +16,24 @@ function StreakCell({ streak }: { streak: string | null }) {
 }
 
 // How a standings list is split into tables, shared by the live page and its image:
-// the NFL by division, everything else by conference (or as one table).
+// the NFL and MLB by division, everything else by conference (or as one table).
+//
+// Divisions read in their conventional order. The NFL's (AFC East, North, South, West, then NFC)
+// happens to be alphabetical; baseball's East, Central, West is not, so it is spelled out. A name
+// matching neither falls to the end of its league, in alphabetical order, rather than being dropped.
+const DIVISION_ORDER = ["East", "North", "Central", "South", "West"];
+function divisionKey(name: string): [string, number, string] {
+  const last = name.split(/\s+/).pop() ?? "";
+  const at = DIVISION_ORDER.indexOf(last);
+  return [name.slice(0, name.length - last.length).trim(), at === -1 ? DIVISION_ORDER.length : at, name];
+}
+
 export function groupStandings(league: League, standings: StandingRow[]) {
   const mode = isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "default";
-  // The NFL table is conventionally shown by division; everything else by
-  // conference (or as one table). Divisions are only stored for the NFL.
-  const useDivisions = league === "nfl" && standings.every((r) => r.division);
+  // The NFL and MLB tables are conventionally shown by division; everything else by conference (or as
+  // one table). Only those two leagues' standings fetches ask ESPN for division-level groups, so
+  // `division` is null elsewhere and the `every` check is what makes this safe for a part-filled season.
+  const useDivisions = (league === "nfl" || league === "mlb") && standings.every((r) => r.division);
   const byConference = new Map<string, StandingRow[]>();
   for (const row of standings) {
     const key = useDivisions ? row.division! : (row.conference ?? "All Teams");
@@ -29,9 +41,13 @@ export function groupStandings(league: League, standings: StandingRow[]) {
     byConference.get(key)!.push(row);
   }
 
-  // Divisions read in the conventional order (AFC East, North, South, West, then NFC),
-  // which is also alphabetical.
-  let sections = useDivisions ? [...byConference.entries()].sort((a, b) => a[0].localeCompare(b[0])) : [...byConference.entries()];
+  let sections = useDivisions
+    ? [...byConference.entries()].sort(([a], [b]) => {
+        const [la, oa, na] = divisionKey(a);
+        const [lb, ob, nb] = divisionKey(b);
+        return la.localeCompare(lb) || oa - ob || na.localeCompare(nb);
+      })
+    : [...byConference.entries()];
   // A domestic league is one table, and the feed's name for it varies by season and league
   // ("2026-2027 Italian Serie A", "2015/2016 Spanish Primera División", "Barclays Premier League
   // 2015-2016"), so it is headed by the league and the season instead. A cup's groups and stages
@@ -56,6 +72,19 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
   const ties = mode === "default" && hasTies(league);
   // Cricket: ESPN marks the sides through to the playoffs with a Q (src/lib/cricketStandings.ts).
   const qualifiers = mode === "cricket" && showQualifiers(standings, seasonFinished);
+  // Baseball tables are read down the games-behind column — a 162-game season turns on half a game,
+  // and ".556" says much less than "4.5 back". Only MLB: the NFL's own table prints W-L-T and Pct,
+  // and the NBA's standings page has never shown it here.
+  const gamesBehind = league === "mlb";
+  // ESPN's clinch letters as words, for the markers' tooltips and a legend of only the ones this
+  // table actually carries. One entry per wording, so "z" and "*" (both the best record) read once.
+  const clinches = new Map<string, string>();
+  if (gamesBehind) {
+    for (const r of standings) {
+      const label = clinchLabel(r.clinched);
+      if (label && !clinches.has(label)) clinches.set(label, r.clinched!.trim());
+    }
+  }
   const numCell = "px-2 py-2.5 text-right tabular-nums";
 
   return (
@@ -97,6 +126,7 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
                     {mode === "default" && (
                       <>
                         <th className={`${numCell} font-semibold`}>Pct</th>
+                        {gamesBehind && <th className={`${numCell} font-semibold`}>GB</th>}
                         <th className="py-2 pl-2 pr-4 text-right font-semibold">Streak</th>
                       </>
                     )}
@@ -120,6 +150,11 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
                             {qualifiers && r.qualified === true && (
                               <span className="text-[10px] font-bold text-[var(--accent)]" title={qualifierLegend(league)} aria-label={qualifierLegend(league)}>
                                 Q
+                              </span>
+                            )}
+                            {gamesBehind && clinchLabel(r.clinched) && (
+                              <span className="text-[10px] font-bold text-[var(--text-muted)]" title={clinchLabel(r.clinched)!} aria-label={clinchLabel(r.clinched)!}>
+                                {r.clinched!.trim()}
                               </span>
                             )}
                           </Link>
@@ -153,6 +188,7 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
                         {mode === "default" && (
                           <>
                             <td className={`${numCell} text-[var(--text-muted)]`}>{Number(r.win_percent).toFixed(3)}</td>
+                            {gamesBehind && <td className={numCell}>{r.games_behind?.trim() || "—"}</td>}
                             <td className="py-2.5 pl-2 pr-4 text-right tabular-nums">
                               <StreakCell streak={r.streak} />
                             </td>
@@ -171,6 +207,15 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
         <p className="text-xs text-[var(--text-muted)]">
           <span className="font-bold text-[var(--accent)]">Q</span> {qualifierLegend(league)}
         </p>
+      )}
+      {clinches.size > 0 && (
+        <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-[var(--text-muted)]">
+          {[...clinches].map(([label, letter]) => (
+            <li key={label}>
+              <span className="font-bold">{letter}</span> {label}
+            </li>
+          ))}
+        </ul>
       )}
       {zones && zones.legend.length > 0 && (
         <div className="flex flex-col gap-1.5 text-xs text-[var(--text-muted)]">

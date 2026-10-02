@@ -252,6 +252,12 @@ export interface StandingRow {
   rank: number | null;
   /** ESPN's qualification / relegation note for the row (soccer only), e.g. "Champions League"; null when the feed had none. */
   zone: string | null;
+  /** How far off the division lead, as ESPN prints it: "4.5", or "-" for the leader. Text, not a number,
+   * because of that dash and because half a game is a real figure. Baseball; null where the feed has none.
+   * Optional, like `qualified`: a row built by a caller that does not select it simply has none. */
+  games_behind?: string | null;
+  /** Baseball: ESPN's clinch letter for the row ("y", "x", "w", "z", "*", "e"); see clinchLabel. Null for none. */
+  clinched?: string | null;
   /** Cricket: ESPN marks the teams through to the playoffs or the next stage; null when the feed does not say. */
   qualified?: boolean | null;
   /** Set by sortStandings on every row of a table nobody has played in yet: it has no order, so no positions are shown. */
@@ -262,7 +268,7 @@ const STANDING_SELECT = `
   select s.season, s.team_espn_id, t.name, t.slug, t.abbreviation, t.logo_url, t.color,
          s.conference, s.division, s.wins, s.losses, s.win_percent, s.streak, s.playoff_seed,
          s.draws, s.points, s.goals_for, s.goals_against, s.no_result, s.net_run_rate, s.rank,
-         s.zone, s.qualified
+         s.zone, s.qualified, s.games_behind, s.clinched
   from standings s
   join teams t on t.league = s.league and t.espn_id = s.team_espn_id
 `;

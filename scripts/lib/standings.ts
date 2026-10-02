@@ -38,7 +38,7 @@ export function espnQualified(value: string | undefined): boolean | null {
   return v === "Y" ? true : v === "N" ? false : null;
 }
 
-function collectEntries(node: any, conference: string | null, out: any[]) {
+function collectEntries(node: any, conference: string | null, out: any[], depth = 0) {
   if (node.standings?.entries) {
     // A group nested under a conference that is not itself a conference is a
     // division (NFL "AFC East"); entries directly on the conference have none.
@@ -47,8 +47,14 @@ function collectEntries(node: any, conference: string | null, out: any[]) {
       out.push({ entry, conference: tidyConference(conference ?? node.name ?? null), division });
     }
   }
+  // ESPN flags the NFL's AFC and NFC with `isConference`, but not baseball's American League and
+  // National League, so a conference is also recognised by its shape: a node below the root that has
+  // no table of its own and whose children do. The depth guard is what keeps the root out of it — a
+  // one-level response (the NBA's two conference tables, a cup's groups) hangs its tables directly
+  // off the root, and those are the conferences themselves, not divisions of one.
+  const isConferenceLevel = Boolean(node.isConference) || (depth > 0 && !node.standings?.entries && (node.children ?? []).some((c: any) => c.standings?.entries));
   for (const child of node.children ?? []) {
-    collectEntries(child, node.isConference ? node.name : conference, out);
+    collectEntries(child, isConferenceLevel ? node.name : conference, out, depth + 1);
   }
 }
 
@@ -73,14 +79,16 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
     const rank = espnRank(statValue(stats, "rank"));
     const zone = isSoccerLeague(league) ? espnZone(entry.note?.description) : null;
     const qualified = espnQualified(statValue(stats, "qualified"));
+    // Baseball marks a clinched division, a clinched berth or an eliminated team with a letter.
+    const clinched = statValue(stats, "clincher")?.trim() || null;
     await pool.query(
       `insert into standings (
          league, season, team_espn_id, conference, wins, losses,
          win_percent, streak, playoff_seed, games_behind,
          draws, points, goals_for, goals_against, no_result, net_run_rate, division, rank,
-         zone, qualified, updated_at
+         zone, qualified, clinched, updated_at
        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-         $19,$20, now())
+         $19,$20,$21, now())
        on conflict (league, season, team_espn_id, coalesce(conference, '')) do update set
          division = coalesce(excluded.division, standings.division),
          wins = excluded.wins, losses = excluded.losses,
@@ -90,10 +98,10 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          goals_for = excluded.goals_for, goals_against = excluded.goals_against,
          no_result = excluded.no_result, net_run_rate = excluded.net_run_rate,
          rank = excluded.rank, zone = excluded.zone,
-         qualified = excluded.qualified,
+         qualified = excluded.qualified, clinched = excluded.clinched,
          updated_at = now()
-     where (standings.division, standings.wins, standings.losses, standings.win_percent, standings.streak, standings.playoff_seed, standings.games_behind, standings.draws, standings.points, standings.goals_for, standings.goals_against, standings.no_result, standings.net_run_rate, standings.rank, standings.zone, standings.qualified)
-       is distinct from (coalesce(excluded.division, standings.division), excluded.wins, excluded.losses, excluded.win_percent, excluded.streak, excluded.playoff_seed, excluded.games_behind, excluded.draws, excluded.points, excluded.goals_for, excluded.goals_against, excluded.no_result, excluded.net_run_rate, excluded.rank, excluded.zone, excluded.qualified)`,
+     where (standings.division, standings.wins, standings.losses, standings.win_percent, standings.streak, standings.playoff_seed, standings.games_behind, standings.draws, standings.points, standings.goals_for, standings.goals_against, standings.no_result, standings.net_run_rate, standings.rank, standings.zone, standings.qualified, standings.clinched)
+       is distinct from (coalesce(excluded.division, standings.division), excluded.wins, excluded.losses, excluded.win_percent, excluded.streak, excluded.playoff_seed, excluded.games_behind, excluded.draws, excluded.points, excluded.goals_for, excluded.goals_against, excluded.no_result, excluded.net_run_rate, excluded.rank, excluded.zone, excluded.qualified, excluded.clinched)`,
       [
         league,
         season,
@@ -120,6 +128,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
         rank,
         zone,
         qualified,
+        clinched,
       ]
     );
   }

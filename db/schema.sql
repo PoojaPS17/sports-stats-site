@@ -293,6 +293,12 @@ alter table standings add column if not exists rank int;
 -- is not, because ESPN's note then still describes last year's places. Filled by `npm run backfill:standings`.
 alter table standings add column if not exists zone text;
 
+-- Baseball: ESPN's `clincher` letter for the row, as sent — "y" a division clinched, "x" a playoff
+-- berth, "w" a wild card, "z" or "*" the best record, "e" eliminated (see clinchLabel in
+-- src/lib/standingsZones.ts). Stored raw rather than interpreted, so a letter the site has no wording
+-- for yet is kept and simply not shown. Null for a row the feed marks with nothing, and for sports
+-- whose tables carry no such marker.
+alter table standings add column if not exists clinched text;
 -- Cricket: ESPN's `qualified` stat ("Y") on a team through to the playoffs or the next stage. Only the
 -- qualifiers carry it, so null means not known; filled by `npm run backfill:standings <league>`.
 alter table standings add column if not exists qualified boolean;
