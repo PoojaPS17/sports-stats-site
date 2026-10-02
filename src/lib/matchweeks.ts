@@ -10,7 +10,7 @@ import { formatGameDate, gameDayIso } from "./gameDay";
 import { isRegularSeasonGame } from "./gameStage";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
-import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
+import { hasKnockoutRounds, isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 
@@ -145,8 +145,9 @@ function playoffGroups(playoffs: GameRow[]): { label: string; shortLabel: string
 export function buildMatchweeks(league: League, games: GameRow[]): Matchweek[] {
   if (games.length === 0) return [];
   const all = [...games].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  // A cup's knockout games carry their stage; only the league phase is numbered.
-  const cup = isCupCompetition(league);
+  // A cup's knockout games carry their stage (and so do the MLS Cup playoffs); only the league phase
+  // or regular season is numbered.
+  const cup = hasKnockoutRounds(league);
   const sorted = cup ? all.filter((g) => !g.round) : all;
   const knockouts = cup ? all.filter((g) => g.round && !isQualifyingRound(g.round)) : [];
 
@@ -487,6 +488,26 @@ const PERFORMER_CONFIG: Partial<Record<League, { category: string; label: string
     { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
   ],
   ucl: [
+    { category: "match", label: "G", title: "Goals", unit: "G" },
+    { category: "match", label: "A", title: "Assists", unit: "A" },
+    { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
+  ],
+  ligue1: [
+    { category: "match", label: "G", title: "Goals", unit: "G" },
+    { category: "match", label: "A", title: "Assists", unit: "A" },
+    { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
+  ],
+  europa: [
+    { category: "match", label: "G", title: "Goals", unit: "G" },
+    { category: "match", label: "A", title: "Assists", unit: "A" },
+    { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
+  ],
+  mls: [
+    { category: "match", label: "G", title: "Goals", unit: "G" },
+    { category: "match", label: "A", title: "Assists", unit: "A" },
+    { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },
+  ],
+  saudi: [
     { category: "match", label: "G", title: "Goals", unit: "G" },
     { category: "match", label: "A", title: "Assists", unit: "A" },
     { category: "match", label: "SOG", title: "Shots on target", unit: "SOT" },

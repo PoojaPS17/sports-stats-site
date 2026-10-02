@@ -10,6 +10,7 @@ import {
   CRICKET_LEADER_CATEGORIES,
   isCricketLeague,
   isSoccerLeague,
+  hasKnockoutRounds,
   isCupCompetition,
   formatSeasonLabel,
   type League,
@@ -88,7 +89,8 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
   const finalOf = (rs: PlayoffResult[]) => [...rs].reverse().find((r) => /final/i.test(r.round) && !/semi|quarter/i.test(r.round));
   const decided = playoffs.filter((r) => !r.noWinner);
   const domesticTableComplete = isSoccerLeague(league) && !isCupCompetition(league) && tableComplete(standings);
-  const seasonOver = seasonIsOver({ cup: isCupCompetition(league), finalPlayed: finalOf(playoffs) !== undefined, domesticTableComplete, hasFutureFixture: nextFixture !== null });
+  // MLS is over when the MLS Cup has been played, not when its conference tables are complete.
+  const seasonOver = seasonIsOver({ cup: hasKnockoutRounds(league), finalPlayed: finalOf(playoffs) !== undefined, domesticTableComplete: domesticTableComplete && league !== "mls", hasFutureFixture: nextFixture !== null });
   let champion: OffseasonRecap["champion"] = null;
   // No champion while the season still has fixtures to play (Task 4): the hub says the next matchday instead.
   if (seasonOver) {

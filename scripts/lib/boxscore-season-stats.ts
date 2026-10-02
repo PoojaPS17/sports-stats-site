@@ -6,10 +6,10 @@
 // rows land in player_season_stats in the same shape the athlete feed produces, so
 // every page reads them unchanged.
 import { pool } from "./db";
-import type { League } from "./espn";
+import { isCupCompetition, type League } from "./espn";
 
 export function seasonStatsFromBoxScores(league: League): boolean {
-  return league === "ucl";
+  return isCupCompetition(league);
 }
 
 // Box-score labels (see extractSoccer) and the season category each is summed into.

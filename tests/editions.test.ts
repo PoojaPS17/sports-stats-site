@@ -44,6 +44,7 @@ test("USA starts with the NFL and NBA, Germany with the Bundesliga, World with f
     "Live in your blocks",
     "NFL standings",
     "NBA standings",
+    "MLS standings",
     "Premier League standings",
     "Champions League standings",
     "Beyond the Scoreline",

@@ -19,6 +19,10 @@ const SPORT_PATH: Partial<Record<League, string>> = {
   laliga: "soccer/esp.1",
   bundesliga: "soccer/ger.1",
   seriea: "soccer/ita.1",
+  ligue1: "soccer/fra.1",
+  europa: "soccer/uefa.europa",
+  mls: "soccer/usa.1",
+  saudi: "soccer/ksa.1",
   ucl: "soccer/uefa.champions",
 };
 

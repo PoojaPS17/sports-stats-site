@@ -13,7 +13,7 @@ import { extractPlayerStats, storeGameStats } from "./lib/game-stats";
 import { rebuildSeasonStatsFromBoxScores, seasonStatsFromBoxScores } from "./lib/boxscore-season-stats";
 import { detailsFromSummary, storeGameDetails } from "./lib/game-details";
 
-const LEAGUES: League[] = ["nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "nba"];
+const LEAGUES: League[] = ["nfl", "epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi", "nba"];
 const REQUEST_DELAY_MS = 80;
 
 function sleep(ms: number) {

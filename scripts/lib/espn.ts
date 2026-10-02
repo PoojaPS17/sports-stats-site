@@ -1,6 +1,6 @@
 import { cricketSummaryPaths, fetchCricketSummaryVia, type CricketSummaryOptions } from "../../src/lib/cricketSummary";
 
-export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "wpl" | "wbbl" | "wcwc" | "wt20wc" | "laliga" | "bundesliga" | "seriea" | "ucl";
+export type League = "nba" | "nfl" | "epl" | "ipl" | "bbl" | "cwc" | "t20wc" | "wpl" | "wbbl" | "wcwc" | "wt20wc" | "laliga" | "bundesliga" | "seriea" | "ucl" | "ligue1" | "europa" | "mls" | "saudi";
 
 // Cricket competition ids: IPL 8048, Big Bash League 8044, ICC Cricket World Cup
 // (ODI) 8039, ICC Men's T20 World Cup 8604, Women's Premier League 21282, Women's
@@ -23,6 +23,10 @@ export const SPORT_PATH: Record<League, string> = {
   bundesliga: "soccer/ger.1",
   seriea: "soccer/ita.1",
   ucl: "soccer/uefa.champions",
+  ligue1: "soccer/fra.1",
+  europa: "soccer/uefa.europa",
+  mls: "soccer/usa.1",
+  saudi: "soccer/ksa.1",
 };
 
 const CRICKET_LEAGUES: League[] = ["ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
@@ -30,7 +34,7 @@ export function isCricketLeague(league: League): boolean {
   return CRICKET_LEAGUES.includes(league);
 }
 
-export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl"];
+export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi"];
 export function isSoccerLeague(league: League): boolean {
   return SOCCER_LEAGUES.includes(league);
 }
@@ -38,7 +42,13 @@ export function isSoccerLeague(league: League): boolean {
 // Cup competitions: the feed tags every game with its stage (league phase, then the
 // knockout rounds), which the games writer keeps for the knockout games.
 export function isCupCompetition(league: League): boolean {
-  return league === "ucl";
+  return league === "ucl" || league === "europa";
+}
+
+// The cups, and MLS: a regular season followed by the MLS Cup playoffs, which the feed tags per
+// game the way it tags a cup's knockout rounds (see parseRound).
+export function hasKnockoutRounds(league: League): boolean {
+  return isCupCompetition(league) || league === "mls";
 }
 
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";
@@ -212,6 +222,10 @@ const CORE_LEAGUE_PATH: Record<League, string> = {
   bundesliga: "soccer/leagues/ger.1",
   seriea: "soccer/leagues/ita.1",
   ucl: "soccer/leagues/uefa.champions",
+  ligue1: "soccer/leagues/fra.1",
+  europa: "soccer/leagues/uefa.europa",
+  mls: "soccer/leagues/usa.1",
+  saudi: "soccer/leagues/ksa.1",
   // Unused — team-info.ts never calls fetchCoreTeam for a cricket league (its
   // team-level core-API endpoints 404, same as the site API's /teams/{id}). Present
   // only so this Record stays total over League.

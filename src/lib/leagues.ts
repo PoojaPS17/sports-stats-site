@@ -23,7 +23,11 @@ export type League =
   | "wcwc"
   | "wt20wc"
   | "wodi"
-  | "wt20i";
+  | "wt20i"
+  | "mls"
+  | "saudi"
+  | "europa"
+  | "ligue1";
 
 // The 4 major, always-active leagues — these get homepage sections and top-level nav
 // links. The other competitions (only in season occasionally, or every 2-4 years for
@@ -43,8 +47,10 @@ export const INTERNATIONAL_CRICKET: League[] = ["test", "odi", "t20i", "wodi", "
 export function isFirstClassCricket(league: League): boolean {
   return league === "test";
 }
-export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ucl"];
-export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "test", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i", "laliga", "bundesliga", "seriea", "ucl"];
+// The domestic leagues first, then the two UEFA cups, then MLS and the Saudi Pro League (added
+// 2026-10 for Messi's and Ronaldo's clubs; their history starts in 2023, when the two arrived).
+export const SOCCER_LEAGUES: League[] = ["epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi"];
+export const ALL_LEAGUES: League[] = [...LEAGUES, "bbl", "cwc", "t20wc", "test", "odi", "t20i", "wpl", "wbbl", "wcwc", "wt20wc", "wodi", "wt20i", "laliga", "bundesliga", "seriea", "ucl", "ligue1", "europa", "mls", "saudi"];
 export const LEAGUE_LABEL: Record<League, string> = {
   nba: "NBA",
   nfl: "NFL",
@@ -66,6 +72,10 @@ export const LEAGUE_LABEL: Record<League, string> = {
   bundesliga: "Bundesliga",
   seriea: "Serie A",
   ucl: "Champions League",
+  ligue1: "Ligue 1",
+  europa: "Europa League",
+  mls: "MLS",
+  saudi: "Saudi Pro League",
 };
 
 // Short names for a page <title>, which search results cut at about 70 characters (see fitTitle in metadata.ts).
@@ -90,15 +100,19 @@ export const LEAGUE_SHORT: Record<League, string> = {
   bundesliga: "Bundesliga",
   seriea: "Serie A",
   ucl: "UCL",
+  ligue1: "Ligue 1",
+  europa: "Europa League",
+  mls: "MLS",
+  saudi: "Saudi Pro League",
 };
 
 export function isWomensCricket(league: League): boolean {
   return (WOMENS_CRICKET as string[]).includes(league);
 }
 
-// "the NBA", "the Premier League", but "La Liga" and "Serie A" take no article.
+// "the NBA", "the Premier League", but "La Liga", "Serie A", "Ligue 1" and "MLS" take no article.
 export function leagueNameWithArticle(league: League, capitalise = false): string {
-  if (league === "laliga" || league === "seriea" || isInternationalCricket(league)) return LEAGUE_LABEL[league];
+  if (league === "laliga" || league === "seriea" || league === "ligue1" || league === "mls" || isInternationalCricket(league)) return LEAGUE_LABEL[league];
   return `${capitalise ? "The" : "the"} ${LEAGUE_LABEL[league]}`;
 }
 
@@ -149,7 +163,14 @@ export function isSoccerLeague(league: League): boolean {
 // which the feed tags per game; those rounds are stored in `games.round` and kept
 // out of tables, projections and matchday numbering. Domestic leagues have none.
 export function isCupCompetition(league: League): boolean {
-  return league === "ucl";
+  return league === "ucl" || league === "europa";
+}
+
+// A competition whose season ends in knockout rounds the feed tags per game: the two UEFA cups,
+// and MLS, whose regular season (two conference tables) is followed by the MLS Cup playoffs. The
+// knockout games keep their round in `games.round` and stay out of the tables and matchday numbering.
+export function hasKnockoutRounds(league: League): boolean {
+  return isCupCompetition(league) || league === "mls";
 }
 
 // Summer qualifying rounds ("Qualifying Third Round", the August "Playoff Round")
@@ -160,7 +181,7 @@ export function isQualifyingRound(round: string | null | undefined): boolean {
   return Boolean(round && /qualifying|playoff round/i.test(round));
 }
 
-// The Champions League switched from eight groups of four to a single 36-team
+// The Champions League and the Europa League switched from groups of four to a single 36-team
 // league phase in 2024-25. Tables, zones and projections differ between the formats.
 export const UCL_LEAGUE_PHASE_FROM = 2024;
 
@@ -186,6 +207,11 @@ export const HISTORY_START: Partial<Record<League, number>> = {
   bundesliga: 2015,
   seriea: 2015,
   ucl: 2015,
+  ligue1: 2015,
+  europa: 2015,
+  // Messi joined Inter Miami and Ronaldo Al Nassr in 2023: the seasons anyone searches for.
+  mls: 2023,
+  saudi: 2023,
   nba: 2015,
   nfl: 2015,
 };
@@ -193,9 +219,10 @@ export const HISTORY_START: Partial<Record<League, number>> = {
 // ESPN labels a season by its *ending* year for NBA ("2023" = the 2022-23 season) but
 // by its *starting* year for NFL/EPL/La Liga/IPL ("2024" = the 2024 NFL season /
 // 2024-25 EPL season / 2024 IPL season). Render the conventional human label for each.
+// MLS plays February to December, so its season is the calendar year.
 export function formatSeasonLabel(league: League, year: number | null): string | null {
   if (!year) return null;
   if (league === "nba") return `${year - 1}-${String(year).slice(2)}`;
-  if (isSoccerLeague(league)) return `${year}-${String(year + 1).slice(2)}`;
+  if (isSoccerLeague(league) && league !== "mls") return `${year}-${String(year + 1).slice(2)}`;
   return String(year);
 }

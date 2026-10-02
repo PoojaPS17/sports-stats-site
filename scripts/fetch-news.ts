@@ -3,7 +3,7 @@ import { fetchNews, type League } from "./lib/espn";
 import { scopedLeagues } from "./lib/scope";
 import { isBettingText } from "../src/lib/betting";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
+const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
 
 async function processLeague(league: League) {
   const data = await fetchNews(league, 15);

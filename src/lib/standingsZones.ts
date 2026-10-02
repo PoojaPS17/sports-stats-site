@@ -30,7 +30,11 @@ export const UPCOMING_CAPTION = "Qualification places as at the start of the sea
 
 // The leagues whose sixth place is a Conference League place at the start of the season (the BBC's
 // tables mark it). The Premier League's depends on the cups, so it has none.
-const CONFERENCE_AT_SIXTH: League[] = ["laliga", "seriea", "bundesliga"];
+const CONFERENCE_AT_SIXTH: League[] = ["laliga", "seriea", "bundesliga", "ligue1"];
+const ACL_ELITE: Zone = { cls: "zone-1", label: "AFC Champions League Elite" };
+const CHAMPIONS_QUALIFYING: Zone = { cls: "zone-1", label: "Champions League qualifying" };
+const MLS_PLAYOFFS: Zone = { cls: "zone-1", label: "MLS Cup Playoffs" };
+const MLS_WILD_CARD: Zone = { cls: "zone-2", label: "Wild Card" };
 
 /**
  * The band of a table position (1-based), or null when the shape has no rule. Domestic leagues: a
@@ -47,10 +51,35 @@ export function zoneRules(league: League, total: number, finished = false): ((po
     if (total === 4) return (p) => (p <= 2 ? { cls: "zone-1", label: "Round of 16" } : p === 3 ? { cls: "zone-2", label: "Europa League" } : { cls: "zone-3", label: "Eliminated" });
     return null;
   }
+  // The Europa League's league phase has the Champions League's shape; its old groups sent the top
+  // two into the knockout round and the third into the Conference League.
+  if (league === "europa") {
+    if (total === 36) return (p) => (p <= 8 ? { cls: "zone-1", label: "Round of 16" } : p <= 24 ? { cls: "zone-2", label: "Knockout playoffs" } : { cls: "zone-3", label: "Eliminated" });
+    if (total === 4) return (p) => (p <= 2 ? { cls: "zone-1", label: "Knockout round" } : p === 3 ? CONFERENCE : { cls: "zone-3", label: "Eliminated" });
+    return null;
+  }
+  // MLS: each conference table of 15 sends seven straight into the MLS Cup playoffs and two more into
+  // the wild-card matches; nobody goes down.
+  if (league === "mls") {
+    if (total !== 15) return null;
+    return (p) => (p <= 7 ? MLS_PLAYOFFS : p <= 9 ? MLS_WILD_CARD : null);
+  }
+  // Saudi Pro League: 18 clubs, the top three to the AFC Champions League Elite, the bottom three down.
+  if (league === "saudi") {
+    if (total !== 18) return null;
+    return (p) => (p <= 3 ? ACL_ELITE : p >= 16 ? RELEGATION : null);
+  }
   const conference = !finished && CONFERENCE_AT_SIXTH.includes(league);
   if (league === "bundesliga") {
     if (total !== 18) return null;
     return (p) => (p <= 4 ? CHAMPIONS : p === 5 ? EUROPA : p === 6 && conference ? CONFERENCE : p === 16 ? RELEGATION_PLAYOFF : p >= 17 ? RELEGATION : null);
+  }
+  // Ligue 1 (18 clubs since 2023-24): three straight into the Champions League and a fourth into its
+  // qualifying, fifth to the Europa League, sixth to the Conference League qualifying, 16th plays the
+  // relegation play-off and the bottom two go down.
+  if (league === "ligue1") {
+    if (total !== 18) return null;
+    return (p) => (p <= 3 ? CHAMPIONS : p === 4 ? CHAMPIONS_QUALIFYING : p === 5 ? EUROPA : p === 6 && conference ? CONFERENCE : p === 16 ? RELEGATION_PLAYOFF : p >= 17 ? RELEGATION : null);
   }
   if (total !== 20) return null;
   return (p) => (p <= 4 ? CHAMPIONS : p === 5 ? EUROPA : p === 6 && conference ? CONFERENCE : p >= 18 ? RELEGATION : null);
@@ -103,7 +132,7 @@ export function zoneFromNote(description: string | null | undefined): Zone | nul
 function bandsFromNotes(league: League, rows: StandingRow[]): (Zone | null)[] {
   const noted = rows.map((r) => zoneFromNote(r.zone));
   const hasRelegation = noted.some((z) => z?.label === RELEGATION.label || z?.label === RELEGATION_PLAYOFF.label);
-  if (league === "bundesliga" && rows.length === 18 && hasRelegation && noted[15]?.label !== RELEGATION.label) noted[15] = RELEGATION_PLAYOFF;
+  if ((league === "bundesliga" || league === "ligue1") && rows.length === 18 && hasRelegation && noted[15]?.label !== RELEGATION.label) noted[15] = RELEGATION_PLAYOFF;
   return noted;
 }
 
@@ -157,17 +186,19 @@ export function zonesFor(league: League, sections: [string, StandingRow[]][]): T
  * a play-off and is not relegated yet. The table's bands use the same notes, so they agree.
  */
 export function relegationSummary<T extends StandingRow>(league: League, standings: T[]): { relegated: T[]; playoff: T[] } {
-  const bundesliga = league === "bundesliga";
+  // Nobody is relegated from MLS.
+  if (league === "mls") return { relegated: [], playoff: [] };
+  const twoDown = league === "bundesliga" || league === "ligue1";
   const noted = bandsFromNotes(league, standings);
   if (noted.some((z) => z?.label === RELEGATION.label || z?.label === RELEGATION_PLAYOFF.label)) {
     return { relegated: standings.filter((_, i) => noted[i]?.label === RELEGATION.label), playoff: standings.filter((_, i) => noted[i]?.label === RELEGATION_PLAYOFF.label) };
   }
-  const down = bundesliga ? 2 : 3;
-  return { relegated: standings.slice(-down), playoff: bundesliga && standings.length > down ? [standings[standings.length - down - 1]] : [] };
+  const down = twoDown ? 2 : 3;
+  return { relegated: standings.slice(-down), playoff: twoDown && standings.length > down ? [standings[standings.length - down - 1]] : [] };
 }
 
 /** The number of clubs in each domestic league's table, which the positional rules above assume. */
-export const DOMESTIC_TABLE_SIZE: Partial<Record<League, number>> = { epl: 20, laliga: 20, seriea: 20, bundesliga: 18 };
+export const DOMESTIC_TABLE_SIZE: Partial<Record<League, number>> = { epl: 20, laliga: 20, seriea: 20, bundesliga: 18, ligue1: 18, saudi: 18 };
 
 /**
  * How many places of a domestic league's table the start-of-season bands give the Champions League,

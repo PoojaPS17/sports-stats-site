@@ -213,8 +213,12 @@ export const ELO_PARAMS: Record<string, { k: number; homeAdvantage: number; seas
   laliga: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   bundesliga: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   seriea: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
+  ligue1: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
+  mls: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
+  saudi: { k: 22, homeAdvantage: 60, seasonCarry: 0.8, marginScale: 1 },
   // Few games per club per season, so ratings lean a little more on the previous season.
   ucl: { k: 24, homeAdvantage: 60, seasonCarry: 0.85, marginScale: 1 },
+  europa: { k: 24, homeAdvantage: 60, seasonCarry: 0.85, marginScale: 1 },
   default: { k: 20, homeAdvantage: 50, seasonCarry: 0.75, marginScale: 1 },
 };
 
