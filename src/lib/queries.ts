@@ -531,6 +531,8 @@ export interface LeaderCategory {
   column: string; // player_season_stats column
   label: string;
   unit: string;
+  /** The board reads lowest first: an ERA. Omitted everywhere else, where the best figure is the biggest. */
+  asc?: true;
 }
 
 export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
@@ -544,9 +546,16 @@ export const LEADER_CATEGORIES: Record<League, LeaderCategory[]> = {
     { column: "rushing_yards", label: "Rushing Yards", unit: "YDS" },
     { column: "receiving_yards", label: "Receiving Yards", unit: "YDS" },
   ],
-  // Baseball's boards need their own player_season_stats columns (a batting average and an ERA are
-  // not totals), which arrive with the MLB season-stats loader; empty until then.
-  mlb: [],
+  // Three boards for the batters, two for the pitchers. The batting average and the ERA carry a
+  // qualifying threshold (see storedBoard in leaderQueries.ts) so a ten-game cameo cannot lead them,
+  // and the ERA board reads lowest first, which is the only board on the site that does.
+  mlb: [
+    { column: "home_runs", label: "Home Runs", unit: "HR" },
+    { column: "rbi", label: "RBI", unit: "RBI" },
+    { column: "batting_avg", label: "Batting Average", unit: "AVG" },
+    { column: "strikeouts", label: "Strikeouts", unit: "K" },
+    { column: "era", label: "ERA", unit: "ERA", asc: true },
+  ],
   epl: [
     { column: "goals", label: "Goals", unit: "GLS" },
     { column: "assists", label: "Assists", unit: "AST" },

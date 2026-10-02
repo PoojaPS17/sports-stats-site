@@ -16,8 +16,16 @@ export interface Rankable {
   secondary?: number | null;
 }
 
-function compareLeaders(a: Rankable, b: Rankable): number {
-  if (a.value !== b.value) return b.value - a.value;
+/**
+ * `asc` on a board whose best figure is the SMALLEST: an earned run average. Every other board on the
+ * site reads highest first, so it is an option rather than a parameter every caller has to think about.
+ */
+export interface LeaderOrder {
+  asc?: boolean;
+}
+
+function compareLeaders(a: Rankable, b: Rankable, asc = false): number {
+  if (a.value !== b.value) return asc ? a.value - b.value : b.value - a.value;
   const sa = a.secondary ?? Number.NEGATIVE_INFINITY;
   const sb = b.secondary ?? Number.NEGATIVE_INFINITY;
   if (sa !== sb) return sb > sa ? 1 : -1;
@@ -25,8 +33,8 @@ function compareLeaders(a: Rankable, b: Rankable): number {
 }
 
 /** Best first: value, then the secondary figure, then name, then id, so no two runs order a tie differently. */
-export function orderLeaders<T extends Rankable>(rows: readonly T[]): T[] {
-  return [...rows].sort(compareLeaders);
+export function orderLeaders<T extends Rankable>(rows: readonly T[], opts: LeaderOrder = {}): T[] {
+  return [...rows].sort((a, b) => compareLeaders(a, b, opts.asc));
 }
 
 /** Standard competition ranking of values already best first: equal values share a rank and the next rank skips
@@ -40,8 +48,8 @@ export function competitionRanks(values: readonly number[]): number[] {
 /** The standing of every candidate: ordered (see `orderLeaders`) and given its competition rank. Players with no positive
  * figure are never in it. The rank is a fact about the whole standing, so anything that later leaves a player out (no page
  * to link to) must keep the others' ranks: a hole in the numbering is fine, a wrong rank is not. */
-export function rankLeaders<T extends Rankable>(candidates: readonly T[]): (T & { rank: number })[] {
-  const ordered = orderLeaders(candidates.filter((c) => c.value > 0));
+export function rankLeaders<T extends Rankable>(candidates: readonly T[], opts: LeaderOrder = {}): (T & { rank: number })[] {
+  const ordered = orderLeaders(candidates.filter((c) => c.value > 0), opts);
   const ranks = competitionRanks(ordered.map((r) => r.value));
   return ordered.map((r, i) => ({ ...r, rank: ranks[i] }));
 }
@@ -67,6 +75,12 @@ const PER_GAME_UNITS = new Set(["PPG", "RPG", "APG"]);
 /** The units of the cricket boards (CRICKET_LEADER_CATEGORIES), whose player pages print plain numbers: they stay plain. */
 const CRICKET_UNITS = new Set(["RUNS", "WKTS", "6s"]);
 
+/** Baseball's two rate boards, printed the way the sport prints them: ".312", never "0.312", and "2.40". */
+const BASEBALL_RATE: Record<string, (v: number) => string> = {
+  AVG: (v) => v.toFixed(3).replace(/^0\./, "."),
+  ERA: (v) => v.toFixed(2),
+};
+
 const PER_GAME_SPEC: StatSpec = { key: "", label: "", title: "", value: () => null, agg: "avg", decimals: 1 };
 const TOTAL_SPEC: StatSpec = { key: "", label: "", title: "", value: () => null, agg: "sum" };
 
@@ -75,6 +89,8 @@ const TOTAL_SPEC: StatSpec = { key: "", label: "", title: "", value: () => null,
  * Only the display string: boards are ranked and tied on the number. Cricket boards keep their plain figures. */
 export function formatLeaderValue(value: number, unit: string): string {
   if (CRICKET_UNITS.has(unit)) return String(value);
+  const baseball = BASEBALL_RATE[unit];
+  if (baseball) return baseball(value);
   return formatStat(PER_GAME_UNITS.has(unit) ? PER_GAME_SPEC : TOTAL_SPEC, value);
 }
 

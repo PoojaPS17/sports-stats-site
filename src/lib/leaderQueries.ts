@@ -38,7 +38,11 @@ export interface LeaderBoard {
 type BoxColumn =
   | { sport: "soccer"; key: "goals" | "assists"; secondary: "goals" | "assists" }
   | { sport: "nfl"; category: "passing" | "rushing" | "receiving" }
-  | { sport: "nba"; stat: NbaStat };
+  | { sport: "nba"; stat: NbaStat }
+  // Baseball: stored rows only, so there is nothing to say about reading it from box scores.
+  // `asc` is the ERA board, the one board whose best figure is the smallest; `qualify` is the column
+  // a minimum is taken over, so a cameo cannot top a rate board (see `storedBoard`).
+  | { sport: "mlb"; asc?: true; qualify?: "games_played" | "innings_pitched" };
 
 // Every leader column: how a box-score board reads it. The keys are also the player_season_stats columns (the fallback source).
 const BOX_COLUMNS: Record<string, BoxColumn> = {
@@ -50,6 +54,11 @@ const BOX_COLUMNS: Record<string, BoxColumn> = {
   pts_avg: { sport: "nba", stat: "pts" },
   reb_avg: { sport: "nba", stat: "reb" },
   ast_avg: { sport: "nba", stat: "ast" },
+  home_runs: { sport: "mlb" },
+  rbi: { sport: "mlb" },
+  batting_avg: { sport: "mlb", qualify: "games_played" },
+  strikeouts: { sport: "mlb" },
+  era: { sport: "mlb", asc: true, qualify: "innings_pitched" },
 };
 
 /** The most recent season a board can show: the latest season with a stored ESPN figure, or, for the leagues whose boards
@@ -83,7 +92,11 @@ export async function getLeaderBoard(league: League, column: string, opts: { lim
   const season = opts.season ?? (await getLeadersSeason(league));
   if (season === null) return { rows: [], omitted: 0 };
   const spec = BOX_COLUMNS[column];
-  if (!isCupCompetition(league) && spec.sport === playerSport(league)) {
+  // MLB has no box-score path at all: two of its five boards are a batting average and an ERA, which
+  // are not sums of per-game cells, so all five read ESPN's stored season rows and stay consistent
+  // with one another. The `spec.sport !== "mlb"` guard is what says so out loud — `playerSport("mlb")`
+  // is "mlb", so without it a baseball board would fall into the summing path and find no measures.
+  if (!isCupCompetition(league) && spec.sport !== "mlb" && spec.sport === playerSport(league)) {
     const summed = spec.sport === "nba" ? await nbaBoard(league, season, spec.stat, limit, ties) : await totalsBoard(league, season, spec, limit, ties);
     // null: the season has no stored box scores (before the history starts), so ESPN's stored rows are the source.
     if (summed !== null) return summed;
@@ -99,9 +112,19 @@ async function storedBoard(league: League, season: number, column: string, limit
   // qualifying share of the season (the NBA's own rule is 70% of games, 58 of 82):
   // without it a ten-game injury season outranks a full one. The threshold follows
   // the most games anyone has played so far, so it tracks the season as it goes.
-  const qualifier = column.endsWith("_avg")
-    ? `and pss.games_played >= ceil(0.7 * (select max(games_played) from player_season_stats q where q.league = pss.league and q.season = pss.season))`
+  //
+  // Baseball's two rate boards name their own threshold column instead (BOX_COLUMNS.qualify): a
+  // batting average over games played, the way the NBA's averages do it, and an ERA over innings
+  // pitched, because a reliever plays in seventy games and a starter in thirty, so a games threshold
+  // taken over the whole league would leave every pitcher off the board.
+  const spec = BOX_COLUMNS[column];
+  const qualifyOn = spec.sport === "mlb" ? spec.qualify : column.endsWith("_avg") ? "games_played" : undefined;
+  const share = qualifyOn === "innings_pitched" ? 0.6 : 0.7;
+  const qualifier = qualifyOn
+    ? `and pss.${qualifyOn} >= ${share} * (select max(${qualifyOn}) from player_season_stats q where q.league = pss.league and q.season = pss.season)`
     : "";
+  // The one board whose best figure is the smallest.
+  const asc = spec.sport === "mlb" && spec.asc === true;
   const secondary = column === "goals" ? "pss.assists" : column === "assists" ? "pss.goals" : "null";
   // Ranked over every stored row BEFORE the join to `players`, so a top row with no players row (which cannot be shown) leaves
   // the others their own ranks instead of promoting the next player to 1: a hole is fine, a wrong rank is not.
@@ -110,7 +133,7 @@ async function storedBoard(league: League, season: number, column: string, limit
             t.name as team_name, t.slug as team_slug, x.value, x.secondary, x.rk
      from (
        select pss.player_espn_id, pss.team_espn_id, pss.${column} as value, ${secondary} as secondary,
-              rank() over (order by pss.${column} desc) as rk
+              rank() over (order by pss.${column} ${asc ? "asc" : "desc"}) as rk
        from player_season_stats pss
        where pss.league = $1 and pss.${column} > 0 and ${notPseudoAthleteSql("pss.player_espn_id")}
          and pss.season = $3
@@ -122,7 +145,10 @@ async function storedBoard(league: League, season: number, column: string, limit
     [league, limit, season]
   );
   // Best first with real names for equal figures, each row keeping the rank the whole standing gave it.
-  const ranked = orderLeaders(rows.map((r) => ({ ...r, value: Number(r.value), secondary: r.secondary === null ? null : Number(r.secondary), rank: Number(r.rk) })));
+  const ranked = orderLeaders(
+    rows.map((r) => ({ ...r, value: Number(r.value), secondary: r.secondary === null ? null : Number(r.secondary), rank: Number(r.rk) })),
+    { asc },
+  );
   const picked = takeLeaders(ranked, limit, { ties });
   return {
     rows: picked.rows.map((r): LeaderRow => ({ player_espn_id: r.player_espn_id, name: r.name, slug: r.slug, headshot_url: r.headshot_url, team_name: r.team_name, team_slug: r.team_slug, value: r.value, rank: r.rank })),

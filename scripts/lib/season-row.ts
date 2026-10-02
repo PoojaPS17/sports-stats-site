@@ -88,6 +88,25 @@ export function postseasonRows(categories: (SeasonCategory & { name?: string })[
 }
 
 /**
+ * Which of baseball's categories is which. ESPN is not consistent about the names: a batter's
+ * regular-season category comes back as "career-batting" while a pitcher's comes back as plain
+ * "pitching" (measured on Aaron Judge, 33192, and Aaron Nola, 33709, on 2026-10-02), so both
+ * spellings are matched. "expanded-", "advanced-" and "opponent-" categories are ignored: they hold
+ * nothing the site reads, and "opponent-batting" on a pitcher must never be mistaken for his batting.
+ *
+ * Unlike the NBA, baseball's postseason lines arrive in the SAME response, so no second request with
+ * `seasontype=3` is made for MLB.
+ */
+export function mlbCategoryKind(name: string | undefined): "batting" | "pitching" | "postseason_batting" | "postseason_pitching" | null {
+  if (!name) return null;
+  if (name === "batting" || name === "career-batting") return "batting";
+  if (name === "pitching" || name === "career-pitching") return "pitching";
+  if (name === "postseason-batting") return "postseason_batting";
+  if (name === "postseason-pitching") return "postseason_pitching";
+  return null;
+}
+
+/**
  * ESPN's games played for one season of an NFL player, read from the `GP` column.
  *
  * The site's own game count comes from box-score rows, and ESPN's NFL box scores list only players

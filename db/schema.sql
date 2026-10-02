@@ -230,6 +230,22 @@ alter table player_season_stats add column if not exists assists int;
 -- Games played that season (NBA "GP"), so per-game leader boards can apply the
 -- usual qualifying threshold instead of ranking a ten-game injury season first.
 alter table player_season_stats add column if not exists games_played int;
+-- Baseball's leader-board figures, read out of ESPN's batting and pitching categories the way
+-- pts_avg and passing_yards are read out of the NBA's and NFL's. Two of the five are rates, not
+-- totals, which is why MLB boards come from these stored rows rather than being summed from box
+-- scores at read time like the NBA's and NFL's (see src/lib/leaderQueries.ts).
+--   batting_avg numeric: ".291" is 0.291, three decimals.
+--   era numeric: earned runs per nine innings, and the one board that reads lowest first.
+--   innings_pitched numeric: the printed figure ("199.1" is 199 innings and one out), used as the
+--   ERA board's qualifying threshold. Not a quantity to do arithmetic on — see outsFromInnings in
+--   src/lib/playerDerived.ts for the unit the player pages total innings in.
+alter table player_season_stats add column if not exists home_runs int;
+alter table player_season_stats add column if not exists rbi int;
+alter table player_season_stats add column if not exists batting_avg numeric;
+alter table player_season_stats add column if not exists strikeouts int;
+alter table player_season_stats add column if not exists era numeric;
+alter table player_season_stats add column if not exists pitching_wins int;
+alter table player_season_stats add column if not exists innings_pitched numeric;
 
 create index if not exists player_season_stats_pts_idx on player_season_stats (league, season, pts_avg desc nulls last);
 create index if not exists player_season_stats_reb_idx on player_season_stats (league, season, reb_avg desc nulls last);
@@ -239,6 +255,12 @@ create index if not exists player_season_stats_rush_idx on player_season_stats (
 create index if not exists player_season_stats_recv_idx on player_season_stats (league, season, receiving_yards desc nulls last);
 create index if not exists player_season_stats_goals_idx on player_season_stats (league, season, goals desc nulls last);
 create index if not exists player_season_stats_assists_idx on player_season_stats (league, season, assists desc nulls last);
+create index if not exists player_season_stats_hr_idx on player_season_stats (league, season, home_runs desc nulls last);
+create index if not exists player_season_stats_rbi_idx on player_season_stats (league, season, rbi desc nulls last);
+create index if not exists player_season_stats_batting_avg_idx on player_season_stats (league, season, batting_avg desc nulls last);
+create index if not exists player_season_stats_strikeouts_idx on player_season_stats (league, season, strikeouts desc nulls last);
+-- Ascending: the ERA board reads lowest first.
+create index if not exists player_season_stats_era_idx on player_season_stats (league, season, era asc nulls last);
 
 create table if not exists news_articles (
   league text not null,

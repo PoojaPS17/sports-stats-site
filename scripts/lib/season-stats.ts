@@ -1,7 +1,7 @@
 import { pool } from "./db";
 import { fetchAthleteSeasonStats, type League } from "./espn";
 
-import { postseasonCategoriesOf, postseasonRows, seasonGamesPlayed, seasonRow, seasonWindowStart } from "./season-row";
+import { mlbCategoryKind, postseasonCategoriesOf, postseasonRows, seasonGamesPlayed, seasonRow, seasonWindowStart } from "./season-row";
 
 // Which of a category's rows a season stores (ESPN's Totals row for a traded player, and the
 // league filter for soccer), and an NFL season's games played (ESPN's own GP, summed over a traded
@@ -45,6 +45,15 @@ async function upsertOneSeason(
   let goals: number | null = null;
   let assists: number | null = null;
   let gamesPlayed: number | null = null;
+  // Baseball. A category is identified by `mlbCategoryKind`, not by its raw name, and the postseason
+  // lines come back in this same response rather than needing a second request (see season-row.ts).
+  let homeRuns: number | null = null;
+  let rbi: number | null = null;
+  let battingAvg: number | null = null;
+  let strikeouts: number | null = null;
+  let era: number | null = null;
+  let pitchingWins: number | null = null;
+  let inningsPitched: number | null = null;
   let found = false;
 
   for (const category of categories) {
@@ -69,6 +78,33 @@ async function upsertOneSeason(
       goals = positiveOrNull(numberAt(row.labels, row.values, "G"));
       assists = positiveOrNull(numberAt(row.labels, row.values, "A"));
     }
+    if (league === "mlb") {
+      const kind = mlbCategoryKind(key);
+      // The postseason line is stored under its own key (below) and must not overwrite the
+      // regular-season figures the boards rank by.
+      if (kind === "batting") {
+        homeRuns = positiveOrNull(numberAt(row.labels, row.values, "HR"));
+        rbi = positiveOrNull(numberAt(row.labels, row.values, "RBI"));
+        // ".291" parses as 0.291. A .000 average reads as no average, like every other zero here.
+        battingAvg = positiveOrNull(numberAt(row.labels, row.values, "AVG"));
+        gamesPlayed = positiveOrNull(numberAt(row.labels, row.values, "GP"));
+      }
+      if (kind === "pitching") {
+        // A pitcher's strikeouts, which is the board baseball means by "strikeouts"; a batter's are
+        // the ones he took, and no board ranks those.
+        strikeouts = positiveOrNull(numberAt(row.labels, row.values, "K"));
+        era = positiveOrNull(numberAt(row.labels, row.values, "ERA"));
+        pitchingWins = positiveOrNull(numberAt(row.labels, row.values, "W"));
+        inningsPitched = positiveOrNull(numberAt(row.labels, row.values, "IP"));
+        // A pitcher has no batting category, so his games come from here instead.
+        gamesPlayed = gamesPlayed ?? positiveOrNull(numberAt(row.labels, row.values, "GP"));
+      }
+      // Stored under the prefixed key the site reads a postseason line by (src/lib/espnSeason.ts).
+      if (kind === "postseason_batting" || kind === "postseason_pitching") {
+        delete out[key];
+        out[kind] = row;
+      }
+    }
   }
 
   if (!found) return false;
@@ -81,20 +117,38 @@ async function upsertOneSeason(
   // own GP (the site's box-score rows list only players with a stat line, so counting them undercounts).
   if (league === "nfl") gamesPlayed = positiveOrNull(seasonGamesPlayed(categories, seasonYear));
 
+  // Every scalar column, so the insert, the update and the is-distinct-from guard can never list a
+  // different set of them — which is how a column gets written on insert and quietly never updated.
+  const COLUMNS = [
+    "team_espn_id",
+    "categories",
+    "pts_avg",
+    "reb_avg",
+    "ast_avg",
+    "passing_yards",
+    "rushing_yards",
+    "receiving_yards",
+    "goals",
+    "assists",
+    "games_played",
+    "home_runs",
+    "rbi",
+    "batting_avg",
+    "strikeouts",
+    "era",
+    "pitching_wins",
+    "innings_pitched",
+  ];
+  const values = [teamEspnId, JSON.stringify(out), ptsAvg, rebAvg, astAvg, passingYards, rushingYards, receivingYards, goals, assists, gamesPlayed, homeRuns, rbi, battingAvg, strikeouts, era, pitchingWins, inningsPitched];
+  const placeholders = COLUMNS.map((_, i) => `$${i + 4}`).join(", ");
+  const tuple = (prefix: string) => COLUMNS.map((c) => `${prefix}${c}`).join(", ");
   await pool.query(
-    `insert into player_season_stats (
-       league, season, player_espn_id, team_espn_id, categories,
-       pts_avg, reb_avg, ast_avg, passing_yards, rushing_yards, receiving_yards, goals, assists, games_played, updated_at
-     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
+    `insert into player_season_stats (league, season, player_espn_id, ${COLUMNS.join(", ")}, updated_at)
+     values ($1,$2,$3, ${placeholders}, now())
      on conflict (league, season, player_espn_id) do update set
-       team_espn_id = excluded.team_espn_id, categories = excluded.categories,
-       pts_avg = excluded.pts_avg, reb_avg = excluded.reb_avg, ast_avg = excluded.ast_avg,
-       passing_yards = excluded.passing_yards, rushing_yards = excluded.rushing_yards,
-       receiving_yards = excluded.receiving_yards, goals = excluded.goals, assists = excluded.assists,
-       games_played = excluded.games_played, updated_at = now()
-     where (player_season_stats.team_espn_id, player_season_stats.categories, player_season_stats.pts_avg, player_season_stats.reb_avg, player_season_stats.ast_avg, player_season_stats.passing_yards, player_season_stats.rushing_yards, player_season_stats.receiving_yards, player_season_stats.goals, player_season_stats.assists, player_season_stats.games_played)
-       is distinct from (excluded.team_espn_id, excluded.categories, excluded.pts_avg, excluded.reb_avg, excluded.ast_avg, excluded.passing_yards, excluded.rushing_yards, excluded.receiving_yards, excluded.goals, excluded.assists, excluded.games_played)`,
-    [league, seasonYear, playerEspnId, teamEspnId, JSON.stringify(out), ptsAvg, rebAvg, astAvg, passingYards, rushingYards, receivingYards, goals, assists, gamesPlayed]
+       ${COLUMNS.map((c) => `${c} = excluded.${c}`).join(", ")}, updated_at = now()
+     where (${tuple("player_season_stats.")}) is distinct from (${tuple("excluded.")})`,
+    [league, seasonYear, playerEspnId, ...values]
   );
   return true;
 }
@@ -124,15 +178,33 @@ export async function upsertPlayerSeasonStats(
   // store, silently, and nothing is asked about his postseason (whose answer would be just as empty). An error body that
   // `getJson` parsed anyway looks the same and has always been a silent 0 here: nothing is written either way.
   if (!Array.isArray(data.categories)) return 0;
-  const categories: any[] = data.categories;
   // NBA: one more request for the postseason line (seasontype=3), for a player whose regular-season response HAS categories. Then
   // a response that is not a real answer (no categories array, no seasontype filter: an error body `getJson` parsed anyway) throws,
   // which fails the player's whole update instead of rewriting the stored row without the `postseason_*` keys a previous run
-  // stored (`categories = excluded.categories`).
+  // stored (`categories = excluded.categories`). Baseball needs no second request: its postseason
+  // categories are in the response above (see mlbCategoryKind in season-row.ts).
   const postseasonCategories = league === "nba" ? postseasonCategoriesOf(await fetchAthleteSeasonStats(league, playerEspnId, 3)) : [];
   // An explicit `yearsBack` is a relative window; the default is the league's pinned start (seasonWindowStart).
   const currentYear = new Date().getUTCFullYear();
   const minYear = yearsBack === undefined ? seasonWindowStart(league, currentYear) : currentYear - yearsBack;
+  return storeAthleteSeasons(league, playerEspnId, teamEspnId, data, minYear, postseasonCategories);
+}
+
+/**
+ * The half of the loader that is only the response: which seasons it holds and what each one stores.
+ * Split out from the fetch so tests can drive it from a saved ESPN response (tests/fixtures), which is
+ * how the MLB category reading is held to the real thing rather than to a hand-written shape.
+ */
+export async function storeAthleteSeasons(
+  league: League,
+  playerEspnId: string,
+  teamEspnId: string | null,
+  data: { categories?: unknown },
+  minYear: number,
+  postseasonCategories: any[] = []
+): Promise<number> {
+  if (!Array.isArray(data.categories)) return 0;
+  const categories: any[] = data.categories;
   // Soccer's stats endpoint is sport-wide, so seasons must be filtered to the actual
   // league's rows (leagueSlug "eng.1", "esp.1", ...) — otherwise a player's time at a club
   // in a different country's league would be collected and stored as if it were an EPL season.

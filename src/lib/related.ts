@@ -29,6 +29,9 @@ interface SeasonMetricRow {
   passing_yards: number | null;
   rushing_yards: number | null;
   receiving_yards: number | null;
+  home_runs: number | null;
+  strikeouts: number | null;
+  era: string | null;
 }
 
 // How players are ranked for "teammates" and "peers": the season stat a reader of
@@ -37,6 +40,10 @@ function metricSql(league: League): string {
   if (isSoccerLeague(league)) return "coalesce(ps.goals, 0) * 2 + coalesce(ps.assists, 0)";
   if (league === "nba") return "coalesce(ps.pts_avg, 0)";
   if (league === "nfl") return "coalesce(ps.passing_yards, 0) + coalesce(ps.rushing_yards, 0) + coalesce(ps.receiving_yards, 0)";
+  // Baseball: a batter by home runs, a pitcher by strikeouts. The two never both apply to one row, so
+  // adding them needs no weighting, and a pitcher is never ranked against a batter — the peers query
+  // only ever compares players at the same position.
+  if (league === "mlb") return "coalesce(ps.home_runs, 0) + coalesce(ps.strikeouts, 0)";
   return "0";
 }
 
@@ -51,13 +58,19 @@ function metricText(league: League, r: SeasonMetricRow): string | null {
     ].sort((a, b) => Number(b[1]) - Number(a[1]))[0];
     return Number(best[1]) > 0 ? `${Number(best[1]).toLocaleString("en-US")} ${best[0]} yds` : null;
   }
+  // Baseball: a pitcher reads as his ERA (the figure a reader quotes), a batter as his home runs.
+  if (league === "mlb") {
+    if (r.era != null) return `${Number(r.era).toFixed(2)} ERA`;
+    return r.home_runs == null ? null : `${r.home_runs} HR`;
+  }
   return null;
 }
 
 const SEASON_JOIN = `left join player_season_stats ps on ps.league = p.league and ps.player_espn_id = p.espn_id
                        and ps.season = (select max(season) from player_season_stats where league = p.league)`;
 const SELECT = `select p.slug, p.name, p.position, coalesce(p.headshot_url, p.photo_url) as headshot_url, t.name as team_name, t.slug as team_slug,
-                       ps.goals, ps.assists, ps.pts_avg, ps.passing_yards, ps.rushing_yards, ps.receiving_yards`;
+                       ps.goals, ps.assists, ps.pts_avg, ps.passing_yards, ps.rushing_yards, ps.receiving_yards,
+                       ps.home_runs, ps.strikeouts, ps.era`;
 
 function toLink(league: League, r: SeasonMetricRow, withTeam: boolean): RelatedLink {
   const bits = [r.position, metricText(league, r), withTeam ? r.team_name : null].filter(Boolean);
