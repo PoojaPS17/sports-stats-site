@@ -5,7 +5,7 @@ import { pool } from "./lib/db";
 // the odd NBA/NFL rookie — from Wikimedia Commons.
 //
 // Matching is by id, never by name: Wikidata stores the ESPN player id for each
-// sport (P3681 ESPN FC, P3685 NBA, P3686 NFL) next to the item's image (P18), so a
+// sport (P3681 ESPN FC, P3685 NBA, P3686 NFL, P3571 MLB) next to the item's image (P18), so a
 // player gets a photo only when Wikidata says that exact ESPN id is that person.
 // Commons then supplies a sized thumbnail plus the photographer and licence, which
 // the site credits on the player page (Creative Commons attribution).
@@ -19,11 +19,12 @@ const SPORT_LEAGUES: Record<string, string[]> = {
   soccer: ["epl", "laliga", "bundesliga", "seriea", "ucl"],
   nba: ["nba"],
   nfl: ["nfl"],
+  mlb: ["mlb"],
 };
 
 const USER_AGENT = "SportsDB/1.0 (https://sports-stats-site.vercel.app; player photo import)";
 const SPARQL = `SELECT ?sport ?espn ?img WHERE {
-  VALUES (?prop ?sport) { (wdt:P3681 "soccer") (wdt:P3685 "nba") (wdt:P3686 "nfl") }
+  VALUES (?prop ?sport) { (wdt:P3681 "soccer") (wdt:P3685 "nba") (wdt:P3686 "nfl") (wdt:P3571 "mlb") }
   ?item ?prop ?espn ; wdt:P18 ?img .
 }`;
 

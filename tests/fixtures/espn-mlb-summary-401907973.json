@@ -1,0 +1,1056 @@
+{
+ "boxscore": {
+  "players": [
+   {
+    "team": {
+     "id": "22",
+     "abbreviation": "PHI",
+     "displayName": "Philadelphia Phillies"
+    },
+    "statistics": [
+     {
+      "type": "batting",
+      "labels": [
+       "H-AB",
+       "AB",
+       "R",
+       "H",
+       "RBI",
+       "HR",
+       "BB",
+       "K",
+       "#P",
+       "AVG",
+       "OBP",
+       "SLG"
+      ],
+      "keys": [
+       "hits-atBats",
+       "atBats",
+       "runs",
+       "hits",
+       "RBIs",
+       "homeRuns",
+       "walks",
+       "strikeouts",
+       "pitches",
+       "avg",
+       "onBasePct",
+       "slugAvg"
+      ],
+      "descriptions": [
+       "Hits per At Bats",
+       "At Bats",
+       "Runs",
+       "Hits",
+       "Runs Batted In",
+       "Home Runs",
+       "Walks",
+       "Strikeouts",
+       "Pitches Seen",
+       "Batting Average",
+       "On Base Percentage",
+       "Slugging Percentage"
+      ],
+      "totals": [
+       "4-21",
+       "21",
+       "1",
+       "4",
+       "1",
+       "0",
+       "2",
+       "3",
+       "86",
+       "",
+       "",
+       ""
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "33710",
+         "displayName": "Trea Turner",
+         "shortName": "T. Turner",
+         "position": {
+          "abbreviation": "SS"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33710.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-3",
+         "3",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "12",
+         ".091",
+         ".167",
+         ".182"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "33712",
+         "displayName": "Kyle Schwarber",
+         "shortName": "K. Schwarber",
+         "position": {
+          "abbreviation": "DH"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33712.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "2-2",
+         "2",
+         "1",
+         "2",
+         "0",
+         "0",
+         "1",
+         "0",
+         "9",
+         ".400",
+         ".500",
+         ".700"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "30951",
+         "displayName": "Bryce Harper",
+         "shortName": "B. Harper",
+         "position": {
+          "abbreviation": "1B"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/30951.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "1-3",
+         "3",
+         "0",
+         "1",
+         "0",
+         "0",
+         "0",
+         "1",
+         "13",
+         ".250",
+         ".250",
+         ".583"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "41169",
+         "displayName": "Alec Bohm",
+         "shortName": "A. Bohm",
+         "position": {
+          "abbreviation": "3B"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/41169.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-3",
+         "3",
+         "0",
+         "0",
+         "1",
+         "0",
+         "0",
+         "0",
+         "8",
+         ".273",
+         ".333",
+         ".636"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "42417",
+         "displayName": "Bryson Stott",
+         "shortName": "B. Stott",
+         "position": {
+          "abbreviation": "2B"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/42417.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-3",
+         "3",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "2",
+         "15",
+         ".167",
+         ".167",
+         ".167"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "40787",
+         "displayName": "Bryan De La Cruz",
+         "shortName": "B. De La Cruz",
+         "position": {
+          "abbreviation": "RF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/40787.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "1-2",
+         "2",
+         "0",
+         "1",
+         "0",
+         "0",
+         "0",
+         "0",
+         "6",
+         ".286",
+         ".375",
+         ".286"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "33809",
+         "displayName": "Edmundo Sosa",
+         "shortName": "E. Sosa",
+         "position": {
+          "abbreviation": "LF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33809.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-1",
+         "1",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "4",
+         ".286",
+         ".286",
+         ".429"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "40803",
+         "displayName": "Brandon Marsh",
+         "shortName": "B. Marsh",
+         "position": {
+          "abbreviation": "LF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/40803.png"
+         }
+        },
+        "starter": false,
+        "stats": [
+         "0-0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "1",
+         "0",
+         "6",
+         ".500",
+         ".600",
+         ".500"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "32177",
+         "displayName": "J.T. Realmuto",
+         "shortName": "J.T. Realmuto",
+         "position": {
+          "abbreviation": "C"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/32177.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-2",
+         "2",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "5",
+         ".222",
+         ".222",
+         ".444"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "5080642",
+         "displayName": "Justin Crawford",
+         "shortName": "J. Crawford",
+         "position": {
+          "abbreviation": "CF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/5080642.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-2",
+         "2",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "8",
+         ".143",
+         ".143",
+         ".143"
+        ]
+       }
+      ]
+     },
+     {
+      "type": "pitching",
+      "labels": [
+       "IP",
+       "H",
+       "R",
+       "ER",
+       "BB",
+       "K",
+       "HR",
+       "PC-ST",
+       "ERA",
+       "PC"
+      ],
+      "keys": [
+       "fullInnings.partInnings",
+       "hits",
+       "runs",
+       "earnedRuns",
+       "walks",
+       "strikeouts",
+       "homeRuns",
+       "pitches-strikes",
+       "ERA",
+       "pitches"
+      ],
+      "descriptions": [
+       "Innings Pitched",
+       "Hits",
+       "Runs",
+       "Earned Runs",
+       "Walks",
+       "Strikeouts",
+       "Home Runs",
+       "Pitches Thrown/Strikes Thrown",
+       "Earned Run Average",
+       "Pitches Thrown"
+      ],
+      "totals": [
+       "5.2",
+       "5",
+       "5",
+       "5",
+       "4",
+       "3",
+       "2",
+       "104-60",
+       "",
+       "104"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "33709",
+         "displayName": "Aaron Nola",
+         "shortName": "A. Nola",
+         "position": {
+          "abbreviation": "SP"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33709.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "1.2",
+         "2",
+         "3",
+         "3",
+         "2",
+         "1",
+         "1",
+         "38-19",
+         "16.20",
+         "38"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "35773",
+         "displayName": "Tim Mayza",
+         "shortName": "T. Mayza",
+         "position": {
+          "abbreviation": "RP"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/35773.png"
+         }
+        },
+        "starter": false,
+        "stats": [
+         "0.1",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "6-3",
+         "0.00",
+         "6"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "31267",
+         "displayName": "Zack Wheeler",
+         "shortName": "Z. Wheeler",
+         "position": {
+          "abbreviation": "SP"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/31267.png"
+         }
+        },
+        "starter": false,
+        "stats": [
+         "3.2",
+         "3",
+         "2",
+         "2",
+         "2",
+         "2",
+         "1",
+         "60-38",
+         "4.91",
+         "60"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "team": {
+     "id": "15",
+     "abbreviation": "ATL",
+     "displayName": "Atlanta Braves"
+    },
+    "statistics": [
+     {
+      "type": "batting",
+      "labels": [
+       "H-AB",
+       "AB",
+       "R",
+       "H",
+       "RBI",
+       "HR",
+       "BB",
+       "K",
+       "#P",
+       "AVG",
+       "OBP",
+       "SLG"
+      ],
+      "keys": [
+       "hits-atBats",
+       "atBats",
+       "runs",
+       "hits",
+       "RBIs",
+       "homeRuns",
+       "walks",
+       "strikeouts",
+       "pitches",
+       "avg",
+       "onBasePct",
+       "slugAvg"
+      ],
+      "descriptions": [
+       "Hits per At Bats",
+       "At Bats",
+       "Runs",
+       "Hits",
+       "Runs Batted In",
+       "Home Runs",
+       "Walks",
+       "Strikeouts",
+       "Pitches Seen",
+       "Batting Average",
+       "On Base Percentage",
+       "Slugging Percentage"
+      ],
+      "totals": [
+       "5-21",
+       "21",
+       "5",
+       "5",
+       "5",
+       "2",
+       "4",
+       "3",
+       "104",
+       "",
+       "",
+       ""
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4810190",
+         "displayName": "Drake Baldwin",
+         "shortName": "D. Baldwin",
+         "position": {
+          "abbreviation": "C"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/4810190.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-3",
+         "3",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "12",
+         ".167",
+         ".167",
+         ".250"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "36185",
+         "displayName": "Ronald Acuna Jr.",
+         "shortName": "R. Acuna Jr.",
+         "position": {
+          "abbreviation": "RF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/36185.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "1-2",
+         "2",
+         "1",
+         "1",
+         "0",
+         "0",
+         "1",
+         "0",
+         "11",
+         ".125",
+         ".417",
+         ".125"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "32767",
+         "displayName": "Matt Olson",
+         "shortName": "M. Olson",
+         "position": {
+          "abbreviation": "1B"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/32767.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-2",
+         "2",
+         "1",
+         "0",
+         "0",
+         "0",
+         "1",
+         "0",
+         "11",
+         ".100",
+         ".167",
+         ".100"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "42470",
+         "displayName": "Michael Harris II",
+         "shortName": "M. Harris II",
+         "position": {
+          "abbreviation": "CF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/42470.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "1-3",
+         "3",
+         "1",
+         "1",
+         "3",
+         "1",
+         "0",
+         "1",
+         "15",
+         ".455",
+         ".455",
+         ".727"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "35304",
+         "displayName": "Mauricio Dubon",
+         "shortName": "M. Dubon",
+         "position": {
+          "abbreviation": "LF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/35304.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-3",
+         "3",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "1",
+         "9",
+         ".250",
+         ".250",
+         ".333"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "33341",
+         "displayName": "Mike Yastrzemski",
+         "shortName": "M. Yastrzemski",
+         "position": {
+          "abbreviation": "LF"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33341.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-3",
+         "3",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "1",
+         "14",
+         ".125",
+         ".125",
+         ".125"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "34982",
+         "displayName": "Austin Riley",
+         "shortName": "A. Riley",
+         "position": {
+          "abbreviation": "3B"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/34982.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "0-1",
+         "1",
+         "1",
+         "0",
+         "0",
+         "0",
+         "2",
+         "0",
+         "16",
+         ".250",
+         ".500",
+         ".625"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "33783",
+         "displayName": "Ozzie Albies",
+         "shortName": "O. Albies",
+         "position": {
+          "abbreviation": "2B"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33783.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "1-2",
+         "2",
+         "1",
+         "1",
+         "2",
+         "1",
+         "0",
+         "0",
+         "8",
+         ".375",
+         ".545",
+         "1.000"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "33218",
+         "displayName": "Dominic Smith",
+         "shortName": "D. Smith",
+         "position": {
+          "abbreviation": "DH"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33218.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "2-2",
+         "2",
+         "0",
+         "2",
+         "0",
+         "0",
+         "0",
+         "0",
+         "8",
+         ".500",
+         ".500",
+         ".500"
+        ]
+       }
+      ]
+     },
+     {
+      "type": "pitching",
+      "labels": [
+       "IP",
+       "H",
+       "R",
+       "ER",
+       "BB",
+       "K",
+       "HR",
+       "PC-ST",
+       "ERA",
+       "PC"
+      ],
+      "keys": [
+       "fullInnings.partInnings",
+       "hits",
+       "runs",
+       "earnedRuns",
+       "walks",
+       "strikeouts",
+       "homeRuns",
+       "pitches-strikes",
+       "ERA",
+       "pitches"
+      ],
+      "descriptions": [
+       "Innings Pitched",
+       "Hits",
+       "Runs",
+       "Earned Runs",
+       "Walks",
+       "Strikeouts",
+       "Home Runs",
+       "Pitches Thrown/Strikes Thrown",
+       "Earned Run Average",
+       "Pitches Thrown"
+      ],
+      "totals": [
+       "6.0",
+       "4",
+       "1",
+       "1",
+       "2",
+       "3",
+       "0",
+       "86-55",
+       "",
+       "86"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "40426",
+         "displayName": "Ray Kerr",
+         "shortName": "R. Kerr",
+         "position": {
+          "abbreviation": "RP"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/40426.png"
+         }
+        },
+        "starter": true,
+        "stats": [
+         "3.1",
+         "1",
+         "0",
+         "0",
+         "1",
+         "2",
+         "0",
+         "47-29",
+         "0.00",
+         "47"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "33840",
+         "displayName": "Grant Holmes",
+         "shortName": "G. Holmes",
+         "position": {
+          "abbreviation": "SP"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/33840.png"
+         }
+        },
+        "starter": false,
+        "stats": [
+         "2.0",
+         "2",
+         "1",
+         "1",
+         "1",
+         "1",
+         "0",
+         "28-17",
+         "4.50",
+         "28"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4148749",
+         "displayName": "Robert Suarez",
+         "shortName": "R. Suarez",
+         "position": {
+          "abbreviation": "RP"
+         },
+         "headshot": {
+          "href": "https://a.espncdn.com/i/headshots/mlb/players/full/4148749.png"
+         }
+        },
+        "starter": false,
+        "stats": [
+         "0.2",
+         "1",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0",
+         "11-9",
+         "0.00",
+         "11"
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "header": {
+  "id": "401907973",
+  "season": {
+   "year": 2026,
+   "current": true,
+   "type": 3
+  },
+  "competitions": [
+   {
+    "id": "401907973",
+    "date": "2026-10-02T00:00Z",
+    "status": {
+     "displayClock": "0:00",
+     "period": 6,
+     "type": {
+      "id": "2",
+      "name": "STATUS_IN_PROGRESS",
+      "state": "in",
+      "completed": false,
+      "description": "In Progress",
+      "detail": "Bottom 6th",
+      "shortDetail": "Bot 6th",
+      "statusPrimary": "Bot 6th"
+     },
+     "periodPrefix": "Bottom",
+     "displayPeriod": "6th"
+    },
+    "competitors": [
+     {
+      "id": "15",
+      "homeAway": "home",
+      "score": "5",
+      "team": {
+       "id": "15",
+       "abbreviation": "ATL",
+       "displayName": "Atlanta Braves"
+      },
+      "linescores": [
+       {
+        "displayValue": "3",
+        "hits": 1,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 1,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 1,
+        "errors": 0
+       },
+       {
+        "displayValue": "2",
+        "hits": 2,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 0,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 0,
+        "errors": 0
+       }
+      ]
+     },
+     {
+      "id": "22",
+      "homeAway": "away",
+      "score": "1",
+      "team": {
+       "id": "22",
+       "abbreviation": "PHI",
+       "displayName": "Philadelphia Phillies"
+      },
+      "linescores": [
+       {
+        "displayValue": "0",
+        "hits": 1,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 0,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 0,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 0,
+        "errors": 0
+       },
+       {
+        "displayValue": "0",
+        "hits": 1,
+        "errors": 0
+       },
+       {
+        "displayValue": "1",
+        "hits": 2,
+        "errors": 0
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

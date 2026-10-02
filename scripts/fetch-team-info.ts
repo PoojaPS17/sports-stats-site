@@ -6,7 +6,7 @@ import { fetchCurrentSeasonYear, type League } from "./lib/espn";
 import { upsertTeamInfo } from "./lib/team-info";
 import { scopedLeagues } from "./lib/scope";
 
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl"];
+const LEAGUES: League[] = ["nba", "nfl", "mlb", "epl", "laliga", "bundesliga", "seriea", "ucl"];
 
 async function processLeague(league: League) {
   const season = await fetchCurrentSeasonYear(league);

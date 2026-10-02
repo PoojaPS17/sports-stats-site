@@ -5,19 +5,19 @@ import { pool } from "./lib/db";
 async function main() {
   const { rows: byStage } = await pool.query(
     `select league, stage, season_type, competition_type, count(*)::int as games
-     from games where league in ('nba', 'nfl') group by 1, 2, 3, 4 order by 1, 2, 3, 4`
+     from games where league in ('nba', 'nfl', 'mlb') group by 1, 2, 3, 4 order by 1, 2, 3, 4`
   );
   console.table(byStage);
   const { rows: untyped } = await pool.query(
     `select league, count(*)::int as games, min(date)::date as first, max(date)::date as last
-     from games where league in ('nba', 'nfl') and completed and season_type is null group by 1`
+     from games where league in ('nba', 'nfl', 'mlb') and completed and season_type is null group by 1`
   );
   console.log("[audit-game-stages] completed games without a season type:", untyped.length ? untyped : "none");
   // Teams that exist only because of games that are not counted (e.g. preseason opponents from outside the league).
   const { rows: strays } = await pool.query(
     `select t.league, t.name, count(*)::int as games
      from teams t join games g on g.league = t.league and t.espn_id in (g.home_team_espn_id, g.away_team_espn_id)
-     where t.league in ('nba', 'nfl')
+     where t.league in ('nba', 'nfl', 'mlb')
      group by t.league, t.espn_id, t.name
      having bool_and(g.stage = 'excluded')
      order by 1, 2`

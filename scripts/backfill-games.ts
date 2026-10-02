@@ -145,7 +145,7 @@ async function backfillCricketViaSeasonScoreboard(league: League, onlySeasons: n
 
 async function main() {
   const target = process.argv[2] as League | undefined;
-  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
+  const leagues: League[] = target ? [target] : ["nba", "nfl", "mlb", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
   // Optional comma-separated seasons (cricket only): `backfill-games cwc 1987,1992`.
   const onlySeasons = process.argv[3] ? process.argv[3].split(",").map(Number).filter(Number.isInteger) : null;
 

@@ -1,6 +1,6 @@
-// Gives a season type to every stored NBA/NFL game that lacks one, by re-reading that day's
+// Gives a season type to every stored NBA, NFL or MLB game that lacks one, by re-reading that day's
 // scoreboard. Safe to re-run; a game ESPN no longer lists stays untyped and is reported.
-//   tsx scripts/backfill-game-stages.ts          # nba and nfl
+//   tsx scripts/backfill-game-stages.ts          # nba, nfl and mlb
 //   tsx scripts/backfill-game-stages.ts nba
 import { pool } from "./lib/db";
 import { fetchScoreboard, type League } from "./lib/espn";
@@ -9,11 +9,11 @@ import { classifyUntypedGames } from "./lib/stage-backfill";
 async function main() {
   const target = process.argv[2];
   // Only leagues whose games carry a season type: for any other league every game would read as untyped.
-  if (target !== undefined && target !== "nba" && target !== "nfl") {
-    console.error("usage: tsx scripts/backfill-game-stages.ts [nba|nfl]");
+  if (target !== undefined && target !== "nba" && target !== "nfl" && target !== "mlb") {
+    console.error("usage: tsx scripts/backfill-game-stages.ts [nba|nfl|mlb]");
     process.exit(1);
   }
-  const leagues: League[] = target ? [target] : ["nba", "nfl"];
+  const leagues: League[] = target ? [target] : ["nba", "nfl", "mlb"];
   let stillUntyped = 0;
   for (const league of leagues) {
     const res = await classifyUntypedGames(pool, league, async (l, d) => {

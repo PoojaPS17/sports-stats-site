@@ -8,7 +8,9 @@ import { parseRound, parseStageFields } from "./games";
 // box scores to fetch.
 export function seasonTypesFor(league: League): (number | undefined)[] {
   if (league === "nba") return [undefined, 3, 5];
-  if (league === "nfl") return [undefined, 3];
+  // Baseball has a postseason but no play-in: the three division winners and three wild cards per
+  // league are decided by the regular-season table alone.
+  if (league === "nfl" || league === "mlb") return [undefined, 3];
   return [undefined];
 }
 

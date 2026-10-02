@@ -142,9 +142,18 @@ alter table games add column if not exists note text;
 -- games only: they leave out preseason, play-in, All-Star and the NBA Cup final. A game with no
 -- known type falls back to the old `round is null` reading so nothing changes until it is typed.
 -- Generated, so it can never drift from the columns it is derived from.
-alter table games add column if not exists stage text generated always as (
-  case
-    when league not in ('nba', 'nfl') then case when round is null then 'regular' else 'other' end
+-- A stored generated column cannot be altered in place, and this file is re-run on every deploy
+-- (`npm run migrate`), so `add column if not exists` would silently keep an out-of-date expression
+-- forever: the NBA and NFL were in the list before baseball joined it, and an MLB row would have
+-- been classified by the `round is null` fallback, counting spring training as the regular season.
+-- The definition lives in one place below and the column is dropped and re-added whenever the stored
+-- expression no longer matches it. Nothing depends on the column (no index, no view), and re-adding
+-- it rewrites the table once, which is seconds on a few hundred thousand games.
+do $$
+declare
+  wanted constant text :=
+    $def$case
+    when league not in ('nba', 'nfl', 'mlb') then case when round is null then 'regular' else 'other' end
     when competition_type in ('ALLSTAR', 'CC') then 'excluded'
     when season_type = 1 then 'excluded'
     when season_type = 2 then 'regular'
@@ -152,8 +161,29 @@ alter table games add column if not exists stage text generated always as (
     when season_type = 5 then 'playin'
     when round is null then 'regular'
     else 'playoffs'
-  end
-) stored;
+  end$def$;
+  current_def text;
+begin
+  select pg_get_expr(d.adbin, d.adrelid)
+    into current_def
+    from pg_attribute a
+    join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+   where a.attrelid = 'games'::regclass and a.attname = 'stage' and a.attgenerated = 's';
+  -- Compared on the expression's own meaning, not its text: Postgres re-prints a generation
+  -- expression in its own canonical form (it adds casts and parentheses), so the two are checked by
+  -- asking the database whether they are the same expression, via a throwaway generated column.
+  if current_def is not null then
+    execute format('alter table games add column stage__check text generated always as (%s) stored', wanted);
+    if (select pg_get_expr(d.adbin, d.adrelid) from pg_attribute a join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+         where a.attrelid = 'games'::regclass and a.attname = 'stage__check') = current_def then
+      alter table games drop column stage__check;
+      return;
+    end if;
+    alter table games drop column stage__check;
+    alter table games drop column stage;
+  end if;
+  execute format('alter table games add column stage text generated always as (%s) stored', wanted);
+end $$;
 
 -- The local calendar day(s) of a cricket match. `date` is a UTC instant, which for a Test starting
 -- 10.30 in Melbourne (23:30 UTC the day before) or a morning game in the Big Bash lands on the wrong

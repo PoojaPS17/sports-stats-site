@@ -12,7 +12,7 @@ import { notPseudoAthleteSql } from "../src/lib/pseudoAthlete";
 
 // Cricket has no per-player match data yet (ESPN's roster/boxscore endpoints 404 for
 // this competition), so there's no athlete season-stats endpoint to backfill from.
-const LEAGUES: League[] = ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea"];
+const LEAGUES: League[] = ["nba", "nfl", "mlb", "epl", "laliga", "bundesliga", "seriea"];
 const REQUEST_DELAY_MS = 100;
 
 function sleep(ms: number) {

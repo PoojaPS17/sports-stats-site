@@ -121,6 +121,8 @@ function durationMinutes(league: League): number {
   if (isSoccer(league)) return 115;
   if (league === "nfl") return 195;
   if (league === "nba") return 150;
+  // Nine innings, with no clock to run out: three hours is the modern average since the pitch timer.
+  if (league === "mlb") return 180;
   if (isCricketLeague(league)) return 210;
   return 120;
 }

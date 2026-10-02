@@ -7,6 +7,7 @@ import { cricketSummaryPaths, fetchCricketSummaryVia } from "./cricketSummary";
 const SPORT_PATH: Partial<Record<League, string>> = {
   nba: "basketball/nba",
   nfl: "football/nfl",
+  mlb: "baseball/mlb",
   epl: "soccer/eng.1",
   ipl: "cricket/8048",
   bbl: "cricket/8044",

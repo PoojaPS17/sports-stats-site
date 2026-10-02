@@ -91,16 +91,24 @@ function fmtRange(league: League, start: string, end: string): string {
 
 // Normalise the feed's per-conference, per-game playoff labels into one round:
 // "AFC Wild Card Playoffs" / "NFC Wild Card Playoffs" → "Wild Card";
-// "East 1st Round - Game 3" → "First Round"; "West Finals - Game 5" → "Conference Finals".
+// "East 1st Round - Game 3" → "First Round"; "West Finals - Game 5" → "Conference Finals";
+// "NL Wild Card - Game 3" → "Wild Card"; "AL Championship Series" → "Championship Series".
 // A cup's stages have no conference: "Semifinals - 2nd Leg" → "Semifinals", and the
 // Champions League's "Knockout Playoffs" keeps its name.
-function playoffRoundLabel(round: string): string {
-  const conference = /^(AFC|NFC|East|West)\b/i.test(round);
+// Exported for tests/mlb-ingest.test.ts, which holds the four baseball rounds.
+export function playoffRoundLabel(round: string): string {
+  const conference = /^(AFC|NFC|East|West|AL|NL)\b/i.test(round);
   const r = round
     .replace(/\s*-\s*(Game\s*\d+|(1st|2nd)\s+Leg)$/i, "")
-    .replace(/^(AFC|NFC|East|West)\s+/i, "")
+    .replace(/^(AFC|NFC|East|West|AL|NL)\s+/i, "")
     .replace(/(?<!knockout)\s+Playoffs$/i, "")
     .trim();
+  // Baseball's rounds are already their own names once the league prefix is off, and both halves of
+  // the bracket play the same round, so they are not "Conference" anything. Checked before the
+  // championship rule below, which would otherwise call an ALCS game a Conference Championship.
+  if (/^(wild card|division series|championship series|world series)$/i.test(r)) {
+    return r.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
   if (/championship/i.test(r)) return "Conference Championships";
   if (/^1st round$/i.test(r)) return "First Round";
   if (/^semifinals$/i.test(r)) return conference ? "Conference Semifinals" : "Semifinals";

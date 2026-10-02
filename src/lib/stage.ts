@@ -8,7 +8,19 @@ import { specialStageLabel } from "./stageLabels";
 // given (a numbered match, "Round of 16 - 1st Leg", "Super Bowl LX").
 const ORD = "(\\d+(?:st|nd|rd|th))";
 
+// Baseball's rounds reach us as ESPN's own abbreviations — "NLWC - Game 3", "ALDS", "NLCS" — which
+// mean nothing on a card. They are spelled out, league prefix and game number kept, so a card reads
+// "NL Wild Card - Game 3"; the week hub strips both to group by round (playoffRoundLabel in
+// matchweeks.ts). The World Series needs no rewriting, and neither does a spelled-out "AL Division
+// Series", which some of ESPN's feeds send instead; "Series" is dropped from "Wild Card Series" so
+// the three rounds read alike.
+const MLB_ROUND: Record<string, string> = { wc: "Wild Card", ds: "Division Series", cs: "Championship Series" };
+const MLB_GAME = "(?:\\s*-\\s*game\\s*(\\d+))?";
+
 const RULES: [RegExp, (m: RegExpMatchArray) => string | null][] = [
+  [new RegExp(`^(al|nl)(wc|ds|cs)${MLB_GAME}$`, "i"), (m) => `${m[1].toUpperCase()} ${MLB_ROUND[m[2].toLowerCase()]}${m[3] ? ` - Game ${m[3]}` : ""}`],
+  [new RegExp(`^(al|nl)\\s+wild\\s*card(?:\\s+series)?${MLB_GAME}$`, "i"), (m) => `${m[1].toUpperCase()} Wild Card${m[2] ? ` - Game ${m[2]}` : ""}`],
+  [new RegExp(`^(al|nl)\\s+(division|championship)\\s+series${MLB_GAME}$`, "i"), (m) => `${m[1].toUpperCase()} ${m[2][0].toUpperCase()}${m[2].slice(1).toLowerCase()} Series${m[3] ? ` - Game ${m[3]}` : ""}`],
   [/^final$/i, () => "Final"],
   [new RegExp(`^(?:${ORD}\\s+)?semi[\\s-]?finals?$`, "i"), (m) => (m[1] ? `${m[1]} Semi-Final` : "Semi-Final")],
   [new RegExp(`^(?:${ORD}\\s+)?(?:quarter[\\s-]?finals?|qf)$`, "i"), (m) => (m[1] ? `${m[1]} Quarter-Final` : "Quarter-Final")],
