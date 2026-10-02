@@ -4,7 +4,7 @@
 import { blockId, type HomeBlock } from "./blockTypes";
 import { LEAGUE_LABEL, type League } from "./leagues";
 
-export type EditionKey = "IN" | "PK" | "BD" | "LK" | "US" | "CA" | "GB" | "IE" | "AU" | "NZ" | "ZA" | "DE" | "ES" | "IT" | "world";
+export type EditionKey = "IN" | "PK" | "BD" | "LK" | "US" | "CA" | "GB" | "IE" | "AU" | "NZ" | "ZA" | "DE" | "ES" | "IT" | "FR" | "SA" | "world";
 
 export interface Edition {
   key: EditionKey;
@@ -37,6 +37,8 @@ const EDITIONS: Record<Exclude<EditionKey, "world">, Omit<Edition, "key">> = {
   DE: { name: "Germany", nationalSide: null, domesticLeague: "bundesliga" },
   ES: { name: "Spain", nationalSide: null, domesticLeague: "laliga" },
   IT: { name: "Italy", nationalSide: null, domesticLeague: "seriea" },
+  FR: { name: "France", nationalSide: null, domesticLeague: "ligue1" },
+  SA: { name: "Saudi Arabia", nationalSide: null, domesticLeague: "saudi" },
 };
 
 export function editionFor(country: string | null | undefined): Edition {
@@ -56,7 +58,7 @@ export const standingsBlock = (league: League): HomeBlock => make("standings", {
 export const cricketSideBlock = (side: { id: string; name: string }): HomeBlock => make("team-next", { league: "cricket", team: side.id }, `${side.name}: next three`);
 export const seriesStandingsBlock = (series: { id: string; name: string }): HomeBlock => make("series-standings", { series: series.id }, `${series.name} standings`);
 
-type Group = "cricket-first" | "us" | "uk" | "cricket-south" | "european" | "world";
+type Group = "cricket-first" | "us" | "uk" | "cricket-south" | "european" | "saudi" | "world";
 
 function group(edition: Edition): Group {
   switch (edition.key) {
@@ -78,7 +80,10 @@ function group(edition: Edition): Group {
     case "DE":
     case "ES":
     case "IT":
+    case "FR":
       return "european";
+    case "SA":
+      return "saudi";
     default:
       return "world";
   }
@@ -94,13 +99,15 @@ export function startingBlocks(edition: Edition, ctx: EditionContext): HomeBlock
     case "cricket-first":
       return [liveBlock(), ...sideBlock, ...seriesBlock, standingsBlock("epl"), f1Block(), btsBlock()];
     case "us":
-      return [liveBlock(), standingsBlock("nfl"), standingsBlock("nba"), standingsBlock("epl"), standingsBlock("ucl"), btsBlock()];
+      return [liveBlock(), standingsBlock("nfl"), standingsBlock("nba"), standingsBlock("mls"), standingsBlock("epl"), standingsBlock("ucl"), btsBlock()];
     case "uk":
       return [liveBlock(), standingsBlock("epl"), standingsBlock("ucl"), ...sideBlock, f1Block(), btsBlock()];
     case "cricket-south":
       return [liveBlock(), ...sideBlock, ...seriesBlock, f1Block(), btsBlock()];
     case "european":
       return [liveBlock(), standingsBlock(edition.domesticLeague as League), standingsBlock("ucl"), f1Block(), btsBlock()];
+    case "saudi":
+      return [liveBlock(), standingsBlock("saudi"), standingsBlock("epl"), standingsBlock("ucl"), f1Block(), btsBlock()];
     case "world":
       return [liveBlock(), standingsBlock("epl"), standingsBlock("ucl"), f1Block(), btsBlock()];
   }

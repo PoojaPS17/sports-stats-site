@@ -241,11 +241,11 @@ export function integritySection(pool: Pool) {
     const orphanSeasonStats = await finding(
       `select s.league, s.player_espn_id as espn_id from player_season_stats s left join players p on p.league = s.league and p.espn_id = s.player_espn_id
        where p.espn_id is null`, g);
-    // For the four football leagues: wins + losses + draws may not exceed a 38-match season, and a row
-    // with points set must have points equal to 3 * wins + draws.
+    // For the domestic football leagues: wins + losses + draws may not exceed a 38-match season (MLS plays
+    // 34), and a row with points set must have points equal to 3 * wins + draws.
     const standingsSumMismatch = await finding(
       `select league, team_espn_id as espn_id from standings
-       where league in ('epl','laliga','bundesliga','seriea') and wins is not null and losses is not null
+       where league in ('epl','laliga','bundesliga','seriea','ligue1','mls','saudi') and wins is not null and losses is not null
          and ((wins + losses + coalesce(draws, 0)) > 38 or (points is not null and points <> 3 * wins + coalesce(draws, 0)))`, g);
     // Only a league that has actually played in the window counts as in season: a pre-season fixture
     // list satisfies "a game dated in the last 30 days" on its own, and would report every team in a

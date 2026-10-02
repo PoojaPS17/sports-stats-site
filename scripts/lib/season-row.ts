@@ -5,7 +5,7 @@ import { HISTORY_START, type League } from "./espn";
 
 /** One row of a category in ESPN's athlete /stats payload. */
 export interface SeasonStatRow {
-  season?: { year?: number };
+  season?: { year?: number; displayName?: string };
   teamSlug?: string;
   displayName?: string;
   leagueSlug?: string;
@@ -33,6 +33,17 @@ export function seasonWindowStart(league: League, currentYear: number): number {
   return Math.min(currentYear - SEASON_YEARS_BACK, HISTORY_START[league] ?? Infinity);
 }
 
+/** The seasons the games backfill asks a club's schedule for: from one season before `currentYear - 10` (the
+ * `- 1` over-covers the NBA's ending-year labels; an out-of-range season just returns no events), or from the
+ * league's HISTORY_START when that is later (MLS and the Saudi Pro League from 2023: 30 clubs' schedules for
+ * eight empty seasons would be wasted requests), up to the current year. */
+export function gamesSeasonsToTry(league: League, currentYear = new Date().getUTCFullYear()): number[] {
+  const from = Math.max(currentYear - SEASON_YEARS_BACK, HISTORY_START[league] ?? -Infinity);
+  const years: number[] = [];
+  for (let y = from; y <= currentYear; y++) years.push(y);
+  return years;
+}
+
 /** ESPN's whole-season row for a player who changed teams: `teamSlug` like "2024-25 Totals" and
  * `displayName` "2024-25  Totals". */
 export const isTotalsRow = (s: Pick<SeasonStatRow, "teamSlug" | "displayName">) => /\btotals?\b/i.test(`${s.teamSlug ?? ""} ${s.displayName ?? ""}`);
@@ -50,8 +61,19 @@ export const isTotalsRow = (s: Pick<SeasonStatRow, "teamSlug" | "displayName">) 
  * that league (a soccer row has no Totals row to prefer).
  */
 export function seasonRow(category: SeasonCategory, seasonYear: number, leagueSlug?: string): { labels: string[]; values: string[] } | null {
-  const rows = (category.statistics ?? []).filter((s) => s.season?.year === seasonYear && (!leagueSlug || s.leagueSlug === leagueSlug));
+  const rows = (category.statistics ?? []).filter((s) => s.season?.year === seasonYear && (!leagueSlug || s.leagueSlug === leagueSlug) && !(leagueSlug && isSoccerPlayoffRow(s)));
   const row = (leagueSlug ? undefined : rows.find(isTotalsRow)) ?? rows[0];
+  if (!row) return null;
+  return { labels: category.labels ?? [], values: row.stats ?? [] };
+}
+
+/** ESPN splits an MLS season into a regular-season row and a playoffs row, the latter named by its first
+ * round ("Eastern Conference Playoffs - Wild Card"); a European league has one row per season. */
+const isSoccerPlayoffRow = (s: Pick<SeasonStatRow, "season">) => /playoff|mls cup/i.test((s.season as { displayName?: string } | undefined)?.displayName ?? "");
+
+/** A soccer league's playoffs row for the season (MLS), or null when the feed has none. */
+export function soccerPostseasonRow(category: SeasonCategory, seasonYear: number, leagueSlug: string): { labels: string[]; values: string[] } | null {
+  const row = (category.statistics ?? []).find((s) => s.season?.year === seasonYear && s.leagueSlug === leagueSlug && isSoccerPlayoffRow(s));
   if (!row) return null;
   return { labels: category.labels ?? [], values: row.stats ?? [] };
 }

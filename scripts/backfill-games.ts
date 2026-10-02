@@ -10,6 +10,7 @@
 import { pool } from "./lib/db";
 import { HISTORY_START, fetchScoreboardBySeason, fetchTeamSchedule, type League } from "./lib/espn";
 import { seasonTypesFor } from "./lib/stage-backfill";
+import { gamesSeasonsToTry } from "./lib/season-row";
 import { upsertEvent } from "./lib/games";
 
 const YEARS_BACK = 10;
@@ -23,18 +24,13 @@ function sleep(ms: number) {
 // Over-cover by one extra year label on each side rather than get the NBA
 // ending-year vs NFL/soccer starting-year convention exactly right — an
 // out-of-range season just returns 0 events (harmless).
-// The `- 1` below is also what makes the games history start one season before `currentYear - YEARS_BACK`;
-// HISTORY_START (scripts/lib/espn.ts) and the season-stats window (seasonWindowStart in
-// scripts/lib/season-row.ts) depend on that history reaching 2015.
-function seasonsToTry(): number[] {
-  const currentYear = new Date().getUTCFullYear();
-  const years: number[] = [];
-  for (let y = currentYear - YEARS_BACK - 1; y <= currentYear; y++) years.push(y);
-  return years;
-}
+// The window itself is gamesSeasonsToTry in scripts/lib/season-row.ts (pure, so it is tested): the games history
+// starts one season before `currentYear - YEARS_BACK`, which HISTORY_START (scripts/lib/espn.ts) and the
+// season-stats window depend on reaching 2015, and a league pinned to a LATER start (MLS and the Saudi Pro
+// League from 2023) is not scanned before it.
 
 async function backfillViaTeamSchedules(league: League) {
-  const seasons = seasonsToTry();
+  const seasons = gamesSeasonsToTry(league);
   const seen = new Set<string>();
   const scanned = new Set<string>();
   let gameCount = 0;
@@ -145,7 +141,7 @@ async function backfillCricketViaSeasonScoreboard(league: League, onlySeasons: n
 
 async function main() {
   const target = process.argv[2] as League | undefined;
-  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
+  const leagues: League[] = target ? [target] : ["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "europa", "mls", "saudi", "ipl", "bbl", "cwc", "t20wc", "wpl", "wbbl", "wcwc", "wt20wc"];
   // Optional comma-separated seasons (cricket only): `backfill-games cwc 1987,1992`.
   const onlySeasons = process.argv[3] ? process.argv[3].split(",").map(Number).filter(Number.isInteger) : null;
 

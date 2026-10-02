@@ -4,7 +4,7 @@ import { createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { startTestDb, type TestDb } from "./helpers/testDb";
 import { outcome } from "./helpers/nextErrors";
-import { ALL_LEAGUES } from "../src/lib/leagues";
+import { ALL_LEAGUES, isCricketLeague } from "../src/lib/leagues";
 import { absoluteUrl } from "../src/lib/site";
 
 let db: TestDb;
@@ -97,7 +97,7 @@ test("a non-cricket history keeps its Pct column", async () => {
 /* ---- /[league]/compare ---- */
 
 test("every cricket league's team compare redirects to its players' compare; other leagues are unchanged", async () => {
-  const cricket = ALL_LEAGUES.filter((l) => !["nba", "nfl", "epl", "laliga", "bundesliga", "seriea", "ucl"].includes(l));
+  const cricket = ALL_LEAGUES.filter((l) => isCricketLeague(l));
   assert.ok(cricket.includes("ipl") && cricket.includes("wbbl") && cricket.includes("test"), `cricket leagues: ${cricket.join(",")}`);
   for (const league of cricket) {
     let digest = "";

@@ -52,7 +52,7 @@ const TAG_PALETTE: [RegExp, ArtPalette][] = [
   [/^(nfl|super-bowl)/, "nfl"],
   [/^(nba|basketball)/, "nba"],
   [/^(tennis|atp|wta|grand-slam)/, "tennis"],
-  [/^(football|soccer|premier-league|la-liga|laliga|bundesliga|serie-a|seriea|champions-league|ucl|epl|man-city|arsenal|liverpool|barcelona|real-madrid)/, "football"],
+  [/^(football|soccer|premier-league|la-liga|laliga|bundesliga|serie-a|seriea|ligue-1|ligue1|champions-league|europa-league|europa|ucl|epl|mls|major-league-soccer|saudi|inter-miami|al-nassr|messi|ronaldo|psg|man-city|arsenal|liverpool|barcelona|real-madrid)/, "football"],
 ];
 
 /** The display name of a palette, for the eyebrow above a headline and the card's sport line. */
