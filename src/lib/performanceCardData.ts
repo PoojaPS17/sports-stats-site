@@ -1,5 +1,5 @@
 import { createElement, type ReactElement } from "react";
-import { isLeague, getGameByEspnId, getPlayerBySlug, getPlayerLog, getPlayerReportedGames, getPlayerEspnSeasons, type GameRow, type PlayerRow } from "./queries";
+import { isLeague, getGameByEspnId, getPlayerBySlug, getPlayerLog, getPlayerReportedGames, getPlayerEspnSeasons, type GameRow, type League, type PlayerRow } from "./queries";
 import { buildStagedProfile, playerSport, type PlayerLogRow, type PlayerProfile, type StagedProfile } from "./playerProfile";
 import type { GameStage } from "./gameStage";
 import { performanceLine, type PerformanceStat } from "./performanceLine";
@@ -7,21 +7,38 @@ import { PerformanceCard } from "@/components/PerformanceCard";
 import { gameRoundLabel } from "./stage";
 import { formatGameDate } from "./gameDay";
 
-// Phase 1/2 is NBA and NFL only — every other league returns null, same guarantee as the card route's 404.
-const SUPPORTED_LEAGUES = new Set(["nba", "nfl"]);
+/**
+ * The leagues performance cards exist for — every other league returns null, the same guarantee as
+ * the card route's 404. Phase 1/2 was NBA and NFL only. This one array is the source of both the
+ * type and the runtime check, so the two can never disagree.
+ */
+export const PERFORMANCE_CARD_LEAGUES = ["nba", "nfl"] as const;
+export type PerformanceCardLeague = (typeof PERFORMANCE_CARD_LEAGUES)[number];
+const SUPPORTED_LEAGUES = new Set<string>(PERFORMANCE_CARD_LEAGUES);
+
+/**
+ * Whether a league has per-game player cards, so a box-score row, a best-games row, a milestone and
+ * a match-leaders row all decide alike whether to show the share button. One predicate rather than
+ * the four copies of `league === "nba" || league === "nfl"` these surfaces used to carry, each of
+ * which could be widened without the others and offer a button whose route 404s. A type predicate,
+ * so a caller that has checked it may pass the league straight to `performancePagePath`.
+ */
+export function supportsPerformanceCards(league: League): league is PerformanceCardLeague {
+  return SUPPORTED_LEAGUES.has(league);
+}
 
 // Reuses queries.ts's own PlayerRow (what getPlayerBySlug actually returns) rather than declaring a
 // second, narrower type of the same name — that would either silently shadow the real one or, if
 // TypeScript caught the mismatch (its `position`/`jersey` are optional there, not required), fail to
 // compile on the very first assignment. No new player type here.
 export interface PerformanceCardData {
-  league: "nba" | "nfl";
+  league: PerformanceCardLeague;
   game: GameRow;
   player: PlayerRow;
   row: PlayerLogRow;
   profile: PlayerProfile;
   stageProfile: PlayerProfile | null;
-  sport: "nba" | "nfl";
+  sport: PerformanceCardLeague;
   stats: PerformanceStat[];
   teamColor: string | null;
   isHomeTeam: boolean;
@@ -70,7 +87,7 @@ export function stageProfileFor(staged: StagedProfile, stage: GameStage): Player
 
 // The single place that builds the new performance page's URL — box-score rows and match leaders
 // both link here, so the path shape only needs to be right in one place.
-export function performancePagePath(league: "nba" | "nfl", gameId: string, slug: string): string {
+export function performancePagePath(league: PerformanceCardLeague, gameId: string, slug: string): string {
   return `/${league}/games/${gameId}/players/${slug}`;
 }
 

@@ -1,6 +1,6 @@
 // Copy for the NFL player pages, which show ESPN's games played but total stats from the box scores, and for the
 // NBA player pages, where ESPN's box scores have no stat line for some games.
-import { formatSeasonLabel, HISTORY_START, isSoccerLeague, LEAGUE_LABEL, type League } from "./leagues";
+import { formatSeasonLabel, HISTORY_START, isSoccerLeague, isUsSport, LEAGUE_LABEL, type League } from "./leagues";
 import type { GamesSource } from "./playerProfile";
 
 const NFL_REGULAR_SEASON_ESPN_NOTE =
@@ -131,7 +131,7 @@ export interface CareerWording {
  * Left out, the note always shows. Only the leagues whose player pages total from box scores that begin at HISTORY_START (NBA,
  * NFL, soccer) say "since"; cricket totals are whole careers (Cricsheet, ESPN) and keep the plain wording. */
 export function careerWording(league: League, split: boolean, firstSeason?: number | null): CareerWording {
-  const boxScoreLeague = league === "nba" || league === "nfl" || isSoccerLeague(league);
+  const boxScoreLeague = isUsSport(league) || isSoccerLeague(league);
   const since = boxScoreLeague ? formatSeasonLabel(league, HISTORY_START[league] ?? null) : null;
   const label = LEAGUE_LABEL[league];
   if (!since) {

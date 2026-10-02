@@ -8,6 +8,14 @@ import { getSeasonsWithGames } from "./matchweeks";
 import { isCalledOff } from "./gameStatus";
 import { placeCounts } from "./standingsZones";
 
+/**
+ * MLB is deliberately not here, although it is a US sport like the other two. The outcome columns
+ * below are written per format, and baseball's is neither the NFL's nor the NBA's: three division
+ * winners plus three wild cards per league, seeded one to six, with byes for the top two — and no
+ * play-in at all, which is what the trailing NBA branch of `columnsFor` would otherwise give it.
+ * Until that format is modelled, `/mlb/projections` returns nothing rather than a table that is
+ * confidently wrong; tests/mlb-projections.test.ts holds this.
+ */
 export function supportsProjections(league: League): boolean {
   return isSoccerLeague(league) || league === "nfl" || league === "nba";
 }

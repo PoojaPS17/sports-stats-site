@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
 import { getSeasonProjection, supportsProjections } from "@/lib/simulator";
 import { isSoccer } from "@/lib/analytics";
+import { isUsSport } from "@/lib/leagues";
 import { pageMeta } from "@/lib/metadata";
 import { AdSlot } from "@/components/AdSlot";
 import { PageHeader } from "@/components/PageHeader";
@@ -54,7 +55,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
   const label = LEAGUE_LABEL[league];
   const soccer = isSoccer(league);
   const unit = soccer ? "Pts" : "W";
-  const grouped = league === "nfl" || league === "nba";
+  const grouped = isUsSport(league);
   const groups = grouped ? [...new Set(proj.teams.map((t) => t.conference ?? "League"))] : ["all"];
 
   return (

@@ -1,5 +1,5 @@
 import { gameDayIso, gameStartDateIso } from "./gameDay";
-import { isCricketLeague, isSoccerLeague } from "./leagues";
+import { isCricketLeague, isSoccerLeague, isUsSport } from "./leagues";
 import type { CricketTeamScorecard } from "./matchDetail";
 import { isTimeTbd, schemaEventStatus, schemaStatusForLabel } from "./gameStatus";
 import { f1EventDescription, f1EventStatus } from "./f1Status";
@@ -233,7 +233,7 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null,
     ...(logo ? { logo } : {}),
   });
   // American sports say "Away at Home"; football and cricket list the home side first.
-  const matchup = league === "nfl" || league === "nba" ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`;
+  const matchup = isUsSport(league) ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`;
   // A fixture with no kickoff time yet carries its day only; a placeholder clock time would be a false claim.
   const startDate = isTimeTbd(game) ? gameDayIso(game.date, league) : gameStartDateIso(game.date, league);
   const endDate = eventEndDate(game, startDate);
@@ -269,6 +269,7 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null,
 function sportName(league: League): string {
   if (league === "nfl") return "American football";
   if (league === "nba") return "Basketball";
+  if (league === "mlb") return "Baseball";
   if (isSoccerLeague(league)) return "Soccer";
   return "Cricket";
 }

@@ -10,7 +10,7 @@ import { formatGameDate, gameDayIso } from "./gameDay";
 import { isRegularSeasonGame } from "./gameStage";
 import { GAME_SELECT, type GameRow } from "./queries";
 import { computeTable, isSoccer, type ComputedTableRow, type ResultRow, type TeamRef } from "./analytics";
-import { isCupCompetition, isQualifyingRound, isSoccerLeague, type League } from "./leagues";
+import { isCupCompetition, isQualifyingRound, isSoccerLeague, isUsSport, type League } from "./leagues";
 import { gameCalledOffLabel, isGameCalledOff } from "./gameStatus";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 
@@ -32,7 +32,7 @@ export interface Matchweek {
 }
 
 export function supportsMatchweeks(league: League): boolean {
-  return isSoccerLeague(league) || league === "nfl" || league === "nba";
+  return isSoccerLeague(league) || isUsSport(league);
 }
 
 export function weekNoun(league: League): string {

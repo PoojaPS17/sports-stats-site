@@ -3,7 +3,7 @@
 // history, and record books. Everything here is pure aggregation of data the
 // scrapers already store — nothing is fetched from ESPN.
 import { pool } from "./db";
-import { hasTies, isCricketLeague, SOCCER_LEAGUES, type League } from "./leagues";
+import { hasTies, isCricketLeague, isUsSport, SOCCER_LEAGUES, type League } from "./leagues";
 import type { GameStage } from "./gameStage";
 import { CALLED_OFF, isCalledOff } from "./gameStatus";
 import type { GameRow } from "./queries";
@@ -47,7 +47,7 @@ export function supportsScoreAnalytics(league: League): boolean {
 }
 
 export function supportsInjuryTracker(league: League): boolean {
-  return league === "nfl" || league === "nba";
+  return isUsSport(league);
 }
 
 // Regular-season only: stage = 'regular' (see db/schema.sql). Playoff rounds, the NBA

@@ -4,12 +4,12 @@ import type { League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
 import { fmtDate } from "./PlayerStatsShared";
 import { ImageActions } from "./ImageActions";
-import { performancePagePath } from "@/lib/performanceCardData";
+import { performancePagePath, supportsPerformanceCards } from "@/lib/performanceCardData";
 
 // Career landmarks pinned to the game they happened in. "On record" because the log
 // starts where our data does (about a decade back), not at the player's debut.
 export function PlayerMilestones({ league, slug, profile }: { league: League; slug: string; profile: PlayerProfile }) {
-  const showCardShare = league === "nba" || league === "nfl";
+  const showCardShare = supportsPerformanceCards(league);
   return (
     <ul className="card divide-y divide-[var(--border)] text-sm">
       {profile.milestones.map((m, i) => (

@@ -1,4 +1,4 @@
-import { hasNewsFeed, hasStandings, isCricketLeague, LEAGUE_LABEL } from "@/lib/leagues";
+import { hasNewsFeed, hasStandings, isCricketLeague, isUsSport, LEAGUE_LABEL } from "@/lib/leagues";
 import type { League } from "@/lib/leagues";
 import { SubNav } from "./SubNav";
 import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
@@ -6,7 +6,7 @@ import { supportsProjections } from "@/lib/simulator";
 
 export function LeagueSubNav({ league }: { league: League }) {
   const cricket = isCricketLeague(league);
-  const injuries = league === "nfl" || league === "nba";
+  const injuries = isUsSport(league);
   const tabs = [
     { label: "Scores", href: `/${league}`, exact: true },
     ...(supportsMatchweeks(league) ? [{ label: `${weekNoun(league)}s`, href: weekIndexPath(league), match: `/${league}/matchweek` }] : []),

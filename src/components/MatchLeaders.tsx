@@ -2,15 +2,16 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import type { MatchLeader } from "@/lib/matchDetail";
 import type { GameRow, League } from "@/lib/queries";
-import { performancePagePath } from "@/lib/performanceCardData";
+import { performancePagePath, supportsPerformanceCards } from "@/lib/performanceCardData";
+
 import { ImageActions } from "./ImageActions";
 
-// gameId is only used to build the per-player performance-card image URL below (nba/nfl only);
+// gameId is only used to build the per-player performance-card image URL below (the US sports only);
 // every other league passes leaders without it and never renders that button.
 export function MatchLeaders({ league, game, gameId, leaders, playerSlugs }: { league: League; game: GameRow; gameId?: string; leaders: MatchLeader[]; playerSlugs: Map<string, string> }) {
   if (leaders.length === 0) return null;
   const abbr = (id: string) => (id === game.home_team_espn_id ? game.home_abbr ?? teamDisplayName(game.home_name) : game.away_abbr ?? teamDisplayName(game.away_name));
-  const showCardShare = gameId && (league === "nba" || league === "nfl");
+  const showCardShare = gameId && supportsPerformanceCards(league);
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {leaders.map((l, i) => {
