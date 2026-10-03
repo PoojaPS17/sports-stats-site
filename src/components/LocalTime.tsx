@@ -29,6 +29,7 @@ export function LocalTime({
   serverTimeZone,
   league,
   showZone = false,
+  day,
 }: {
   iso: string;
   format?: LocalTimeFormat;
@@ -36,6 +37,8 @@ export function LocalTime({
   serverTimeZone?: string;
   league?: League;
   showZone?: boolean;
+  /** The day the league files the game under (YYYY-MM-DD): the date then never moves to the visitor's zone, see formatLocalTime. */
+  day?: string;
 }) {
   const [label, setLabel] = useState<string | null>(null);
   const clock24 = league !== undefined && isSoccerLeague(league);
@@ -43,12 +46,13 @@ export function LocalTime({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLabel(formatLocalTime(iso, fmt, { clock24, showZone }));
-  }, [iso, fmt, clock24, showZone]);
+    setLabel(formatLocalTime(iso, fmt, { clock24, showZone, day }));
+  }, [iso, fmt, clock24, showZone, day]);
 
   return (
-    <time dateTime={iso} className={`tabular-nums ${className}`} suppressHydrationWarning>
-      {label ?? formatLocalTime(iso, fmt, { clock24, showZone, timeZone: firstPaintZone })}
+    // toISOString, because a row's timestamp column arrives as a Date object (pg), whose own string is not a valid datetime attribute.
+    <time dateTime={new Date(iso).toISOString()} className={`tabular-nums ${className}`} suppressHydrationWarning>
+      {label ?? formatLocalTime(iso, fmt, { clock24, showZone, day, timeZone: firstPaintZone })}
     </time>
   );
 }
