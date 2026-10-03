@@ -1,0 +1,16 @@
+[Unit]
+Description=SportsDB deploy of origin/main when it has moved
+After=network-online.target pgbouncer.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/sportsdb/repo
+# No EnvironmentFile and no NODE_ENV: autodeploy.sh reads DATABASE_URL itself for the migrate step and
+# sources .env.production only for the build. NODE_ENV=production here would make npm ci drop tsx.
+# -n -E 0: a poll that lands while a deploy is still running is skipped (exit 0), not queued behind it,
+# so only autodeploy.sh's own non-zero exit marks the unit failed.
+ExecStart=/usr/bin/flock -n -E 0 /run/lock/sportsdb-deploy.lock /bin/bash /opt/sportsdb/repo/deploy/vm/autodeploy.sh
+TimeoutStartSec=30min
+Nice=5

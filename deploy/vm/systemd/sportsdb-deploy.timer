@@ -1,0 +1,9 @@
+[Unit]
+Description=SportsDB: poll origin/main every ten minutes and deploy when it moved
+
+[Timer]
+OnCalendar=*:0/10
+Unit=sportsdb-deploy.service
+
+[Install]
+WantedBy=timers.target
