@@ -7,6 +7,7 @@ export function StatusPill({
   statusState,
   statusDetail,
   date,
+  localDate,
   completed,
   round: rawRound,
   stage,
@@ -19,6 +20,8 @@ export function StatusPill({
   statusState: string | null;
   statusDetail: string | null;
   date: string;
+  /** games.local_date: a cricket match's own calendar day, which is the day its pill shows. */
+  localDate?: string | null;
   completed: boolean;
   round?: string | null;
   /** games.stage and games.competition_type: a play-in game and the NBA Cup final get their own label where a round would show. */
@@ -66,7 +69,7 @@ export function StatusPill({
   return (
     <span className="pill pill-upcoming">
       {round ? `${round} · ` : ""}
-      <Kickoff league={league} game={{ date, completed, status_state: statusState, status_detail: statusDetail }} format={kickoff} />
+      <Kickoff league={league} game={{ date, completed, status_state: statusState, status_detail: statusDetail, local_date: localDate }} format={kickoff} />
     </span>
   );
 }

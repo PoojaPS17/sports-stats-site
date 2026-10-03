@@ -115,6 +115,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           statusState={game.status_state}
           statusDetail={game.status_detail}
           date={game.date}
+          localDate={game.local_date}
           completed={game.completed}
           round={game.round}
           stage={game.stage}

@@ -387,3 +387,48 @@ test("gameAccessibleLabel: 'final' follows a stage label unless the label alread
   assert.equal(gameAccessibleLabel("nba", g({ stage: "playin", status_detail: "Final/OT" })), "Chelsea 1, Arsenal 2, Play-In · Final/OT");
   assert.equal(gameAccessibleLabel("nba", g()), "Chelsea 1, Arsenal 2, final");
 });
+
+// ---------------------------------------------------------------- Kickoff day vs visitor day
+
+test("formatLocalTime: with the league's day, the date never moves and the clock names its own weekday only when it differs", () => {
+  // Heat at Raptors, 7:00 PM ET on Saturday 3 October: 4:30 AM on Sunday in India.
+  const iso = "2026-10-03T23:00:00.000Z";
+  const day = "2026-10-03";
+  assert.equal(formatLocalTime(iso, "time", { day, timeZone: "Asia/Kolkata" }), "Sun 4:30 AM");
+  assert.equal(formatLocalTime(iso, "date", { day, timeZone: "Asia/Kolkata" }), "Sat, Oct 3");
+  assert.equal(formatLocalTime(iso, "datetime", { day, timeZone: "Asia/Kolkata" }), "Sat, Oct 3 · Sun 4:30 AM");
+  // A visitor on the league's own day sees what they always did.
+  assert.equal(formatLocalTime(iso, "time", { day, timeZone: "America/New_York" }), "7:00 PM");
+  assert.equal(formatLocalTime(iso, "datetime", { day, timeZone: "America/New_York" }), "Sat, Oct 3 · 7:00 PM");
+  // Football's 24-hour clock gets the same weekday, before the time, zone still named after it.
+  assert.equal(formatLocalTime("2026-10-21T19:00:00.000Z", "time", { day: "2026-10-21", clock24: true, timeZone: "Asia/Kolkata" }), "Thu 00:30 GMT+5:30");
+});
+
+test("formatLocalTime: a named zone is printed, a bare GMT offset is not", () => {
+  const iso = "2026-10-03T23:00:00.000Z";
+  assert.equal(formatLocalTime(iso, "time", { day: "2026-10-03", showZone: true, timeZone: "America/New_York" }), "7:00 PM EDT");
+  assert.equal(formatLocalTime(iso, "time", { day: "2026-10-03", showZone: true, timeZone: "UTC" }), "11:00 PM UTC");
+  // ICU's en-US has no abbreviation for India or Britain and prints "GMT+5:30" / "GMT+1": the weekday and AM already say enough.
+  assert.equal(formatLocalTime(iso, "time", { day: "2026-10-03", showZone: true, timeZone: "Asia/Kolkata" }), "Sun 4:30 AM");
+  assert.equal(formatLocalTime(iso, "time", { day: "2026-10-03", showZone: true, timeZone: "Europe/London" }), "Sun 12:00 AM");
+});
+
+test("LocalTime: the time element's dateTime is ISO 8601 even when the row gives a Date object", () => {
+  const html = renderToStaticMarkup(createElement(LocalTime, { iso: new Date("2026-10-03T23:00:00.000Z") as unknown as string, format: "time", league: "nba" }));
+  assert.match(html, /dateTime="2026-10-03T23:00:00\.000Z"/);
+});
+
+test("StatusPill: an upcoming US game's first paint carries the Eastern day and names the zone", () => {
+  const html = renderToStaticMarkup(
+    createElement(StatusPill, { statusState: "pre", statusDetail: "7:00 PM EDT", date: "2026-10-03T23:00:00.000Z", completed: false, league: "nba", kickoff: "datetime" }),
+  );
+  assert.match(html, />Sat, Oct 3 · 7:00 PM EDT</);
+});
+
+test("StatusPill: a cricket match's pill is its own local day, not the UTC one", () => {
+  // 10:30 in Melbourne on Sunday 4 October is 23:30 UTC on the Saturday.
+  const html = renderToStaticMarkup(
+    createElement(StatusPill, { statusState: "pre", statusDetail: null, date: "2026-10-03T23:30:00.000Z", localDate: "2026-10-04", completed: false, league: "bbl" }),
+  );
+  assert.match(html, />Sun, Oct 4</);
+});
