@@ -60,10 +60,21 @@ test("deploy service is a oneshot run as ubuntu from the app checkout, serialise
   assert.ok(!env.some((v) => /NODE_ENV/.test(v)), "NODE_ENV must stay unset for npm ci");
 });
 
-test("autodeploy.sh deploys only when origin/main moved, and clears NODE_ENV", () => {
+test("autodeploy.sh compares origin/main with the sha it last BUILT, not with the checkout's HEAD", () => {
   const src = readFileSync(join(VM_DIR, "autodeploy.sh"), "utf8");
   assert.match(src, /git fetch/);
   assert.match(src, /origin\/main/);
+  // A manual `git pull` on the VM moves HEAD without building anything (2026-10-03: the first
+  // timer run saw HEAD == origin/main and exited while the app still served the old build).
+  // The marker holds the sha that was built and started, and is written only after a healthy start.
+  assert.match(src, /built_marker=.*\.deployed\.sha/);
+  assert.match(readFileSync(resolve(process.cwd(), ".gitignore"), "utf8"), /^\.deployed\.sha$/m);
+  assert.doesNotMatch(src, /git rev-parse HEAD/, "HEAD is not evidence of what is running");
+  assert.ok(src.indexOf('> "$built_marker"') > src.indexOf("curl -fsS"), "marker written after the health check passes");
+  // bash reads a script as it runs; a fast-forward can replace this file mid-deploy, so every
+  // line must be parsed before the first command runs: the body lives in main() and is called last.
+  assert.match(src, /^main\(\) \{/m);
+  assert.match(src, /^main "\$@"\s*$/m);
   assert.match(src, /unset NODE_ENV/);
   assert.match(src, /npm run migrate/);
   assert.match(src, /npm run build/);
