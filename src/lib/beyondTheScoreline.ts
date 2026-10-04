@@ -8,6 +8,7 @@ import { article as kane100BundesligaGoalsRecord } from "@/content/beyondTheScor
 import { article as bayern67MatchdayReignEnds } from "@/content/beyondTheScoreline/bayern-67-matchday-reign-ends";
 import { article as zhangZhanshuoSevenGoldsAsianGames } from "@/content/beyondTheScoreline/zhang-zhanshuo-seven-golds-asian-games";
 import { article as whiteSox121LossesToWildCardSweep } from "@/content/beyondTheScoreline/white-sox-121-losses-to-wild-card-sweep";
+import { article as skubalDodgersNldsGameOneWin } from "@/content/beyondTheScoreline/skubal-dodgers-nlds-game-one-win";
 
 export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "mlb" | "tennis" | "neutral";
 
@@ -73,6 +74,7 @@ export const ARTICLES: BeyondTheScorelineArticle[] = [
   bayern67MatchdayReignEnds,
   zhangZhanshuoSevenGoldsAsianGames,
   whiteSox121LossesToWildCardSweep,
+  skubalDodgersNldsGameOneWin,
 ];
 
 assertUniqueSlugs(ARTICLES);
