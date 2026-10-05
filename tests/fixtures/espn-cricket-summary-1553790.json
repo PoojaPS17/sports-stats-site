@@ -1,0 +1,628 @@
+{
+ "header": {
+  "competitions": [
+   {
+    "id": "1553790",
+    "description": "14th Match",
+    "date": "2026-09-30T05:00Z",
+    "status": {
+     "displayClock": "0'",
+     "presentLocalTime": "",
+     "period": 0,
+     "summary": "Match drawn",
+     "type": {
+      "id": "4",
+      "description": "Result",
+      "detail": "Final",
+      "shortDetail": "Final",
+      "state": "post"
+     },
+     "displayPeriod": "0th"
+    },
+    "competitors": [
+     {
+      "id": "2831",
+      "homeAway": "home",
+      "winner": "false",
+      "score": "344",
+      "team": {
+       "id": "2831",
+       "displayName": "Khan Research Laboratories",
+       "abbreviation": "KRL"
+      }
+     },
+     {
+      "id": "1549016",
+      "homeAway": "away",
+      "winner": "false",
+      "score": "643/8d & 167/3 (24.5 ov)",
+      "team": {
+       "id": "1549016",
+       "displayName": "Hyderabad Kingsmen Academy",
+       "abbreviation": "HHKA"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "gameInfo": {
+  "venue": {
+   "id": "427809",
+   "fullName": "National Ground, Islamabad",
+   "shortName": "National Ground, Islamabad",
+   "address": {
+    "city": "Islamabad",
+    "zipCode": "",
+    "country": "Pakistan",
+    "summary": ""
+   },
+   "capacity": 0,
+   "grass": false,
+   "images": [],
+   "links": [
+    {
+     "language": "en",
+     "rel": [
+      "ground",
+      "desktop"
+     ],
+     "href": "https://www.cricinfo.com/ci/content/ground/427809.html",
+     "text": "Ground",
+     "shortText": "Ground",
+     "isExternal": false,
+     "isPremium": false
+    }
+   ]
+  },
+  "officials": [
+   {
+    "displayName": "Imranullah Aslam",
+    "position": {
+     "displayName": "umpire",
+     "name": "umpire"
+    }
+   },
+   {
+    "displayName": "Imtiaz Iqbal",
+    "position": {
+     "displayName": "umpire",
+     "name": "umpire"
+    }
+   },
+   {
+    "displayName": "Aleem Moosa",
+    "position": {
+     "displayName": "referee",
+     "name": "referee"
+    }
+   }
+  ]
+ },
+ "rosters": [
+  {
+   "team": {
+    "id": "2831",
+    "displayName": "Khan Research Laboratories",
+    "abbreviation": "KRL"
+   },
+   "roster": [
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1339134",
+      "displayName": "Shahzaib Khan",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/OBT",
+       "id": "OBT",
+       "name": "Opening batter",
+       "abbreviation": "OBT",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/OBT"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "WK",
+      "name": "Wicketkeeper",
+      "abbreviation": "WK"
+     },
+     "athlete": {
+      "id": "1060012",
+      "displayName": "Asim Ali",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1233544",
+      "displayName": "Mohammad Faiq",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/TBT",
+       "id": "TBT",
+       "name": "Top-order batter",
+       "abbreviation": "TBT",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/TBT"
+       }
+      }
+     }
+    },
+    {
+     "captain": true,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "480603",
+      "displayName": "Iftikhar Ahmed",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/MBT",
+       "id": "MBT",
+       "name": "Middle-order batter",
+       "abbreviation": "MBT",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/MBT"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "711737",
+      "displayName": "Imran Rafiq",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "424238",
+      "displayName": "Sarmad Bhatti",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "AR",
+      "name": "Allrounder",
+      "abbreviation": "AR"
+     },
+     "athlete": {
+      "id": "681117",
+      "displayName": "Faheem Ashraf",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BLA",
+       "id": "BLA",
+       "name": "Bowling allrounder",
+       "abbreviation": "BLA",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BLA"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1168716",
+      "displayName": "Mohammad Junaid",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "BL",
+      "name": "Bowler",
+      "abbreviation": "BL"
+     },
+     "athlete": {
+      "id": "1130463",
+      "displayName": "Arshad Iqbal",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BL",
+       "id": "BL",
+       "name": "Bowler",
+       "abbreviation": "BL",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BL"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "43509",
+      "displayName": "Usman Tariq",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1469015",
+      "displayName": "Mohammad Qaiser",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "team": {
+    "id": "1549016",
+    "displayName": "Hyderabad Kingsmen Academy",
+    "abbreviation": "HHKA"
+   },
+   "roster": [
+    {
+     "captain": true,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1339087",
+      "displayName": "Tayyab Arif",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BT",
+       "id": "BT",
+       "name": "Batter",
+       "abbreviation": "BT",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BT"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1212781",
+      "displayName": "Muhammad Hurraira",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BT",
+       "id": "BT",
+       "name": "Batter",
+       "abbreviation": "BT",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BT"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1206299",
+      "displayName": "Mohammad Suleman",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/MBT",
+       "id": "MBT",
+       "name": "Middle-order batter",
+       "abbreviation": "MBT",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/MBT"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "652687",
+      "displayName": "Saud Shakeel",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/MBT",
+       "id": "MBT",
+       "name": "Middle-order batter",
+       "abbreviation": "MBT",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/MBT"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "AR",
+      "name": "Allrounder",
+      "abbreviation": "AR"
+     },
+     "athlete": {
+      "id": "623977",
+      "displayName": "Salman Agha",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/AR",
+       "id": "AR",
+       "name": "Allrounder",
+       "abbreviation": "AR",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/AR"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "793425",
+      "displayName": "Daniyal Hussain",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "WK",
+      "name": "Wicketkeeper",
+      "abbreviation": "WK"
+     },
+     "athlete": {
+      "id": "1515071",
+      "displayName": "Mohammad Shayan",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/WK",
+       "id": "WK",
+       "name": "Wicketkeeper",
+       "abbreviation": "WK",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/WK"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "BL",
+      "name": "Bowler",
+      "abbreviation": "BL"
+     },
+     "athlete": {
+      "id": "1159371",
+      "displayName": "Mohammad Ilyas",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BL",
+       "id": "BL",
+       "name": "Bowler",
+       "abbreviation": "BL",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BL"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "BL",
+      "name": "Bowler",
+      "abbreviation": "BL"
+     },
+     "athlete": {
+      "id": "1076392",
+      "displayName": "Mehran Mumtaz",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BL",
+       "id": "BL",
+       "name": "Bowler",
+       "abbreviation": "BL",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/BL"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1553940",
+      "displayName": "Faizan Ghani",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    },
+    {
+     "captain": false,
+     "starter": true,
+     "position": {
+      "id": "UKN",
+      "name": "Unknown",
+      "abbreviation": "UKN"
+     },
+     "athlete": {
+      "id": "1550859",
+      "displayName": "Shoaib Afridi",
+      "position": {
+       "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN",
+       "id": "UKN",
+       "name": "Unknown",
+       "abbreviation": "UKN",
+       "leaf": true,
+       "parent": {
+        "$ref": "http://new.core.espnuk.org/v2/sports/cricket/positions/UKN"
+       }
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

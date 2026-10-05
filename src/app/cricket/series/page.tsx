@@ -78,8 +78,10 @@ export default async function CricketSeriesPage() {
   const withLive = series.map((s) => (liveSeries.has(s.espn_id) ? { ...s, live_count: Math.max(s.live_count, 1) } : s));
   const { inProgress, upcoming, finished } = split(withLive.filter((s) => s.featured));
   const other = withLive.filter((s) => !s.featured);
-  // Anything in play first, then by kind and start date as the cards are grouped.
-  const otherOrdered = [...split(other).inProgress, ...split(other).upcoming, ...split(other).finished];
+  // The domestic, women's and youth series with play in progress are shown in the open: they are the series
+  // readers arrive at from search (Search Console, 2026-10-05). The rest stay behind the toggle.
+  const otherInProgress = split(other).inProgress;
+  const otherRest = [...split(other).upcoming, ...split(other).finished];
 
   return (
     <div className="flex flex-col gap-8">
@@ -136,20 +138,25 @@ export default async function CricketSeriesPage() {
 
       {other.length > 0 && (
         <section id="other-competitions">
-          <SectionHeader description="Domestic first-class and one-day cups, club T20s, youth and A-team tours: stored in full, shown on request">
+          <SectionHeader description={`Domestic first-class and one-day cups, club T20s, youth and A-team tours: ${otherInProgress.length} in progress${otherLive > 0 ? `, ${otherLive} match${otherLive === 1 ? "" : "es"} live` : ""}`}>
             Other competitions
           </SectionHeader>
-          <details className="card group px-4 py-3">
-            <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent)] marker:hidden [&::-webkit-details-marker]:hidden">
-              <span className="group-open:hidden">
-                Show {other.length} series in progress, upcoming or just finished{otherLive > 0 ? `, ${otherLive} match${otherLive === 1 ? "" : "es"} live` : ""} →
-              </span>
-              <span className="hidden group-open:inline">Hide other competitions</span>
-            </summary>
-            <div className="mt-4">
-              <ByKind series={otherOrdered} now={now} />
+          {otherInProgress.length > 0 && (
+            <div className="mb-4">
+              <ByKind series={otherInProgress} now={now} />
             </div>
-          </details>
+          )}
+          {otherRest.length > 0 && (
+            <details className="card group px-4 py-3">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent)] marker:hidden [&::-webkit-details-marker]:hidden">
+                <span className="group-open:hidden">Show {otherRest.length} more series upcoming or just finished →</span>
+                <span className="hidden group-open:inline">Hide upcoming and finished competitions</span>
+              </summary>
+              <div className="mt-4">
+                <ByKind series={otherRest} now={now} />
+              </div>
+            </details>
+          )}
         </section>
       )}
     </div>

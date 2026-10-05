@@ -7,7 +7,15 @@ import type { CricketSeriesMatch } from "@/lib/cricketSeries";
 // cricket (internationals, World Cups, the IPL and the other big franchise leagues,
 // see cricketFeatured.ts). Matches in play sit in Live now and the biggest fixtures
 // in Coming up; this block carries the rest of the week's fixtures.
-export function HomeCricket({ live, next }: { live: number; next: CricketSeriesMatch[] }) {
+export interface HomeOtherSeries {
+  espn_id: string;
+  name: string;
+  live: boolean;
+}
+
+// `otherSeries`: the domestic, women's and youth series with play in progress, outside headline cricket. They
+// are what search sends readers to (Search Console, 2026-10-05), so the homepage names and links them.
+export function HomeCricket({ live, next, otherSeries = [] }: { live: number; next: CricketSeriesMatch[]; otherSeries?: HomeOtherSeries[] }) {
   return (
     <section className="sm:col-span-2">
       <SectionHeader
@@ -23,6 +31,20 @@ export function HomeCricket({ live, next }: { live: number; next: CricketSeriesM
         </>
       ) : (
         <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">{live > 0 ? "Every fixture this week is listed above." : "No fixtures listed for the next week."}</p>
+      )}
+      {otherSeries.length > 0 && (
+        <p className="mt-3 text-sm text-[var(--text-muted)]">
+          <span className="font-semibold text-[var(--text)]">Also in progress:</span>{" "}
+          {otherSeries.map((s, i) => (
+            <span key={s.espn_id}>
+              {i > 0 && <span aria-hidden> · </span>}
+              <Link href={`/cricket/series/${s.espn_id}`} className="font-semibold text-[var(--accent)] hover:underline">
+                {s.name}
+              </Link>
+              {s.live && <span className="pill pill-live ml-1 align-middle">Live</span>}
+            </span>
+          ))}
+        </p>
       )}
       <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold">
         <Link href="/cricket/series" className="text-[var(--accent)] hover:underline">
