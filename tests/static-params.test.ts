@@ -27,7 +27,7 @@ function expireTime(): number {
 // Anything not listed here must have one.
 const DYNAMIC_ON_PURPOSE: Record<string, string> = {
   "api/block/[type]/route.ts": "reads the block type and its query params from the request and sets its own Cache-Control per type (lib/blockParams.ts) rather than a static revalidate window",
-  "[league]/games/[id]/page.tsx": "live match state; a cached render is up to 5 minutes old and its pre-state render ships no LiveRefresh timer",
+  "[league]/games/[id]/page.tsx": "live match state; a cached render is up to 5 minutes old and its pre-state render ships no LiveRefresh timer; a finished game with its report stored is rewritten by the proxy to the cached final/[id] route",
   "[league]/games/[id]/opengraph-image.tsx": "draws the live score",
   "[league]/games/[id]/players/[slug]/card/route.ts": "reads ?format from the request and sets its own cache-control per game (5 min fresh, a day once settled) rather than a static revalidate window",
   "[league]/scores/[date]/page.tsx": "today's scores are live",
@@ -46,6 +46,7 @@ const ABOVE_CAP: Record<string, string> = {
   "[league]/teams/[slug]/about/page.tsx": "home venue, city and head coach only — nothing that moves",
   "[league]/teams/[slug]/opengraph-image.tsx": "crest, club name and competition label only",
   "cricket/matches/final/[id]/page.tsx": "a finished match: the proxy sends only a stored result here (lib/cricketMatchCache.ts), and nothing in it moves",
+  "[league]/games/final/[id]/page.tsx": "a finished game with its report stored: the proxy sends only those here (lib/gameCache.ts), and nothing in it moves",
   "[league]/compare/page.tsx": "reads ?a and ?b in generateMetadata, so every render is per request",
   "[league]/compare/players/page.tsx": "reads ?a and ?b in generateMetadata, so every render is per request",
   "calendar/[league]/route.ts": "reads ?download from the request, so every render is per request",
@@ -61,6 +62,7 @@ const REVALIDATE: Record<string, number> = {
   "beyond-the-scoreline/[slug]/opengraph-image.tsx": 300,
   "[league]/h2h/[pair]/page.tsx": 300,
   "[league]/games/[id]/players/[slug]/page.tsx": 300,
+  "[league]/games/final/[id]/page.tsx": 86400,
   "[league]/games/[id]/players/[slug]/opengraph-image.tsx": 300,
   "[league]/matchweek/[n]/page.tsx": 300,
   "[league]/matchweek/[n]/[week]/page.tsx": 300,
