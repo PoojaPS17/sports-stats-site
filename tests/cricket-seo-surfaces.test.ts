@@ -10,6 +10,7 @@ import { CricketPointsTable } from "../src/components/CricketPointsTable";
 import { CricketMatchInfo } from "../src/components/CricketMatchInfo";
 import { HomeCricket } from "../src/components/HomeCricket";
 import { SeriesMatchRow } from "../src/components/CricketSeries";
+import { SeriesMatchesExportCard } from "../src/components/SeriesMatchesExportCard";
 
 // Search Console, 2026-10-05: cricket match pages sit on page one (position 8-9) for "A vs B scorecard", "players"
 // and "points table" queries and get 0.1-0.5% of the clicks. The sections below put those words, and that content,
@@ -159,4 +160,10 @@ test("series cards, rows, the export card and the series header print formats in
     assert.match(src, /seriesFormatTitles\(/, `${file} uses the labels`);
   }
   assert.doesNotMatch(read("src/components/CricketSeries.tsx"), /m\.class_card\]/, "the match row no longer prints the raw card");
+  // The export card's rows print the same label as the page's rows (missed in PR #54: the card kept "4th Match · Other OD").
+  assert.doesNotMatch(read("src/components/SeriesMatchesExportCard.tsx"), /m\.class_card\]/, "the export card rows no longer print the raw card");
+  const series = { espn_id: "1554058", name: "CSA Women Pro50 Series 2026/27", kind: "womens-domestic" as const, formats: ["Other OD"], teams: [], start_date: null, end_date: null, match_count: 1, completed_count: 0, called_off_count: 0, live_count: 0, league: null, season: 2026 };
+  const card = renderToStaticMarkup(createElement(SeriesMatchesExportCard, { series: series as never, title: "Fixtures", matches: [match] }));
+  assert.match(card, /3rd Match · One-day/);
+  assert.doesNotMatch(card, /Other OD/);
 });

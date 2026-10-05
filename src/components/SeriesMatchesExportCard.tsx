@@ -1,4 +1,4 @@
-import { seriesFormatTitles } from "@/lib/cricketSeriesSeo";
+import { cricketFormatTitle, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportLabel, ExportMore, capRows } from "./ExportShell";
@@ -46,7 +46,7 @@ export function SeriesMatchesExportCard({ series, title, matches }: { series: Cr
             <div key={m.espn_id} style={{ background: CARD.bg, border: `1px solid ${CARD.border}`, borderRadius: 10, padding: "8px 12px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4, fontSize: 11, color: CARD.textMuted }}>
                 <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{cricketMatchWhen(m)}</span>
-                <span style={{ textAlign: "right" }}>{[normalizeStage(m.description), m.class_card].filter(Boolean).join(" · ")}</span>
+                <span style={{ textAlign: "right" }}>{[normalizeStage(m.description), cricketFormatTitle(m.class_card)].filter(Boolean).join(" · ")}</span>
               </div>
               <Side side={m.home} decided={decided} />
               <Side side={m.away} decided={decided} />
