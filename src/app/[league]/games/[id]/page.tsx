@@ -53,7 +53,8 @@ export const revalidate = 10;
 // It renders on every request and answers no-store: a cached render is up to 5 minutes old
 // (expireTime in next.config.ts), and a render made in the pre state ships no LiveRefresh timer,
 // so it would not catch up on its own. The window above still sets the default for the cached
-// fetches inside this render.
+// fetches inside this render. A game that is over with its report stored does not come here at all:
+// the proxy rewrites it to ../final/[id], this same page cached for a day (see lib/gameCache.ts).
 
 function sportOf(league: League): MatchSport {
   return isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "american";
