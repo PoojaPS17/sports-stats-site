@@ -8,7 +8,8 @@ import { resolveTeamLogo } from "@/lib/teamLogos";
 import { baseSeriesId, seriesEdition, seriesTitle } from "./cricketSeriesKey";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
-const LIVE_REVALIDATE = 10;
+/** The fetch window for anything that may be in play. */
+export const LIVE_REVALIDATE = 10;
 
 const LEAGUE_BY_SERIES: Record<string, string> = {
   "8048": "ipl",
@@ -108,10 +109,23 @@ export async function overlayLiveCricket(rows: CricketSeriesMatch[], seriesEspnI
   return [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
+export interface SummaryFetchOptions {
+  /** How long Next keeps the response; the live window unless the caller knows the match is over. */
+  revalidate?: number;
+  /**
+   * A second read for a match whose longer-lived copy turned out not to be final: its own address (so
+   * the bad copy is not read back), kept for the live window. A no-store read would do the same in a
+   * dynamic render, but inside an on-demand static render it is an error, not a fallback.
+   */
+  attempt?: number;
+}
+
 /** One match's full summary (scorecard, officials, venue), fresh enough for a match in play. */
-export async function fetchCricketSummaryLive(espnId: string, seriesId = "8048"): Promise<any | null> {
+export async function fetchCricketSummaryLive(espnId: string, seriesId = "8048", opts: SummaryFetchOptions = {}): Promise<any | null> {
   try {
-    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/cricket/${baseSeriesId(seriesId)}/summary?event=${espnId}`, { next: { revalidate: LIVE_REVALIDATE } });
+    const retry = opts.attempt && opts.attempt > 1 ? `&attempt=${opts.attempt}` : "";
+    const revalidate = retry ? LIVE_REVALIDATE : opts.revalidate ?? LIVE_REVALIDATE;
+    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/cricket/${baseSeriesId(seriesId)}/summary?event=${espnId}${retry}`, { next: { revalidate } });
     if (!res.ok) return null;
     const data = await res.json();
     return data?.header?.competitions?.[0]?.competitors?.length ? data : null;

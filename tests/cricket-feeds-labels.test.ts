@@ -81,7 +81,7 @@ test("the venue line names the city once, on the series match page too", () => {
   assert.equal(venueWithCity("GB Oval, Szodliget, Budapest", "Szodliget"), "GB Oval, Szodliget, Budapest");
   assert.equal(venueWithCity("Melbourne Cricket Ground", "Melbourne"), "Melbourne Cricket Ground, Melbourne");
   assert.equal(venueWithCity("Kensington Oval", null), "Kensington Oval");
-  const page = src("src/app/cricket/matches/[id]/page.tsx");
+  const page = src("src/lib/cricketMatchPage.tsx");
   assert.match(page, /venueWithCity\(details\.venue, details\.city\)/);
   assert.doesNotMatch(page, /`\$\{details\.venue\}, \$\{details\.city\}`/);
 });

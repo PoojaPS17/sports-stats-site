@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { PRIMARY_HOST } from "./lib/launchHost";
+import { storedMatchIsFinal } from "./lib/cricketMatchCache";
 
 // Only https://sports-db.live is ever indexable. The site's own domain is wired up ahead
 // of launch so DNS and the certificate are ready, but it shows a holding page and tells
@@ -12,6 +13,10 @@ import { PRIMARY_HOST } from "./lib/launchHost";
 const WWW_HOST = `www.${PRIMARY_HOST}`;
 const OWN_DOMAIN = /(^|\.)sports-db\.live$/i;
 const DEV_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|.+\.localhost)$/;
+
+// A cricket match that is over is served by its day-cached route; see routeCricketMatch below.
+const MATCH_PATH = /^\/cricket\/matches\/(\d+)$/;
+const FINAL_MATCH_PATH = /^\/cricket\/matches\/final\/(\d+)$/;
 
 const NOINDEX = "noindex, nofollow";
 const ROBOTS_DISALLOW_ALL = "User-agent: *\nDisallow: /\n";
@@ -34,7 +39,30 @@ function robotsDisallowAll(): NextResponse {
   });
 }
 
-export default function proxy(request: NextRequest) {
+/**
+ * /cricket/matches/<id> is rendered per request while a match is in play or still to come. Once the
+ * stored row says it is over (one indexed read, lib/cricketMatchCache.ts), the request is rewritten
+ * to /cricket/matches/final/<id>: the same page, cached for a day at the origin and the edge. The
+ * public address never changes; a direct request to the final address is sent back to it. Anything
+ * else, and any read failure, falls through to the public route.
+ */
+async function routeCricketMatch(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  const direct = FINAL_MATCH_PATH.exec(pathname);
+  if (direct) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/cricket/matches/${direct[1]}`;
+    return NextResponse.redirect(url, 308);
+  }
+  const match = MATCH_PATH.exec(pathname);
+  if (!match || (request.method !== "GET" && request.method !== "HEAD")) return null;
+  if (!(await storedMatchIsFinal(match[1]))) return null;
+  const url = request.nextUrl.clone();
+  url.pathname = `/cricket/matches/final/${match[1]}`;
+  return NextResponse.rewrite(url);
+}
+
+export default async function proxy(request: NextRequest): Promise<NextResponse> {
   const host = hostOf(request);
   const { pathname, search } = request.nextUrl;
 
@@ -47,7 +75,7 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(target, 308);
   }
 
-  if (DEV_HOST.test(host)) return NextResponse.next();
+  if (DEV_HOST.test(host)) return (await routeCricketMatch(request)) ?? NextResponse.next();
 
   // Before launch the site's own domain (apex and any subdomain) shows the holding page.
   if (process.env.SITE_LAUNCHED !== "1" && OWN_DOMAIN.test(host)) {
@@ -61,7 +89,7 @@ export default function proxy(request: NextRequest) {
     return response;
   }
 
-  if (host === PRIMARY_HOST) return NextResponse.next();
+  if (host === PRIMARY_HOST) return (await routeCricketMatch(request)) ?? NextResponse.next();
 
   // Any other host: the page is served as usual but must never be indexed.
   if (pathname === "/robots.txt") return robotsDisallowAll();
