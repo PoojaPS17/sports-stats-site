@@ -37,6 +37,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
 import { buildStagedProfile, goalBands, hasGames, noBoxScoreGames, playerMeta, playerSport, positionLabel, storedGamesOnly, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
 import { profileSummary } from "@/lib/playerDescriptions";
+import { cricketPlayerDescription } from "@/lib/cricketPlayerSeo";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { ImageActions } from "@/components/ImageActions";
 import { PlayerExportCard } from "@/components/PlayerExportCard";
@@ -69,6 +70,7 @@ const cachedPlayer = cache((league: League, slug: string) => getPlayerBySlug(lea
 const cachedLog = cache((league: League, espnId: string) => getPlayerLog(league, espnId));
 const cachedReportedGames = cache((league: League, espnId: string) => getPlayerReportedGames(league, espnId));
 const cachedEspnSeasons = cache((league: League, espnId: string) => getPlayerEspnSeasons(league, espnId));
+const cachedCareer = cache((league: League, espnId: string) => getPlayerCricketCareer(league, espnId));
 
 async function loadStaged(league: League, player: PlayerRow): Promise<StagedProfile | null> {
   const sport = playerSport(league);
@@ -83,8 +85,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const player = await cachedPlayer(league, slug);
   if (!player) return {};
   if (isCricketLeague(league)) {
-    const team = player.team_name ? ` (${player.team_name})` : "";
-    return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), `${player.name}${team} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`, `/${league}/players/${slug}`);
+    // The career figures a searcher wants are in the description (see cricketPlayerSeo.ts); the page reads the same career once more from the cache.
+    const career = await cachedCareer(league, player.espn_id);
+    return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), cricketPlayerDescription(league, player.name, player.team_name, career), `/${league}/players/${slug}`);
   }
   const staged = await loadStaged(league, player);
   const profile = staged?.regular ?? null;
@@ -145,7 +148,7 @@ export default async function PlayerPage({
     // Every split at once: they are tabs in the page now, so the player has one address and the
     // page renders the same for everyone (which is what lets it be cached).
     const [career, splitRows] = await Promise.all([
-      getPlayerCricketCareer(league, player.espn_id),
+      cachedCareer(league, player.espn_id),
       Promise.all(CRICKET_SPLIT_DIMENSIONS.map((d) => getPlayerCricketSplits(league, player.espn_id, d.key))),
     ]);
     const splits = Object.fromEntries(CRICKET_SPLIT_DIMENSIONS.map((d, i) => [d.key, splitRows[i]])) as Record<CricketSplitDimension, CricketSplitRow[]>;

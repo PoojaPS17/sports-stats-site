@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatLabels } from "../src/lib/cricketSeriesSeo";
+import { cricketFormatTitle, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatLabels, seriesFormatTitles } from "../src/lib/cricketSeriesSeo";
 import { fitTitle } from "../src/lib/metadata";
 
 // The series row's `formats` are ESPN's class cards as stored ("Other OD", "Other T20", "Women T20", "List A",
@@ -40,4 +40,18 @@ test("cricketSeriesDescription: what the page holds, the format in words, the te
   );
   assert.equal(cricketSeriesDescription({ name: "India tour of Australia 2026-27", formats: ["Test", "T20I"], teams: [{ name: "India" }, { name: "Australia" }] }, false), "India tour of Australia 2026-27: fixtures, results and live scores for every Test and T20I match between India and Australia.");
   assert.equal(cricketSeriesDescription({ name: "Odd Cup", formats: ["Other match"], teams: [] }, false), "Odd Cup: fixtures, results and live scores for every match, with the scorecard of each.");
+});
+
+test("a class card becomes a label a reader understands, capitalised for a card or row", () => {
+  assert.equal(cricketFormatTitle("Other OD"), "One-day");
+  assert.equal(cricketFormatTitle("Other T20"), "T20");
+  assert.equal(cricketFormatTitle("First-class"), "First-class");
+  assert.equal(cricketFormatTitle("Women T20"), "Women's T20");
+  assert.equal(cricketFormatTitle("Youth ODI"), "Youth ODI");
+  assert.equal(cricketFormatTitle("List A"), "List A");
+  assert.equal(cricketFormatTitle("T20I"), "T20I");
+  assert.equal(cricketFormatTitle("Other match"), null, "a card that says nothing is left out");
+  assert.equal(cricketFormatTitle(null), null);
+  assert.deepEqual(seriesFormatTitles(["Other OD", "Other T20", "Twenty20", "Other match"]), ["One-day", "T20"]);
+  assert.deepEqual(seriesFormatTitles(["First-class", "List A"]), ["First-class", "List A"]);
 });

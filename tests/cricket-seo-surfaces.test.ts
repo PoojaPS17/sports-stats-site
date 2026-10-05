@@ -9,6 +9,7 @@ import { CricketPlayingXi } from "../src/components/CricketPlayingXi";
 import { CricketPointsTable } from "../src/components/CricketPointsTable";
 import { CricketMatchInfo } from "../src/components/CricketMatchInfo";
 import { HomeCricket } from "../src/components/HomeCricket";
+import { SeriesMatchRow } from "../src/components/CricketSeries";
 
 // Search Console, 2026-10-05: cricket match pages sit on page one (position 8-9) for "A vs B scorecard", "players"
 // and "points table" queries and get 0.1-0.5% of the clicks. The sections below put those words, and that content,
@@ -126,4 +127,36 @@ test("the homepage reads the other series in progress at the fixtures tier", () 
   assert.match(data, /getCricketSeriesInProgressOther\(/);
   assert.match(data, /otherSeries: /);
   assert.match(read("src/app/page.tsx"), /otherSeries=\{home\.otherSeries\}/);
+});
+
+test("series cards, rows, the export card and the series header print formats in a reader's words, never the raw class card", () => {
+  const match = {
+    espn_id: "1553792",
+    series_espn_id: "8836-2026-27",
+    series_name: "President's Trophy 2026-27",
+    series_kind: "domestic" as const,
+    date: "2026-09-30T05:00:00Z",
+    name: "Oil & Gas Development Company Limited v State Bank of Pakistan",
+    short_name: null,
+    description: "3rd Match",
+    class_card: "Other OD",
+    international_class_id: "0",
+    status_state: "post" as const,
+    status_summary: "OGDCL won by 5 wickets",
+    home: { id: "1", name: "Oil & Gas Development Company Limited", abbreviation: "O&G", score: "250/8", winner: true, logo: null },
+    away: { id: "2", name: "State Bank of Pakistan", abbreviation: "SBP", score: "246", winner: false, logo: null },
+    scorecard_league: null,
+  };
+  const row = renderToStaticMarkup(createElement(SeriesMatchRow, { m: match }));
+  assert.match(row, /3rd Match · One-day/);
+  assert.doesNotMatch(row, /Other OD/);
+  const seriesPage = read("src/app/cricket/series/[id]/page.tsx");
+  assert.match(seriesPage, /seriesFormatTitles\(s\.formats\)/);
+  assert.doesNotMatch(seriesPage, /s\.formats\.join/);
+  for (const file of ["src/components/CricketSeries.tsx", "src/components/SeriesMatchesExportCard.tsx"]) {
+    const src = read(file);
+    assert.doesNotMatch(src, /formats\.join\(" · "\)/, `${file} still joins raw class cards`);
+    assert.match(src, /seriesFormatTitles\(/, `${file} uses the labels`);
+  }
+  assert.doesNotMatch(read("src/components/CricketSeries.tsx"), /m\.class_card\]/, "the match row no longer prints the raw card");
 });

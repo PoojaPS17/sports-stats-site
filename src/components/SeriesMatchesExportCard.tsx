@@ -1,3 +1,4 @@
+import { seriesFormatTitles } from "@/lib/cricketSeriesSeo";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportLabel, ExportMore, capRows } from "./ExportShell";
@@ -29,7 +30,7 @@ export function SeriesMatchesExportCard({ series, title, matches }: { series: Cr
         <div>
           <ExportLabel>
             Cricket · {SERIES_KIND_LABEL[series.kind]}
-            {series.formats.length > 0 ? ` · ${series.formats.join(" · ")}` : ""}
+            {seriesFormatTitles(series.formats).length > 0 ? ` · ${seriesFormatTitles(series.formats).join(" · ")}` : ""}
           </ExportLabel>
           <div style={{ marginTop: 4, fontSize: 22, fontWeight: 800, lineHeight: 1.2, color: CARD.text }}>{series.name}</div>
           <div style={{ marginTop: 4, fontSize: 13, color: CARD.textMuted }}>{[title, dates].filter(Boolean).join(" · ")}</div>
