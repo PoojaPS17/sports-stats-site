@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { fitTitle, pageMeta } from "@/lib/metadata";
-import { cricketSeriesDescription, cricketSeriesTitleCandidates } from "@/lib/cricketSeriesSeo";
+import { cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
 import { fetchCricketSeriesStandings, pointsTableShown } from "@/lib/cricketSeriesStandings";
 import { CricketPointsTable } from "@/components/CricketPointsTable";
 import { PageHeader } from "@/components/PageHeader";
@@ -102,7 +102,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
   return (
     <div className="flex flex-col gap-8">
       <LiveRefresh active={live.length > 0} />
-      <PageHeader title={s.name} subtitle={[SERIES_KIND_LABEL[s.kind], s.formats.join(" · ") || null, dates, `${s.match_count} match${s.match_count === 1 ? "" : "es"}`].filter(Boolean).join(" · ")}>
+      <PageHeader title={s.name} subtitle={[SERIES_KIND_LABEL[s.kind], seriesFormatTitles(s.formats).join(" · ") || null, dates, `${s.match_count} match${s.match_count === 1 ? "" : "es"}`].filter(Boolean).join(" · ")}>
         <Link href="/cricket/series" className="nav-pill">
           All series
         </Link>

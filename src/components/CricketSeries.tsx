@@ -1,3 +1,4 @@
+import { cricketFormatTitle, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { LocalTime } from "@/components/LocalTime";
@@ -26,7 +27,7 @@ export function SeriesCard({ s, now }: { s: CricketSeries; now: number }) {
       <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
         <span className="truncate">
           {SERIES_KIND_LABEL[s.kind]}
-          {s.formats.length > 0 && <span className="ml-2 font-semibold normal-case tracking-normal text-[var(--text-faint)]">{s.formats.join(" · ")}</span>}
+          {seriesFormatTitles(s.formats).length > 0 && <span className="ml-2 font-semibold normal-case tracking-normal text-[var(--text-faint)]">{seriesFormatTitles(s.formats).join(" · ")}</span>}
         </span>
         {s.live_count > 0 ? <span className="pill pill-live">Live</span> : inPlay ? <span className="pill pill-upcoming">In progress</span> : done ? <span className="pill pill-final">Completed</span> : null}
       </div>
@@ -73,7 +74,7 @@ export function SeriesMatchRow({ m, showSeries = false }: { m: CricketSeriesMatc
           {live ? <span className="pill pill-live">Live</span> : done ? <span className="pill pill-final">Result</span> : calledOff ? <span className="pill pill-final">{calledOff}</span> : <span className="pill pill-upcoming"><LocalTime iso={m.date} format="datetime" /></span>}
           {showSeries && <span className="truncate font-semibold text-[var(--text-muted)]">{m.series_name}</span>}
         </span>
-        <span className="shrink-0 truncate text-[var(--text-faint)]">{[normalizeStage(m.description), m.class_card].filter(Boolean).join(" · ")}</span>
+        <span className="shrink-0 truncate text-[var(--text-faint)]">{[normalizeStage(m.description), cricketFormatTitle(m.class_card)].filter(Boolean).join(" · ")}</span>
       </div>
       <Side side={m.home} decided={decided} />
       <Side side={m.away} decided={decided} />

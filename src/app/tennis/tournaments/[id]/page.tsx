@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { tennisTournamentDescription, tennisTournamentTitleCandidates } from "@/lib/tennisTournamentSeo";
 import { PageHeader } from "@/components/PageHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { FollowButton } from "@/components/FollowButton";
@@ -30,12 +31,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (SEASON_RE.test(id)) return pageMeta(`${id} Tennis Calendar`, `Every ATP and WTA tournament of ${id} with dates, venues and champions.`, `/tennis/tournaments/${id}`);
   const t = await getTennisTournament(id);
   if (!t) return {};
-  const champions = t.champions.map((c) => `${COMPETITION_LABEL[c.competition_type]}: ${c.names.join(" / ")}`).join("; ");
-  return pageMeta(
-    `${t.name} ${t.season}`,
-    `${t.name} ${t.season} results${t.location ? ` from ${t.location}` : ""}: every match by round with set scores${champions ? `. ${champions}` : ""}.`,
-    `/tennis/tournaments/${t.espn_id}`
-  );
+  // "Results, Scores & Champions" once it is over, "Live Scores, Draw & Results" in play, "Draw, Schedule & Results" before (see tennisTournamentSeo.ts).
+  const today = tennisToday();
+  return pageMeta(fitTitle(...tennisTournamentTitleCandidates(t, today)), tennisTournamentDescription(t, today), `/tennis/tournaments/${t.espn_id}`);
 }
 
 export default async function TennisTournamentPage({ params }: { params: Promise<{ id: string }> }) {

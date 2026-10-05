@@ -19,6 +19,23 @@ const FORMAT_LABEL: Record<string, string | null> = {
   "Youth Test": "youth Test",
 };
 
+/** A class card as the label on a card or row ("One-day", "T20", "First-class", "Women's T20"); null for a card that says nothing. */
+export function cricketFormatTitle(card: string | null | undefined): string | null {
+  if (!card) return null;
+  const label = card in FORMAT_LABEL ? FORMAT_LABEL[card] : card;
+  return label ? label[0].toUpperCase() + label.slice(1) : null;
+}
+
+/** The formats as labels, in the order given, without repeats. */
+export function seriesFormatTitles(formats: string[]): string[] {
+  const out: string[] = [];
+  for (const f of formats) {
+    const label = cricketFormatTitle(f);
+    if (label && !out.includes(label)) out.push(label);
+  }
+  return out;
+}
+
 /** The formats in a reader's words, in the order given, without repeats; a card with no label is skipped. */
 export function seriesFormatLabels(formats: string[]): string[] {
   const out: string[] = [];
