@@ -91,7 +91,7 @@ test("HomeCricket: the domestic and women's series in progress are linked from t
 });
 
 test("the cricket match page titles, names and sections come from the helpers", () => {
-  const page = read("src/app/cricket/matches/[id]/page.tsx");
+  const page = read("src/lib/cricketMatchPage.tsx");
   assert.match(page, /cricketMatchTitleCandidates/);
   assert.match(page, /fitTitle\(\.\.\.cricketMatchTitleCandidates\(/);
   assert.match(page, /join\(" vs "\)/);
