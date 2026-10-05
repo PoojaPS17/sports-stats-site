@@ -4,7 +4,8 @@ import { LEAGUES, type League, getRecentAndUpcoming, getFeaturedGames, getNews, 
 import { getLiveGames, getUpcomingGames, getNextF1Event } from "@/lib/homeFeed";
 import { getOffseasonRecap } from "@/lib/offseason";
 import { snapshotFromRecap, type LeagueSnapshotData } from "@/lib/leagueSnapshot";
-import { byPriority, getLiveCricketMatches, getUpcomingCricketMatches, type CricketSeriesMatch } from "@/lib/cricketSeries";
+import { byPriority, getCricketSeriesInProgressOther, getLiveCricketMatches, getUpcomingCricketMatches, type CricketSeriesMatch } from "@/lib/cricketSeries";
+import type { HomeOtherSeries } from "@/components/HomeCricket";
 import { getTennisDay, type TennisMatch } from "@/lib/tennis";
 import { easternDay } from "@/lib/tennisFeed";
 import { overlayLiveGames } from "@/lib/gamesLive";
@@ -44,7 +45,7 @@ const readTennisDay = unstable_cache(async (day: string) => getTennisDay(day), [
 
 const readFixtures = unstable_cache(
   async () => {
-    const [upcoming, cricketUpcoming, featured, sections] = await Promise.all([
+    const [upcoming, cricketUpcoming, featured, sections, otherSeries] = await Promise.all([
       getUpcomingGames(6, 2),
       // A busy week (multiple concurrent bilateral tours plus a tournament like the
       // Asian Games) regularly schedules 30+ featured internationals in 7 days; a
@@ -54,8 +55,10 @@ const readFixtures = unstable_cache(
       getUpcomingCricketMatches(60, 7, true),
       Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3))).then((x) => x.flat()),
       Promise.all(SECTION_LEAGUES.map(async (league) => ({ league, games: (await getRecentAndUpcoming(league, 2, 5)).slice(0, 8) }))),
+      // Domestic, women's and youth series in progress, for the Cricket block's "Also in progress" line.
+      getCricketSeriesInProgressOther(6),
     ]);
-    return { upcoming, cricketUpcoming, featured, sections };
+    return { upcoming, cricketUpcoming, featured, sections, otherSeries };
   },
   ["home-fixtures"],
   { revalidate: TIER.FIXTURES }
@@ -151,6 +154,8 @@ export interface HomeData {
   nextCricket: CricketSeriesMatch[];
   /** The rest of the week's cricket, for the Cricket block. */
   moreCricket: CricketSeriesMatch[];
+  /** Series outside headline cricket with play in progress, linked from the Cricket block. */
+  otherSeries: HomeOtherSeries[];
   nextTennis: TennisMatch[];
   f1: F1EventRow | null;
   featured: GameRow[];
@@ -239,6 +244,7 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
     upcomingGames,
     nextCricket,
     moreCricket,
+    otherSeries: fixtures.otherSeries.map((s) => ({ espn_id: s.espn_id, name: s.name, live: s.live_count > 0 })),
     nextTennis,
     f1: facts.f1,
     featured: refresh(fixtures.featured),

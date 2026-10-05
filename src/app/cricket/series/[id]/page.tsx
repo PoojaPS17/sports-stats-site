@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
+import { cricketSeriesDescription, cricketSeriesTitleCandidates } from "@/lib/cricketSeriesSeo";
+import { fetchCricketSeriesStandings, pointsTableShown } from "@/lib/cricketSeriesStandings";
+import { CricketPointsTable } from "@/components/CricketPointsTable";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
@@ -39,11 +42,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (SEASON_RE.test(id)) return pageMeta(`${id} Cricket Series`, `Every cricket series, league and tournament of ${id} with results.`, `/cricket/series/${id}`);
   const s = await getCricketSeries(id);
   if (!s) return {};
-  return pageMeta(
-    s.name,
-    `${s.name}: fixtures, live scores and results for every match${s.formats.length ? ` (${s.formats.join(", ")})` : ""}${s.teams.length && s.teams.length <= 4 ? `, ${s.teams.map((t) => t.name).join(", ")}` : ""}.`,
-    `/cricket/series/${s.espn_id}`
-  );
+  // The title names the points table only when the page shows one (the same fetch, cached, as the page's).
+  const hasTable = s.league ? false : pointsTableShown(await fetchCricketSeriesStandings(s.espn_id), s);
+  return pageMeta(fitTitle(...cricketSeriesTitleCandidates(s, hasTable)), cricketSeriesDescription(s, hasTable), `/cricket/series/${s.espn_id}`);
 }
 
 export default async function CricketSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -85,6 +86,10 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
   const s = await getCricketSeries(id);
   if (!s) notFound();
   const editions = await getCricketSeriesEditions(id);
+  // Competitions SportsDB archives (the IPL, the World Cups) have a standings page on their hub; every other
+  // series with three or more teams gets ESPN's points table here. Points are the feed's, never counted here.
+  const table = s.league ? null : await fetchCricketSeriesStandings(s.espn_id);
+  const showTable = pointsTableShown(table, s);
   const matches = await overlayLiveCricket(await getCricketSeriesMatches(id), id);
   // A match ESPN closed without playing is neither a fixture nor a result: it gets its own list, with no start time.
   const kinds = new Map(matches.map((m) => [m.espn_id, classifyCricketMatch(m)]));
@@ -141,6 +146,8 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
           <SeriesMatchList matches={live} />
         </section>
       )}
+
+      {showTable && table && <CricketPointsTable table={table} />}
 
       {fixtures.length > 0 && (
         <section>

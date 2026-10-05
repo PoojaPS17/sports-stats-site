@@ -69,7 +69,7 @@ export default async function HomePage() {
   // (a full day of internationals outranks a league with nothing on). Leagues
   // between seasons collapse into one line each at the very end.
   const blocks: React.ReactNode[] = home.sections.map((s) => <LeagueBlock key={s.league} section={s} />);
-  const cricketBlock = <HomeCricket key="cricket" live={home.liveCricket.length} next={home.moreCricket} />;
+  const cricketBlock = <HomeCricket key="cricket" live={home.liveCricket.length} next={home.moreCricket} otherSeries={home.otherSeries} />;
   const cricketAt = home.sections.findIndex((s) => s.liveCount < home.liveCricket.length);
   blocks.splice(cricketAt === -1 ? blocks.length : cricketAt, 0, cricketBlock);
 

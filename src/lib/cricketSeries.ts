@@ -61,6 +61,22 @@ export async function getCricketSeriesWindow(back = 14, ahead = 60): Promise<Cri
   return rows.map(shape);
 }
 
+/**
+ * Series outside headline cricket (domestic, women's domestic, youth and A-team) with play in progress today:
+ * those with a match live first, then by start date, newest first; youth and A-team cricket last.
+ */
+export async function getCricketSeriesInProgressOther(limit = 6): Promise<CricketSeries[]> {
+  const { rows } = await pool.query(
+    `${SERIES_SELECT}
+     where s.start_date is not null and ${seriesHasPlaySql("s")} and not ${featuredSeriesSql("s")}
+       and s.start_date <= now() and s.end_date >= now() - interval '1 day'
+     order by live_count desc, s.kind = 'other', s.start_date desc, s.name
+     limit $1`,
+    [limit]
+  );
+  return rows.map(shape);
+}
+
 export async function getCricketSeriesBySeason(season: number): Promise<CricketSeries[]> {
   const { rows } = await pool.query(`${SERIES_SELECT} where s.season = $1 and ${seriesHasPlaySql("s")} order by s.start_date, s.name`, [season]);
   return rows.map(shape);

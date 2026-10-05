@@ -53,9 +53,61 @@ export function seriesMatchesToPlay(s: { match_count: number; completed_count: n
   return Math.max(0, s.match_count - s.completed_count - s.called_off_count);
 }
 
-/** The meta description of a cricket match page: the reason for a called-off match, otherwise the live score and result. */
-export function cricketMatchDescription(m: StatusFields & { name: string; series_name: string }): string {
+/** ESPN names a match "A v B"; searchers type "A vs B", so titles, headings and descriptions read that way. */
+export function cricketMatchName(name: string): string {
+  return name.replace(/ v /g, " vs ");
+}
+
+interface SeoFields extends StatusFields {
+  name: string;
+  series_name: string;
+  /** The stage ("14th Match", "2nd ODI", "Final"), when the listing has one. */
+  description?: string | null;
+  /** The sides' abbreviations ("KRL", "HKA"), for the title forms a long pair of names cannot fit. */
+  home?: { abbreviation: string | null } | null;
+  away?: { abbreviation: string | null } | null;
+}
+
+/**
+ * The page title, longest form first for fitTitle: the teams as searchers type them, then the word that names the
+ * page (Scorecard for a result, Live Score in play, nothing for a fixture or a called-off match), then the stage and
+ * the series. The series is dropped before the stage: the description still names it, and "14th Match" alone tells
+ * the match apart from the sides' other meetings. Domestic sides have long names ("Khan Research Laboratories vs
+ * Hyderabad Kingsmen Academy Scorecard" is over the budget on its own), so the same forms with the sides' abbreviations
+ * ("KRL vs HKA Scorecard, 14th Match, ...", as Cricbuzz titles its pages) follow, and the full names alone come last.
+ */
+export function cricketMatchTitleCandidates(m: SeoFields): string[] {
   const kind = classifyCricketMatch(m);
-  if (typeof kind === "object") return `${m.name}, ${m.series_name}: match ${kind.calledOff.toLowerCase()}.`;
-  return `${m.name} live score and scorecard, ${m.series_name}${m.status_summary ? `: ${m.status_summary}` : ""}.`;
+  const keyword = kind === "result" ? " Scorecard" : kind === "live" ? " Live Score" : "";
+  const stage = m.description?.trim() || null;
+  const pairs = [cricketMatchName(m.name)];
+  if (m.home?.abbreviation && m.away?.abbreviation) pairs.push(`${m.home.abbreviation} vs ${m.away.abbreviation}`);
+  const out: string[] = [];
+  const add = (title: string) => {
+    if (!out.includes(title)) out.push(title);
+  };
+  for (const pair of pairs) {
+    const lead = `${pair}${keyword}`;
+    for (const parts of [[lead, stage, m.series_name], [lead, m.series_name], [lead, stage], [lead]]) {
+      if (!parts.includes(null)) add(parts.join(", "));
+    }
+  }
+  add(pairs[0]);
+  return out;
+}
+
+/**
+ * The meta description of a cricket match page, in the words searchers use ("scorecard", "live score", "playing XI"):
+ * the reason for a called-off match; the scorecard and the result for a finished one; the live score in play; and
+ * what the page will hold for a fixture.
+ */
+export function cricketMatchDescription(m: SeoFields): string {
+  const kind = classifyCricketMatch(m);
+  const name = cricketMatchName(m.name);
+  const where = [m.description?.trim() || null, m.series_name].filter(Boolean).join(", ");
+  const summary = m.status_summary ? `: ${m.status_summary}` : "";
+  if (typeof kind === "object") return `${name}, ${where}: match ${kind.calledOff.toLowerCase()}.`;
+  if (kind === "result") return `${name} scorecard and result, ${where}${summary}. Full batting and bowling scorecard, Playing XI, umpires and venue.`;
+  if (kind === "live") return `${name} live score and scorecard, ${where}${summary}. Batting and bowling figures, Playing XI and match facts, updating while the match is in play.`;
+  return `${name} live score and scorecard, ${where}${summary}. Playing XI and match facts once play starts.`;
 }

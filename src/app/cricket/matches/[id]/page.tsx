@@ -24,7 +24,11 @@ import { cricketSeriesMatchSchema } from "@/lib/structuredData";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { normalizeStage } from "@/lib/stage";
 import { venueWithCity } from "@/components/MatchFacts";
-import { classifyCricketMatch, cricketMatchDescription } from "@/lib/cricketMatchStatus";
+import { classifyCricketMatch, cricketMatchDescription, cricketMatchTitleCandidates } from "@/lib/cricketMatchStatus";
+import { playingXi } from "@/lib/cricketPlayingXi";
+import { seriesFormatLabels } from "@/lib/cricketSeriesSeo";
+import { CricketPlayingXi } from "@/components/CricketPlayingXi";
+import { CricketMatchInfo } from "@/components/CricketMatchInfo";
 
 // The live page for any cricket match ESPN lists: read straight from ESPN's summary
 // with a 10-second cache, refreshed in the browser while the match is in play.
@@ -42,12 +46,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // A match ESPN lists that is not stored yet still renders from ESPN's live summary (the page), so it
   // keeps the address as its canonical; the title and description stay the site's.
   if (!m) return { alternates: { canonical: absoluteUrl(`/cricket/matches/${id}`) } };
-  // Name, stage and series when they fit a search result's title; otherwise the month
-  // stands in for the series (which the description still names), then the stage, then the name alone.
-  const stage = m.description ? `, ${m.description}` : "";
-  const full = `${m.name}${stage} | ${m.series_name}`;
-  const month = m.date ? `, ${new Date(m.date).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}` : "";
-  return pageMeta(fitTitle(full, `${m.name}${stage}${month}`, `${m.name}${stage}`, m.name), cricketMatchDescription(m), `/cricket/matches/${id}`);
+  // "A vs B Scorecard, 14th Match, President's Trophy 2026-27", shortened from the series end while it is over the
+  // title budget (see cricketMatchTitleCandidates); the description names the series either way.
+  const titled = { ...m, description: normalizeStage(m.description) };
+  return pageMeta(fitTitle(...cricketMatchTitleCandidates(titled)), cricketMatchDescription(titled), `/cricket/matches/${id}`);
 }
 
 export default async function CricketLiveMatchPage({ params }: { params: Promise<{ id: string }> }) {
@@ -74,7 +76,9 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
   const seriesName = stored?.series_name ?? summary?.header?.league?.name ?? null;
   const date = comp?.date ?? stored?.date ?? null;
   const sideName = (c: any, fallback: SeriesSide | null) => teamDisplayName(c?.team?.displayName ?? c?.team?.name ?? fallback?.name ?? "");
-  const matchName = [sideName(home, stored?.home ?? null), sideName(away, stored?.away ?? null)].filter(Boolean).join(" v ");
+  // "vs", as searchers type it (ESPN's listing says "v"; cricketMatchName makes the same change for the title).
+  const matchName = [sideName(home, stored?.home ?? null), sideName(away, stored?.away ?? null)].filter(Boolean).join(" vs ");
+  const format = stored?.class_card ? (seriesFormatLabels([stored.class_card])[0] ?? null) : null;
   const potm = (comp?.status?.featuredAthletes ?? []).find((a: any) => a.name === "playerOfTheMatch")?.athlete?.displayName ?? null;
 
   const sideData = (c: any, fallback: SeriesSide | null) => ({
@@ -160,7 +164,20 @@ export default async function CricketLiveMatchPage({ params }: { params: Promise
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{calledOff ? `No scorecard: this match was ${calledOff.toLowerCase()}.` : state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
       )}
 
-      <p className="text-xs text-[var(--text-muted)]">Live scores and scorecard, refreshed every 10 seconds while in play.</p>
+      <CricketPlayingXi sides={playingXi(summary)} />
+
+      <CricketMatchInfo
+        series={stored ? { name: stored.series_name, href: `/cricket/series/${stored.series_espn_id}` } : seriesName ? { name: seriesName, href: null } : null}
+        stage={description}
+        format={format ? format[0].toUpperCase() + format.slice(1) : null}
+        date={date}
+        venue={details?.venue ? venueWithCity(details.venue, details.city) : null}
+        officials={details?.officials ?? []}
+        playerOfTheMatch={potm}
+        result={state === "post" && summaryText ? summaryText : null}
+      />
+
+      <p className="text-xs text-[var(--text-muted)]">Live score, scorecard, Playing XI and match facts, refreshed every 10 seconds while in play.</p>
     </div>
   );
 }
