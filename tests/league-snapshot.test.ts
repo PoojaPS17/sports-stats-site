@@ -12,6 +12,7 @@ const recap = {
   seasonLabel: "2026-27",
   seasonOver: false,
   table: [0, 1, 2, 3, 4, 5, 6].map(row),
+  bands: [0, 1, 2, 3, 4, 5, 6].map((i) => (i < 4 ? { cls: "zone-1", label: "Champions League" } : i === 4 ? { cls: "zone-2", label: "Europa League" } : null)),
   tableSize: 20,
   leaders: [
     { label: "Goals", unit: "gls", rows: [0, 1, 2, 3, 4].map(leader) },
@@ -22,6 +23,8 @@ const recap = {
 test("the homepage snapshot trims to five table rows, one board of three", () => {
   const s = snapshotFromRecap(recap, { tableRows: 5, boards: 1, leaderRows: 3 });
   assert.equal(s.table.length, 5);
+  // The bands come from the recap (read against the whole table) and are trimmed with the rows they belong to.
+  assert.deepEqual(s.bands.map((z) => z?.label ?? null), ["Champions League", "Champions League", "Champions League", "Champions League", "Europa League"]);
   assert.equal(s.tableSize, 20);
   assert.equal(s.leaders.length, 1);
   assert.equal(s.leaders[0].rows.length, 3);
@@ -32,6 +35,18 @@ test("the homepage snapshot trims to five table rows, one board of three", () =>
 test("without options nothing is trimmed (the league hub shows the full recap)", () => {
   const s = snapshotFromRecap(recap);
   assert.equal(s.table.length, 7);
+  assert.equal(s.bands.length, 7);
   assert.equal(s.leaders.length, 2);
   assert.equal(s.leaders[0].rows.length, 5);
+});
+
+test("the mini table draws the bands it is given, not a positional guess: a finished season's 5th place can be a Champions League place", async () => {
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { createElement } = await import("react");
+  const { LeagueSnapshot } = await import("../src/components/LeagueSnapshot");
+  const data = snapshotFromRecap({ ...recap, seasonOver: true } as OffseasonRecap, { tableRows: 5, boards: 0 });
+  const html = renderToStaticMarkup(createElement(LeagueSnapshot, { league: "laliga", data }));
+  const markers = [...html.matchAll(/zone-marker ([a-z0-9-]*)" title="([^"]*)"/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(markers, [["zone-1", "Champions League"], ["zone-1", "Champions League"], ["zone-1", "Champions League"], ["zone-1", "Champions League"], ["zone-2", "Europa League"]]);
+  assert.match(html, /Final table/);
 });

@@ -295,7 +295,8 @@ test("the offseason recap's cricket record carries ties and no results in words,
   assert.equal(cricketRecord({ wins: 9, losses: 5, draws: null, no_result: null }), "9-5");
   assert.equal(cricketRecord({ wins: 3, losses: 4, draws: 2, no_result: 2 }), "3-4, 2 ties, 2 NR");
   const table = asRows(WBBL_2024);
-  const recap = { season: 2024, seasonLabel: "2024", tableSize: 8, table: sortStandings("wbbl", table), playoffs: [], champion: null, endedOn: null, endedOnLocal: null, leaders: [], closingGames: [] } as never;
+  // A cricket table has no qualification bands (lib/standingsZones.ts), so the recap carries none for its rows.
+  const recap = { season: 2024, seasonLabel: "2024", tableSize: 8, table: sortStandings("wbbl", table), bands: [null, null, null, null, null], playoffs: [], champion: null, endedOn: null, endedOnLocal: null, leaders: [], closingGames: [] } as never;
   const markup = renderToStaticMarkup(createElement(OffseasonRecap, { league: "wbbl", recap }));
   assert.match(markup, /Perth Scorchers Women[\s\S]*?4-5, 1 tie</, "Perth: T=1 in the table, so 1 tie here");
   assert.match(markup, /Sydney Sixers Women[\s\S]*?3-5, 1 tie, 1 NR</);

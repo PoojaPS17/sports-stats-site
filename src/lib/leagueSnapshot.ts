@@ -5,6 +5,8 @@ export interface LeagueSnapshotData {
   seasonLabel: string;
   inSeason: boolean;
   table: OffseasonRecap["table"];
+  /** One per row of `table`: its qualification or relegation band, or null. */
+  bands: OffseasonRecap["bands"];
   tableSize: number;
   leaders: OffseasonRecap["leaders"];
 }
@@ -20,6 +22,7 @@ export function snapshotFromRecap(recap: OffseasonRecap, opts: { tableRows?: num
     seasonLabel: recap.seasonLabel,
     inSeason: !recap.seasonOver,
     table: opts.tableRows !== undefined ? recap.table.slice(0, opts.tableRows) : recap.table,
+    bands: opts.tableRows !== undefined ? recap.bands.slice(0, opts.tableRows) : recap.bands,
     tableSize: recap.tableSize,
     leaders,
   };
