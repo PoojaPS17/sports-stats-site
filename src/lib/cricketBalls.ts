@@ -179,8 +179,11 @@ export interface BallFetchOptions {
   fetchJson?: (url: string, revalidate: number) => Promise<unknown>;
 }
 
+/** How long one page may take before the story is dropped for this render; the page must not wait on a slow ESPN. */
+const PAGE_TIMEOUT_MS = 6000;
+
 async function nextFetchJson(url: string, revalidate: number): Promise<unknown> {
-  const res = await fetch(url, { next: { revalidate } });
+  const res = await fetch(url, { next: { revalidate }, signal: AbortSignal.timeout(PAGE_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`${res.status} from ${url}`);
   return res.json();
 }
@@ -201,10 +204,12 @@ export async function fetchCricketBallByBall(eventId: string, seriesId: string, 
     if (!meta || typeof meta.pageCount !== "number") return null;
     const pageCount: number = meta.pageCount;
     if (pageCount <= 0) return [];
+    if (pageCount > BALL_PAGE_CAP) return null;
     const items: unknown[] = [...(Array.isArray(meta.items) ? meta.items : [])];
-    for (let page = 2; page <= pageCount; page++) {
-      if (page > BALL_PAGE_CAP) return null;
-      const body: any = await fetchJson(playByPlayUrl(seriesId, eventId, page), page === pageCount ? edge : FINISHED_REVALIDATE);
+    // The remaining pages are independent, so they are read together: a cold render of a T20 is two
+    // round trips to ESPN, not nine.
+    const rest = await Promise.all(Array.from({ length: pageCount - 1 }, (_, i) => fetchJson(playByPlayUrl(seriesId, eventId, i + 2), i + 2 === pageCount ? edge : FINISHED_REVALIDATE)));
+    for (const body of rest as any[]) {
       if (!Array.isArray(body?.commentary?.items)) return null;
       items.push(...body.commentary.items);
     }

@@ -59,5 +59,21 @@ test("it stops at the page cap", async () => {
   for (let i = 1; i <= 60; i++) pages[i] = page(i, 1500, 60);
   const r = recorder(pages);
   assert.equal(await fetchCricketBallByBall("1", "8669", { settled: true, fetchJson: r.fetchJson }), null);
-  assert.equal(r.calls.length, BALL_PAGE_CAP);
+  assert.ok(r.calls.length < BALL_PAGE_CAP, `read ${r.calls.length} pages of a match past the cap`);
+});
+
+test("the pages after the first are read in parallel, not one after another", async () => {
+  let inFlight = 0;
+  let peak = 0;
+  const fetchJson = async (url: string) => {
+    const n = Number(new URL(url).searchParams.get("page"));
+    inFlight++;
+    peak = Math.max(peak, inFlight);
+    await new Promise((r) => setTimeout(r, 5));
+    inFlight--;
+    return page(n, 100, 4);
+  };
+  const items = await fetchCricketBallByBall("1", "8669", { settled: true, fetchJson });
+  assert.equal(items?.length, 100);
+  assert.ok(peak >= 3, `pages 2-4 should overlap, peak in flight was ${peak}`);
 });

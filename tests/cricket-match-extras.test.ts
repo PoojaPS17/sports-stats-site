@@ -63,3 +63,12 @@ test("the Player of the Match line picks the figures that earned it: a big score
   // not in the card at all
   assert.equal(potmLine(card([], []), "Nobody"), null);
 });
+
+test("the live line keeps ESPN's status sentence and adds the rates from the last ball", async () => {
+  const { liveStatusLine } = await import("../src/lib/cricketMatchExtras");
+  const last = { runRate: 11.72, requiredRunRate: 8.4 } as never;
+  assert.equal(liveStatusLine("India need 52 runs from 30 balls", last), "India need 52 runs from 30 balls · run rate 11.72 · required 8.40");
+  assert.equal(liveStatusLine("India need 52 runs from 30 balls", undefined), "India need 52 runs from 30 balls");
+  assert.equal(liveStatusLine(null, { runRate: 8.92, requiredRunRate: null } as never), "Run rate 8.92");
+  assert.equal(liveStatusLine(null, undefined), null);
+});

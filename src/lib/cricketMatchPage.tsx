@@ -33,7 +33,7 @@ import { CricketMatchInfo } from "@/components/CricketMatchInfo";
 import { CricketMatchHero } from "@/components/CricketMatchHero";
 import { CricketMatchStory } from "@/components/CricketMatchStory";
 import { deriveMatchStory, fetchCricketBallByBall } from "@/lib/cricketBalls";
-import { matchPills, potmLine, teamColours } from "@/lib/cricketMatchExtras";
+import { liveStatusLine, matchPills, potmLine, teamColours } from "@/lib/cricketMatchExtras";
 
 /** The page title, description and canonical of a match, the same on the public and the final route. */
 export async function cricketMatchMetadata(id: string): Promise<Metadata> {
@@ -131,8 +131,7 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
   if (home?.team?.id && colours.home) colourById[String(home.team.id)] = colours.home;
   if (away?.team?.id && colours.away) colourById[String(away.team.id)] = colours.away;
   const potmFigures = potm && details ? potmLine(details.scorecard, potm) : null;
-  const lastInnings = story.at(-1);
-  const liveLine = live && lastInnings?.runRate != null ? `Run rate ${lastInnings.runRate.toFixed(2)}${lastInnings.requiredRunRate != null ? ` · required ${lastInnings.requiredRunRate.toFixed(2)}` : ""}` : null;
+  const liveLine = live ? liveStatusLine(summaryText ? teamDisplayName(summaryText) : null, story.at(-1)) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -158,7 +157,7 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
         result={state === "post" && summaryText ? teamDisplayName(summaryText) : null}
         potm={potm ? { name: potm, line: potmFigures } : null}
         pills={matchPills(summary?.notes)}
-        liveLine={liveLine ?? (live && summaryText ? teamDisplayName(summaryText) : null)}
+        liveLine={liveLine}
         venue={details?.venue ? venueWithCity(details.venue, details.city) : (stored?.venue ?? null)}
       />
       {report ? <p className="text-sm leading-relaxed">{report}</p> : null}

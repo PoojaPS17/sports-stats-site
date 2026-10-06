@@ -36,3 +36,10 @@ test("every over has a hit zone and the inspector lists the balls with their sym
 test("no innings renders nothing", () => {
   assert.equal(renderToStaticMarkup(createElement(CricketMatchStory, { innings: [], colours: {} })), "");
 });
+
+test("the inspector has previous and next over buttons so the chart is usable by keyboard and on a phone", () => {
+  const html = renderToStaticMarkup(createElement(CricketMatchStory, { innings, colours: {} }));
+  assert.match(html, /aria-label="Previous over"/);
+  assert.match(html, /aria-label="Next over"/);
+  assert.match(html, /Over 14 of 20/);
+});

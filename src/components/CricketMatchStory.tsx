@@ -63,6 +63,8 @@ export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[
   };
   const seg = (on: boolean) => `nav-pill text-[13px] ${on ? "nav-pill-active" : "text-[var(--text-muted)]"}`;
   const grid = view === "worm" ? model.wormGrid : model.barGrid;
+  // The last over anyone bowled: where the inspector's Next button stops.
+  const lastOver = Math.max(1, ...innings.map((inn) => inn.overs.length));
 
   return (
     <section className="flex flex-col" aria-label="Match story">
@@ -131,7 +133,18 @@ export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[
           ))}
         </svg>
 
-        <div className="flex flex-wrap gap-4 border-t border-[var(--border)] pt-3.5">
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3.5">
+          <button type="button" onClick={() => setOver(Math.max(1, over - 1))} disabled={over <= 1} aria-label="Previous over" className="nav-pill text-[13px] disabled:opacity-40">
+            ‹ Prev
+          </button>
+          <span className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-faint)]">
+            Over {over} of {lastOver}
+          </span>
+          <button type="button" onClick={() => setOver(Math.min(lastOver, over + 1))} disabled={over >= lastOver} aria-label="Next over" className="nav-pill text-[13px] disabled:opacity-40">
+            Next ›
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-4">
           {innings.map((inn) => (
             <OverPanel key={inn.period} over={inn.overs[over - 1]} innings={inn} colour={colourOf(inn.teamId)} number={over} />
           ))}

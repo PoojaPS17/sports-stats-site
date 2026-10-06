@@ -110,3 +110,17 @@ export function potmLine(scorecard: CardRows[], name: string): string | null {
   if (bowl && bowl.wickets >= 2) parts.push(`${bowl.wickets}/${bowl.runs}`);
   return parts.length ? parts.join(" & ") : null;
 }
+
+/**
+ * The hero's line while in play: ESPN's status sentence ("India need 52 runs from 30 balls") with the
+ * run rate and required rate from the last ball after it; the rates alone when ESPN has no sentence.
+ */
+export function liveStatusLine(statusText: string | null, last: Pick<StoryInnings, "runRate" | "requiredRunRate"> | undefined): string | null {
+  const rates: string[] = [];
+  if (last?.runRate != null) rates.push(`run rate ${last.runRate.toFixed(2)}`);
+  if (last?.requiredRunRate != null) rates.push(`required ${last.requiredRunRate.toFixed(2)}`);
+  const status = statusText?.trim() || null;
+  if (status) return [status, ...rates].join(" · ");
+  if (rates.length === 0) return null;
+  return rates.join(" · ").replace(/^run rate/, "Run rate");
+}
