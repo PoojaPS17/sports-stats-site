@@ -55,6 +55,8 @@ job_tick() {
   # Tennis and cricket run all day in every time zone, so these feeds are read on every tick.
   run fetch:tennis-daily
   run fetch:cricket-series -- --days 1 --ahead 2
+  # Figures for the newest finished matches outside the archived competitions (the series stats block), a few per tick.
+  run topup:cricket-series-stats -- --cap 15
   # Heartbeat for check:stale, only when every step above succeeded (an idle tick counts too).
   if [ "$failed" -eq 0 ]; then run record:run -- scrape-tick; fi
 }
@@ -80,6 +82,7 @@ job_daily() {
   run sweep:cricket-seasons
   run import:cricket-espn -- --reconcile
   run topup:cricket-player-stats
+  run topup:cricket-series-stats -- --cap 200
   run fetch:fixtures
   run seed:f1-teams
 }

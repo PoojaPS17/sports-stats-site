@@ -670,3 +670,24 @@ create table if not exists medal_tally (
   updated_at timestamptz not null default now(),
   primary key (edition_year, nation_slug)
 );
+
+-- Per-player figures for matches in the series SportsDB does not archive under a competition (domestic,
+-- women's domestic, associate, youth and A-team cricket): the series page sums them into its stats block
+-- (most runs, most wickets). Written by scripts/topup-cricket-series-stats.ts from ESPN's summary once a
+-- match is over, one row per player per match, in the shape of player_game_stats.stats (see
+-- scripts/lib/cricket-career.ts). The archived competitions keep theirs in player_game_stats.
+create table if not exists cricket_series_player_stats (
+  match_espn_id text not null,
+  series_espn_id text not null,
+  player_espn_id text not null,
+  player_name text not null,
+  team_espn_id text not null,
+  stats jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (match_espn_id, player_espn_id)
+);
+create index if not exists cricket_series_player_stats_series_idx on cricket_series_player_stats (series_espn_id);
+
+-- When the top-up last read a finished match's summary, so a result ESPN has no scorecard for yet is
+-- retried hourly for a few days and not on every run (null: never read).
+alter table cricket_series_matches add column if not exists stats_checked_at timestamptz;

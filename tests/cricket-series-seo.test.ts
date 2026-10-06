@@ -42,6 +42,14 @@ test("cricketSeriesDescription: what the page holds, the format in words, the te
   assert.equal(cricketSeriesDescription({ name: "Odd Cup", formats: ["Other match"], teams: [] }, false), "Odd Cup: fixtures, results and live scores for every match, with the scorecard of each.");
 });
 
+test("cricketSeriesDescription: with leaders, the format tail makes room for them, so the snippet names the players", () => {
+  const leaders = "Most runs: Faye Tunnicliffe (171); most wickets: Paulinah Mashishi (4).";
+  assert.equal(cricketSeriesDescription(csa, true, leaders), `CSA Women Pro50 Series 2026/27: points table, results and live scores. ${leaders}`);
+  assert.equal(cricketSeriesDescription(csa, false, leaders), `CSA Women Pro50 Series 2026/27: fixtures, results and live scores. ${leaders}`);
+  // No leaders yet: the usual description.
+  assert.equal(cricketSeriesDescription(csa, true, null), cricketSeriesDescription(csa, true));
+});
+
 test("a class card becomes a label a reader understands, capitalised for a card or row", () => {
   assert.equal(cricketFormatTitle("Other OD"), "One-day");
   assert.equal(cricketFormatTitle("Other T20"), "T20");

@@ -5,6 +5,11 @@ import { fitTitle, pageMeta } from "@/lib/metadata";
 import { cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
 import { fetchCricketSeriesStandings, pointsTableShown } from "@/lib/cricketSeriesStandings";
 import { CricketPointsTable } from "@/components/CricketPointsTable";
+import { CricketSeriesLeaders } from "@/components/CricketSeriesLeaders";
+import { cricketSeriesSoFar, seriesLeadersClause } from "@/lib/cricketSeriesStats";
+import { getCricketSeriesStats } from "@/lib/cricketSeriesStatsData";
+import { normalizeStage } from "@/lib/stage";
+import { teamDisplayName } from "@/lib/teamName";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
@@ -44,7 +49,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!s) return {};
   // The title names the points table only when the page shows one (the same fetch, cached, as the page's).
   const hasTable = s.league ? false : pointsTableShown(await fetchCricketSeriesStandings(s.espn_id), s);
-  return pageMeta(fitTitle(...cricketSeriesTitleCandidates(s, hasTable)), cricketSeriesDescription(s, hasTable), `/cricket/series/${s.espn_id}`);
+  // The leaders name the snippet's players ("Most runs: ..."), and move as the series does; a competition with a hub has none here.
+  const leaders = s.league ? null : seriesLeadersClause(await getCricketSeriesStats(s.espn_id));
+  return pageMeta(fitTitle(...cricketSeriesTitleCandidates(s, hasTable)), cricketSeriesDescription(s, hasTable, leaders), `/cricket/series/${s.espn_id}`);
 }
 
 export default async function CricketSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -98,6 +105,21 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
   const fixtures = matches.filter((m) => kinds.get(m.espn_id) === "fixture");
   const calledOff = matches.filter((m) => typeof kinds.get(m.espn_id) === "object");
   const dates = formatSeriesDates(s.start_date, s.end_date);
+  // Most runs and most wickets from the stored scorecards (a competition with a hub has its leaders there), and the
+  // series in a paragraph: the table leader (one table only; a group leader leads a group, not the series), the
+  // latest result, the next fixture and the leaders.
+  const stats = s.league ? null : await getCricketSeriesStats(s.espn_id);
+  const top = showTable && table && table.groups.length === 1 ? (table.groups[0].rows[0] ?? null) : null;
+  const stage = (m: { description: string | null }) => normalizeStage(m.description);
+  const soFar = cricketSeriesSoFar({
+    leader: top ? { team: teamDisplayName(top.team), points: top.points, played: top.played } : null,
+    lastResult: results[0] ? { name: results[0].name, stage: stage(results[0]), summary: results[0].status_summary } : null,
+    nextFixture: fixtures[0] ? { name: fixtures[0].name, stage: stage(fixtures[0]), date: fixtures[0].date } : null,
+    stats,
+    // Over when nothing is left to play and its last scheduled day is behind us (a day's grace: the end date is a
+    // start time), not when the fixture list alone is empty: ESPN lists some rounds late.
+    finished: live.length === 0 && fixtures.length === 0 && Boolean(s.end_date) && new Date(s.end_date as string).getTime() + 86_400_000 < clock(),
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -113,6 +135,8 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
         )}
         <FollowButton item={{ kind: "series", league: s.league ?? "cricket", refId: s.espn_id, label: s.name, sublabel: "Cricket", href: `/cricket/series/${s.espn_id}` }} />
       </PageHeader>
+
+      {soFar && <p className="card px-4 py-3 text-sm leading-relaxed">{soFar}</p>}
 
       <AdSlot label="Cricket series detail top" />
 
@@ -148,6 +172,8 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
       )}
 
       {showTable && table && <CricketPointsTable table={table} />}
+
+      <CricketSeriesLeaders stats={stats} teams={s.teams} />
 
       {fixtures.length > 0 && (
         <section>

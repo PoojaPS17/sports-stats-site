@@ -67,8 +67,13 @@ export function cricketSeriesTitleCandidates(s: { name: string }, hasTable: bool
 // What a search result shows of a description; a team list cut mid-name says less than no list.
 const DESCRIPTION_LIMIT = 160;
 
-/** What the page holds, the format in words, and the teams when there are four or fewer and they fit. */
-export function cricketSeriesDescription(s: SeriesSeoFields, hasTable: boolean): string {
+/**
+ * What the page holds, the format in words, and the teams when there are four or fewer and they fit. With `leaders`
+ * (the series' most runs and most wickets, see cricketSeriesStats.ts) the format tail gives way to them, so the
+ * snippet names the players and moves as the series does.
+ */
+export function cricketSeriesDescription(s: SeriesSeoFields, hasTable: boolean, leaders?: string | null): string {
+  if (leaders) return `${s.name}: ${hasTable ? "points table, results and live scores" : "fixtures, results and live scores"}. ${leaders}`;
   const holds = hasTable ? "fixtures, results, points table and live scores" : "fixtures, results and live scores";
   const format = list(seriesFormatLabels(s.formats));
   const base = `${s.name}: ${holds} for every ${format ? `${format} ` : ""}match`;
