@@ -84,10 +84,25 @@ export function parseTeamStats(data: any): TeamStatGroup[] {
   }));
 }
 
+export interface PlayerBoxRow {
+  athleteId: string;
+  name: string;
+  stats: string[];
+  /** ESPN's bench-sheet flag (NBA lists players who did not play, with empty stats and a reason). Only set when true. */
+  didNotPlay?: boolean;
+}
+
 export interface PlayerStatCategory {
   name: string;
   labels: string[];
-  rows: { athleteId: string; name: string; stats: string[] }[];
+  rows: PlayerBoxRow[];
+}
+
+// The scraper stores no stats row for a didNotPlay or empty-stats box-score row (scripts/lib/game-stats.ts),
+// so such a player has no game log entry and no performance card: loadPerformanceCardData returns null
+// and the card page 404s. Anything that links to a card must ask this first.
+export function playedInGame(row: Pick<PlayerBoxRow, "stats" | "didNotPlay">): boolean {
+  return row.didNotPlay !== true && row.stats.length > 0;
 }
 
 export interface TeamPlayerBox {
@@ -110,7 +125,7 @@ export function parseAmericanPlayerBox(data: any): TeamPlayerBox[] {
       labels: cat.labels ?? [],
       rows: (cat.athletes ?? [])
         .filter((a: any) => a.athlete)
-        .map((a: any) => ({ athleteId: a.athlete.id, name: a.athlete.displayName, stats: a.stats ?? [] })),
+        .map((a: any) => ({ athleteId: a.athlete.id, name: a.athlete.displayName, stats: a.stats ?? [], ...(a.didNotPlay === true ? { didNotPlay: true } : {}) })),
     })),
   }));
 }
