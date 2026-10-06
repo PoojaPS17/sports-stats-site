@@ -30,3 +30,12 @@ test("the cricket summary is read through the cricket fetcher, which resolves ev
   assert.match(page, /fetchCricketSummaryLive\(id, "8048"/);
   assert.doesNotMatch(page, /loaded\.summary \?\? \(await fetchMatchSummary\(league, id\)\)/);
 });
+
+test("the league game page carries the same story blocks for cricket, with player links from the slug lookup", () => {
+  assert.match(page, /<CricketKeyMoments/);
+  assert.match(page, /<CricketTopPerformers[^>]*playerSlugs=\{playerSlugs\}/);
+  assert.match(page, /<CricketPartnerships/);
+  assert.match(page, /<CricketNextMatch/);
+  assert.match(page, /getCricketSeriesMatch\(id\)/);
+  assert.match(page, /parseMilestones\(summary\?\.notes, names\)/);
+});

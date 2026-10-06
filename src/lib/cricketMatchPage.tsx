@@ -15,7 +15,7 @@ import { ExportTeamLine } from "@/components/ExportTeamLine";
 import { ExportLabel } from "@/components/ExportShell";
 import { CARD } from "@/lib/exportTheme";
 import { extractGameDetails } from "@/lib/matchDetail";
-import { getCricketSeriesMatch, type SeriesSide } from "@/lib/cricketSeries";
+import { getCricketSeriesMatch, getCricketSeriesMatches, type SeriesSide } from "@/lib/cricketSeries";
 import { fetchCricketSummaryLive } from "@/lib/cricketLive";
 import { FINISHED_MATCH_REVALIDATE, isSettledCricketMatch } from "@/lib/cricketMatchCache";
 import { resolveTeamLogo } from "@/lib/teamLogos";
@@ -33,7 +33,13 @@ import { CricketMatchInfo } from "@/components/CricketMatchInfo";
 import { CricketMatchHero } from "@/components/CricketMatchHero";
 import { CricketMatchStory } from "@/components/CricketMatchStory";
 import { deriveMatchStory, fetchCricketBallByBall } from "@/lib/cricketBalls";
-import { liveStatusLine, matchPills, potmLine, teamColours } from "@/lib/cricketMatchExtras";
+import { liveStatusLine, matchPills, potmLine, seriesNote, teamColours } from "@/lib/cricketMatchExtras";
+import { CricketKeyMoments } from "@/components/CricketKeyMoments";
+import { CricketTopPerformers } from "@/components/CricketTopPerformers";
+import { CricketPartnerships } from "@/components/CricketPartnerships";
+import { CricketNextMatch } from "@/components/CricketNextMatch";
+import { keyMoments, parseMilestones } from "@/lib/cricketMatchMoments";
+import { topPerformers } from "@/lib/cricketPerformers";
 
 /** The page title, description and canonical of a match, the same on the public and the final route. */
 export async function cricketMatchMetadata(id: string): Promise<Metadata> {
@@ -132,6 +138,15 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
   if (away?.team?.id && colours.away) colourById[String(away.team.id)] = colours.away;
   const potmFigures = potm && details ? potmLine(details.scorecard, potm) : null;
   const liveLine = live ? liveStatusLine(summaryText ? teamDisplayName(summaryText) : null, story.at(-1)) : null;
+  // The story blocks: wickets and landmarks, the innings leaders, the stands, the series' next fixture.
+  const scorecard = details?.scorecard ?? [];
+  const names = scorecard.flatMap((t) => [...t.battingRows, ...t.bowlingRows].map((r) => r.name));
+  const moments = keyMoments(story, parseMilestones(summary?.notes, names), scorecard);
+  const performers = topPerformers(scorecard, potm);
+  const teamNames: Record<string, string> = {};
+  if (home?.team?.id) teamNames[String(home.team.id)] = sides[0].name;
+  if (away?.team?.id) teamNames[String(away.team.id)] = sides[1].name;
+  const nextMatch = stored ? ((await getCricketSeriesMatches(stored.series_espn_id)).find((m) => m.espn_id !== stored.espn_id && m.date > stored.date && m.status_state === "pre") ?? null) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,6 +180,15 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
       <AdSlot label="Cricket live match top" />
 
       {story.length > 0 && <CricketMatchStory innings={story} colours={colourById} />}
+
+      {(moments.length > 0 || performers.large) && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          <CricketKeyMoments moments={moments} colours={colourById} teams={teamNames} />
+          <CricketTopPerformers large={performers.large} small={performers.small} league="odi" playerSlugs={new Map()} teams={teamNames} largeLabel={potm && performers.large?.name === potm ? "Player of the Match" : "Top scorer"} />
+        </div>
+      )}
+
+      <CricketPartnerships innings={story} colours={colourById} />
 
       {details && details.scorecard.length > 0 ? (
         <section className="flex flex-col gap-4">
@@ -215,6 +239,8 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
         playerOfTheMatch={potm}
         result={state === "post" && summaryText ? summaryText : null}
       />
+
+      {stored && <CricketNextMatch next={nextMatch} series={{ name: stored.series_name, href: `/cricket/series/${stored.series_espn_id}` }} seriesNote={seriesNote(summary?.notes)} />}
 
       <p className="text-xs text-[var(--text-muted)]">Live score, scorecard, Playing XI and match facts, refreshed every 10 seconds while in play.</p>
     </div>

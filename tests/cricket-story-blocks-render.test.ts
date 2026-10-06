@@ -74,7 +74,7 @@ const next: CricketSeriesMatch = {
   espn_id: "1529231",
   series_espn_id: "8669",
   series_name: "West Indies tour of India 2026/27",
-  series_kind: "tour",
+  series_kind: "international",
   date: "2026-10-08T13:30:00Z",
   name: "India v West Indies",
   short_name: "IND v WI",
