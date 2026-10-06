@@ -163,6 +163,12 @@ test("a series match links the series as its organizer and names both sides as p
   assert.equal(schema.description, "India won by 6 wickets");
 });
 
+test("a series match carries its own share card as the event image", () => {
+  // The match page had no card of its own until now, so the schema named no image; Search Console lists an Event
+  // without one as a warning. The card lives at the public address even when the proxy renders the final route.
+  assert.equal(cricketMatch().image, `${SITE_URL}/cricket/matches/1449/opengraph-image`);
+});
+
 test("a series match that has not finished describes itself as the fixture it is", () => {
   const upcoming = cricketMatch({ status_state: "pre", status_summary: null });
   assert.equal(upcoming.description, "Australia tour of India: India v Australia.");

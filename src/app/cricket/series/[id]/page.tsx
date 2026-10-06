@@ -45,15 +45,17 @@ function clock(): number {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  if (id === "archive") return pageMeta("Cricket Series Archive", "Past cricket series and tournaments by season.", "/cricket/series/archive");
-  if (SEASON_RE.test(id)) return pageMeta(`${id} Cricket Series`, `Every cricket series, league and tournament of ${id} with results.`, `/cricket/series/${id}`);
+  // Each series and season has its own card beside this page; naming it replaces the site's generic one.
+  const image = { path: `/cricket/series/${id}/opengraph-image`, alt: "Cricket series" };
+  if (id === "archive") return pageMeta("Cricket Series Archive", "Past cricket series and tournaments by season.", "/cricket/series/archive", { image });
+  if (SEASON_RE.test(id)) return pageMeta(`${id} Cricket Series`, `Every cricket series, league and tournament of ${id} with results.`, `/cricket/series/${id}`, { image });
   const s = await getCricketSeries(id);
   if (!s) return {};
   // The title names the points table only when the page shows one (the same fetch, cached, as the page's).
   const hasTable = s.league ? false : pointsTableShown(await fetchCricketSeriesStandings(s.espn_id), s);
   // The leaders name the snippet's players ("Most runs: ..."), and move as the series does; a competition with a hub has none here.
   const leaders = s.league ? null : seriesLeadersClause(await getCricketSeriesStats(s.espn_id));
-  return pageMeta(fitTitle(...cricketSeriesTitleCandidates(s, hasTable)), cricketSeriesDescription(s, hasTable, leaders), `/cricket/series/${s.espn_id}`);
+  return pageMeta(fitTitle(...cricketSeriesTitleCandidates(s, hasTable)), cricketSeriesDescription(s, hasTable, leaders), `/cricket/series/${s.espn_id}`, { image: { ...image, alt: `${s.name} on SportsDB` } });
 }
 
 export default async function CricketSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {

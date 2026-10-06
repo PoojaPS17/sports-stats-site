@@ -101,3 +101,12 @@ test("the title budget matches the root layout's template", () => {
   const layout = readFileSync(new URL("../src/app/layout.tsx", import.meta.url), "utf8");
   assert.match(layout, /template: "%s \| SportsDB"/);
 });
+
+// A page whose share image lives at another address than its own segment (a finished cricket match is rendered
+// under /cricket/matches/final/<id> while its image stays at /cricket/matches/<id>/opengraph-image) names that
+// image outright, in place of the generic one.
+test("pageMeta: an `image` option names the page's own share image for Open Graph and Twitter", () => {
+  const m = pageMeta("T", "D", "/cricket/matches/1", { image: { path: "/cricket/matches/1/opengraph-image", alt: "Match card" } });
+  assert.deepEqual((m.openGraph as { images?: unknown }).images, [{ url: absoluteUrl("/cricket/matches/1/opengraph-image"), width: 1200, height: 630, alt: "Match card" }]);
+  assert.deepEqual((m.twitter as { images?: unknown }).images, [absoluteUrl("/cricket/matches/1/opengraph-image")]);
+});

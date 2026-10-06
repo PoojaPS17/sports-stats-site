@@ -347,10 +347,12 @@ export function cricketSeriesMatchSchema(m: {
     competitor: sides,
     performer: sides,
     organizer: { "@type": "SportsOrganization", name: m.series_name, url: absoluteUrl(`/cricket/series/${m.series_espn_id}`) },
+    // The match's own card (cricket/matches/[id]/opengraph-image.tsx), at the public address: the proxy
+    // renders a finished match under final/[id], but leaves image paths alone.
+    image: absoluteUrl(`/cricket/matches/${m.espn_id}/opengraph-image`),
     // No address: a series match names the ground from the live summary, and cricket's team
-    // endpoints carry no venue of their own, so there is no city to attach to it. No image
-    // either — this route has no share card to point at. And no `offers`, for the same reason
-    // a game page has none: we sell no tickets.
+    // endpoints carry no venue of their own, so there is no city to attach to it. And no
+    // `offers`, for the same reason a game page has none: we sell no tickets.
     ...(venue ? { location: { "@type": "Place", name: venue } } : {}),
     description: m.status_state === "post" && m.status_summary ? m.status_summary : `${m.series_name}: ${m.name}.`,
   };
