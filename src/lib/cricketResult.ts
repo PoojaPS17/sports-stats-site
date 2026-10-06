@@ -88,3 +88,31 @@ export function resolveCricketWinner(summary: string | null | undefined, home: C
   if (/\btied?\b/i.test(text) || /\bdraw/i.test(text)) return { home: false, away: false };
   return feed;
 }
+
+/**
+ * The result in a sentence's words, the winner first and both names in full: "Australia beat India by 5 wickets",
+ * "A and B drew", "No result between A and B". ESPN's own summary abbreviates the winner ("BAN-WMN U19 won by 30
+ * runs"), and the searches that find a match page type the names in full (Search Console, 2026-10-06). Null when
+ * the summary gives no result to put into words (abandoned, cancelled, unreadable), so the caller can fall back to
+ * ESPN's text.
+ */
+export function cricketResultLine(home: CricketSide & { winner?: boolean | null }, away: CricketSide & { winner?: boolean | null }, summary: string | null | undefined): string | null {
+  const text = (summary ?? "").trim();
+  if (!text || !home.name || !away.name) return null;
+  if (/abandon|cancel|postpon/i.test(text)) return null;
+  const flags = resolveCricketWinner(text, home, away, { home: home.winner ?? null, away: away.winner ?? null });
+  if (flags.home !== flags.away && (flags.home === true || flags.away === true)) {
+    const [winner, loser] = flags.home ? [home.name, away.name] : [away.name, home.name];
+    const margin = /won by (\d+) (wkts?|wickets?|runs?)\b(\s*\([^)]*\))?/i.exec(text);
+    if (margin) {
+      const n = Number(margin[1]);
+      const unit = /wkt|wicket/i.test(margin[2]) ? (n === 1 ? "wicket" : "wickets") : n === 1 ? "run" : "runs";
+      return `${winner} beat ${loser} by ${n} ${unit}${margin[3] ? ` ${margin[3].trim()}` : ""}`;
+    }
+    return `${winner} beat ${loser} (${text})`;
+  }
+  if (/no result/i.test(text)) return `No result between ${home.name} and ${away.name}`;
+  if (/\btied?\b/i.test(text)) return `${home.name} and ${away.name} tied`;
+  if (/\bdraw/i.test(text)) return `${home.name} and ${away.name} drew`;
+  return null;
+}

@@ -101,6 +101,9 @@ test("the cricket match page titles, names and sections come from the helpers", 
   assert.match(page, /<CricketPlayingXi /);
   assert.match(page, /<CricketMatchInfo[\s>]/);
   assert.match(page, /playingXi\(summary\)/);
+  // The report paragraph stands in for ESPN's abbreviated status line on a result or a fixture.
+  assert.match(page, /cricketMatchReport\(\{/);
+  assert.match(page, /report \? <p[^>]*>\{report\}<\/p> : /);
 });
 
 test("the cricket series page titles and table come from the helpers, and the table is fetched for the title too", () => {

@@ -9,6 +9,7 @@
 // summary is called off, never a result. No postponed match, and no "pre" match with a called-off summary, turned up
 // in that window; those are recognised from the summary text alone.
 import { calledOffLabel, CALLED_OFF, isNeverPlayed, schemaStatusForLabel } from "./gameStatus";
+import { cricketResultLine, type CricketSide } from "./cricketResult";
 
 export type CricketMatchKind = "live" | "result" | "fixture" | { calledOff: string };
 
@@ -65,6 +66,9 @@ interface SeoFields extends StatusFields {
   description?: string | null;
   /** The start, as stored (UTC ISO string); the description dates the match with it. */
   date?: string | null;
+  /** The sides, when stored: a result is then written in full names, the winner first, instead of ESPN's abbreviated summary. */
+  home?: (Partial<CricketSide> & { winner?: boolean | null }) | null;
+  away?: (Partial<CricketSide> & { winner?: boolean | null }) | null;
 }
 
 /**
@@ -91,7 +95,7 @@ export function cricketMatchTitleCandidates(m: SeoFields): string[] {
 }
 
 /** "Oct 2, 2026", and with `withTime` "Oct 2, 2026, 04:00 UTC": the match's start as the description states it. */
-function describedDate(date: string | null | undefined, withTime: boolean): string | null {
+export function describedDate(date: string | null | undefined, withTime: boolean): string | null {
   if (!date) return null;
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return null;
@@ -110,7 +114,8 @@ export function cricketMatchDescription(m: SeoFields): string {
   const kind = classifyCricketMatch(m);
   const name = cricketMatchName(m.name);
   const where = [m.description?.trim() || null, m.series_name].filter(Boolean).join(", ");
-  const summary = m.status_summary ? `: ${m.status_summary}` : "";
+  const line = kind === "result" && m.home?.name && m.away?.name ? cricketResultLine({ ...m.home, name: m.home.name }, { ...m.away, name: m.away.name }, m.status_summary) : null;
+  const summary = line ? `: ${line}` : m.status_summary ? `: ${m.status_summary}` : "";
   if (typeof kind === "object") return `${name}, ${where}: match ${kind.calledOff.toLowerCase()}.`;
   const day = describedDate(m.date, kind === "fixture");
   if (kind === "result") return `${name} match scorecard and result, ${where}${day ? `, ${day}` : ""}${summary}. Full batting and bowling scorecard, Playing XI, umpires and venue.`;
