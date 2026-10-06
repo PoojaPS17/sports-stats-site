@@ -53,7 +53,7 @@ export function splitCricketScore(score: string): { main: string; detail: string
  * When the fields cannot write one (no bowler, a catch with no fielder) ESPN's own line is used, then the
  * dismissal type alone.
  */
-function wicketLine(w: StoryWicket): string {
+export function wicketLine(w: StoryWicket): string {
   const runs = w.batterRuns === null ? "" : ` ${w.batterRuns}`;
   const fielder = w.fielder ? (w.keeper ? `\u2020${w.fielder}` : w.fielder) : null;
   let how: string | null = null;
