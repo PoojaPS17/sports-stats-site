@@ -40,7 +40,9 @@ import { PlayerBoxScoreExportCard } from "@/components/PlayerBoxScoreExportCard"
 import { CricketScorecardExportCard } from "@/components/CricketScorecardExportCard";
 import { MatchScoreHeader } from "@/components/MatchScoreHeader";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
-import { CricketScorecards } from "@/components/CricketScorecard";
+import { CricketScorecardTabs } from "@/components/CricketScorecardTabs";
+import { CricketScorecardPanel } from "@/components/CricketScorecardPanel";
+import { scorecardTabs } from "@/lib/cricketScorecardView";
 import { ViewTracker } from "@/components/ViewTracker";
 import { MatchFacts } from "@/components/MatchFacts";
 import { MatchTimeline } from "@/components/MatchTimeline";
@@ -352,7 +354,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           >
             Scorecard
           </SectionHeader>
-          <CricketScorecards league={league} scorecard={cricketScorecard} playerSlugs={playerSlugs} />
+          <CricketScorecardTabs tabs={scorecardTabs(cricketScorecard, story, storyColours).map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league={league} playerSlugs={playerSlugs} /> }))} />
         </section>
       )}
 

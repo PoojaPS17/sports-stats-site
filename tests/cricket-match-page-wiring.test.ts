@@ -39,3 +39,15 @@ test("the story blocks follow the chart: key moments and top performers side by 
   // the Player of the Match is named as such only when the large card is theirs
   assert.match(page, /largeLabel=\{/);
 });
+
+test("the scorecard is innings tabs with per-innings panels, and the Playing XI and Match info are collapsed side by side", () => {
+  assert.match(page, /<CricketScorecardTabs/);
+  assert.match(page, /<CricketScorecardPanel/);
+  assert.doesNotMatch(page, /<CricketScorecards /);
+  assert.match(page, /scorecardTabs\(scorecard, story, colourById\)/);
+  assert.match(page, /<CricketPlayingXi collapsed/);
+  assert.match(page, /<CricketMatchInfo\s+collapsed/);
+  // the share tools and the "Scorecard" heading stay
+  assert.match(page, /<CricketScorecardExportCard/);
+  assert.match(page, />\s*Scorecard\s*<\/SectionHeader>/);
+});
