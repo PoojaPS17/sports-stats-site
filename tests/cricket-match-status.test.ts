@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { classifyCricketMatch, cricketMatchDescription, cricketMatchName, cricketMatchTitleCandidates, cricketMatchWhen, cricketSchemaStatus, seriesMatchesToPlay } from "../src/lib/cricketMatchStatus";
-import { fitTitle, TITLE_BUDGET } from "../src/lib/metadata";
+import { clampDescription, fitTitle, TITLE_BUDGET } from "../src/lib/metadata";
 
 // ESPN's cricket listing (site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=YYYYMMDD) sends a match
 // abandoned without a ball bowled as status "post" (type id 6, description "Abandoned", longSummary "Match abandoned
@@ -110,7 +110,7 @@ test("cricketMatchDescription: a result leads with the match scorecard and the r
       home: { name: "India", abbreviation: "IND", score: "250/8", winner: false },
       away: { name: "Australia", abbreviation: "AUS", score: "251/5 (48.1 ov, target 251)", winner: true },
     }),
-    "India vs Australia match scorecard and result, 2nd ODI, Tour of India, Oct 2, 2026: Australia beat India by 5 wickets. Full batting and bowling scorecard, Playing XI, umpires and venue."
+    "Australia beat India by 5 wickets in the 2nd ODI of the Tour of India, Oct 2, 2026. Match scorecard with full batting and bowling figures, Playing XI, umpires and venue."
   );
   // A fixture gives its start (UTC), not ESPN's "Match scheduled to begin at 09:30" (a local time with no zone).
   assert.equal(
@@ -120,6 +120,37 @@ test("cricketMatchDescription: a result leads with the match scorecard and the r
   // No stage: nothing dangles between the name and the series. No date (a match not stored yet): no date clause.
   assert.equal(cricketMatchDescription({ ...base, description: null, date: null, ...m("pre", null) }), "India vs Australia live score and scorecard, Tour of India. Playing XI and match facts once play starts.");
   assert.equal(cricketMatchDescription({ name: "India v Australia", series_name: "Tour of India", ...m("post", "India won") }), "India vs Australia match scorecard and result, Tour of India: India won. Full batting and bowling scorecard, Playing XI, umpires and venue.");
+});
+
+// The description is clamped at 160 characters (clampDescription). With the names first, a domestic result such as
+// "Khan Research Laboratories v Hyderabad Kingsmen Academy, 14th Match, President's Trophy 2026-27" ran to 200+
+// characters before the result, so the snippet ended at the date and never said who won. The result sentence comes
+// first and stands on its own, so the clamp cuts the scorecard tail, never the result.
+test("cricketMatchDescription: a result in full names leads the description and survives the 160-character clamp", () => {
+  const d = cricketMatchDescription({
+    name: "Khan Research Laboratories v Hyderabad Kingsmen Academy",
+    series_name: "President's Trophy 2026-27",
+    description: "14th Match",
+    date: "2026-09-30T05:00:00Z",
+    ...m("post", "Match drawn"),
+    home: { name: "Khan Research Laboratories", abbreviation: "KRL", score: "412 & 180/4", winner: false },
+    away: { name: "Hyderabad Kingsmen Academy", abbreviation: "HKA", score: "389", winner: false },
+  });
+  assert.equal(
+    d,
+    "Khan Research Laboratories and Hyderabad Kingsmen Academy drew in the 14th Match of the President's Trophy 2026-27, Sep 30, 2026. Match scorecard with full batting and bowling figures, Playing XI, umpires and venue."
+  );
+  assert.equal(clampDescription(d), "Khan Research Laboratories and Hyderabad Kingsmen Academy drew in the 14th Match of the President's Trophy 2026-27, Sep 30, 2026.");
+  // No stage: "in the <series>". No date: no date clause. A result ESPN's line cannot be put into words keeps the old order.
+  const sides = { home: { name: "India", abbreviation: "IND", score: "250/8", winner: false }, away: { name: "Australia", abbreviation: "AUS", score: "251/5", winner: true } };
+  assert.equal(
+    cricketMatchDescription({ name: "India v Australia", series_name: "Tour of India", ...m("post", "AUS won by 5 wkts"), ...sides }),
+    "Australia beat India by 5 wickets in the Tour of India. Match scorecard with full batting and bowling figures, Playing XI, umpires and venue."
+  );
+  assert.equal(
+    cricketMatchDescription({ name: "India v Australia", series_name: "Tour of India", description: "2nd ODI", date: "2026-10-02T04:00:00Z", ...m("post", "Match abandoned due to rain"), ...sides }),
+    "India vs Australia match scorecard and result, 2nd ODI, Tour of India, Oct 2, 2026: Match abandoned due to rain. Full batting and bowling scorecard, Playing XI, umpires and venue."
+  );
 });
 
 test("cricketMatchName: ESPN's 'A v B' reads 'A vs B', and only the separator changes", () => {

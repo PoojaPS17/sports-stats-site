@@ -3,7 +3,7 @@
 // with a 0.1-0.5% click rate, a snippet problem, and a page of tables alone gives Google no sentence to lift. Pure,
 // so the page and its tests share it; the figures come from the parsed scorecard (matchDetail.ts).
 import type { CricketMatchKind } from "./cricketMatchStatus";
-import { describedDate } from "./cricketMatchStatus";
+import { cricketMatchWhere, describedDate } from "./cricketMatchStatus";
 import { cricketResultLine, type CricketSide } from "./cricketResult";
 import type { CricketTeamScorecard } from "./matchDetail";
 
@@ -29,12 +29,6 @@ export interface MatchReportInput {
 }
 
 /** "in the 1st Match of the <series>", "in the <series>", or nothing. */
-function where(stage: string | null, seriesName: string | null): string {
-  if (stage && seriesName) return ` in the ${stage} of the ${seriesName}`;
-  if (seriesName) return ` in the ${seriesName}`;
-  return "";
-}
-
 const num = (s: string | undefined) => (s != null && /^\d+(\.\d+)?$/.test(s) ? Number(s) : null);
 
 /** The highest single innings of the match: most runs, then fewer balls faced, then scorecard order. */
@@ -75,12 +69,12 @@ export function cricketMatchReport(m: MatchReportInput): string | null {
   if (m.kind === "fixture") {
     if (!m.home.name || !m.away.name) return null;
     const start = describedDate(m.date, true);
-    return `${m.home.name} play ${m.away.name}${where(m.stage, m.seriesName)}${at}${start ? ` on ${start}` : ""}.`;
+    return `${m.home.name} play ${m.away.name}${cricketMatchWhere(m.stage, m.seriesName)}${at}${start ? ` on ${start}` : ""}.`;
   }
   const line = cricketResultLine(m.home, m.away, m.statusSummary);
   if (!line) return null;
   const day = describedDate(m.date, false);
-  const first = `${line}${where(m.stage, m.seriesName)}${at}${day ? ` on ${day}` : ""}.`;
+  const first = `${line}${cricketMatchWhere(m.stage, m.seriesName)}${at}${day ? ` on ${day}` : ""}.`;
   const figures = [topScorer(m.scorecard), bestBowler(m.scorecard)].filter((s): s is string => s != null).join(" and ");
   const potm = m.playerOfTheMatch ? `${m.playerOfTheMatch} was Player of the Match` : "";
   const second = figures && potm ? `${figures}; ${potm}.` : figures ? `${figures}.` : potm ? `${potm}.` : "";

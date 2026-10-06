@@ -110,14 +110,24 @@ export function describedDate(date: string | null | undefined, withTime: boolean
  * score in play; and what the page will hold for a fixture, with its start in UTC rather than ESPN's status text
  * ("Match scheduled to begin at 09:30", a local time with no zone).
  */
+/** " in the 1st Match of the <series>", " in the <series>", or nothing: the stage clause of a match sentence. */
+export function cricketMatchWhere(stage: string | null | undefined, seriesName: string | null | undefined): string {
+  const s = stage?.trim();
+  if (s && seriesName) return ` in the ${s} of the ${seriesName}`;
+  if (seriesName) return ` in the ${seriesName}`;
+  return "";
+}
+
 export function cricketMatchDescription(m: SeoFields): string {
   const kind = classifyCricketMatch(m);
   const name = cricketMatchName(m.name);
   const where = [m.description?.trim() || null, m.series_name].filter(Boolean).join(", ");
   const line = kind === "result" && m.home?.name && m.away?.name ? cricketResultLine({ ...m.home, name: m.home.name }, { ...m.away, name: m.away.name }, m.status_summary) : null;
-  const summary = line ? `: ${line}` : m.status_summary ? `: ${m.status_summary}` : "";
+  const summary = m.status_summary ? `: ${m.status_summary}` : "";
   if (typeof kind === "object") return `${name}, ${where}: match ${kind.calledOff.toLowerCase()}.`;
   const day = describedDate(m.date, kind === "fixture");
+  // The description is clamped at 160 characters, so a result in full names comes first and stands as its own sentence.
+  if (line) return `${line}${cricketMatchWhere(m.description, m.series_name)}${day ? `, ${day}` : ""}. Match scorecard with full batting and bowling figures, Playing XI, umpires and venue.`;
   if (kind === "result") return `${name} match scorecard and result, ${where}${day ? `, ${day}` : ""}${summary}. Full batting and bowling scorecard, Playing XI, umpires and venue.`;
   if (kind === "live") return `${name} live score and scorecard, ${where}${day ? `, ${day}` : ""}${summary}. Batting and bowling figures, Playing XI and match facts, updating while the match is in play.`;
   return `${name} live score and scorecard, ${where}${day ? `, starts ${day}` : ""}. Playing XI and match facts once play starts.`;
