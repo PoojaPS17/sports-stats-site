@@ -77,3 +77,8 @@ test("the pages after the first are read in parallel, not one after another", as
   assert.equal(items?.length, 100);
   assert.ok(peak >= 3, `pages 2-4 should overlap, peak in flight was ${peak}`);
 });
+
+test("a middle page that is not full is a stale copy of a page that used to be last: no story this render", async () => {
+  const r = recorder({ 1: page(1, 70, 3), 2: { commentary: { count: 70, pageIndex: 2, pageSize: 25, pageCount: 3, items: Array.from({ length: 20 }, (_, i) => ({ id: `2-${i}` })) } }, 3: page(3, 70, 3) });
+  assert.equal(await fetchCricketBallByBall("1", "8669", { settled: false, fetchJson: r.fetchJson }), null);
+});

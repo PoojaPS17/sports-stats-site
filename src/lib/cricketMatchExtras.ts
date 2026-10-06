@@ -44,22 +44,27 @@ export function splitCricketScore(score: string): { main: string; detail: string
   return { main: m[1].trim(), detail: m[2].trim() || null };
 }
 
-/** A wicket as a scorecard line: "Kamil Pooran b Arshdeep Singh 12", "Shimron Hetmyer run out". */
+/**
+ * A wicket as a scorecard line: "Kamil Pooran b Arshdeep Singh 12", "Shai Hope c Axar Patel b Naman Dhir 52",
+ * "Sanju Samson c & b Akeal Hosein 11", "A Batter st \u2020K Keeper b B Spinner 4", "Shimron Hetmyer run out".
+ * When the fields cannot write one (no bowler, a catch with no fielder) ESPN's own line is used, then the
+ * dismissal type alone.
+ */
 function wicketLine(w: StoryWicket): string {
-  const how = w.how.includes("run out")
-    ? "run out"
-    : w.how.includes("leg before")
-      ? `lbw b ${w.bowler}`
-      : w.how === "bowled"
-        ? `b ${w.bowler}`
-        : w.how === "caught"
-          ? `c ${w.bowler}`
-          : w.how === "stumped"
-            ? `st ${w.bowler}`
-            : w.bowler
-              ? `${w.how} b ${w.bowler}`
-              : w.how;
-  return `${w.batter} ${how}${w.batterRuns === null ? "" : ` ${w.batterRuns}`}`;
+  const runs = w.batterRuns === null ? "" : ` ${w.batterRuns}`;
+  const fielder = w.fielder ? (w.keeper ? `\u2020${w.fielder}` : w.fielder) : null;
+  let how: string | null = null;
+  if (w.how.includes("run out")) how = "run out";
+  else if (w.bowler) {
+    if (w.how === "caught") how = w.fielder ? (w.fielder === w.bowler ? `c & b ${w.bowler}` : `c ${fielder} b ${w.bowler}`) : null;
+    else if (w.how === "stumped") how = fielder ? `st ${fielder} b ${w.bowler}` : null;
+    else if (w.how.includes("leg before")) how = `lbw b ${w.bowler}`;
+    else if (w.how === "bowled") how = `b ${w.bowler}`;
+    else how = `${w.how} b ${w.bowler}`;
+  }
+  if (how) return `${w.batter} ${how}${runs}`;
+  const text = w.text.split(" (")[0].replace(/\s+/g, " ").trim();
+  return text || `${w.batter} ${w.how}${runs}`;
 }
 
 /**

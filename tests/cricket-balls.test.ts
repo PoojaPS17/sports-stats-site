@@ -57,9 +57,12 @@ test("overs carry runs, wickets and one symbol per delivery", () => {
 test("wickets name the batter out, the dismissal, the bowler (none for a run out) and the batter's runs", () => {
   const [wi, ind] = deriveMatchStory(items);
   assert.equal(wi.wickets.length, 10);
-  assert.deepEqual(wi.wickets[0], { over: 4.3, runs: 38, wicket: 1, batter: "Kamil Pooran", how: "bowled", bowler: "Arshdeep Singh", batterRuns: 12 });
+  assert.deepEqual(wi.wickets[0], { over: 4.3, runs: 38, wicket: 1, batter: "Kamil Pooran", how: "bowled", bowler: "Arshdeep Singh", fielder: null, keeper: false, batterRuns: 12, text: "K Pooran b Arshdeep Singh 12" });
   // Hetmyer was run out at the non-striker's end: no bowler, and the striker's runs are not his
-  assert.deepEqual(wi.wickets[1], { over: 5.2, runs: 44, wicket: 2, batter: "Shimron Hetmyer", how: "run out", bowler: null, batterRuns: null });
+  assert.deepEqual(wi.wickets[1], { over: 5.2, runs: 44, wicket: 2, batter: "Shimron Hetmyer", how: "run out", bowler: null, fielder: null, keeper: false, batterRuns: null, text: "SO Hetmyer run out 5" });
+  // a catch names the fielder as well as the bowler
+  assert.deepEqual([wi.wickets[3].fielder, wi.wickets[3].bowler], ["Axar Patel", "Naman Dhir"]);
+  assert.deepEqual([ind.wickets[1].fielder, ind.wickets[1].bowler], ["Akeal Hosein", "Akeal Hosein"]);
   assert.deepEqual(
     ind.wickets.map((w) => [w.over, w.runs, w.batter, w.batterRuns]),
     [
@@ -94,6 +97,25 @@ test("the worm has a point per completed over and the final partial over", () =>
   assert.deepEqual(wi.worm[19], { over: 19.17, runs: 171, wickets: 10 });
   assert.equal(ind.worm.length, 15);
   assert.deepEqual(ind.worm[14], { over: 14.67, runs: 172, wickets: 2 });
+});
+
+test("the innings carries ESPN's over limit, and a complete final over counts as a whole number", () => {
+  const [wi, ind] = deriveMatchStory(items);
+  assert.equal(wi.limit, 20);
+  assert.equal(ind.limit, 20);
+  const last = items[items.length - 1] as Record<string, unknown>;
+  const whole = { ...last, over: { ...(last.over as object), number: 15, ball: 6, complete: true, actual: 14.6 } };
+  const story = deriveMatchStory([...items.slice(0, -1), whole]);
+  assert.equal(story[1].total.overs, 15);
+  assert.equal(story[1].worm.at(-1)?.over, 15);
+});
+
+test("a live partial over places its worm point by legal balls, not by deliveries bowled", () => {
+  const last = items[items.length - 1] as Record<string, unknown>;
+  // two wides then three legal balls: seven deliveries, 14.3 on the scorecard
+  const extras = { ...last, over: { ...(last.over as object), number: 15, ball: 7, complete: false, actual: 14.3 } };
+  const story = deriveMatchStory([...items.slice(0, -1), extras]);
+  assert.equal(story[1].worm.at(-1)?.over, 14.5);
 });
 
 test("an empty or malformed list gives no innings", () => {

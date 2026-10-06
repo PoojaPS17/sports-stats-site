@@ -67,6 +67,27 @@ test("an ODI gets a 50-over frame and a 10-over axis", () => {
   assert.equal(m.hitZones.length, 50);
 });
 
+test("the frame follows ESPN's over limit: a rain-reduced match is drawn on its own axis", () => {
+  const short = story.map((inn) => ({ ...inn, limit: 8, overs: inn.overs.slice(0, 8), worm: inn.worm.slice(0, 8), wickets: inn.wickets.filter((w) => w.over < 8) }));
+  const m = matchStoryModel(short);
+  assert.equal(m.overLimit, 8);
+  assert.equal(m.hitZones.length, 8);
+  assert.deepEqual(
+    m.axis.map((a) => a.label),
+    ["Overs", "5", "8"]
+  );
+});
+
+test("worm lines and bars carry their innings period so a super over keeps its own key and style", () => {
+  const superOver = { ...story[0], period: 3, overs: story[0].overs.slice(0, 1), worm: story[0].worm.slice(0, 1), wickets: [], partnerships: [] };
+  const m = matchStoryModel([...story, superOver]);
+  assert.deepEqual(
+    m.worm.map((w) => w.period),
+    [1, 2, 3]
+  );
+  assert.ok(m.bars.some((b) => b.period === 3));
+});
+
 test("an empty story still gives a drawable frame", () => {
   const m = matchStoryModel([]);
   assert.equal(m.overLimit, 20);

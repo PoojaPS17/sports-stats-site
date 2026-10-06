@@ -109,8 +109,8 @@ export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[
           ))}
           {view === "worm" &&
             model.worm.map((w) => (
-              <g key={w.teamId}>
-                <polyline points={w.points} fill="none" stroke={colourOf(w.teamId)} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+              <g key={w.period}>
+                <polyline points={w.points} fill="none" stroke={colourOf(w.teamId)} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={w.period > 2 ? "6 5" : undefined} />
                 <text x={w.end.x + 8} y={w.end.y + 4} fontSize="12" fontWeight="700" fill={colourOf(w.teamId)}>
                   {w.end.label}
                 </text>
@@ -119,8 +119,8 @@ export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[
           {view === "worm" && model.wormWickets.map((w, i) => <circle key={i} cx={w.x} cy={w.y} r="5" fill="var(--surface)" stroke={colourOf(w.teamId)} strokeWidth="2.5" />)}
           {view === "bars" &&
             model.bars.map((b) => (
-              <g key={`${b.teamId}-${b.over}`}>
-                <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="2" fill={colourOf(b.teamId)} opacity={b.over === over ? 1 : 0.7} />
+              <g key={`${b.period}-${b.over}`}>
+                <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="2" fill={colourOf(b.teamId)} opacity={b.over === over ? 1 : 0.7} strokeDasharray={b.period > 2 ? "3 2" : undefined} stroke={b.period > 2 ? "var(--surface)" : undefined} />
                 {Array.from({ length: b.wickets }, (_, k) => (
                   <circle key={k} cx={b.x + b.w / 2} cy={b.y - 8 - k * 11} r="4" fill="var(--surface)" stroke={colourOf(b.teamId)} strokeWidth="2" />
                 ))}

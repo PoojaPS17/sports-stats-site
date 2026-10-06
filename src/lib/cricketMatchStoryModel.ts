@@ -6,10 +6,10 @@ export interface StoryModel {
   height: number;
   plot: { x0: number; x1: number; y0: number; y1: number };
   overLimit: number;
-  worm: { teamId: string; points: string; end: { x: number; y: number; label: string } }[];
+  worm: { teamId: string; period: number; points: string; end: { x: number; y: number; label: string } }[];
   wormWickets: { x: number; y: number; teamId: string }[];
   wormGrid: { y: number; label: string }[];
-  bars: { teamId: string; over: number; x: number; y: number; w: number; h: number; wickets: number }[];
+  bars: { teamId: string; period: number; over: number; x: number; y: number; w: number; h: number; wickets: number }[];
   barGrid: { y: number; label: string }[];
   axis: { x: number; label: string }[];
   hitZones: { over: number; x: number; w: number }[];
@@ -28,8 +28,9 @@ const ballPosition = (over: number) => Math.floor(over) + Math.round((over % 1) 
 
 export function matchStoryModel(innings: StoryInnings[]): StoryModel {
   const oversPlayed = Math.max(0, ...innings.map((i) => i.overs.length));
-  // A T20 is 20 overs, an ODI 50; anything longer rounds up to a ten.
-  const overLimit = oversPlayed <= 20 ? 20 : oversPlayed <= 50 ? 50 : Math.ceil(oversPlayed / 10) * 10;
+  // The feed's own limit (20, 50, a rain-reduced 8); without one, a T20 is 20 overs, an ODI 50, anything longer rounds up to a ten.
+  const stated = Math.max(0, ...innings.map((i) => i.limit ?? 0));
+  const overLimit = stated >= oversPlayed && stated > 0 ? stated : oversPlayed <= 20 ? 20 : oversPlayed <= 50 ? 50 : Math.ceil(oversPlayed / 10) * 10;
   const topRuns = Math.max(0, ...innings.map((i) => i.total.runs));
   const runMax = Math.max(50, Math.ceil(topRuns / 50) * 50);
   const topOver = Math.max(0, ...innings.flatMap((i) => i.overs.map((o) => o.runs)));
@@ -42,7 +43,7 @@ export function matchStoryModel(innings: StoryInnings[]): StoryModel {
     const pts = [`${PLOT.x0},${PLOT.y1}`, ...inn.worm.map((p) => `${r1(xOf(p.over))},${r1(yRuns(p.runs))}`)];
     const last = inn.worm.at(-1);
     const label = inn.total.wickets >= 10 ? String(inn.total.runs) : `${inn.total.runs}/${inn.total.wickets}`;
-    return { teamId: inn.teamId, points: pts.join(" "), end: { x: r1(last ? xOf(last.over) : PLOT.x0), y: r1(last ? yRuns(last.runs) : PLOT.y1), label } };
+    return { teamId: inn.teamId, period: inn.period, points: pts.join(" "), end: { x: r1(last ? xOf(last.over) : PLOT.x0), y: r1(last ? yRuns(last.runs) : PLOT.y1), label } };
   });
   const wormWickets = innings.flatMap((inn) => inn.wickets.map((w) => ({ x: r1(xOf(ballPosition(w.over))), y: r1(yRuns(w.runs)), teamId: inn.teamId })));
   const wormStep = runMax <= 100 ? 25 : 50;
@@ -55,12 +56,14 @@ export function matchStoryModel(innings: StoryInnings[]): StoryModel {
     inn.overs.map((o) => {
       const x = PLOT.x0 + (o.number - 1) * cell + 1.5 + side * (barW + 2);
       const h = o.runs === 0 ? 2 : PLOT.y1 - yBar(o.runs);
-      return { teamId: inn.teamId, over: o.number, x: r1(x), y: r1(PLOT.y1 - h), w: r1(barW), h: r1(h), wickets: o.wickets };
+      return { teamId: inn.teamId, period: inn.period, over: o.number, x: r1(x), y: r1(PLOT.y1 - h), w: r1(barW), h: r1(h), wickets: o.wickets };
     })
   );
   const barGrid = Array.from({ length: barMax / 6 + 1 }, (_, i) => ({ y: r1(yBar(i * 6)), label: String(i * 6) }));
   const axisStep = overLimit <= 20 ? 5 : 10;
-  const axis = Array.from({ length: overLimit / axisStep + 1 }, (_, i) => ({ x: r1(xOf(i * axisStep)), label: i === 0 ? "Overs" : String(i * axisStep) }));
+  const ticks = Array.from({ length: Math.floor(overLimit / axisStep) + 1 }, (_, i) => i * axisStep);
+  if (ticks[ticks.length - 1] !== overLimit) ticks.push(overLimit);
+  const axis = ticks.map((t) => ({ x: r1(xOf(t)), label: t === 0 ? "Overs" : String(t) }));
   const hitZones = Array.from({ length: overLimit }, (_, i) => ({ over: i + 1, x: r1(PLOT.x0 + i * cell), w: r1(cell) }));
 
   let defaultOver = 1;

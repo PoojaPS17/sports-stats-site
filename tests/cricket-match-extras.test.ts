@@ -41,9 +41,11 @@ test("the over note is a wicket line for each wicket in the over, then the score
   const [wi, ind] = deriveMatchStory(items);
   assert.equal(overNote(wi.overs[5], wi), "Shimron Hetmyer run out; Rovman Powell b Axar Patel 0. West Indies 44/3 after 6 overs.");
   assert.equal(overNote(wi.overs[4], wi), "Kamil Pooran b Arshdeep Singh 12. West Indies 44/1 after 5 overs.");
-  assert.equal(overNote(wi.overs[11], wi), "Shai Hope c Naman Dhir 52. West Indies 109/4 after 12 overs.");
+  assert.equal(overNote(wi.overs[11], wi), "Shai Hope c Axar Patel b Naman Dhir 52. West Indies 109/4 after 12 overs.");
+  assert.equal(overNote(wi.overs[12], wi), "Roston Chase lbw b Kuldeep Yadav 5. West Indies 115/5 after 13 overs.");
+  assert.equal(overNote(ind.overs[3], ind), "Sanju Samson c & b Akeal Hosein 11. India 36/2 after 4 overs.");
   assert.equal(overNote(ind.overs[13], ind), "India 164/2 after 14 overs.");
-  assert.equal(overNote(wi.overs[19], wi), "Akeal Hosein c Axar Patel 15. West Indies 171 all out.");
+  assert.equal(overNote(wi.overs[19], wi), "Akeal Hosein c Ishan Kishan b Axar Patel 15. West Indies 171 all out.");
   assert.equal(overNote(ind.overs[14], ind), "India 172/2, target reached.");
 });
 
@@ -71,4 +73,16 @@ test("the live line keeps ESPN's status sentence and adds the rates from the las
   assert.equal(liveStatusLine("India need 52 runs from 30 balls", undefined), "India need 52 runs from 30 balls");
   assert.equal(liveStatusLine(null, { runRate: 8.92, requiredRunRate: null } as never), "Run rate 8.92");
   assert.equal(liveStatusLine(null, undefined), null);
+});
+
+test("a stumping names the keeper; a wicket with no bowler in the feed falls back to ESPN's line, then to the type", async () => {
+  const { overNote } = await import("../src/lib/cricketMatchExtras");
+  type Wicket = import("../src/lib/cricketBalls").StoryWicket;
+  const base: Wicket = { over: 1, runs: 10, wicket: 1, batter: "A Batter", how: "stumped", bowler: "B Spinner", fielder: "K Keeper", keeper: true, batterRuns: 4, text: "A Batter st K Keeper b B Spinner 4 (10m 8b)" };
+  const innings = (w: Wicket) => ({ period: 1, teamId: "1", team: "Side", overs: [{ number: 2, runs: 4, wickets: 1, balls: [] }], worm: [{ over: 2, runs: 10, wickets: 1 }], wickets: [w], partnerships: [], total: { runs: 10, wickets: 1, overs: 2 }, runRate: 5, requiredRunRate: null, target: null, limit: 20 });
+  assert.equal(overNote(innings(base).overs[0], innings(base)), "A Batter st \u2020K Keeper b B Spinner 4. Side 10/1 after 2 overs.");
+  const noBowler = { ...base, how: "bowled", bowler: null, fielder: null, keeper: false, text: "A Batter b Someone 4 (10m 8b)" };
+  assert.equal(overNote(innings(noBowler).overs[0], innings(noBowler)), "A Batter b Someone 4. Side 10/1 after 2 overs.");
+  const bare = { ...noBowler, text: "" };
+  assert.equal(overNote(innings(bare).overs[0], innings(bare)), "A Batter bowled 4. Side 10/1 after 2 overs.");
 });

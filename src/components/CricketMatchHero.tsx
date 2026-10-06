@@ -71,11 +71,11 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {sides.map((side) => {
+        {sides.map((side, i) => {
           const muted = state === "post" && !side.winner;
           const { main, detail } = splitCricketScore(side.score);
           return (
-            <div key={side.name} className={`flex min-w-0 items-center gap-4 border-l-[6px] pl-4 ${muted ? "text-[var(--mast-muted)]" : ""}`} style={{ borderColor: side.colour ?? "var(--mast-line)" }}>
+            <div key={i} className={`flex min-w-0 items-center gap-4 border-l-[6px] pl-4 ${muted ? "text-[var(--mast-muted)]" : ""}`} style={{ borderColor: side.colour ?? "var(--mast-line)" }}>
               <TeamLogo name={side.name} logoUrl={side.logo} size={52} priority />
               <div className="flex min-w-0 flex-col">
                 <span className={`line-clamp-2 text-[20px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>

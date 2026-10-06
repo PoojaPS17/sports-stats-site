@@ -43,3 +43,24 @@ test("the inspector has previous and next over buttons so the chart is usable by
   assert.match(html, /aria-label="Next over"/);
   assert.match(html, /Over 14 of 20/);
 });
+
+test("a super over is drawn dashed on top of the main innings, with no duplicate React keys", () => {
+  const superOver = { ...innings[0], period: 3, overs: innings[0].overs.slice(0, 1), worm: innings[0].worm.slice(0, 1), wickets: [], partnerships: [] };
+  const warnings: string[] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(" "));
+  };
+  let html = "";
+  try {
+    html = renderToStaticMarkup(createElement(CricketMatchStory, { innings: [...innings, superOver], colours: {} }));
+  } finally {
+    console.error = original;
+  }
+  assert.equal((html.match(/<polyline/g) ?? []).length, 3);
+  assert.match(html, /stroke-dasharray="6 5"/);
+  assert.deepEqual(
+    warnings.filter((w) => /key/i.test(w)),
+    []
+  );
+});
