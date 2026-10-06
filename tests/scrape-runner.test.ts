@@ -100,7 +100,7 @@ test("live tick: scopes seed and fetch to the flagged leagues in live mode", () 
   assert.match(calls[calls.length - 1], /^npm run --silent record:run -- scrape-tick \|/);
 });
 
-test("daily: updates code, migrates first, runs a full unscoped fetch, then the daily-only steps", () => {
+test("daily: updates code, migrates first, runs a full unscoped fetch, then the daily-only steps, then its own heartbeat", () => {
   const { status, calls } = run("daily");
   assert.equal(status, 0);
   const steps = calls.map((c) => c.split(" | ")[0]);
@@ -116,6 +116,8 @@ test("daily: updates code, migrates first, runs a full unscoped fetch, then the 
   assert.ok(at("npm run --silent import:cricket-espn") >= 0);
   assert.ok(at("npm run --silent import:cricket-espn -- --reconcile") > at("npm run --silent import:cricket-espn"));
   assert.ok(at("npm run --silent topup:cricket-player-stats") > at("npm run --silent import:cricket-espn -- --reconcile"));
+  assert.equal(steps[steps.length - 1], "npm run --silent record:run -- scrape-daily");
+  assert.equal(steps.filter((s) => s.includes("record:run")).length, 1);
 });
 
 test("a failing cricket top-up (exit 1 when any game failed) fails the daily job but not the steps after it", () => {
@@ -228,9 +230,17 @@ test("a tick records its heartbeat last, and only when no step failed", () => {
   }
 });
 
-test("only ticks record a heartbeat", () => {
-  for (const job of ["daily", "hourly"]) {
-    assert.ok(!run(job).calls.some((c) => c.includes("record:run")), `${job} must not record scrape-tick`);
+test("the tick and the daily job each record their own heartbeat; hourly records none", () => {
+  assert.ok(run("tick").calls.some((c) => c.includes("record:run -- scrape-tick")));
+  assert.ok(run("daily").calls.some((c) => c.includes("record:run -- scrape-daily")));
+  assert.ok(!run("hourly").calls.some((c) => c.includes("record:run")), "hourly must not record a heartbeat");
+});
+
+test("a daily job records no heartbeat when a step fails", () => {
+  for (const fail of ["migrate", "fetch:all", "fetch:fixtures", "seed:f1-teams"]) {
+    const res = run("daily", { STUB_FAIL: fail });
+    assert.equal(res.status, 1, `${fail} failing should fail the daily job`);
+    assert.ok(!res.calls.some((c) => c.includes("record:run")), `no heartbeat when ${fail} fails`);
   }
 });
 
