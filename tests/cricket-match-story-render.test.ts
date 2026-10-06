@@ -64,3 +64,9 @@ test("a super over is drawn dashed on top of the main innings, with no duplicate
     []
   );
 });
+
+test("the chart puts no <title> elements in the page: a naive parser must never read 'Over 1' as the document title", () => {
+  const html = renderToStaticMarkup(createElement(CricketMatchStory, { innings, colours: {} }));
+  assert.doesNotMatch(html, /<title/);
+  assert.match(html, /aria-label="Over 1"/);
+});
