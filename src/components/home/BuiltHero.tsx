@@ -16,7 +16,7 @@ export function BuiltHero({ setup, headline, sub, liveCount, onEdit }: { setup: 
         <div className="flex flex-wrap gap-2">
           {liveCount > 0 && (
             <a href="#block-live" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[var(--sig)] px-3.5 text-[13px] font-extrabold text-[var(--sig-on)]">
-              <span className="live-dot bg-[var(--sig-on)]!" aria-hidden />Jump to live ({liveCount})
+              <span className="live-dot bg-[var(--sig-on)]" aria-hidden />Jump to live ({liveCount})
             </a>
           )}
           <button type="button" onClick={onEdit} className="inline-flex h-10 items-center rounded-lg border border-[var(--mast-line)] px-3.5 text-[13px] font-bold text-[var(--mast-text)]">Edit blocks</button>
