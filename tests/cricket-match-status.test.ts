@@ -101,6 +101,17 @@ test("cricketMatchDescription: a result leads with the match scorecard and the r
     cricketMatchDescription({ ...base, ...m("in", "Stumps") }),
     "India vs Australia live score and scorecard, 2nd ODI, Tour of India, Oct 2, 2026: Stumps. Batting and bowling figures, Playing XI and match facts, updating while the match is in play."
   );
+  // With the stored sides, the result is written in full names, the winner first (ESPN's summary abbreviates: "BAN-WMN
+  // U19 won by 30 runs"; the queries that find these pages type the names in full).
+  assert.equal(
+    cricketMatchDescription({
+      ...base,
+      ...m("post", "AUS won by 5 wkts"),
+      home: { name: "India", abbreviation: "IND", score: "250/8", winner: false },
+      away: { name: "Australia", abbreviation: "AUS", score: "251/5 (48.1 ov, target 251)", winner: true },
+    }),
+    "India vs Australia match scorecard and result, 2nd ODI, Tour of India, Oct 2, 2026: Australia beat India by 5 wickets. Full batting and bowling scorecard, Playing XI, umpires and venue."
+  );
   // A fixture gives its start (UTC), not ESPN's "Match scheduled to begin at 09:30" (a local time with no zone).
   assert.equal(
     cricketMatchDescription({ ...base, ...m("pre", "Match scheduled to begin at 09:30") }),

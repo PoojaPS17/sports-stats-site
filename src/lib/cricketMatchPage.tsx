@@ -27,6 +27,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { normalizeStage } from "@/lib/stage";
 import { venueWithCity } from "@/components/MatchFacts";
 import { classifyCricketMatch, cricketMatchDescription, cricketMatchTitleCandidates } from "@/lib/cricketMatchStatus";
+import { cricketMatchReport } from "@/lib/cricketMatchReport";
 import { playingXi } from "@/lib/cricketPlayingXi";
 import { seriesFormatLabels } from "@/lib/cricketSeriesSeo";
 import { CricketPlayingXi } from "@/components/CricketPlayingXi";
@@ -102,6 +103,20 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
     logo: resolveTeamLogo(c?.team?.id ?? fallback?.id, c?.team?.logo ?? fallback?.logo ?? (c?.team?.id ? `https://a.espncdn.com/i/teamlogos/cricket/500/${c.team.id}.png` : null)),
   });
   const sides = [sideData(home, stored?.home ?? null), sideData(away, stored?.away ?? null)];
+  // The report paragraph: the result in full names with the top performers, or a fixture's preview; nothing while
+  // live or called off, when ESPN's own status line stays.
+  const report = cricketMatchReport({
+    kind,
+    home: { name: sides[0].name, abbreviation: home?.team?.abbreviation ?? stored?.home?.abbreviation ?? null, score: sides[0].score, winner: sides[0].winner },
+    away: { name: sides[1].name, abbreviation: away?.team?.abbreviation ?? stored?.away?.abbreviation ?? null, score: sides[1].score, winner: sides[1].winner },
+    statusSummary: summaryText,
+    stage: description,
+    seriesName,
+    venue: details?.venue ? venueWithCity(details.venue, details.city) : stored?.venue ?? null,
+    date,
+    scorecard: details?.scorecard ?? [],
+    playerOfTheMatch: potm,
+  });
   const sideRow = ({ name, score, winner, logo }: (typeof sides)[number]) => {
     return (
       <div className="flex items-center gap-3">
@@ -134,9 +149,9 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
         </div>
         {sideRow(sides[0])}
         {sideRow(sides[1])}
-        {summaryText && <p className="text-sm font-medium">{teamDisplayName(summaryText)}</p>}
-        {potm && <p className="text-xs text-[var(--text-muted)]">Player of the Match: {potm}</p>}
-        {details?.venue && <p className="text-xs text-[var(--text-muted)]">{venueWithCity(details.venue, details.city)}</p>}
+        {report ? <p className="text-sm leading-relaxed">{report}</p> : summaryText && <p className="text-sm font-medium">{teamDisplayName(summaryText)}</p>}
+        {!report && potm && <p className="text-xs text-[var(--text-muted)]">Player of the Match: {potm}</p>}
+        {!report && details?.venue && <p className="text-xs text-[var(--text-muted)]">{venueWithCity(details.venue, details.city)}</p>}
       </section>
 
       <AdSlot label="Cricket live match top" />
