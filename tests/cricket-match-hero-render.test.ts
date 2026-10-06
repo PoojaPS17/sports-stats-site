@@ -64,3 +64,17 @@ test("a fixture shows Upcoming and the ground; a called-off match says why; no c
   const off = renderToStaticMarkup(createElement(CricketMatchHero, { ...base, calledOff: "Abandoned", result: null }));
   assert.match(off, />Abandoned</);
 });
+
+test("a two-innings score steps the display size down so the name keeps its room", () => {
+  const html = renderToStaticMarkup(
+    createElement(CricketMatchHero, {
+      ...base,
+      sides: [
+        { ...base.sides[0], score: "327", winner: false },
+        { ...base.sides[1], score: "311 & 372/6 (117 ov)", winner: false },
+      ],
+    })
+  );
+  assert.match(html, /class="display[^"]*text-\[44px\][^"]*"[^>]*>327</);
+  assert.match(html, /class="display[^"]*text-\[30px\][^"]*"[^>]*>311 &amp; 372\/6</);
+});

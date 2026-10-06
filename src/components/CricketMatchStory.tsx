@@ -126,7 +126,7 @@ export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[
             ))}
           {model.hitZones.map((z) => (
             <rect key={z.over} data-over={z.over} x={z.x} y={model.plot.y0} width={z.w} height={model.plot.y1 - model.plot.y0 + 10} fill="var(--sig)" opacity={z.over === over ? 0.1 : 0} className="cursor-pointer" onClick={() => setOver(z.over)}>
-              <title>Over {z.over}</title>
+              <title>{`Over ${z.over}`}</title>
             </rect>
           ))}
         </svg>

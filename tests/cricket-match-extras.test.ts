@@ -46,3 +46,20 @@ test("the over note is a wicket line for each wicket in the over, then the score
   assert.equal(overNote(wi.overs[19], wi), "Akeal Hosein c Axar Patel 15. West Indies 171 all out.");
   assert.equal(overNote(ind.overs[14], ind), "India 172/2, target reached.");
 });
+
+test("the Player of the Match line picks the figures that earned it: a big score, a bowling return, or both", async () => {
+  const { potmLine } = await import("../src/lib/cricketMatchExtras");
+  const card = (batting: [string, string, string[]][], bowling: [string, string[]][]) => [
+    { battingRows: batting.map(([name, dismissal, stats]) => ({ name, dismissal, stats })), bowlingRows: bowling.map(([name, stats]) => ({ name, stats })) },
+  ];
+  // Iyer: 102 not out off 43, did not bowl
+  assert.equal(potmLine(card([["Shreyas Iyer", "not out", ["102", "43", "10", "6", "237.2"]]], []), "Shreyas Iyer"), "102* (43)");
+  // Naeem Ahmed: 30 off 95 and 5 for 119: the wickets earned it
+  assert.equal(potmLine(card([["Naeem Ahmed", "c Ali b Khan", ["30", "95", "2", "0", "31.5"]]], [["Naeem Ahmed", ["41", "8", "119", "5", "2.90"]]]), "Naeem Ahmed"), "5/119");
+  // an all-rounder's day: both
+  assert.equal(potmLine(card([["Axar Patel", "not out", ["64", "40", "5", "3", "160.0"]]], [["Axar Patel", ["4", "0", "26", "3", "6.50"]]]), "Axar Patel"), "64* (40) & 3/26");
+  // two innings: the better of each
+  assert.equal(potmLine([...card([["Mahfijul Islam", "lbw b Debbarma", ["70", "135", "6", "3", "51.9"]]], []), ...card([["Mahfijul Islam", "c Ali b Ahmed", ["100", "160", "9", "1", "62.5"]]], [])], "Mahfijul Islam"), "100 (160)");
+  // not in the card at all
+  assert.equal(potmLine(card([], []), "Nobody"), null);
+});

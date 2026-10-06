@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `deriveMatchStory(items: unknown[]): StoryInnings[]` and the types `StoryBall`, `StoryOver`, `StoryWicket`, `StoryPartnership`, `StoryInnings` (below).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { test } from "node:test";
@@ -99,12 +99,12 @@ test("an empty or malformed list gives no innings", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-balls.test.ts`
 Expected: FAIL, cannot find module `../src/lib/cricketBalls`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```ts
 /* eslint-disable @typescript-eslint/no-explicit-any -- ESPN feed JSON has no published schema */
@@ -269,12 +269,12 @@ export function deriveMatchStory(items: unknown[]): StoryInnings[] {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-balls.test.ts`
 Expected: 6 pass. If the worm's final point is `19` not `19.17`, `position()` is reading `complete` as true for a one-ball over: check the fixture's last item (`complete: false, ball: 1`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/cricketBalls.ts tests/cricket-balls.test.ts tests/fixtures/espn-cricket-playbyplay-1529230.json
@@ -293,7 +293,7 @@ git commit -m "feat(cricket): derive a match story from ESPN ball-by-ball"
 - Consumes: `LIVE_REVALIDATE` from `src/lib/cricketLive.ts` (10), `FINISHED_MATCH_REVALIDATE` from `src/lib/cricketMatchCache.ts` (86400), `baseSeriesId` from `src/lib/cricketSeriesKey.ts`.
 - Produces: `fetchCricketBallByBall(eventId: string, seriesId: string, opts: BallFetchOptions): Promise<unknown[] | null>`; `BALL_PAGE_CAP = 40`; `playByPlayUrl(seriesId, eventId, page)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { test } from "node:test";
@@ -352,12 +352,12 @@ test("it stops at the page cap", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-balls-fetch.test.ts`
 Expected: FAIL, `fetchCricketBallByBall` is not exported.
 
-- [ ] **Step 3: Write the implementation** (append to `src/lib/cricketBalls.ts`; add the imports at the top of the file)
+- [x] **Step 3: Write the implementation** (append to `src/lib/cricketBalls.ts`; add the imports at the top of the file)
 
 ```ts
 import { LIVE_REVALIDATE } from "./cricketLive";
@@ -414,12 +414,12 @@ export async function fetchCricketBallByBall(eventId: string, seriesId: string, 
 }
 ```
 
-- [ ] **Step 4: Run both ball tests**
+- [x] **Step 4: Run both ball tests**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-balls.test.ts tests/cricket-balls-fetch.test.ts`
 Expected: 12 pass. Importing `cricketMatchCache` pulls in `./db`; if that throws at import without `DATABASE_URL`, import `FINISHED_MATCH_REVALIDATE` by re-declaring the constant locally with a comment pointing at the source instead.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/cricketBalls.ts tests/cricket-balls-fetch.test.ts
@@ -438,7 +438,7 @@ git commit -m "feat(cricket): fetch ball-by-ball pages with per-page cache windo
 - Consumes: `StoryInnings` from Task 1.
 - Produces: `matchStoryModel(innings: StoryInnings[]): StoryModel` with `StoryModel = { width: 1000; height: 340; plot: { x0, x1, y0, y1 }; overLimit: number; worm: { teamId, points: string, end: { x, y, label } }[]; wormWickets: { x, y, teamId }[]; wormGrid: { y, label }[]; bars: { teamId, over, x, y, w, h, wickets }[]; barGrid: { y, label }[]; axis: { x, label }[]; hitZones: { over, x, w }[]; defaultOver: number }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { test } from "node:test";
@@ -497,12 +497,12 @@ test("an empty story still gives a drawable frame", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-story-model.test.ts`
 Expected: FAIL, cannot find module.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```ts
 // Geometry for the match story chart: pure numbers, so the client component only maps them to SVG.
@@ -573,12 +573,12 @@ export function matchStoryModel(innings: StoryInnings[]): StoryModel {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-story-model.test.ts`
 Expected: 5 pass. (`wormWickets` x and y are not rounded, so the equality assertions hold exactly.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/cricketMatchStoryModel.ts tests/cricket-match-story-model.test.ts
@@ -596,7 +596,7 @@ git commit -m "feat(cricket): geometry for the match story chart"
 **Interfaces:**
 - Produces: `matchPills(notes: unknown): string[]`, `teamColours(summary: unknown): { home: string | null; away: string | null }`, `splitCricketScore(score: string): { main: string; detail: string | null }`, `overNote(over, innings, team): string` (the one-line note under an over's balls).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { test } from "node:test";
@@ -644,12 +644,12 @@ test("the over note is a wicket line, else the score after the over", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-extras.test.ts`
 Expected: FAIL, cannot find module.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```ts
 /* eslint-disable @typescript-eslint/no-explicit-any -- ESPN feed JSON has no published schema */
@@ -724,12 +724,12 @@ export function overNote(over: StoryOver, innings: StoryInnings): string {
 
 `wicketLine` reads `w.batterRuns`; add it to Task 1's `StoryWicket` as `batterRuns: number | null` set from `dismissal.batsman` when it is the striker (`item.batsman.totalRuns`), else null, and update Task 1's wicket assertions to include it (`batterRuns: 12` for Pooran, `null` for the run-out Hetmyer who was the non-striker; the over-6 note then reads "Shimron Hetmyer run out; Rovman Powell b Axar Patel 0." — change the extras test's expected string to match: `"Shimron Hetmyer run out; Rovman Powell b Axar Patel 0. West Indies 44/3 after 6 overs."`).
 
-- [ ] **Step 4: Run the extras and balls tests**
+- [x] **Step 4: Run the extras and balls tests**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-extras.test.ts tests/cricket-balls.test.ts`
 Expected: all pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/cricketMatchExtras.ts src/lib/cricketBalls.ts tests/cricket-match-extras.test.ts tests/cricket-balls.test.ts
@@ -748,7 +748,7 @@ git commit -m "feat(cricket): hero pills, team colours, score split and over not
 - Consumes: `StoryInnings` (Task 1), `matchStoryModel` (Task 3), `overNote` (Task 4).
 - Produces: `CricketMatchStory({ innings, colours }: { innings: StoryInnings[]; colours: Record<string, string> })` where `colours` maps `teamId` to a CSS colour (falls back to `var(--sig)` and `var(--text-muted)`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { test } from "node:test";
@@ -786,12 +786,12 @@ test("no innings renders nothing", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-story-render.test.ts`
 Expected: FAIL, cannot find module.
 
-- [ ] **Step 3: Write the component**
+- [x] **Step 3: Write the component**
 
 ```tsx
 "use client";
@@ -927,12 +927,12 @@ export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-story-render.test.ts`
 Expected: 3 pass. `useState` inside `renderToStaticMarkup` is fine (initial state only). If `tsx` cannot compile the `.tsx` import, check that other tests import `.tsx` components the same way (`tests/breadcrumbs.test.ts` does).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/CricketMatchStory.tsx tests/cricket-match-story-render.test.ts
@@ -967,7 +967,7 @@ export interface CricketMatchHeroProps {
 }
 ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { test } from "node:test";
@@ -1023,12 +1023,12 @@ test("a fixture shows Upcoming and the venue; a called-off match shows why", () 
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-hero-render.test.ts`
 Expected: FAIL, cannot find module.
 
-- [ ] **Step 3: Write the component**
+- [x] **Step 3: Write the component**
 
 ```tsx
 import { TeamLogo } from "@/components/TeamLogo";
@@ -1139,12 +1139,12 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
 
 Note: inside `.band-deep`, `--sig` resolves to the band's link colour and `--mast-muted`/`--mast-line` to the band's muted text and hairline, so the component names only band tokens. The pill's text sits on the band, so the result line uses `--sig` as the spec says.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-hero-render.test.ts`
 Expected: 3 pass. `LocalTime` is a client component; rendering it with `renderToStaticMarkup` in node works as the breadcrumbs test shows for other client components; if it reads `window`, pass `date: null` in the test and assert the date elsewhere.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/CricketMatchHero.tsx tests/cricket-match-hero-render.test.ts
@@ -1162,7 +1162,7 @@ git commit -m "feat(cricket): band-deep match hero with team colours and display
 **Interfaces:**
 - Consumes: everything above; `isSettledCricketMatch` from `cricketMatchCache`; `details.scorecard` for the Player of the Match's figures.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { test } from "node:test";
@@ -1184,12 +1184,12 @@ test("the match page renders the hero and the story, keeps its h1 line, report a
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `env -u NODE_ENV npx tsx --test tests/cricket-match-page-wiring.test.ts`
 Expected: FAIL on the first assertion.
 
-- [ ] **Step 3: Edit the page**
+- [x] **Step 3: Edit the page**
 
 Imports to add:
 
@@ -1249,7 +1249,7 @@ Keep the `potm` and `venue` fallbacks that the old card showed when there was no
 
 Check `CricketInningsRow.stats` order (`battingLabels` is `["R","B","4s","6s","SR"]` in `matchDetail.ts`), so `stats[0]` is runs and `stats[1]` balls. If the labels differ, index by `battingLabels.indexOf("R")` instead.
 
-- [ ] **Step 4: Run the wiring test, then the full suite, types and lint**
+- [x] **Step 4: Run the wiring test, then the full suite, types and lint**
 
 ```bash
 env -u NODE_ENV npx tsx --test tests/cricket-match-page-wiring.test.ts
@@ -1260,7 +1260,7 @@ npx eslint src tests
 
 Expected: all pass (1910 + the new tests), no type errors, lint clean. `css-layers.test.ts` must still pass: no new CSS was added, only utilities.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/cricketMatchPage.tsx tests/cricket-match-page-wiring.test.ts
@@ -1274,12 +1274,12 @@ git commit -m "feat(cricket): match page opens with the hero and the match story
 **Files:**
 - Create (session root, not committed): `/Users/ps/Claude/sports-stats-site/run-dev-match-story.sh`, a `.claude/launch.json` entry `match-story` on port 3017.
 
-- [ ] **Step 1: Start the dev server** with `preview_start {name: "match-story"}` (the wrapper runs `env -u NODE_ENV npx next dev -p 3017` inside `worktrees/match-story`, which reads `.env.local` for the local Postgres on 5433).
+- [x] **Step 1: Start the dev server** with `preview_start {name: "match-story"}` (the wrapper runs `env -u NODE_ENV npx next dev -p 3017` inside `worktrees/match-story`, which reads `.env.local` for the local Postgres on 5433).
 
-- [ ] **Step 2: Open `/cricket/matches/1529230`** (a finished T20I: ESPN serves its summary and play-by-play live). Check: the band-deep hero with both colour bars, 56px scores, the result line, the Player of the Match chip "Shreyas Iyer 102* (43)", the pills; the Match story card with the worm, 12 wicket circles, the legend; click "Runs per over"; click over 6 and over 14 in the chart; the inspector texts. `read_console_messages` for hydration warnings (there must be none: the server and client HTML are identical).
+- [x] **Step 2: Open `/cricket/matches/1529230`** (a finished T20I: ESPN serves its summary and play-by-play live). Check: the band-deep hero with both colour bars, 56px scores, the result line, the Player of the Match chip "Shreyas Iyer 102* (43)", the pills; the Match story card with the worm, 12 wicket circles, the legend; click "Runs per over"; click over 6 and over 14 in the chart; the inspector texts. `read_console_messages` for hydration warnings (there must be none: the server and client HTML are identical).
 
-- [ ] **Step 3: Dark mode and phone width.** `resize_window {colorScheme: "dark"}` then reload; `resize_window {preset: "mobile"}`: the hero rows stack, the chart keeps its aspect, the inspector stacks. Screenshot each.
+- [x] **Step 3: Dark mode and phone width.** `resize_window {colorScheme: "dark"}` then reload; `resize_window {preset: "mobile"}`: the hero rows stack, the chart keeps its aspect, the inspector stacks. Screenshot each.
 
-- [ ] **Step 4: Other states.** An upcoming match (the 2nd T20I, 1529231: hero shows Upcoming + venue, no story section, no ball fetch in the dev log); a first-class match from the series list (no story section); a match ESPN lists with no stored row still renders.
+- [x] **Step 4: Other states.** An upcoming match (the 2nd T20I, 1529231: hero shows Upcoming + venue, no story section, no ball fetch in the dev log); a first-class match from the series list (no story section); a match ESPN lists with no stored row still renders.
 
-- [ ] **Step 5: Push and open the PR** via Claude in Chrome (the compare form; title "Cricket match page: hero and match story chart"; body from the spec's PR 1 scope, the verification list and `🤖 Generated with [Claude Code](https://claude.com/claude-code)`), confirm with the GitHub API, then `scratchpad/checks.py <sha>` after ~3 minutes. Do not merge: the owner merges on their say-so, and the merge deploys.
+- [x] **Step 5: Push and open the PR** via Claude in Chrome (the compare form; title "Cricket match page: hero and match story chart"; body from the spec's PR 1 scope, the verification list and `🤖 Generated with [Claude Code](https://claude.com/claude-code)`), confirm with the GitHub API, then `scratchpad/checks.py <sha>` after ~3 minutes. Do not merge: the owner merges on their say-so, and the merge deploys.

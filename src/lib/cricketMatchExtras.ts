@@ -81,3 +81,32 @@ export function overNote(over: StoryOver, innings: StoryInnings): string {
   }
   return parts.join(" ");
 }
+
+interface CardRows {
+  battingRows: { name: string; dismissal?: string | null; stats: string[] }[];
+  bowlingRows: { name: string; stats: string[] }[];
+}
+
+/**
+ * The Player of the Match's figures from the scorecard: the best batting line when it is a score
+ * worth naming (40 or more, or there is no bowling), the best bowling return when it took two or
+ * more, both when both ("64* (40) & 3/26"). Batting stats run R, B, 4s, 6s, SR; bowling O, M, R, W, Econ.
+ */
+export function potmLine(scorecard: CardRows[], name: string): string | null {
+  const bat = scorecard
+    .flatMap((t) => t.battingRows)
+    .filter((r) => r.name === name && r.stats.length >= 2)
+    .map((r) => ({ runs: Number(r.stats[0]), balls: r.stats[1], notOut: /not out/i.test(r.dismissal ?? "") }))
+    .filter((r) => Number.isFinite(r.runs))
+    .sort((a, b) => b.runs - a.runs)[0];
+  const bowl = scorecard
+    .flatMap((t) => t.bowlingRows)
+    .filter((r) => r.name === name && r.stats.length >= 4)
+    .map((r) => ({ wickets: Number(r.stats[3]), runs: r.stats[2] }))
+    .filter((r) => Number.isFinite(r.wickets))
+    .sort((a, b) => b.wickets - a.wickets)[0];
+  const parts: string[] = [];
+  if (bat && (bat.runs >= 40 || !bowl || bowl.wickets < 2)) parts.push(`${bat.runs}${bat.notOut ? "*" : ""} (${bat.balls})`);
+  if (bowl && bowl.wickets >= 2) parts.push(`${bowl.wickets}/${bowl.runs}`);
+  return parts.length ? parts.join(" & ") : null;
+}

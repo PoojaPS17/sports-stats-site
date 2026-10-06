@@ -61,7 +61,7 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
     );
   const line = result ?? liveLine ?? venue;
   return (
-    <section className="band-deep flex flex-col gap-5 overflow-hidden rounded-2xl px-5 py-5 sm:px-6" aria-label="Match summary">
+    <section className="band-deep flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--mast-line)] px-5 py-5 sm:px-6" aria-label="Match summary">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="flex flex-wrap items-center gap-2">
           {pill}
@@ -78,10 +78,10 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
             <div key={side.name} className={`flex min-w-0 items-center gap-4 border-l-[6px] pl-4 ${muted ? "text-[var(--mast-muted)]" : ""}`} style={{ borderColor: side.colour ?? "var(--mast-line)" }}>
               <TeamLogo name={side.name} logoUrl={side.logo} size={52} priority />
               <div className="flex min-w-0 flex-col">
-                <span className={`truncate text-[22px] leading-tight ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
+                <span className={`line-clamp-2 text-[20px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
                 {detail && <span className="text-[13px] text-[var(--mast-muted)]">{detail}</span>}
               </div>
-              {main && <span className="display ml-auto shrink-0 text-[44px] leading-none tabular-nums sm:text-[56px]">{main}</span>}
+              {main && <span className={`display ml-auto shrink-0 leading-none tabular-nums ${main.length > 6 ? "text-[30px] sm:text-[40px]" : "text-[44px] sm:text-[56px]"}`}>{main}</span>}
             </div>
           );
         })}

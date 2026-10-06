@@ -33,7 +33,7 @@ import { CricketMatchInfo } from "@/components/CricketMatchInfo";
 import { CricketMatchHero } from "@/components/CricketMatchHero";
 import { CricketMatchStory } from "@/components/CricketMatchStory";
 import { deriveMatchStory, fetchCricketBallByBall } from "@/lib/cricketBalls";
-import { matchPills, teamColours } from "@/lib/cricketMatchExtras";
+import { matchPills, potmLine, teamColours } from "@/lib/cricketMatchExtras";
 
 /** The page title, description and canonical of a match, the same on the public and the final route. */
 export async function cricketMatchMetadata(id: string): Promise<Metadata> {
@@ -130,9 +130,7 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
   const colourById: Record<string, string> = {};
   if (home?.team?.id && colours.home) colourById[String(home.team.id)] = colours.home;
   if (away?.team?.id && colours.away) colourById[String(away.team.id)] = colours.away;
-  // "102* (43)" for the Player of the Match when the batting rows have the name; runs then balls are the first two batting fields.
-  const potmRow = potm ? (details?.scorecard.flatMap((t) => t.battingRows).find((r) => r.name === potm) ?? null) : null;
-  const potmLine = potmRow && potmRow.stats.length >= 2 ? `${potmRow.stats[0]}${/not out/i.test(potmRow.dismissal ?? "") ? "*" : ""} (${potmRow.stats[1]})` : null;
+  const potmFigures = potm && details ? potmLine(details.scorecard, potm) : null;
   const lastInnings = story.at(-1);
   const liveLine = live && lastInnings?.runRate != null ? `Run rate ${lastInnings.runRate.toFixed(2)}${lastInnings.requiredRunRate != null ? ` · required ${lastInnings.requiredRunRate.toFixed(2)}` : ""}` : null;
 
@@ -158,7 +156,7 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
           { name: sides[1].name, score: sides[1].score, winner: sides[1].winner, logo: sides[1].logo, colour: colours.away },
         ]}
         result={state === "post" && summaryText ? teamDisplayName(summaryText) : null}
-        potm={potm ? { name: potm, line: potmLine } : null}
+        potm={potm ? { name: potm, line: potmFigures } : null}
         pills={matchPills(summary?.notes)}
         liveLine={liveLine ?? (live && summaryText ? teamDisplayName(summaryText) : null)}
         venue={details?.venue ? venueWithCity(details.venue, details.city) : (stored?.venue ?? null)}
