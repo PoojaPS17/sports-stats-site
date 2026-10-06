@@ -39,7 +39,8 @@ export async function cricketMatchMetadata(id: string): Promise<Metadata> {
   // keeps the address as its canonical; the title and description stay the site's.
   if (!m) return { alternates: { canonical: absoluteUrl(`/cricket/matches/${id}`) } };
   // "A vs B Scorecard, 14th Match, President's Trophy 2026-27", shortened from the series end while it is over the
-  // title budget (see cricketMatchTitleCandidates); the description names the series either way.
+  // title budget, down to the full names and the keyword (see cricketMatchTitleCandidates); the description names
+  // the series and the date either way.
   const titled = { ...m, description: normalizeStage(m.description) };
   return pageMeta(fitTitle(...cricketMatchTitleCandidates(titled)), cricketMatchDescription(titled), `/cricket/matches/${id}`);
 }

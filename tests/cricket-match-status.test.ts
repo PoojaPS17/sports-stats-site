@@ -84,28 +84,31 @@ test("cricketMatchDescription: a called-off match says so, and does not promise 
   assert.equal(cricketMatchDescription({ ...base, ...m("pre", "Match cancelled") }), "India vs Australia, 2nd ODI, Tour of India: match cancelled.");
 });
 
-// Searchers type "vs", "scorecard", "live score" and "playing xi" (Search Console, 2026-10-05: 4.6K impressions on
-// "scorecard" queries, 0.1-0.5% CTR at position 8-9). The description names what the page holds, in those words.
-test("cricketMatchDescription: a result leads with the scorecard and the result, a live match with the live score", () => {
-  const base = { name: "India v Australia", series_name: "Tour of India", description: "2nd ODI" };
+// Searchers type "vs", "match scorecard", "live score" and "playing xi" (Search Console, 2026-10-06: the nine biggest
+// queries, 6.6K impressions at position 7-9 with one click, all read "<team> vs <team> cricket team match scorecard").
+// The description names what the page holds in those words, with the match's date, so the snippet matches the query.
+test("cricketMatchDescription: a result leads with the match scorecard and the result, a live match with the live score", () => {
+  const base = { name: "India v Australia", series_name: "Tour of India", description: "2nd ODI", date: "2026-10-02T04:00:00Z" };
   assert.equal(
     cricketMatchDescription({ ...base, ...m("post", "India won by 5 wickets") }),
-    "India vs Australia scorecard and result, 2nd ODI, Tour of India: India won by 5 wickets. Full batting and bowling scorecard, Playing XI, umpires and venue."
+    "India vs Australia match scorecard and result, 2nd ODI, Tour of India, Oct 2, 2026: India won by 5 wickets. Full batting and bowling scorecard, Playing XI, umpires and venue."
   );
   assert.equal(
     cricketMatchDescription({ ...base, ...m("post", "Match abandoned without a ball bowled") }),
-    "India vs Australia scorecard and result, 2nd ODI, Tour of India: Match abandoned without a ball bowled. Full batting and bowling scorecard, Playing XI, umpires and venue."
+    "India vs Australia match scorecard and result, 2nd ODI, Tour of India, Oct 2, 2026: Match abandoned without a ball bowled. Full batting and bowling scorecard, Playing XI, umpires and venue."
   );
   assert.equal(
     cricketMatchDescription({ ...base, ...m("in", "Stumps") }),
-    "India vs Australia live score and scorecard, 2nd ODI, Tour of India: Stumps. Batting and bowling figures, Playing XI and match facts, updating while the match is in play."
+    "India vs Australia live score and scorecard, 2nd ODI, Tour of India, Oct 2, 2026: Stumps. Batting and bowling figures, Playing XI and match facts, updating while the match is in play."
   );
+  // A fixture gives its start (UTC), not ESPN's "Match scheduled to begin at 09:30" (a local time with no zone).
   assert.equal(
-    cricketMatchDescription({ ...base, ...m("pre", null) }),
-    "India vs Australia live score and scorecard, 2nd ODI, Tour of India. Playing XI and match facts once play starts."
+    cricketMatchDescription({ ...base, ...m("pre", "Match scheduled to begin at 09:30") }),
+    "India vs Australia live score and scorecard, 2nd ODI, Tour of India, starts Oct 2, 2026, 04:00 UTC. Playing XI and match facts once play starts."
   );
-  // No stage: nothing dangles between the name and the series.
-  assert.equal(cricketMatchDescription({ ...base, description: null, ...m("pre", null) }), "India vs Australia live score and scorecard, Tour of India. Playing XI and match facts once play starts.");
+  // No stage: nothing dangles between the name and the series. No date (a match not stored yet): no date clause.
+  assert.equal(cricketMatchDescription({ ...base, description: null, date: null, ...m("pre", null) }), "India vs Australia live score and scorecard, Tour of India. Playing XI and match facts once play starts.");
+  assert.equal(cricketMatchDescription({ name: "India v Australia", series_name: "Tour of India", ...m("post", "India won") }), "India vs Australia match scorecard and result, Tour of India: India won. Full batting and bowling scorecard, Playing XI, umpires and venue.");
 });
 
 test("cricketMatchName: ESPN's 'A v B' reads 'A vs B', and only the separator changes", () => {
@@ -125,7 +128,6 @@ test("cricketMatchTitleCandidates: result, live and fixture forms, longest first
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, President's Trophy 2026-27",
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, 14th Match",
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard",
-    "Khan Research Laboratories vs Hyderabad Kingsmen Academy",
   ]);
   assert.deepEqual(cricketMatchTitleCandidates({ ...base, ...m("in", "Stumps") }).slice(0, 2), [
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Live Score, 14th Match, President's Trophy 2026-27",
@@ -141,31 +143,32 @@ test("cricketMatchTitleCandidates: result, live and fixture forms, longest first
   assert.deepEqual(cricketMatchTitleCandidates({ ...base, ...m("pre", "Match postponed") })[0], "Khan Research Laboratories vs Hyderabad Kingsmen Academy, 14th Match, President's Trophy 2026-27");
   // No stage: the stage-only forms are not offered, and no candidate repeats another.
   const noStage = cricketMatchTitleCandidates({ ...base, description: null, ...m("post", "Match drawn") });
-  assert.deepEqual(noStage, ["Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, President's Trophy 2026-27", "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard", "Khan Research Laboratories vs Hyderabad Kingsmen Academy"]);
+  assert.deepEqual(noStage, ["Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, President's Trophy 2026-27", "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard"]);
 });
 
 // Domestic sides have long names: "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard" is 66 characters,
-// over the budget, and the bare names would lose the one word that says what the page is. The abbreviated forms
-// ("KRL vs HKA Scorecard, 14th Match, President's Trophy 2026-27", as Cricbuzz titles its pages) come next, and the
-// full names alone are the last resort.
-test("cricketMatchTitleCandidates: abbreviated forms follow the full ones, so a long-named match keeps its keyword", () => {
-  const sides = { home: { abbreviation: "KRL" }, away: { abbreviation: "HKA" } };
+// over the budget. PR #50 fell back to the sides' abbreviations ("KRL vs HHKA Scorecard, President's Trophy 2026-27"),
+// and Search Console (2026-10-06) showed what that cost: the queries are typed with the full names ("hyderabad kingsmen
+// academy vs khan research laboratories cricket team match scorecard", 2,409 impressions, position 8.3, one click),
+// and a title without those words is skipped. So the full names and the keyword are the floor: when nothing fits,
+// the title runs over and Google clips its tail, which keeps the names searchers scan for. No abbreviated form is offered.
+test("cricketMatchTitleCandidates: a long-named match keeps its full names and keyword, never abbreviations", () => {
+  const sides = { home: { abbreviation: "KRL" }, away: { abbreviation: "HHKA" } };
   const long = { name: "Khan Research Laboratories v Hyderabad Kingsmen Academy", series_name: "President's Trophy 2026-27", description: "14th Match", ...sides, ...m("post", "Match drawn") };
   const candidates = cricketMatchTitleCandidates(long);
-  assert.deepEqual(candidates.slice(4), [
-    "KRL vs HKA Scorecard, 14th Match, President's Trophy 2026-27",
-    "KRL vs HKA Scorecard, President's Trophy 2026-27",
-    "KRL vs HKA Scorecard, 14th Match",
-    "KRL vs HKA Scorecard",
-    "Khan Research Laboratories vs Hyderabad Kingsmen Academy",
-  ]);
-  // The full abbreviated form is 60 characters, one over the budget, so the series form is the one chosen.
-  assert.equal(fitTitle(...candidates), "KRL vs HKA Scorecard, President's Trophy 2026-27");
-  // A fixture has no keyword to keep: its fourth full form is the bare names, which fit, so no abbreviated form is reached.
+  assert.ok(candidates.every((c) => !/\bKRL\b|\bHHKA\b/.test(c)), `abbreviated form offered: ${candidates.join(" / ")}`);
+  assert.ok(candidates.every((c) => c.includes("Scorecard")), "a result title always says Scorecard");
+  assert.equal(fitTitle(...candidates), "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard");
+  assert.ok(fitTitle(...candidates).length > TITLE_BUDGET, "the chosen title runs over the budget rather than lose the names");
+  // The longest pair in the series: still the full names and the keyword.
+  const longest = { ...long, name: "Oil & Gas Development Company Limited v Sui Northern Gas Pipelines Limited" };
+  assert.equal(fitTitle(...cricketMatchTitleCandidates(longest)), "Oil & Gas Development Company Limited vs Sui Northern Gas Pipelines Limited Scorecard");
+  // A fixture has no keyword: the bare names fit, and the stage comes along while it fits.
   assert.equal(fitTitle(...cricketMatchTitleCandidates({ ...long, ...m("pre", null) })), "Khan Research Laboratories vs Hyderabad Kingsmen Academy");
-  assert.ok(cricketMatchTitleCandidates({ ...long, ...m("pre", null) }).includes("KRL vs HKA, 14th Match, President's Trophy 2026-27"));
-  // Without abbreviations (a side not stored yet) only the full forms are offered.
-  assert.equal(fitTitle(...cricketMatchTitleCandidates({ ...long, home: null, away: null })), "Khan Research Laboratories vs Hyderabad Kingsmen Academy");
-  // Short names never need the abbreviated forms: the first fitting full form wins.
-  assert.equal(fitTitle(...cricketMatchTitleCandidates({ name: "India v Australia", series_name: "Australia tour of India 2026-27", description: "2nd ODI", home: { abbreviation: "IND" }, away: { abbreviation: "AUS" }, ...m("post", "India won") })), "India vs Australia Scorecard, 2nd ODI");
+  assert.equal(
+    fitTitle(...cricketMatchTitleCandidates({ ...long, name: "Hyderabad Kingsmen Academy v Sui Northern Gas Pipelines Limited", description: "20th Match", ...m("pre", null) })),
+    "Hyderabad Kingsmen Academy vs Sui Northern Gas Pipelines Limited"
+  );
+  // Short names never run over: the first fitting full form wins, as before.
+  assert.equal(fitTitle(...cricketMatchTitleCandidates({ name: "India v Australia", series_name: "Australia tour of India 2026-27", description: "2nd ODI", ...m("post", "India won") })), "India vs Australia Scorecard, 2nd ODI");
 });
