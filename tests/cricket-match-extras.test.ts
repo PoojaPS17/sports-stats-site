@@ -1,0 +1,48 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { deriveMatchStory } from "../src/lib/cricketBalls";
+import { matchPills, teamColours, splitCricketScore, overNote } from "../src/lib/cricketMatchExtras";
+
+const notes = [
+  { type: "seriesnote", text: "India led the 5-match series 1-0" },
+  { type: "matchnumber", text: "T20I no. 4166" },
+  { type: "season", text: "2026/27" },
+  { type: "matchdays", text: "6 October 2026 - night match (20-over match)" },
+  { type: "toss", text: "India , elected to field first" },
+  { type: "livecommentator", text: "S Sudarshanan" },
+  { type: "matchnote", text: "Powerplay: Overs 0.1 - 6.0 (Mandatory - 44 runs, 3 wickets)" },
+];
+
+test("pills: toss, series state, match number and the night note, in that order, nothing else", () => {
+  assert.deepEqual(matchPills(notes), ["Toss: India, elected to field first", "India lead the 5-match series 1-0", "T20I no. 4166", "Night match"]);
+  assert.deepEqual(matchPills(undefined), []);
+  assert.deepEqual(matchPills([{ type: "toss", text: "West Indies , elected to bat first" }]), ["Toss: West Indies, elected to bat first"]);
+  assert.deepEqual(matchPills([{ type: "matchdays", text: "6 October 2026 - day/night match (50-over match)" }]), ["Day/night match"]);
+});
+
+test("team colours come from the header competitors, none when missing or identical", () => {
+  const summary = { header: { competitions: [{ competitors: [{ homeAway: "home", team: { color: "050ceb" } }, { homeAway: "away", team: { color: "#790D1A" } }] }] } };
+  assert.deepEqual(teamColours(summary), { home: "#050ceb", away: "#790d1a" });
+  assert.deepEqual(teamColours({ header: { competitions: [{ competitors: [{ homeAway: "home", team: { color: "#111111" } }, { homeAway: "away", team: { color: "#111111" } }] }] } }), { home: null, away: null });
+  assert.deepEqual(teamColours({ header: { competitions: [{ competitors: [{ homeAway: "home", team: {} }, { homeAway: "away", team: { color: "#111111" } }] }] } }), { home: null, away: null });
+  assert.deepEqual(teamColours(null), { home: null, away: null });
+});
+
+test("a score splits into the figure and the overs detail", () => {
+  assert.deepEqual(splitCricketScore("172/2 (14.4/20 ov, target 172)"), { main: "172/2", detail: "14.4/20 ov, target 172" });
+  assert.deepEqual(splitCricketScore("171"), { main: "171", detail: null });
+  assert.deepEqual(splitCricketScore("236 & 171/4d"), { main: "236 & 171/4d", detail: null });
+  assert.deepEqual(splitCricketScore(""), { main: "", detail: null });
+});
+
+test("the over note is a wicket line for each wicket in the over, then the score after it", () => {
+  const items = JSON.parse(readFileSync(new URL("./fixtures/espn-cricket-playbyplay-1529230.json", import.meta.url), "utf8")) as unknown[];
+  const [wi, ind] = deriveMatchStory(items);
+  assert.equal(overNote(wi.overs[5], wi), "Shimron Hetmyer run out; Rovman Powell b Axar Patel 0. West Indies 44/3 after 6 overs.");
+  assert.equal(overNote(wi.overs[4], wi), "Kamil Pooran b Arshdeep Singh 12. West Indies 44/1 after 5 overs.");
+  assert.equal(overNote(wi.overs[11], wi), "Shai Hope c Naman Dhir 52. West Indies 109/4 after 12 overs.");
+  assert.equal(overNote(ind.overs[13], ind), "India 164/2 after 14 overs.");
+  assert.equal(overNote(wi.overs[19], wi), "Akeal Hosein c Axar Patel 15. West Indies 171 all out.");
+  assert.equal(overNote(ind.overs[14], ind), "India 172/2, target reached.");
+});
