@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cricketFormatTitle, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatLabels, seriesFormatTitles } from "../src/lib/cricketSeriesSeo";
+import { cricketFormatTitle, cricketSeasonCrumbs, cricketSeriesCrumbs, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatLabels, seriesFormatTitles } from "../src/lib/cricketSeriesSeo";
 import { fitTitle } from "../src/lib/metadata";
 
 // The series row's `formats` are ESPN's class cards as stored ("Other OD", "Other T20", "Women T20", "List A",
@@ -62,4 +62,21 @@ test("a class card becomes a label a reader understands, capitalised for a card 
   assert.equal(cricketFormatTitle(null), null);
   assert.deepEqual(seriesFormatTitles(["Other OD", "Other T20", "Twenty20", "Other match"]), ["One-day", "T20"]);
   assert.deepEqual(seriesFormatTitles(["First-class", "List A"]), ["First-class", "List A"]);
+});
+
+// Series pages earn most of the site's clicks and were the one page type without a breadcrumb trail, so their
+// result showed the raw URL where every other page shows "sports-db.live › Cricket series › …". The same trail
+// a match page draws above its series, ending at the page itself.
+test("cricketSeriesCrumbs: Cricket series, then the series as the current page", () => {
+  assert.deepEqual(cricketSeriesCrumbs({ name: "CSA Provincial One-Day Challenge Division One 2026-27" }), [
+    { label: "Cricket series", href: "/cricket/series" },
+    { label: "CSA Provincial One-Day Challenge Division One 2026-27" },
+  ]);
+});
+
+test("cricketSeasonCrumbs: Cricket series, then the season archive year", () => {
+  assert.deepEqual(cricketSeasonCrumbs(2025), [
+    { label: "Cricket series", href: "/cricket/series" },
+    { label: "2025" },
+  ]);
 });
