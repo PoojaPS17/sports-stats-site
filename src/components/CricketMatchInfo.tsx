@@ -14,6 +14,7 @@ export function CricketMatchInfo({
   officials,
   playerOfTheMatch,
   result,
+  collapsed = false,
 }: {
   series: { name: string; href: string | null } | null;
   stage: string | null;
@@ -23,6 +24,8 @@ export function CricketMatchInfo({
   officials: { name: string; role: string }[];
   playerOfTheMatch: string | null;
   result: string | null;
+  /** Closed by default as a details card (beside the Playing XI); the heading stays an h2 inside the summary. */
+  collapsed?: boolean;
 }) {
   const umpires = officials.filter((o) => /umpire/i.test(o.role) && !/tv|third|reserve|fourth/i.test(o.role)).map((o) => o.name);
   const tvUmpires = officials.filter((o) => /tv|third/i.test(o.role)).map((o) => o.name);
@@ -50,10 +53,8 @@ export function CricketMatchInfo({
   if (playerOfTheMatch) rows.push(["Player of the Match", playerOfTheMatch]);
   if (result) rows.push(["Result", teamDisplayName(result)]);
   if (rows.length === 0) return null;
-  return (
-    <section className="flex flex-col gap-3">
-      <SectionHeader>Match info</SectionHeader>
-      <dl className="card grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
+  const list = (
+    <dl className={collapsed ? "grid grid-cols-1 text-sm" : "card grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2"}>
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-baseline justify-between gap-4 border-b border-[var(--border)] px-4 py-2.5 last:border-b-0 sm:[&:nth-last-child(2):nth-child(odd)]:border-b-0">
             <dt className="shrink-0 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">{label}</dt>
@@ -61,6 +62,22 @@ export function CricketMatchInfo({
           </div>
         ))}
       </dl>
+  );
+  if (collapsed) {
+    return (
+      <details className="card overflow-hidden">
+        <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
+          <h2 className="text-sm font-bold">Match info</h2>
+          <span className="text-xs font-bold text-[var(--sig-ink)]">Show</span>
+        </summary>
+        <div className="border-t border-[var(--border)]">{list}</div>
+      </details>
+    );
+  }
+  return (
+    <section className="flex flex-col gap-3">
+      <SectionHeader>Match info</SectionHeader>
+      {list}
     </section>
   );
 }

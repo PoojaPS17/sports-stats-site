@@ -5,12 +5,11 @@ import type { TeamXi } from "@/lib/cricketPlayingXi";
 // Each side's Playing XI on a cricket match page: the names in roster order, the captain and the
 // wicketkeeper marked, the player's usual role when ESPN knows it. Renders nothing without a squad
 // (a fixture ESPN has not listed yet, a summary served without rosters).
-export function CricketPlayingXi({ sides }: { sides: TeamXi[] }) {
+export function CricketPlayingXi({ sides, collapsed = false }: { sides: TeamXi[]; collapsed?: boolean }) {
   if (sides.length === 0) return null;
-  return (
-    <section className="flex flex-col gap-3">
-      <SectionHeader description="Captain (c) and wicketkeeper (wk) as listed in the match summary">Playing XI</SectionHeader>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+  const note = "Captain (c) and wicketkeeper (wk) as listed in the match summary";
+  const lists = (
+    <div className={collapsed ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 gap-3 md:grid-cols-2"}>
         {sides.map((side) => (
           <div key={side.teamId || side.team} className="card overflow-hidden">
             <h3 className="border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-bold">{teamDisplayName(side.team)}</h3>
@@ -29,6 +28,26 @@ export function CricketPlayingXi({ sides }: { sides: TeamXi[] }) {
           </div>
         ))}
       </div>
+  );
+  // Closed by default beside the match info: the heading stays an h2 inside the summary, the lists stay in the HTML.
+  if (collapsed) {
+    return (
+      <details className="card overflow-hidden">
+        <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
+          <h2 className="text-sm font-bold">Playing XI</h2>
+          <span className="text-xs font-bold text-[var(--sig-ink)]">Show</span>
+        </summary>
+        <div className="flex flex-col gap-3 border-t border-[var(--border)] px-3 pb-3 pt-3">
+          <p className="text-xs text-[var(--text-muted)]">{note}</p>
+          {lists}
+        </div>
+      </details>
+    );
+  }
+  return (
+    <section className="flex flex-col gap-3">
+      <SectionHeader description={note}>Playing XI</SectionHeader>
+      {lists}
     </section>
   );
 }
