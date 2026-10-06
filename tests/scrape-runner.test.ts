@@ -85,6 +85,7 @@ test("idle tick: checks live games, then only the always-on tennis and cricket f
       "npm run --silent check:live",
       "npm run --silent fetch:tennis-daily",
       "npm run --silent fetch:cricket-series -- --days 1 --ahead 2",
+      "npm run --silent topup:cricket-series-stats -- --cap 15",
       "npm run --silent record:run -- scrape-tick",
     ]
   );
@@ -153,7 +154,7 @@ test("a failing check:live skips the scoped fetch but still runs the always-on f
   const { status, calls } = run("tick", { STUB_FAIL: "check:live", STUB_SHOULD: "true", STUB_LEAGUES: "nba" });
   assert.equal(status, 1);
   const steps = calls.map((c) => c.split(" | ")[0]);
-  assert.deepEqual(steps, ["npm run --silent check:live", "npm run --silent fetch:tennis-daily", "npm run --silent fetch:cricket-series -- --days 1 --ahead 2"]);
+  assert.deepEqual(steps, ["npm run --silent check:live", "npm run --silent fetch:tennis-daily", "npm run --silent fetch:cricket-series -- --days 1 --ahead 2", "npm run --silent topup:cricket-series-stats -- --cap 15"]);
 });
 
 test("idle tick (should_scrape=false) never seeds or fetches the leagues", () => {
@@ -186,7 +187,7 @@ test("a leaked SCRAPE_LEAGUES never reaches the tick's own scoped steps", () => 
   const { calls } = run("tick", { SCRAPE_MODE: "full", SCRAPE_LEAGUES: "nfl", STUB_SHOULD: "true", STUB_LEAGUES: "epl" });
   assert.ok(calls.includes("npm run --silent fetch:all | MODE=live LEAGUES=epl FORCE="));
   const feeds = calls.filter((c) => c.includes("tennis-daily") || c.includes("cricket-series"));
-  assert.ok(feeds.length === 2 && feeds.every((c) => c.endsWith("| MODE= LEAGUES= FORCE=")));
+  assert.ok(feeds.length === 3 && feeds.every((c) => c.endsWith("| MODE= LEAGUES= FORCE=")));
 });
 
 test("a missing SCRAPE_DIR exits 1 with a message and runs nothing", () => {
