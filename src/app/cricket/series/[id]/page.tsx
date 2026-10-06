@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { fitTitle, pageMeta } from "@/lib/metadata";
-import { cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
+import { cricketSeasonCrumbs, cricketSeriesCrumbs, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
 import { fetchCricketSeriesStandings, pointsTableShown } from "@/lib/cricketSeriesStandings";
 import { CricketPointsTable } from "@/components/CricketPointsTable";
 import { CricketSeriesLeaders } from "@/components/CricketSeriesLeaders";
@@ -11,6 +11,7 @@ import { cricketSeriesOverview, seriesVenues } from "@/lib/cricketSeriesOverview
 import { getCricketSeriesStats } from "@/lib/cricketSeriesStatsData";
 import { normalizeStage } from "@/lib/stage";
 import { teamDisplayName } from "@/lib/teamName";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
@@ -66,6 +67,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
     const now = clock();
     return (
       <div className="flex flex-col gap-6">
+        <Breadcrumbs items={cricketSeasonCrumbs(season)} />
         <PageHeader title={`${season} Cricket Series`} subtitle={`${series.length} series, leagues and tournaments that started in ${season}.`}>
           <Link href="/cricket/series" className="nav-pill">
             Current
@@ -132,6 +134,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
   return (
     <div className="flex flex-col gap-8">
       <LiveRefresh active={live.length > 0} />
+      <Breadcrumbs items={cricketSeriesCrumbs(s)} />
       <PageHeader title={s.name} subtitle={[SERIES_KIND_LABEL[s.kind], seriesFormatTitles(s.formats).join(" · ") || null, dates, `${s.match_count} match${s.match_count === 1 ? "" : "es"}`].filter(Boolean).join(" · ")}>
         <Link href="/cricket/series" className="nav-pill">
           All series

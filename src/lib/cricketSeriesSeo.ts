@@ -1,6 +1,8 @@
 // The title and description of a cricket series page, in the words searchers use ("fixtures", "results",
 // "points table"). Pure, shared by the page and its tests.
 
+import type { Crumb } from "@/components/Breadcrumbs";
+
 // A series row's `formats` are ESPN's class cards as stored. In a search snippet "(Other OD)" meant nothing
 // to a reader, so each card has a reader's label; the catch-all card has none.
 const FORMAT_LABEL: Record<string, string | null> = {
@@ -79,4 +81,14 @@ export function cricketSeriesDescription(s: SeriesSeoFields, hasTable: boolean, 
   const base = `${s.name}: ${holds} for every ${format ? `${format} ` : ""}match`;
   const withTeams = s.teams.length > 0 && s.teams.length <= 4 ? `${base} between ${list(s.teams.map((t) => t.name))}.` : null;
   return withTeams && withTeams.length <= DESCRIPTION_LIMIT ? withTeams : `${base}, with the scorecard of each.`;
+}
+
+/** The breadcrumb trail of a series page: Cricket series, then the series as the current page. */
+export function cricketSeriesCrumbs(s: { name: string }): Crumb[] {
+  return [{ label: "Cricket series", href: "/cricket/series" }, { label: s.name }];
+}
+
+/** The breadcrumb trail of a season archive: Cricket series, then the year. */
+export function cricketSeasonCrumbs(season: number): Crumb[] {
+  return [{ label: "Cricket series", href: "/cricket/series" }, { label: String(season) }];
 }
