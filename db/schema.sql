@@ -655,6 +655,11 @@ create table if not exists scrape_runs (
   last_changed_at timestamptz
 );
 
+-- The daily job records its own heartbeat (deploy/vm/scrape.sh job_daily), and a scraper with no
+-- row counts as stale, so the first deploy that tracks it would alarm (/api/health, the GitHub
+-- watchdog) until the next 06:07 UTC run. Seed the row once; the job overwrites it from then on.
+insert into scrape_runs (scraper) values ('scrape-daily') on conflict (scraper) do nothing;
+
 -- Medal tally per Asian Games edition, scraped from Wikipedia (see
 -- scripts/lib/asianGamesMedals.ts). `rank` is the site's own tie-aware
 -- computation (src/lib/medalTallyOrder.ts), not read from Wikipedia's markup.

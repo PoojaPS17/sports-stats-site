@@ -85,6 +85,12 @@ job_daily() {
   run topup:cricket-series-stats -- --cap 200
   run fetch:fixtures
   run seed:f1-teams
+  # Heartbeat for check:stale, only when every step above succeeded. This is the only job that
+  # pulls in a whole league's new fixtures, standings and future games (a tick only touches the
+  # leagues check:live already sees as live or just finished), so a daily timer that silently
+  # stopped firing would leave the tables and fixtures ageing while every other heartbeat stayed
+  # green. A day's grace in heartbeat.ts covers a slow run.
+  if [ "$failed" -eq 0 ]; then run record:run -- scrape-daily; fi
 }
 
 # Feeds the old workflow never scheduled, then the alarm for any scraper that stopped.

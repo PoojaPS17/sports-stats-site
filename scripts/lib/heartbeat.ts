@@ -8,6 +8,8 @@ export const MAX_AGE_MINUTES: Record<string, number> = {
   "fetch-asian-games-medals": 180,
   // A tick can legitimately wait behind the daily job's lock for ~100 minutes.
   "scrape-tick": 150,
+  // Runs once a day at 06:07 UTC; a day's grace catches a missed run without flapping on a slow one.
+  "scrape-daily": 1500,
 };
 
 /** Record a successful run. last_changed_at only moves when the caller knows rows really changed. */
