@@ -63,43 +63,48 @@ interface SeoFields extends StatusFields {
   series_name: string;
   /** The stage ("14th Match", "2nd ODI", "Final"), when the listing has one. */
   description?: string | null;
-  /** The sides' abbreviations ("KRL", "HKA"), for the title forms a long pair of names cannot fit. */
-  home?: { abbreviation: string | null } | null;
-  away?: { abbreviation: string | null } | null;
+  /** The start, as stored (UTC ISO string); the description dates the match with it. */
+  date?: string | null;
 }
 
 /**
  * The page title, longest form first for fitTitle: the teams as searchers type them, then the word that names the
  * page (Scorecard for a result, Live Score in play, nothing for a fixture or a called-off match), then the stage and
  * the series. The series is dropped before the stage: the description still names it, and "14th Match" alone tells
- * the match apart from the sides' other meetings. Domestic sides have long names ("Khan Research Laboratories vs
- * Hyderabad Kingsmen Academy Scorecard" is over the budget on its own), so the same forms with the sides' abbreviations
- * ("KRL vs HKA Scorecard, 14th Match, ...", as Cricbuzz titles its pages) follow, and the full names alone come last.
+ * the match apart from the sides' other meetings. The last form is the names and the keyword alone, offered even when
+ * it is over the budget: domestic sides have long names ("Khan Research Laboratories vs Hyderabad Kingsmen Academy
+ * Scorecard" is 66 characters), and the queries that find these pages are typed with those names in full (Search
+ * Console, 2026-10-06), so a title that runs over and is clipped by Google still beats one with abbreviations.
  */
 export function cricketMatchTitleCandidates(m: SeoFields): string[] {
   const kind = classifyCricketMatch(m);
   const keyword = kind === "result" ? " Scorecard" : kind === "live" ? " Live Score" : "";
   const stage = m.description?.trim() || null;
-  const pairs = [cricketMatchName(m.name)];
-  if (m.home?.abbreviation && m.away?.abbreviation) pairs.push(`${m.home.abbreviation} vs ${m.away.abbreviation}`);
+  const lead = `${cricketMatchName(m.name)}${keyword}`;
   const out: string[] = [];
-  const add = (title: string) => {
+  for (const parts of [[lead, stage, m.series_name], [lead, m.series_name], [lead, stage], [lead]]) {
+    if (parts.includes(null)) continue;
+    const title = parts.join(", ");
     if (!out.includes(title)) out.push(title);
-  };
-  for (const pair of pairs) {
-    const lead = `${pair}${keyword}`;
-    for (const parts of [[lead, stage, m.series_name], [lead, m.series_name], [lead, stage], [lead]]) {
-      if (!parts.includes(null)) add(parts.join(", "));
-    }
   }
-  add(pairs[0]);
   return out;
 }
 
+/** "Oct 2, 2026", and with `withTime` "Oct 2, 2026, 04:00 UTC": the match's start as the description states it. */
+function describedDate(date: string | null | undefined, withTime: boolean): string | null {
+  if (!date) return null;
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  if (!withTime) return day;
+  return `${day}, ${d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" })} UTC`;
+}
+
 /**
- * The meta description of a cricket match page, in the words searchers use ("scorecard", "live score", "playing XI"):
- * the reason for a called-off match; the scorecard and the result for a finished one; the live score in play; and
- * what the page will hold for a fixture.
+ * The meta description of a cricket match page, in the words searchers use ("match scorecard", "live score",
+ * "playing XI"): the reason for a called-off match; the match scorecard, date and result for a finished one; the live
+ * score in play; and what the page will hold for a fixture, with its start in UTC rather than ESPN's status text
+ * ("Match scheduled to begin at 09:30", a local time with no zone).
  */
 export function cricketMatchDescription(m: SeoFields): string {
   const kind = classifyCricketMatch(m);
@@ -107,7 +112,8 @@ export function cricketMatchDescription(m: SeoFields): string {
   const where = [m.description?.trim() || null, m.series_name].filter(Boolean).join(", ");
   const summary = m.status_summary ? `: ${m.status_summary}` : "";
   if (typeof kind === "object") return `${name}, ${where}: match ${kind.calledOff.toLowerCase()}.`;
-  if (kind === "result") return `${name} scorecard and result, ${where}${summary}. Full batting and bowling scorecard, Playing XI, umpires and venue.`;
-  if (kind === "live") return `${name} live score and scorecard, ${where}${summary}. Batting and bowling figures, Playing XI and match facts, updating while the match is in play.`;
-  return `${name} live score and scorecard, ${where}${summary}. Playing XI and match facts once play starts.`;
+  const day = describedDate(m.date, kind === "fixture");
+  if (kind === "result") return `${name} match scorecard and result, ${where}${day ? `, ${day}` : ""}${summary}. Full batting and bowling scorecard, Playing XI, umpires and venue.`;
+  if (kind === "live") return `${name} live score and scorecard, ${where}${day ? `, ${day}` : ""}${summary}. Batting and bowling figures, Playing XI and match facts, updating while the match is in play.`;
+  return `${name} live score and scorecard, ${where}${day ? `, starts ${day}` : ""}. Playing XI and match facts once play starts.`;
 }
