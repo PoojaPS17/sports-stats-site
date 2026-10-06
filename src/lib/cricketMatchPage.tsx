@@ -7,8 +7,6 @@ import { fitTitle, pageMeta } from "@/lib/metadata";
 import { absoluteUrl } from "@/lib/site";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
-import { TeamLogo } from "@/components/TeamLogo";
-import { LocalTime } from "@/components/LocalTime";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { CricketScorecards } from "@/components/CricketScorecard";
 import { ImageActions } from "@/components/ImageActions";
@@ -32,6 +30,10 @@ import { playingXi } from "@/lib/cricketPlayingXi";
 import { seriesFormatLabels } from "@/lib/cricketSeriesSeo";
 import { CricketPlayingXi } from "@/components/CricketPlayingXi";
 import { CricketMatchInfo } from "@/components/CricketMatchInfo";
+import { CricketMatchHero } from "@/components/CricketMatchHero";
+import { CricketMatchStory } from "@/components/CricketMatchStory";
+import { deriveMatchStory, fetchCricketBallByBall } from "@/lib/cricketBalls";
+import { liveStatusLine, matchPills, potmLine, teamColours } from "@/lib/cricketMatchExtras";
 
 /** The page title, description and canonical of a match, the same on the public and the final route. */
 export async function cricketMatchMetadata(id: string): Promise<Metadata> {
@@ -119,15 +121,17 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
     scorecard: details?.scorecard ?? [],
     playerOfTheMatch: potm,
   });
-  const sideRow = ({ name, score, winner, logo }: (typeof sides)[number]) => {
-    return (
-      <div className="flex items-center gap-3">
-        <TeamLogo name={name} logoUrl={logo} size={40} priority />
-        <span className={`min-w-0 flex-1 truncate text-lg ${state === "post" && !winner ? "text-[var(--text-muted)]" : "font-bold"}`}>{name}</span>
-        <span className={`shrink-0 text-lg tabular-nums ${state === "post" && !winner ? "text-[var(--text-muted)]" : "font-bold"}`}>{score}</span>
-      </div>
-    );
-  };
+  // The match story needs every ball; only limited-overs matches are asked (a first-class match is
+  // 80+ pages) and only once play has started (an upcoming match has none).
+  const limitedOvers = comp?.limitedOvers === true;
+  const balls = summary && limitedOvers && state !== "pre" ? await fetchCricketBallByBall(id, stored?.series_espn_id ?? "8048", { settled: isSettledCricketMatch(stored, summary) }) : null;
+  const story = balls ? deriveMatchStory(balls) : [];
+  const colours = teamColours(summary);
+  const colourById: Record<string, string> = {};
+  if (home?.team?.id && colours.home) colourById[String(home.team.id)] = colours.home;
+  if (away?.team?.id && colours.away) colourById[String(away.team.id)] = colours.away;
+  const potmFigures = potm && details ? potmLine(details.scorecard, potm) : null;
+  const liveLine = live ? liveStatusLine(summaryText ? teamDisplayName(summaryText) : null, story.at(-1)) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -141,22 +145,26 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
         ]}
       />
 
-      <section className="card flex flex-col gap-3 px-5 py-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="flex items-center gap-2">
-            {live ? <span className="pill pill-live">Live</span> : calledOff ? <span className="pill pill-final">{calledOff}</span> : state === "post" ? <span className="pill pill-final">Result</span> : <span className="pill pill-upcoming">Upcoming</span>}
-            <h1 className="font-semibold text-[var(--text-muted)]">{[matchName, description, seriesName].filter(Boolean).join(" · ")}</h1>
-          </span>
-          {date && <LocalTime iso={date} format={calledOff ? "date" : "datetime"} className="text-[var(--text-muted)]" />}
-        </div>
-        {sideRow(sides[0])}
-        {sideRow(sides[1])}
-        {report ? <p className="text-sm leading-relaxed">{report}</p> : summaryText && <p className="text-sm font-medium">{teamDisplayName(summaryText)}</p>}
-        {!report && potm && <p className="text-xs text-[var(--text-muted)]">Player of the Match: {potm}</p>}
-        {!report && details?.venue && <p className="text-xs text-[var(--text-muted)]">{venueWithCity(details.venue, details.city)}</p>}
-      </section>
+      <CricketMatchHero
+        state={state === "in" ? "in" : state === "post" ? "post" : "pre"}
+        calledOff={calledOff}
+        headline={[matchName, description, seriesName].filter(Boolean).join(" · ")}
+        date={date}
+        sides={[
+          { name: sides[0].name, score: sides[0].score, winner: sides[0].winner, logo: sides[0].logo, colour: colours.home },
+          { name: sides[1].name, score: sides[1].score, winner: sides[1].winner, logo: sides[1].logo, colour: colours.away },
+        ]}
+        result={state === "post" && summaryText ? teamDisplayName(summaryText) : null}
+        potm={potm ? { name: potm, line: potmFigures } : null}
+        pills={matchPills(summary?.notes)}
+        liveLine={liveLine}
+        venue={details?.venue ? venueWithCity(details.venue, details.city) : (stored?.venue ?? null)}
+      />
+      {report ? <p className="text-sm leading-relaxed">{report}</p> : null}
 
       <AdSlot label="Cricket live match top" />
+
+      {story.length > 0 && <CricketMatchStory innings={story} colours={colourById} />}
 
       {details && details.scorecard.length > 0 ? (
         <section className="flex flex-col gap-4">
