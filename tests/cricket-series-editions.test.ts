@@ -420,3 +420,51 @@ test("a live match is filed under its edition, so the edition page's live overla
   assert.deepEqual((await live.overlayLiveCricket([], "8044-2025-26")).map((x) => x.espn_id), ["1493253"]);
   assert.deepEqual(await live.overlayLiveCricket([], "8044"), []);
 });
+
+/* ------------------------------- venues ------------------------------- */
+
+// ESPN's listing names each match's ground (`location`); the series page's overview counts the venues ("across 6
+// venues") and the Teams card lists them, so the ingest keeps it. The fixture days predate the field: it is added here.
+test("a match's venue is stored from the listing's location, read back with the match, and absent when the listing has none", async () => {
+  const day = structuredClone(DAYS["20260105"]);
+  const [first, ...rest] = day.sports[0].leagues.flatMap((l: any) => l.events ?? []);
+  first.location = "Wanderers Stadium, Johannesburg";
+  for (const ev of rest) delete ev.location;
+  const meta: import("../scripts/lib/cricket-series-ingest").SeriesMap = new Map();
+  await ingest.storeMatches(ingest.ingestDay(day, meta));
+  await ingest.storeSeries(meta);
+  const stored = await series.getCricketSeriesMatch(String(first.id));
+  assert.equal(stored?.venue, "Wanderers Stadium, Johannesburg");
+  const other = rest[0] && (await series.getCricketSeriesMatch(String(rest[0].id)));
+  if (other) assert.equal(other.venue, null);
+  // A later listing without the field does not blank a stored venue; one that names it again changes nothing.
+  delete first.location;
+  await ingest.storeMatches(ingest.ingestDay(day, new Map()));
+  assert.equal((await series.getCricketSeriesMatch(String(first.id)))?.venue, "Wanderers Stadium, Johannesburg");
+});
+
+// The page's own element tree as text (string children, walked through props): the paragraph and the Teams card are
+// the page's own elements, not a nested component's render.
+function textOf(node: unknown): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (node && typeof node === "object" && "props" in node) return textOf((node as { props: { children?: unknown } }).props.children);
+  return "";
+}
+const pageText = async (id: string) => textOf(await page.default(params(id)));
+
+test("before the first ball the series page opens with the overview sentence and the Teams card lists the venues; once a result is in, the overview gives way", async () => {
+  globalThis.fetch = (async () => new Response("{}", { status: 500 })) as typeof fetch;
+  await run(["20241231", "20251230", "20260105", "20251201"]);
+  await db.pool.query(`update cricket_series_matches set status_state = 'pre', status_summary = null, venue = 'Wanderers Stadium, Johannesburg' where series_espn_id = '24046'`);
+  await db.pool.query(`update cricket_series set teams = '[{"id":"1","name":"South Africa","abbreviation":"SA","logo":null},{"id":"2","name":"Pakistan","abbreviation":"PAK","logo":null}]'::jsonb, formats = '{Test}', match_count = 2, start_date = '2026-01-05T08:00:00Z', end_date = '2026-01-09T08:00:00Z' where espn_id = '24046'`);
+  const before = await pageText("24046");
+  assert.match(before, /South Africa and Pakistan play 2 Test matches from Jan 5 to Jan 9, 2026 at Wanderers Stadium, Johannesburg\./);
+  assert.match(before, /Venues/);
+  assert.match(before, /Wanderers Stadium, Johannesburg/);
+  await db.pool.query(`update cricket_series_matches set status_state = 'post', status_summary = 'South Africa won by 5 wickets' where series_espn_id = '24046'`);
+  const after = await pageText("24046");
+  assert.doesNotMatch(after, /play 2 Test matches/);
+  assert.match(after, /Latest result/);
+  assert.match(after, /Wanderers Stadium, Johannesburg/, "the venues stay listed");
+});

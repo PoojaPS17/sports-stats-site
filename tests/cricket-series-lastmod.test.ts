@@ -37,6 +37,7 @@ const match = (id: string, day: string, state: string): MatchRow => ({
   intl: "1",
   state,
   summary: null,
+  venue: null,
   home: { id: "1", name: "Alpha", abbreviation: "ALP", score: null, winner: false, logo: null },
   away: { id: "2", name: "Bravo", abbreviation: "BRA", score: null, winner: false, logo: null },
   candidates: [],

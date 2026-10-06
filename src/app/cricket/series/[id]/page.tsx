@@ -7,6 +7,7 @@ import { fetchCricketSeriesStandings, pointsTableShown } from "@/lib/cricketSeri
 import { CricketPointsTable } from "@/components/CricketPointsTable";
 import { CricketSeriesLeaders } from "@/components/CricketSeriesLeaders";
 import { cricketSeriesSoFar, seriesLeadersClause } from "@/lib/cricketSeriesStats";
+import { cricketSeriesOverview, seriesVenues } from "@/lib/cricketSeriesOverview";
 import { getCricketSeriesStats } from "@/lib/cricketSeriesStatsData";
 import { normalizeStage } from "@/lib/stage";
 import { teamDisplayName } from "@/lib/teamName";
@@ -120,6 +121,13 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
     // start time), not when the fixture list alone is empty: ESPN lists some rounds late.
     finished: live.length === 0 && fixtures.length === 0 && Boolean(s.end_date) && new Date(s.end_date as string).getTime() + 86_400_000 < clock(),
   });
+  // Before the first ball the paragraph opens with the series in one sentence (teams, matches, format, dates, venues):
+  // Google re-crawls a series page about weekly, so that is the version it serves through a competition's first days.
+  // Once a result is in, the table leader and the latest result say more.
+  const venues = seriesVenues(matches);
+  const started = live.length > 0 || results.length > 0;
+  const overview = started ? null : cricketSeriesOverview({ teams: s.teams, formats: s.formats, startDate: s.start_date, endDate: s.end_date, matchCount: s.match_count, venues });
+  const intro = [overview, soFar].filter(Boolean).join(" ");
 
   return (
     <div className="flex flex-col gap-8">
@@ -136,7 +144,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
         <FollowButton item={{ kind: "series", league: s.league ?? "cricket", refId: s.espn_id, label: s.name, sublabel: "Cricket", href: `/cricket/series/${s.espn_id}` }} />
       </PageHeader>
 
-      {soFar && <p className="card px-4 py-3 text-sm leading-relaxed">{soFar}</p>}
+      {intro && <p className="card px-4 py-3 text-sm leading-relaxed">{intro}</p>}
 
       <AdSlot label="Cricket series detail top" />
 
@@ -161,6 +169,11 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
               </span>
             ))}
           </div>
+          {venues.length > 0 && (
+            <p className="mt-3 border-t border-[var(--border)] pt-2 text-xs text-[var(--text-muted)]">
+              <span className="font-bold uppercase tracking-wider text-[11px]">Venues</span> · {venues.join(" · ")}
+            </p>
+          )}
         </section>
       )}
 

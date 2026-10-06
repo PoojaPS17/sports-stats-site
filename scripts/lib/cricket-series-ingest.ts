@@ -88,6 +88,8 @@ export interface MatchRow {
   intl: string;
   state: string | null;
   summary: string | null;
+  /** The ground, when the listing names it. */
+  venue: string | null;
   home: ReturnType<typeof competitor>;
   away: ReturnType<typeof competitor>;
   candidates: string[];
@@ -133,6 +135,7 @@ export function ingestDay(data: any, seriesMeta: SeriesMap): MatchRow[] {
           intl: String(ev.class?.internationalClassId ?? "0"),
           state: matchState(ev),
           summary: ev.fullStatus?.longSummary ?? ev.summary ?? null,
+          venue: typeof ev.location === "string" && ev.location.trim() ? ev.location.trim() : null,
           home,
           away,
           candidates,
@@ -151,18 +154,18 @@ export async function storeMatches(rows: MatchRow[]): Promise<void> {
   if (rows.length === 0) return;
   await pool.query(
     `insert into cricket_series_matches (espn_id, series_espn_id, date, name, short_name, description, class_card, class_name, international_class_id,
-                                         status_state, status_summary, home, away, league_candidates, updated_at)
-     select r.id, r.series, r.date, r.name, r.short, r.description, r.card, r.class_name, r.intl, r.state, r.summary, r.home::jsonb, r.away::jsonb,
+                                         status_state, status_summary, venue, home, away, league_candidates, updated_at)
+     select r.id, r.series, r.date, r.name, r.short, r.description, r.card, r.class_name, r.intl, r.state, r.summary, r.venue, r.home::jsonb, r.away::jsonb,
             coalesce(string_to_array(nullif(r.candidates, ''), ','), '{}'::text[]), now()
-     from unnest($1::text[], $2::text[], $3::timestamptz[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], $12::text[], $13::text[], $14::text[])
-       as r(id, series, date, name, short, description, card, class_name, intl, state, summary, home, away, candidates)
+     from unnest($1::text[], $2::text[], $3::timestamptz[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], $12::text[], $13::text[], $14::text[], $15::text[])
+       as r(id, series, date, name, short, description, card, class_name, intl, state, summary, venue, home, away, candidates)
      on conflict (espn_id) do update set
        series_espn_id = excluded.series_espn_id, date = excluded.date, name = excluded.name, short_name = excluded.short_name,
        description = coalesce(excluded.description, cricket_series_matches.description), class_card = excluded.class_card, class_name = excluded.class_name,
        international_class_id = excluded.international_class_id, status_state = excluded.status_state, status_summary = excluded.status_summary,
-       home = excluded.home, away = excluded.away, league_candidates = excluded.league_candidates, updated_at = now()
-     where (cricket_series_matches.series_espn_id, cricket_series_matches.date, cricket_series_matches.name, cricket_series_matches.short_name, cricket_series_matches.description, cricket_series_matches.class_card, cricket_series_matches.class_name, cricket_series_matches.international_class_id, cricket_series_matches.status_state, cricket_series_matches.status_summary, cricket_series_matches.home, cricket_series_matches.away, cricket_series_matches.league_candidates)
-       is distinct from (excluded.series_espn_id, excluded.date, excluded.name, excluded.short_name, coalesce(excluded.description, cricket_series_matches.description), excluded.class_card, excluded.class_name, excluded.international_class_id, excluded.status_state, excluded.status_summary, excluded.home, excluded.away, excluded.league_candidates)`,
+       venue = coalesce(excluded.venue, cricket_series_matches.venue), home = excluded.home, away = excluded.away, league_candidates = excluded.league_candidates, updated_at = now()
+     where (cricket_series_matches.series_espn_id, cricket_series_matches.date, cricket_series_matches.name, cricket_series_matches.short_name, cricket_series_matches.description, cricket_series_matches.class_card, cricket_series_matches.class_name, cricket_series_matches.international_class_id, cricket_series_matches.status_state, cricket_series_matches.status_summary, cricket_series_matches.venue, cricket_series_matches.home, cricket_series_matches.away, cricket_series_matches.league_candidates)
+       is distinct from (excluded.series_espn_id, excluded.date, excluded.name, excluded.short_name, coalesce(excluded.description, cricket_series_matches.description), excluded.class_card, excluded.class_name, excluded.international_class_id, excluded.status_state, excluded.status_summary, coalesce(excluded.venue, cricket_series_matches.venue), excluded.home, excluded.away, excluded.league_candidates)`,
     [
       rows.map((r) => r.id),
       rows.map((r) => r.series),
@@ -175,6 +178,7 @@ export async function storeMatches(rows: MatchRow[]): Promise<void> {
       rows.map((r) => r.intl),
       rows.map((r) => r.state),
       rows.map((r) => r.summary),
+      rows.map((r) => r.venue),
       rows.map((r) => JSON.stringify(r.home)),
       rows.map((r) => JSON.stringify(r.away)),
       rows.map((r) => r.candidates.join(",")),
