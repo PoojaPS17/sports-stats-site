@@ -40,15 +40,27 @@ export function fitTitle(...candidates: string[]): string {
   return candidates.find((c) => c.length <= TITLE_BUDGET) ?? candidates[candidates.length - 1];
 }
 
-export function pageMeta(title: string, rawDescription: string, path?: string, options: { noindex?: boolean; ownImage?: boolean } = {}): Metadata {
+export interface PageImage {
+  /** The image's path on this site ("/cricket/matches/1/opengraph-image"). */
+  path: string;
+  alt: string;
+}
+
+/**
+ * Options: `noindex` for a page search engines should not list; `ownImage` for a page whose segment holds an
+ * opengraph-image file (naming an image here would replace it); `image` to name the page's own share image when
+ * it lives elsewhere (a finished cricket match renders under another segment than its image).
+ */
+export function pageMeta(title: string, rawDescription: string, path?: string, options: { noindex?: boolean; ownImage?: boolean; image?: PageImage } = {}): Metadata {
   const description = clampDescription(rawDescription);
   const canonical = path ? absoluteUrl(path) : undefined;
+  const image = options.image ? { url: absoluteUrl(options.image.path), width: 1200, height: 630, alt: options.image.alt } : options.ownImage ? null : SHARE_IMAGE;
   return {
     title,
     description,
     alternates: canonical ? { canonical } : undefined,
     robots: options.noindex ? { index: false, follow: true } : INDEXABLE_ROBOTS,
-    openGraph: { title, description, siteName: SITE_NAME, type: "website", url: canonical, ...(options.ownImage ? {} : { images: [SHARE_IMAGE] }) },
-    twitter: { card: "summary_large_image", title, description, ...(options.ownImage ? {} : { images: [SHARE_IMAGE.url] }) },
+    openGraph: { title, description, siteName: SITE_NAME, type: "website", url: canonical, ...(image ? { images: [image] } : {}) },
+    twitter: { card: "summary_large_image", title, description, ...(image ? { images: [image.url] } : {}) },
   };
 }

@@ -26,7 +26,7 @@ import { cricketSeriesMatchSchema } from "@/lib/structuredData";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { normalizeStage } from "@/lib/stage";
 import { venueWithCity } from "@/components/MatchFacts";
-import { classifyCricketMatch, cricketMatchDescription, cricketMatchTitleCandidates } from "@/lib/cricketMatchStatus";
+import { classifyCricketMatch, cricketMatchDescription, cricketMatchTitleCandidates, cricketMatchName } from "@/lib/cricketMatchStatus";
 import { cricketMatchReport } from "@/lib/cricketMatchReport";
 import { playingXi } from "@/lib/cricketPlayingXi";
 import { seriesFormatLabels } from "@/lib/cricketSeriesSeo";
@@ -43,7 +43,9 @@ export async function cricketMatchMetadata(id: string): Promise<Metadata> {
   // title budget, down to the full names and the keyword (see cricketMatchTitleCandidates); the description names
   // the series and the date either way.
   const titled = { ...m, description: normalizeStage(m.description) };
-  return pageMeta(fitTitle(...cricketMatchTitleCandidates(titled)), cricketMatchDescription(titled), `/cricket/matches/${id}`);
+  // The card is named outright rather than left to the file beside the page: a finished match renders under
+  // /cricket/matches/final/<id> (the proxy's rewrite), a segment with no image file of its own.
+  return pageMeta(fitTitle(...cricketMatchTitleCandidates(titled)), cricketMatchDescription(titled), `/cricket/matches/${id}`, { image: { path: `/cricket/matches/${id}/opengraph-image`, alt: `${cricketMatchName(m.name)} on SportsDB` } });
 }
 
 export type CricketMatchMode = "live" | "final";

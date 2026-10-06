@@ -28,7 +28,7 @@ export default function Image() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ fontSize: 60, fontWeight: 800, lineHeight: 1.1, letterSpacing: -1.5 }}>Live scores, standings and stats</div>
-          <div style={{ fontSize: 30, color: "#9aa5bd" }}>Premier League · La Liga · NFL · NBA · IPL · Tennis · F1</div>
+          <div style={{ fontSize: 30, color: "#9aa5bd" }}>Cricket · Premier League · La Liga · NFL · NBA · MLB · Tennis · F1</div>
         </div>
       </div>
     ),
