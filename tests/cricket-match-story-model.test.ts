@@ -94,3 +94,11 @@ test("an empty story still gives a drawable frame", () => {
   assert.deepEqual(m.worm, []);
   assert.equal(m.defaultOver, 1);
 });
+
+test("two innings that end close together keep their end labels apart", () => {
+  // Both sides finish near the same corner: a chase won in the last over (3rd ODI: 351/7 and 352/5).
+  const close = story.map((inn, i) => ({ ...inn, total: { ...inn.total, runs: 351 + i, wickets: 7 - 2 * i }, worm: inn.worm.map((p, j, arr) => (j === arr.length - 1 ? { ...p, over: 49.5 + i * 0.2, runs: 351 + i } : p)) }));
+  const m = matchStoryModel(close);
+  const [a, b] = m.worm.map((w) => w.end);
+  assert.ok(Math.abs(a.y - b.y) >= 13.9, `labels ${a.y} and ${b.y} would overlap`);
+});

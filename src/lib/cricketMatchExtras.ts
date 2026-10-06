@@ -22,6 +22,9 @@ export function matchPills(notes: unknown): string[] {
   return out;
 }
 
+/** A stored or fed team colour as CSS ("050ceb" or "#050CEB" become "#050ceb"); null when it is not a six-digit hex. */
+export const cssColour = (c: unknown): string | null => hex(c);
+
 const hex = (c: unknown): string | null => {
   if (typeof c !== "string") return null;
   const v = c.trim().replace(/^#/, "");

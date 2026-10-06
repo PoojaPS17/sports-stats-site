@@ -45,6 +45,12 @@ export function matchStoryModel(innings: StoryInnings[]): StoryModel {
     const label = inn.total.wickets >= 10 ? String(inn.total.runs) : `${inn.total.runs}/${inn.total.wickets}`;
     return { teamId: inn.teamId, period: inn.period, points: pts.join(" "), end: { x: r1(last ? xOf(last.over) : PLOT.x0), y: r1(last ? yRuns(last.runs) : PLOT.y1), label } };
   });
+  // Two sides that finish close together (a chase won in the last over) would print their totals on top of each other.
+  const LABEL_GAP = 14;
+  [...worm].sort((a, b) => a.end.y - b.end.y).reduce<number | null>((prevY, w) => {
+    if (prevY !== null && w.end.y - prevY < LABEL_GAP) w.end.y = r1(prevY + LABEL_GAP);
+    return w.end.y;
+  }, null);
   const wormWickets = innings.flatMap((inn) => inn.wickets.map((w) => ({ x: r1(xOf(ballPosition(w.over))), y: r1(yRuns(w.runs)), teamId: inn.teamId })));
   const wormStep = runMax <= 100 ? 25 : 50;
   const wormGrid = Array.from({ length: Math.floor(runMax / wormStep) }, (_, i) => ({ y: r1(yRuns(i * wormStep)), label: String(i * wormStep) }));
