@@ -13,6 +13,14 @@ import { getMatchContext } from "@/lib/matchContext";
 import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
+import { CricketMatchHero } from "@/components/CricketMatchHero";
+import { CricketMatchStory } from "@/components/CricketMatchStory";
+import { deriveMatchStory, fetchCricketBallByBall, shouldFetchStory } from "@/lib/cricketBalls";
+import { cssColour, liveStatusLine, matchPills, potmLine } from "@/lib/cricketMatchExtras";
+import { fetchCricketSummaryLive, LIVE_REVALIDATE } from "@/lib/cricketLive";
+import { FINISHED_MATCH_REVALIDATE } from "@/lib/cricketMatchCache";
+import { sideScoreText } from "@/lib/gameDisplay";
+import { venueWithCity } from "@/components/MatchFacts";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamStatsComparison } from "@/components/TeamStatsComparison";
@@ -60,13 +68,15 @@ function sportOf(league: League): MatchSport {
   return isSoccerLeague(league) ? "soccer" : isCricketLeague(league) ? "cricket" : "american";
 }
 
-async function loadDetails(league: League, id: string, homeId: string, awayId: string, completed: boolean): Promise<{ details: GameDetails | null; stored: boolean }> {
+/* eslint-disable @typescript-eslint/no-explicit-any -- ESPN feed JSON has no published schema */
+async function loadDetails(league: League, id: string, homeId: string, awayId: string, completed: boolean): Promise<{ details: GameDetails | null; stored: boolean; summary: any | null }> {
   if (completed) {
     const stored = await getGameDetails(league, id);
-    if (stored) return { details: stored, stored: true };
+    if (stored) return { details: stored, stored: true, summary: null };
   }
-  const summary = await fetchMatchSummary(league, id);
-  return { details: summary ? presentDetails(extractGameDetails(sportOf(league), summary, homeId, awayId)) : null, stored: false };
+  // The international formats have no path of their own in SPORT_PATH; any cricket match resolves through the IPL id.
+  const summary = (await fetchMatchSummary(league, id)) ?? (sportOf(league) === "cricket" ? await fetchCricketSummaryLive(id, "8048", { revalidate: completed ? FINISHED_MATCH_REVALIDATE : LIVE_REVALIDATE }) : null);
+  return { details: summary ? presentDetails(extractGameDetails(sportOf(league), summary, homeId, awayId)) : null, stored: false, summary };
 }
 
 function scorersLine(details: GameDetails | null): string {
@@ -114,12 +124,18 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const game = await getGameByEspnId(league, id);
   if (!game) notFound();
 
-  const [{ details, stored }, context] = await Promise.all([
+  const isCricket = isCricketLeague(league);
+  const [loaded, context, balls] = await Promise.all([
     loadDetails(league, id, game.home_team_espn_id, game.away_team_espn_id, game.completed),
     getMatchContext(league, game),
+    // The match story needs every ball: limited-overs cricket only, while in play or recently finished.
+    isCricket && !isFirstClassCricket(league) && shouldFetchStory({ state: game.status_state, completed: game.completed, date: game.date }) ? fetchCricketBallByBall(id, "8048", { settled: game.completed }) : Promise.resolve(null),
   ]);
-
-  const isCricket = isCricketLeague(league);
+  const { details, stored } = loaded;
+  // A stored cricket result still reads ESPN's summary once (cached with the page) for the Player of the Match and the notes; nothing waits on it failing.
+  const summary: any | null = isCricket ? (loaded.summary ?? (await fetchCricketSummaryLive(id, "8048", { revalidate: game.completed ? FINISHED_MATCH_REVALIDATE : LIVE_REVALIDATE }))) : null;
+  const story = balls ? deriveMatchStory(balls) : [];
+  const playerOfTheMatch: string | null = summary?.header?.competitions?.[0]?.status?.featuredAthletes?.find((a: any) => a.name === "playerOfTheMatch")?.athlete?.displayName ?? null;
   const teamStats = details?.team_stats ?? [];
   const playerBox = details?.player_box ?? [];
   const cricketScorecard = details?.scorecard ?? [];
@@ -162,6 +178,13 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
   // The heading, breadcrumb and share titles name the matchup as every other label on the page does (`matchupLabel`).
   const matchName = matchupLabel(league, game);
+  // The sides' stored colours as the hero's edge bars; none when either is missing or they match.
+  const homeColour = cssColour(game.home_color);
+  const awayColour = cssColour(game.away_color);
+  const heroColours = homeColour && awayColour && homeColour !== awayColour ? { home: homeColour, away: awayColour } : { home: null, away: null };
+  const storyColours: Record<string, string> = {};
+  if (heroColours.home) storyColours[game.home_team_espn_id] = heroColours.home;
+  if (heroColours.away) storyColours[game.away_team_espn_id] = heroColours.away;
 
   return (
     <div className="flex flex-col gap-6">
@@ -180,10 +203,31 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         {matchName}, {LEAGUE_LABEL[league]},{" "}
         {formatGameDate(game.date, league, { month: "long", day: "numeric", year: "numeric" }, game.local_date)}
       </h1>
-      <MatchHeader league={league} game={game} scorecard={cricketScorecard} />
+      {isCricket ? (
+        <CricketMatchHero
+          headingTag="p"
+          state={game.status_state === "in" ? "in" : game.status_state === "post" ? "post" : "pre"}
+          calledOff={game.status_state === "post" && !game.completed ? (game.status_detail ?? "Called off") : null}
+          headline={[matchName, LEAGUE_LABEL[league], game.round].filter(Boolean).join(" · ")}
+          date={game.date}
+          sides={[
+            { name: teamDisplayName(game.home_name), score: sideScoreText(league, game.home_score, game.home_score_display, game.completed) ?? "", winner: game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0), logo: game.home_logo, colour: heroColours.home },
+            { name: teamDisplayName(game.away_name), score: sideScoreText(league, game.away_score, game.away_score_display, game.completed) ?? "", winner: game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0), logo: game.away_logo, colour: heroColours.away },
+          ]}
+          result={game.completed && game.status_summary ? teamDisplayName(game.status_summary) : null}
+          potm={playerOfTheMatch ? { name: playerOfTheMatch, line: details ? potmLine(details.scorecard, playerOfTheMatch) : null } : null}
+          pills={matchPills(summary?.notes)}
+          liveLine={game.status_state === "in" ? liveStatusLine(teamDisplayName(game.status_summary ?? game.status_detail ?? null), story.at(-1)) : null}
+          venue={details?.venue ? venueWithCity(details.venue, details.city) : null}
+        />
+      ) : (
+        <MatchHeader league={league} game={game} scorecard={cricketScorecard} />
+      )}
       {details && <MatchFacts league={league} game={game} details={show.playFacts ? details : { ...details, officials: [], attendance: null, linescores: null }} />}
 
       <AdSlot label="Match detail top" />
+
+      {story.length > 0 && <CricketMatchStory innings={story} colours={storyColours} />}
 
       {context && (
         <section>

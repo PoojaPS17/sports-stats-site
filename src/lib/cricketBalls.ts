@@ -245,3 +245,20 @@ export async function fetchCricketBallByBall(eventId: string, seriesId: string, 
     return null;
   }
 }
+
+/** How long after a finished match its story is still fetched live from ESPN; older archive pages get the hero only, until a scrape stores stories. */
+export const STORY_FETCH_DAYS = 45;
+
+/**
+ * Whether a page should read the ball-by-ball at all: yes while the match is in play, yes for a finished
+ * match within STORY_FETCH_DAYS of its date (what people and crawlers come back for), no for a fixture, a
+ * match closed without play, or the long tail of the archive (tens of thousands of pages, 10-24 ESPN
+ * requests each, for little traffic).
+ */
+export function shouldFetchStory({ state, completed, date, now = new Date() }: { state: string | null; completed: boolean; date: string | Date | null; now?: Date }): boolean {
+  if (state === "in") return true;
+  if (state !== "post" || !completed || !date) return false;
+  const when = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(when.getTime())) return false;
+  return now.getTime() - when.getTime() <= STORY_FETCH_DAYS * 86400000;
+}

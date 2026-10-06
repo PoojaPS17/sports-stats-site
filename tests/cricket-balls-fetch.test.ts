@@ -82,3 +82,15 @@ test("a middle page that is not full is a stale copy of a page that used to be l
   const r = recorder({ 1: page(1, 70, 3), 2: { commentary: { count: 70, pageIndex: 2, pageSize: 25, pageCount: 3, items: Array.from({ length: 20 }, (_, i) => ({ id: `2-${i}` })) } }, 3: page(3, 70, 3) });
   assert.equal(await fetchCricketBallByBall("1", "8669", { settled: false, fetchJson: r.fetchJson }), null);
 });
+
+test("the story is fetched live for a match in play, and for a finished one only while it is recent", async () => {
+  const { shouldFetchStory, STORY_FETCH_DAYS } = await import("../src/lib/cricketBalls");
+  const now = new Date("2026-10-07T12:00:00Z");
+  assert.equal(shouldFetchStory({ state: "in", completed: false, date: "2026-10-07T09:00:00Z", now }), true);
+  assert.equal(shouldFetchStory({ state: "pre", completed: false, date: "2026-10-09T13:30:00Z", now }), false);
+  assert.equal(shouldFetchStory({ state: "post", completed: true, date: "2026-10-06T13:30:00Z", now }), true);
+  assert.equal(shouldFetchStory({ state: "post", completed: true, date: new Date(now.getTime() - (STORY_FETCH_DAYS + 1) * 86400000).toISOString(), now }), false);
+  // closed without play: nothing to draw
+  assert.equal(shouldFetchStory({ state: "post", completed: false, date: "2026-10-06T13:30:00Z", now }), false);
+  assert.equal(shouldFetchStory({ state: null, completed: true, date: null, now }), false);
+});

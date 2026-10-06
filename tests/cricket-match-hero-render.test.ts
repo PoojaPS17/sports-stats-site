@@ -78,3 +78,9 @@ test("a two-innings score steps the display size down so the name keeps its room
   assert.match(html, /class="display[^"]*text-\[44px\][^"]*"[^>]*>327</);
   assert.match(html, /class="display[^"]*text-\[30px\][^"]*"[^>]*>311 &amp; 372\/6</);
 });
+
+test("the headline can render as a paragraph for a page that already has its own h1", () => {
+  const html = renderToStaticMarkup(createElement(CricketMatchHero, { ...base, headingTag: "p" }));
+  assert.doesNotMatch(html, /<h1/);
+  assert.match(html, /<p[^>]*>India vs West Indies · 1st T20I · West Indies tour of India 2026\/27<\/p>/);
+});

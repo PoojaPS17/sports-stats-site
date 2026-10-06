@@ -29,6 +29,8 @@ export interface CricketMatchHeroProps {
   liveLine: string | null;
   /** The ground, shown when there is no result or live line (a fixture). */
   venue: string | null;
+  /** The headline is the page's h1 unless the page has its own (the league game page keeps a screen-reader h1). */
+  headingTag?: "h1" | "p";
 }
 
 const initials = (name: string) =>
@@ -45,7 +47,8 @@ const initials = (name: string) =>
  * the facts ESPN notes. Inside `.band-deep` the band tokens resolve to the deep palette, so the
  * component names only `--sig`, `--mast-muted` and `--mast-line`.
  */
-export function CricketMatchHero({ state, calledOff, headline, date, sides, result, potm, pills, liveLine, venue }: CricketMatchHeroProps) {
+export function CricketMatchHero({ state, calledOff, headline, date, sides, result, potm, pills, liveLine, venue, headingTag = "h1" }: CricketMatchHeroProps) {
+  const Heading = headingTag;
   const pill =
     state === "in" ? (
       <span className="pill pill-live">
@@ -65,7 +68,7 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="flex flex-wrap items-center gap-2">
           {pill}
-          <h1 className="font-semibold text-[var(--mast-muted)]">{headline}</h1>
+          <Heading className="font-semibold text-[var(--mast-muted)]">{headline}</Heading>
         </span>
         {date && <LocalTime iso={date} format={calledOff ? "date" : "datetime"} className="text-[var(--mast-muted)]" />}
       </div>
