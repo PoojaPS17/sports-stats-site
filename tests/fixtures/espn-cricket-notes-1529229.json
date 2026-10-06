@@ -1,0 +1,234 @@
+[
+ {
+  "type": "seriesnote",
+  "text": "India won the 3-match series 2-1"
+ },
+ {
+  "type": "matchnumber",
+  "text": "ODI no. 5024"
+ },
+ {
+  "type": "season",
+  "text": "2026/27"
+ },
+ {
+  "type": "matchdays",
+  "text": "3 October 2026 - day/night match (50-over match)"
+ },
+ {
+  "type": "hoursofplay",
+  "text": "14.00 start, First Session 14.00-17.30, Interval 17.30-18.00, Second Session 18.00-21.30"
+ },
+ {
+  "type": "toss",
+  "text": "India , elected to bat first"
+ },
+ {
+  "type": "livecommentator",
+  "text": "Abhimanyu Bose"
+ },
+ {
+  "type": "livescorer",
+  "text": "Ranjith P"
+ },
+ {
+  "type": "matchnote",
+  "text": "India innings"
+ },
+ {
+  "type": "matchnote",
+  "text": "Powerplay 1: Overs 0.1 - 10.0 (Mandatory - 28 runs, 2 wickets)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Over 4.4: Review by West Indies (Bowling), Decision Challenged - Wicket, Umpire - SJ Nogajski, Batter - RG Sharma (Struck down)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Over 8.4: Review by India (Batting), Decision Challenged - Wicket, Umpire - SJ Nogajski, Batter - RG Sharma (Upheld)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Powerplay 2: Overs 10.1 - 40.0 (Mandatory - 218 runs, 3 wickets)"
+ },
+ {
+  "type": "matchnote",
+  "text": "India: 50 runs in 13.5 overs (83 balls), Extras 1"
+ },
+ {
+  "type": "matchnote",
+  "text": "Drinks: India - 55/2 in 13.5 overs (RG Sharma 31, RD Gaikwad 22)"
+ },
+ {
+  "type": "matchnote",
+  "text": "3rd Wicket: 50 runs in 67 balls (RG Sharma 29, RD Gaikwad 22, Ex 0)"
+ },
+ {
+  "type": "matchnote",
+  "text": "RG Sharma: 50 off 58 balls (3 x 4, 2 x 6)"
+ },
+ {
+  "type": "matchnote",
+  "text": "India: 100 runs in 19.5 overs (119 balls), Extras 2"
+ },
+ {
+  "type": "matchnote",
+  "text": "3rd Wicket: 100 runs in 105 balls (RG Sharma 69, RD Gaikwad 34, Ex 2)"
+ },
+ {
+  "type": "matchnote",
+  "text": "India: 150 runs in 26.5 overs (161 balls), Extras 3"
+ },
+ {
+  "type": "matchnote",
+  "text": "RD Gaikwad: 50 off 64 balls (1 x 4, 3 x 6)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Drinks: India - 160/4 in 28.5 overs (KL Rahul 7)"
+ },
+ {
+  "type": "matchnote",
+  "text": "India: 200 runs in 33.2 overs (200 balls), Extras 3"
+ },
+ {
+  "type": "matchnote",
+  "text": "5th Wicket: 50 runs in 33 balls (KL Rahul 32, Naman Dhir 22, Ex 0)"
+ },
+ {
+  "type": "matchnote",
+  "text": "KL Rahul: 50 off 41 balls (5 x 4, 1 x 6)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Powerplay 3: Overs 40.1 - 50.0 (Mandatory - 105 runs, 2 wickets)"
+ },
+ {
+  "type": "matchnote",
+  "text": "India: 250 runs in 40.5 overs (245 balls), Extras 5"
+ },
+ {
+  "type": "matchnote",
+  "text": "India: 300 runs in 46.4 overs (280 balls), Extras 6"
+ },
+ {
+  "type": "matchnote",
+  "text": "Slow over-rate Penalty: Overs 47.1 - 50.0 (extra fielder inside the circle)"
+ },
+ {
+  "type": "matchnote",
+  "text": "KL Rahul: 100 off 80 balls (9 x 4, 3 x 6)"
+ },
+ {
+  "type": "matchnote",
+  "text": "8th Wicket: 50 runs in 23 balls (KL Rahul 43, Gurnoor Brar 8, Ex 2)"
+ },
+ {
+  "type": "matchnote",
+  "text": "India: 350 runs in 49.6 overs (300 balls), Extras 8"
+ },
+ {
+  "type": "matchnote",
+  "text": "Innings Break: India - 351/7 in 50.0 overs (KL Rahul 129, Gurnoor Brar 8)"
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies innings"
+ },
+ {
+  "type": "matchnote",
+  "text": "Powerplay 1: Overs 0.1 - 10.0 (Mandatory - 78 runs, 1 wicket)"
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies: 50 runs in 6.2 overs (38 balls), Extras 5"
+ },
+ {
+  "type": "matchnote",
+  "text": "Powerplay 2: Overs 10.1 - 40.0 (Mandatory - 193 runs, 2 wickets)"
+ },
+ {
+  "type": "matchnote",
+  "text": "2nd Wicket: 50 runs in 54 balls (SD Hope 18, AA Jangoo 29, Ex 4)"
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies: 100 runs in 14.1 overs (86 balls), Extras 9"
+ },
+ {
+  "type": "matchnote",
+  "text": "Drinks: West Indies - 101/1 in 14.2 overs (SD Hope 47, AA Jangoo 34)"
+ },
+ {
+  "type": "matchnote",
+  "text": "SD Hope: 50 off 46 balls (6 x 4)"
+ },
+ {
+  "type": "matchnote",
+  "text": "AA Jangoo: 50 off 47 balls (4 x 4)"
+ },
+ {
+  "type": "matchnote",
+  "text": "2nd Wicket: 100 runs in 89 balls (SD Hope 34, AA Jangoo 63, Ex 6)"
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies: 150 runs in 20.3 overs (124 balls), Extras 11"
+ },
+ {
+  "type": "matchnote",
+  "text": "Dhruv Jurel kept wickets in place of KL Rahul from the 23.1 overs to 28.6 overs."
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies: 200 runs in 28.1 overs (170 balls), Extras 11"
+ },
+ {
+  "type": "matchnote",
+  "text": "3rd Wicket: 50 runs in 45 balls (SD Hope 28, SE Rutherford 22, Ex 0)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Drinks: West Indies - 203/2 in 29.0 overs (SD Hope 92, SE Rutherford 23)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Over 29.6: Review by West Indies (Batting), Decision Challenged - Wicket, Umpire - J Madanagopal, Batter - SE Rutherford (Struck down)"
+ },
+ {
+  "type": "matchnote",
+  "text": "SD Hope: 100 off 104 balls (10 x 4, 1 x 6)"
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies: 250 runs in 37.1 overs (224 balls), Extras 15"
+ },
+ {
+  "type": "matchnote",
+  "text": "4th Wicket: 50 runs in 49 balls (SD Hope 14, KMA Paul 35, Ex 4)"
+ },
+ {
+  "type": "matchnote",
+  "text": "Powerplay 3: Overs 40.1 - 50.0 (Mandatory - 81 runs, 2 wickets)"
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies: 300 runs in 45.1 overs (272 balls), Extras 17"
+ },
+ {
+  "type": "matchnote",
+  "text": "Slow over-rate Penalty: Overs 46.1 - 50.0 (extra fielder inside the circle)"
+ },
+ {
+  "type": "matchnote",
+  "text": "SD Hope: 150 off 139 balls (16 x 4, 2 x 6)"
+ },
+ {
+  "type": "matchnote",
+  "text": "6th Wicket: 50 runs in 28 balls (SD Hope 33, G Motie 19, Ex 3)"
+ },
+ {
+  "type": "matchnote",
+  "text": "West Indies: 350 runs in 48.1 overs (291 balls), Extras 19"
+ }
+]
