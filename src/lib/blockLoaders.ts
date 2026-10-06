@@ -22,7 +22,7 @@ import { f1CircuitTimeZone } from "./f1Circuits";
 import { listArticles } from "./beyondTheScoreline";
 import { articleArt } from "./articleArt";
 import { hasStandings, isCricketLeague, LEAGUE_LABEL, type League } from "./leagues";
-import { zoneRules } from "./standingsZones";
+import { topBands } from "./standingsZones";
 import { usesRecordOrder } from "./standingsOrder";
 import { playerSport, sportProfile } from "./playerProfile";
 import { isGameCalledOff } from "./gameStatus";
@@ -138,7 +138,8 @@ async function loadCricketSide(sideId: string): Promise<TeamNextBlockData | null
 }
 
 function tableFrom(league: League, rows: StandingRow[], label: string, href: string): StandingsBlockData {
-  const zone = zoneRules(league, rows.length);
+  // Bands read against the whole table: ESPN's notes for a finished season, position while it runs.
+  const bands = topBands(league, rows, TABLE_ROWS);
   const record = usesRecordOrder(league);
   return {
     label,
@@ -153,7 +154,7 @@ function tableFrom(league: League, rows: StandingRow[], label: string, href: str
         played: r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0),
         figure: record ? `${r.wins}-${r.losses}` : String(r.points ?? 0),
         netRunRate: r.net_run_rate,
-        zone: zone?.(position)?.cls ?? null,
+        zone: bands[i]?.cls ?? null,
         color: r.color,
       };
     }),

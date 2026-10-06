@@ -179,6 +179,18 @@ export function zonesFor(league: League, sections: [string, StandingRow[]][]): T
 }
 
 /**
+ * The bands of the first `count` rows of one table, read against the whole table: the mini tables (the league
+ * hub's top five, the homepage block) show only the top but must band those rows the way the full table does,
+ * from ESPN's notes once the season is over and by position while it runs. One entry per row shown, null for
+ * a row with no band or a table with no rule.
+ */
+export function topBands(league: League, standings: StandingRow[], count: number): (Zone | null)[] {
+  const shown = standings.slice(0, count);
+  const zones = zonesFor(league, [["", standings]]);
+  return shown.map((_, i) => zones?.zoneAt(standings, i) ?? null);
+}
+
+/**
  * Who went down at the end of a finished domestic season, and who is in a relegation play-off.
  * The stored notes decide when the season has any relegation note (Serie A 2022-23: Spezia, ESPN's
  * "Relegated via playoff", went down with Cremonese and Sampdoria); otherwise the league's rule: three

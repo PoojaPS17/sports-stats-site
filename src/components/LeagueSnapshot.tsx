@@ -3,7 +3,6 @@ import { isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
 import { formatLeaderValue } from "@/lib/leaders";
 import { formatWinLossTie } from "@/lib/teamSummary";
 import { cricketRecord } from "@/lib/cricketStandings";
-import { zoneRules } from "@/lib/standingsZones";
 import type { LeagueSnapshotData } from "@/lib/leagueSnapshot";
 import { SectionHeader } from "./SectionHeader";
 import { TeamLogo } from "./TeamLogo";
@@ -18,9 +17,9 @@ function record(league: League, r: LeagueSnapshotData["table"][number]): string 
 // The league hub shows the whole recap; the homepage passes a trimmed snapshot.
 export function LeagueSnapshot({ league, data }: { league: League; data: LeagueSnapshotData }) {
   if (data.table.length === 0 && data.leaders.length === 0) return null;
-  // Qualification / relegation bands by position, the same rule the full standings table uses;
-  // null for leagues (or table sizes) with no defined zones, e.g. the NBA and NFL.
-  const zoneAt = zoneRules(league, data.tableSize, !data.inSeason);
+  // Qualification / relegation bands come with the data, read against the whole table the way the full
+  // standings table reads it (ESPN's notes once the season is over, position while it runs); null where a
+  // league has no bands, e.g. the NBA and NFL.
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {data.table.length > 0 && (
@@ -30,7 +29,7 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
           </SectionHeader>
           <ol className="card overflow-hidden">
             {data.table.map((r, i) => {
-              const zone = zoneAt ? zoneAt(i + 1) : null;
+              const zone = data.bands[i] ?? null;
               return (
                 <li key={r.team_espn_id} className="table-row first:border-t-0">
                   <Link href={`/${league}/teams/${r.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">

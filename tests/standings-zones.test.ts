@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { League } from "../src/lib/leagues";
 import type { StandingRow } from "../src/lib/queries";
-import { legendFor, placeCounts, relegationSummary, zoneFromNote, zoneRules, zonesFor, UPCOMING_CAPTION } from "../src/lib/standingsZones";
+import { legendFor, placeCounts, relegationSummary, topBands, zoneFromNote, zoneRules, zonesFor, UPCOMING_CAPTION } from "../src/lib/standingsZones";
 import { tableComplete } from "../src/lib/standingsOrder";
 
 const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
@@ -292,3 +292,26 @@ test("relegation summary: notes with no relegation in them fall back to the leag
   const s = relegationSummary("laliga", table(20, { 1: "Champions League" }));
   assert.deepEqual(s.relegated.map((r) => r.rank), [18, 19, 20]);
 });
+
+// The mini tables (the league hub's and the homepage's) show the top five rows but banded them by position even
+// for a finished season, while the full table beside them used ESPN's notes: La Liga 2024-25 had five Champions
+// League places, so the mini table's 5th row said Europa League where the full table said Champions League.
+test("topBands: the top rows of a finished table take their bands from the notes, read against the whole table", () => {
+  const rows = table(20, LALIGA_2025_NOTES);
+  const bands = topBands("laliga", rows, 5);
+  assert.equal(bands.length, 5);
+  assert.deepEqual(bands.map((z) => z?.label ?? null), ["Champions League", "Champions League", "Champions League", "Champions League", "Champions League"]);
+  // The same rows, read as the full table, agree row for row.
+  const full = zonesFor("laliga", [["La Liga", rows]]);
+  assert.deepEqual(bands, rows.slice(0, 5).map((_, i) => full?.zoneAt(rows, i) ?? null));
+});
+
+test("topBands: a table still being played is banded by position, and a table with no rule gives nulls", () => {
+  const running = topBands("laliga", table(20, LALIGA_2025_NOTES, 10), 6);
+  assert.deepEqual(running.map((z) => z?.label ?? null), ["Champions League", "Champions League", "Champions League", "Champions League", "Europa League", "Conference League"]);
+  assert.deepEqual(topBands("nba", table(15), 5), [null, null, null, null, null]);
+  assert.deepEqual(topBands("laliga", [], 5), []);
+  // Fewer rows than asked for: one band per row, never more.
+  assert.equal(topBands("laliga", table(20), 25).length, 20);
+});
+

@@ -20,6 +20,7 @@ import {
 } from "./queries";
 import { summarizePlayoffs, type PlayoffResult } from "./seasonSummary";
 import { tableComplete } from "./standingsOrder";
+import { topBands, type Zone } from "./standingsZones";
 
 // What a league hub shows while nothing is scheduled: the season just played, in
 // three glances — how it ended (the final or the last round), the final table, and
@@ -45,6 +46,8 @@ export interface OffseasonRecap {
   playoffs: PlayoffResult[];
   /** Top of the final table, for competitions decided by a single table. */
   table: StandingRow[];
+  /** The band of each row of `table`, read against the whole table (lib/standingsZones.ts); null for none. */
+  bands: (Zone | null)[];
   tableSize: number;
   leaders: { label: string; unit: string; rows: LeaderRow[] }[];
 }
@@ -103,6 +106,8 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
   // single table worth previewing; leagues and the IPL/BBL do.
   const singleTable = new Set(standings.map((r) => r.conference ?? "")).size <= 1;
   const table = singleTable && !isCupCompetition(league) && (isSoccerLeague(league) || cricket) ? standings.slice(0, 5) : [];
+  // Banded against the whole table, so a finished season's top five carry ESPN's notes as the full table does.
+  const bands = table.length > 0 ? topBands(league, standings, table.length) : [];
 
   return {
     season,
@@ -115,6 +120,7 @@ export async function getOffseasonRecap(league: League): Promise<OffseasonRecap 
     closingGames,
     playoffs,
     table,
+    bands,
     tableSize: standings.length,
     leaders: leaderBoards.filter((b) => b.rows.length > 0 && b.rows[0].value > 0),
   };
