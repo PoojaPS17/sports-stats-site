@@ -511,6 +511,8 @@ create table if not exists cricket_series_matches (
 
 create index if not exists cricket_series_matches_series_idx on cricket_series_matches (series_espn_id, date);
 create index if not exists cricket_series_matches_date_idx on cricket_series_matches (date);
+-- The ground, from the listing's `location`; the series page counts and lists venues. Added 2026-10-06.
+alter table cricket_series_matches add column if not exists venue text;
 
 -- Real external trending signals (Wikipedia pageview spikes, Apple App Store Sports
 -- app charts) to complement game_views, which only tells us what's popular on ScoreDB

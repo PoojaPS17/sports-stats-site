@@ -107,6 +107,12 @@ test("seriesLeadersClause and cricketSeriesSoFar: the table leader, the latest r
     "Titans Women finished top of the points table with 15 points from 7 matches. Latest result: A vs B."
   );
   assert.equal(cricketSeriesSoFar({ leader: null, lastResult: null, nextFixture: null, stats: null, finished: false }), "");
+  // Before the first match, ESPN's table has a top row with nothing played: "lead the points table with 0 points from
+  // 0 matches" (Sheffield Shield 2026-27, live, 2026-10-06) says nothing, so the leader waits for a result.
+  assert.equal(
+    cricketSeriesSoFar({ leader: { team: "New South Wales", points: 0, played: 0 }, lastResult: null, nextFixture: { name: "Victoria v South Australia", stage: "1st Match", date: "2026-10-06T23:30:00Z" }, stats: null, finished: false }),
+    "Next: Victoria vs South Australia, 1st Match, Oct 6."
+  );
 });
 
 test("CricketSeriesLeaders: a Series stats heading, a batting and a bowling table with team short names, and the highlights line", () => {

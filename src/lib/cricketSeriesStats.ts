@@ -190,7 +190,9 @@ export interface SeriesSoFarInput {
 /** The series in a paragraph: the table leader, the latest result, the next fixture and the leaders. Empty when there is nothing to say. */
 export function cricketSeriesSoFar({ leader, lastResult, nextFixture, stats, finished }: SeriesSoFarInput): string {
   const parts: string[] = [];
-  if (leader) parts.push(`${leader.team} ${finished ? "finished top of" : "lead"} the points table with ${plural(leader.points, "point")} from ${plural(leader.played, "match", "matches")}.`);
+  // Before the first match ESPN's table has a top row with nothing played, which would read "lead ... with 0 points
+  // from 0 matches": the leader waits for a result.
+  if (leader && leader.played > 0) parts.push(`${leader.team} ${finished ? "finished top of" : "lead"} the points table with ${plural(leader.points, "point")} from ${plural(leader.played, "match", "matches")}.`);
   if (lastResult) {
     const summary = lastResult.summary?.trim().replace(/\.$/, "");
     parts.push(`Latest result: ${[cricketMatchName(lastResult.name), lastResult.stage].filter(Boolean).join(", ")}${summary ? `: ${summary}` : ""}.`);

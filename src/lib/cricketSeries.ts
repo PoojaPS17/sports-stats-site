@@ -138,7 +138,7 @@ export async function getCricketSeriesEditions(espnId: string): Promise<CricketS
 const MATCH_SELECT = `
   select m.espn_id, m.series_espn_id, s.name as series_name, s.kind as series_kind,
          to_char(m.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
-         m.name, m.short_name, m.description, m.class_card, m.international_class_id, m.status_state, m.status_summary, m.home, m.away,
+         m.name, m.short_name, m.description, m.class_card, m.international_class_id, m.status_state, m.status_summary, m.venue, m.home, m.away,
          (select g.league from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates)
             order by array_position(m.league_candidates, g.league) limit 1) as scorecard_league
   from cricket_series_matches m

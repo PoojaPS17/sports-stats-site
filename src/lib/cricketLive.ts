@@ -83,6 +83,7 @@ export async function fetchLiveCricketFromEspn(): Promise<CricketSeriesMatch[]> 
             international_class_id: String(ev.class?.internationalClassId ?? "0"),
             status_state: "in",
             status_summary: ev.fullStatus?.longSummary ?? ev.summary ?? null,
+            venue: typeof ev.location === "string" && ev.location.trim() ? ev.location.trim() : null,
             home: side((ev.competitors ?? []).find((c: any) => c.homeAway === "home") ?? ev.competitors?.[0]),
             away: side((ev.competitors ?? []).find((c: any) => c.homeAway === "away") ?? ev.competitors?.[1]),
             // Only competitions SportsDB archives have their own match page; the live

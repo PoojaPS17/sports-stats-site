@@ -146,6 +146,7 @@ test("series cards, rows, the export card and the series header print formats in
     status_summary: "OGDCL won by 5 wickets",
     home: { id: "1", name: "Oil & Gas Development Company Limited", abbreviation: "O&G", score: "250/8", winner: true, logo: null },
     away: { id: "2", name: "State Bank of Pakistan", abbreviation: "SBP", score: "246", winner: false, logo: null },
+    venue: null,
     scorecard_league: null,
   };
   const row = renderToStaticMarkup(createElement(SeriesMatchRow, { m: match }));

@@ -51,6 +51,8 @@ export interface CricketSeriesMatch {
   international_class_id: string | null;
   status_state: "pre" | "in" | "post" | null;
   status_summary: string | null;
+  /** The ground, when ESPN's listing names it. */
+  venue: string | null;
   home: SeriesSide | null;
   away: SeriesSide | null;
   /** SportsDB league holding this match's stored scorecard, when one exists. */
