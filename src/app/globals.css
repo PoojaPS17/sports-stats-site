@@ -227,593 +227,604 @@
 
 /* ---------------------------------------------------------------------------
    Base
+   Element defaults, inside Tailwind's base layer so that any utility on an element wins.
 --------------------------------------------------------------------------- */
-html {
-  color-scheme: light;
-  scroll-padding-top: calc(var(--header-h) + 1rem);
-}
+@layer base {
+  html {
+    color-scheme: light;
+    scroll-padding-top: calc(var(--header-h) + 1rem);
+  }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root[data-theme="dark"] {
     color-scheme: dark;
   }
-}
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  /* A classic (non-overlay) scrollbar can turn the .bleed helper's 50vw math into a
-     few pixels of sideways scroll; `clip` (not `hidden`) stops that without making
-     body a scroll container, which would break the sticky header. */
-  overflow-x: clip;
-}
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+    }
+  }
 
-table {
-  font-variant-numeric: tabular-nums;
-}
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* A classic (non-overlay) scrollbar can turn the .bleed helper's 50vw math into a
+       few pixels of sideways scroll; `clip` (not `hidden`) stops that without making
+       body a scroll container, which would break the sticky header. */
+    overflow-x: clip;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+  table {
+    font-variant-numeric: tabular-nums;
+  }
 
-::selection {
-  background: var(--accent-soft);
-}
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 
-/* ---------------------------------------------------------------------------
-   Layout helpers
---------------------------------------------------------------------------- */
-/* A grid item's automatic minimum width is its content's, so one long unbreakable
-   line (a nowrap score, a truncated name) widens a single-column grid past the
-   phone screen and the browser zooms the whole page out. Items may always shrink;
-   a utility (min-w-*) still wins, being in a later layer. */
-@layer base {
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  /* A grid item's automatic minimum width is its content's, so one long unbreakable
+     line (a nowrap score, a truncated name) widens a single-column grid past the
+     phone screen and the browser zooms the whole page out. Items may always shrink;
+     a utility (min-w-*) still wins, being in a later layer. */
   .grid > * {
     min-width: 0;
   }
 }
 
-.container-x {
-  margin-inline: auto;
-  width: 100%;
-  max-width: 72rem;
-  padding-inline: 1rem;
-}
-
-@media (min-width: 640px) {
+/* ---------------------------------------------------------------------------
+   Components
+   Every class below sits in the components layer: a Tailwind utility written next to one of
+   these classes (first:border-t-0, leading-none, px-0) overrides it, so no rule here needs the
+   `!` modifier to be beaten and none of them silently wins over a utility.
+--------------------------------------------------------------------------- */
+@layer components {
   .container-x {
-    padding-inline: 1.5rem;
+    margin-inline: auto;
+    width: 100%;
+    max-width: 72rem;
+    padding-inline: 1rem;
   }
-}
 
-.page-title {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  line-height: 1.05;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  text-wrap: balance;
-}
+  @media (min-width: 640px) {
+    .container-x {
+      padding-inline: 1.5rem;
+    }
+  }
 
-@media (min-width: 640px) {
   .page-title {
-    font-size: 2.5rem;
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-wrap: balance;
   }
-}
 
-/* Headline face for any heading or big number: the body face, heavy and tight, sentence case. */
-.display {
-  font-family: var(--font-display);
-  line-height: 1.05;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
+  @media (min-width: 640px) {
+    .page-title {
+      font-size: 2.5rem;
+    }
+  }
 
-/* Small caps label above a title. Colour is set where it's used (the signature colour on a
-   band, ink on a surface); `.eyebrow-quiet` keeps the faint text colour even inside a band. */
-.eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
+  /* Headline face for any heading or big number: the body face, heavy and tight, sentence case. */
+  .display {
+    font-family: var(--font-display);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
 
-/* A full-bleed dark block: hero, section title bands, article header. Bleeds past the
-   container's side padding, so it needs a `.container-x` (or a `.wrap`) inside. */
-.band {
-  background: var(--mast);
-  color: var(--mast-text);
-}
+  /* Small caps label above a title. Colour is set where it's used (the signature colour on a
+     band, ink on a surface); `.eyebrow-quiet` keeps the faint text colour even inside a band. */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
 
-/* The deep band (scores strip, footer): the band tokens inside it resolve to the deep
-   palette, so the chips and columns need no colours of their own. */
-.band-deep {
-  background: var(--band-deep);
-  color: var(--band-deep-text);
-  --sig: var(--band-deep-link);
-  --mast-text: var(--band-deep-text);
-  --mast-muted: var(--band-deep-muted);
-  --mast-line: var(--band-deep-line);
-  --header-hover-bg: rgba(255, 255, 255, 0.07);
-}
+  /* A full-bleed dark block: hero, section title bands, article header. Bleeds past the
+     container's side padding, so it needs a `.container-x` (or a `.wrap`) inside. */
+  .band {
+    background: var(--mast);
+    color: var(--mast-text);
+  }
 
-.band .eyebrow:not(.eyebrow-quiet) {
-  color: var(--sig);
-}
+  /* The deep band (scores strip, footer): the band tokens inside it resolve to the deep
+     palette, so the chips and columns need no colours of their own. */
+  .band-deep {
+    background: var(--band-deep);
+    color: var(--band-deep-text);
+    --sig: var(--band-deep-link);
+    --mast-text: var(--band-deep-text);
+    --mast-muted: var(--band-deep-muted);
+    --mast-line: var(--band-deep-line);
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
+  }
 
-.eyebrow-quiet {
-  color: var(--text-faint);
-}
+  .band .eyebrow:not(.eyebrow-quiet) {
+    color: var(--sig);
+  }
 
-/* The homepage hero: a faint wash of the signature colour top-right (strength per theme). */
-.band-hero {
-  position: relative;
-  overflow: hidden;
-}
+  .eyebrow-quiet {
+    color: var(--text-faint);
+  }
 
-.band-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sig) var(--hero-wash), transparent), transparent 70%);
-  pointer-events: none;
-}
+  /* The homepage hero: a faint wash of the signature colour top-right (strength per theme). */
+  .band-hero {
+    position: relative;
+    overflow: hidden;
+  }
 
-.band-hero > * {
-  position: relative;
-}
+  .band-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sig) var(--hero-wash), transparent), transparent 70%);
+    pointer-events: none;
+  }
 
-/* Full-bleed inside the centred container: stretches to the viewport edges while its
-   content stays aligned with the container. Used by the dark bands. */
-.bleed {
-  margin-inline: calc(50% - 50vw);
-  padding-inline: calc(50vw - 50%);
-}
+  .band-hero > * {
+    position: relative;
+  }
 
-/* Long-form article body. Paragraphs space themselves; charts, pull-stats and any other
-   block an article embeds get room above and below so they never sit flush on the prose. */
-.prose-bts > p {
-  margin: 0 0 1.25rem;
-}
+  /* Full-bleed inside the centred container: stretches to the viewport edges while its
+     content stays aligned with the container. Used by the dark bands. */
+  .bleed {
+    margin-inline: calc(50% - 50vw);
+    padding-inline: calc(50vw - 50%);
+  }
 
-.prose-bts > :not(p) {
-  margin-block: 1.75rem;
-}
+  /* Long-form article body. Paragraphs space themselves; charts, pull-stats and any other
+     block an article embeds get room above and below so they never sit flush on the prose. */
+  .prose-bts > p {
+    margin: 0 0 1.25rem;
+  }
 
-.prose-bts > p:first-of-type::first-letter {
-  font-family: var(--font-display);
-  font-size: 4.25rem;
-  font-weight: 800;
-  line-height: 0.8;
-  float: left;
-  margin: 0.35rem 0.6rem 0 0;
-  color: var(--sig-ink);
-}
+  .prose-bts > :not(p) {
+    margin-block: 1.75rem;
+  }
 
-/* ---------------------------------------------------------------------------
-   Surfaces
---------------------------------------------------------------------------- */
-.card,
-.player-grid > a {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow-card);
-}
+  .prose-bts > p:first-of-type::first-letter {
+    font-family: var(--font-display);
+    font-size: 4.25rem;
+    font-weight: 800;
+    line-height: 0.8;
+    float: left;
+    margin: 0.35rem 0.6rem 0 0;
+    color: var(--sig-ink);
+  }
 
-a.card,
-.card-link,
-.player-grid > a {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-}
+  /* ---------------------------------------------------------------------------
+     Surfaces
+  --------------------------------------------------------------------------- */
+  .card,
+  .player-grid > a {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-card);
+  }
 
-a.card:hover,
-.card-link:hover,
-.player-grid > a:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-pop);
-  transform: translateY(-2px);
-}
+  a.card,
+  .card-link,
+  .player-grid > a {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
 
-/* A match card: a two-tone team-colour stripe down the left edge, scores in the display face. */
-.match {
-  position: relative;
-  overflow: hidden;
-  padding-left: 1.25rem;
-}
+  a.card:hover,
+  .card-link:hover,
+  .player-grid > a:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-pop);
+    transform: translateY(-2px);
+  }
 
-.match::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  background: linear-gradient(to bottom, var(--c1, var(--border)) 50%, var(--c2, var(--border)) 50%);
-}
+  /* A match card: a two-tone team-colour stripe down the left edge, scores in the display face. */
+  .match {
+    position: relative;
+    overflow: hidden;
+    padding-left: 1.25rem;
+  }
 
-.match-live::before {
-  width: 6px;
-}
+  .match::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(to bottom, var(--c1, var(--border)) 50%, var(--c2, var(--border)) 50%);
+  }
 
-.match-live {
-  box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--live) 45%, transparent);
-}
+  .match-live::before {
+    width: 6px;
+  }
 
-.score-display {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.5rem;
-  line-height: 1;
-  letter-spacing: 0;
-}
+  .match-live {
+    box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--live) 45%, transparent);
+  }
 
-/* The players index lists every player of a league (thousands of links), so a row carries no
-   class attributes of its own: it is a card link, the player's name, and the team on a second line. */
-.player-grid > a {
-  display: block;
-  overflow: hidden;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  .score-display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    line-height: 1;
+    letter-spacing: 0;
+  }
 
-.player-grid > a > span {
-  display: block;
-  overflow: hidden;
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 400;
-  color: var(--text-muted);
-  text-overflow: ellipsis;
-}
+  /* The players index lists every player of a league (thousands of links), so a row carries no
+     class attributes of its own: it is a card link, the player's name, and the team on a second line. */
+  .player-grid > a {
+    display: block;
+    overflow: hidden;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.table-head {
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
+  .player-grid > a > span {
+    display: block;
+    overflow: hidden;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+  }
 
-.table-row {
-  border-top: 1px solid var(--border);
-  transition: background-color 0.12s ease;
-}
+  .table-head {
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
 
-.table-row:hover {
-  background: var(--surface-hover);
-}
+  .table-row {
+    border-top: 1px solid var(--border);
+    transition: background-color 0.12s ease;
+  }
 
-/* ---------------------------------------------------------------------------
-   Navigation primitives
---------------------------------------------------------------------------- */
+  .table-row:hover {
+    background: var(--surface-hover);
+  }
 
-/* Compact chip used for season pickers, filters and small segmented controls. */
-.nav-pill {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 0.5rem;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
+  /* ---------------------------------------------------------------------------
+     Navigation primitives
+  --------------------------------------------------------------------------- */
 
-.nav-pill:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-}
+  /* Compact chip used for season pickers, filters and small segmented controls. */
+  .nav-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
 
-.nav-pill-active,
-.nav-pill-active:hover {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
+  .nav-pill:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
 
-/* Top-level header links. */
-.nav-link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  border-radius: 0.4rem;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--mast-muted);
-  white-space: nowrap;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
+  .nav-pill-active,
+  .nav-pill-active:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
 
-.nav-link:hover {
-  background: var(--header-hover-bg);
-  color: var(--mast-text);
-}
+  /* Top-level header links. */
+  .nav-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--mast-muted);
+    white-space: nowrap;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
 
-.nav-link-active,
-.nav-link-active:hover {
-  color: var(--mast-text);
-  box-shadow: inset 0 -3px 0 var(--sig);
-  border-radius: 0.4rem 0.4rem 0 0;
-}
+  .nav-link:hover {
+    background: var(--header-hover-bg);
+    color: var(--mast-text);
+  }
 
-/* Underlined section tabs (league sub-navigation). */
-.tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.75rem 0.25rem;
-  margin-right: 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-  transition: color 0.15s ease;
-}
+  .nav-link-active,
+  .nav-link-active:hover {
+    color: var(--mast-text);
+    box-shadow: inset 0 -3px 0 var(--sig);
+    border-radius: 0.4rem 0.4rem 0 0;
+  }
 
-.tab:hover {
-  color: var(--text);
-}
+  /* Underlined section tabs (league sub-navigation). */
+  .tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 0.25rem;
+    margin-right: 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    transition: color 0.15s ease;
+  }
 
-.tab::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: transparent;
-  transition: background-color 0.15s ease;
-}
+  .tab:hover {
+    color: var(--text);
+  }
 
-.tab-active {
-  color: var(--text);
-}
+  .tab::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: transparent;
+    transition: background-color 0.15s ease;
+  }
 
-.tab-active::after {
-  background: var(--sig);
-}
+  .tab-active {
+    color: var(--text);
+  }
 
-/* Small status pills on cards. */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border-radius: 9999px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
+  .tab-active::after {
+    background: var(--sig);
+  }
 
-.pill-live {
-  background: var(--pill-live-bg);
-  color: var(--pill-live-text);
-}
+  /* Small status pills on cards. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 9999px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
 
-.pill-final {
-  background: var(--pill-final-bg);
-  color: var(--pill-final-text);
-}
+  .pill-live {
+    background: var(--pill-live-bg);
+    color: var(--pill-live-text);
+  }
 
-.pill-upcoming {
-  background: var(--pill-upcoming-bg);
-  color: var(--pill-upcoming-text);
-}
+  .pill-final {
+    background: var(--pill-final-bg);
+    color: var(--pill-final-text);
+  }
 
-.pill-feature {
-  background: var(--pill-feature-bg);
-  color: var(--pill-feature-text);
-}
+  .pill-upcoming {
+    background: var(--pill-upcoming-bg);
+    color: var(--pill-upcoming-text);
+  }
 
-.live-dot {
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 9999px;
-  background: var(--live);
-  animation: pulse-dot 1.4s ease-in-out infinite;
-}
+  .pill-feature {
+    background: var(--pill-feature-bg);
+    color: var(--pill-feature-text);
+  }
 
-.pill-live .live-dot {
-  background: var(--pill-live-text);
-}
-
-/* Result letters (W / L / D) used in form strips and schedules. */
-.result-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 0.35rem;
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: #fff;
-}
-
-.result-w {
-  background: var(--win);
-}
-
-.result-l {
-  background: var(--loss);
-}
-
-.result-d {
-  background: var(--draw);
-}
-
-/* Standings zone markers. */
-.zone-marker {
-  display: inline-block;
-  width: 3px;
-  height: 1.25rem;
-  border-radius: 2px;
-  background: transparent;
-}
-
-.zone-1 {
-  background: var(--zone-1);
-}
-
-.zone-2 {
-  background: var(--zone-2);
-}
-
-.zone-3 {
-  background: var(--zone-3);
-}
-
-.zone-4 {
-  background: var(--zone-4);
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-
-@media (prefers-reduced-motion: reduce) {
   .live-dot {
-    animation: none;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: var(--live);
+    animation: pulse-dot 1.4s ease-in-out infinite;
   }
+
+  .pill-live .live-dot {
+    background: var(--pill-live-text);
+  }
+
+  /* Result letters (W / L / D) used in form strips and schedules. */
+  .result-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .result-w {
+    background: var(--win);
+  }
+
+  .result-l {
+    background: var(--loss);
+  }
+
+  .result-d {
+    background: var(--draw);
+  }
+
+  /* Standings zone markers. */
+  .zone-marker {
+    display: inline-block;
+    width: 3px;
+    height: 1.25rem;
+    border-radius: 2px;
+    background: transparent;
+  }
+
+  .zone-1 {
+    background: var(--zone-1);
+  }
+
+  .zone-2 {
+    background: var(--zone-2);
+  }
+
+  .zone-3 {
+    background: var(--zone-3);
+  }
+
+  .zone-4 {
+    background: var(--zone-4);
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot {
+      animation: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
+     Scores strip under the masthead
+  --------------------------------------------------------------------------- */
+  /* Swipes land on a whole chip, and the chip cut by the right edge fades out instead of
+     showing half a result. */
+  .strip-scroll {
+    scrollbar-width: none;
+    padding-left: 1rem;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 1rem;
+    mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+  }
+
+  .strip-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .strip-chip {
+    display: flex;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 9.5rem;
+    padding: 0 1rem;
+    border-right: 1px solid var(--mast-line);
+    font-size: 12px;
+    line-height: 1.25;
+    color: var(--mast-text);
+  }
+
+  .strip-chip:hover {
+    background: var(--header-hover-bg);
+  }
+
+  .strip-chip-empty {
+    border-right: 0;
+  }
+
+  .strip-chip-top {
+    display: flex;
+    white-space: nowrap;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--mast-muted);
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .strip-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--live);
+  }
+
+  .strip-chip-side {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-weight: 500;
+    color: var(--mast-muted);
+  }
+
+  .strip-won {
+    font-weight: 800;
+    color: var(--mast-text);
+  }
+
+  /* ---------------------------------------------------------------------------
+     Article art: the sport-coloured panel behind an article's key number.
+  --------------------------------------------------------------------------- */
+  .art {
+    position: relative;
+    overflow: hidden;
+    color: #ffffff;
+    container-type: inline-size;
+  }
+
+  /* Navy scrim rising from the bottom edge so the number and caption stay legible over the
+     lighter palette stops (orange, sky blue, lime). */
+  .art::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, color-mix(in srgb, var(--navy) 62%, transparent), transparent 70%);
+    pointer-events: none;
+  }
+
+  .art::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    top: -40px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 28px solid color-mix(in srgb, var(--mast-text) 12%, transparent);
+    pointer-events: none;
+  }
+
+  .art-football { background: linear-gradient(120deg, #6cabdd, #1c2c5b 90%); }
+  .art-cricket { background: linear-gradient(120deg, #1d9a6c, #0b3d2e 90%); }
+  .art-f1 { background: linear-gradient(120deg, #101010, #2a2a2a 60%, #e10600 160%); }
+  .art-asian-games { background: linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 140%); }
+  .art-nfl { background: linear-gradient(120deg, #013369, #d50a0a 140%); }
+  .art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
+  .art-mlb { background: linear-gradient(120deg, #bf0d3e, #041e42 110%); }
+  .art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); }
+  .art-neutral { background: linear-gradient(120deg, var(--navy-2), var(--navy) 90%); }
 }
 
 /* ---------------------------------------------------------------------------
-   Scores strip under the masthead
+   State
+   Keyed on <html data-*>; these stay outside every layer on purpose so that hiding a card or
+   a homepage section beats whatever display utility the element carries.
 --------------------------------------------------------------------------- */
-/* Swipes land on a whole chip, and the chip cut by the right edge fades out instead of
-   showing half a result. */
-.strip-scroll {
-  scrollbar-width: none;
-  padding-left: 1rem;
-  scroll-snap-type: x mandatory;
-  scroll-padding-left: 1rem;
-  mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
-}
-
-.strip-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.strip-chip {
-  display: flex;
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  min-width: 9.5rem;
-  padding: 0 1rem;
-  border-right: 1px solid var(--mast-line);
-  font-size: 12px;
-  line-height: 1.25;
-  color: var(--mast-text);
-}
-
-.strip-chip:hover {
-  background: var(--header-hover-bg);
-}
-
-.strip-chip-empty {
-  border-right: 0;
-}
-
-.strip-chip-top {
-  display: flex;
-  white-space: nowrap;
-  justify-content: space-between;
-  gap: 0.75rem;
-  color: var(--mast-muted);
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.strip-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--live);
-}
-
-.strip-chip-side {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  font-weight: 500;
-  color: var(--mast-muted);
-}
-
-.strip-won {
-  font-weight: 800;
-  color: var(--mast-text);
-}
-
-/* ---------------------------------------------------------------------------
-   Article art: the sport-coloured panel behind an article's key number.
---------------------------------------------------------------------------- */
-.art {
-  position: relative;
-  overflow: hidden;
-  color: #ffffff;
-  container-type: inline-size;
-}
-
-/* Navy scrim rising from the bottom edge so the number and caption stay legible over the
-   lighter palette stops (orange, sky blue, lime). */
-.art::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, color-mix(in srgb, var(--navy) 62%, transparent), transparent 70%);
-  pointer-events: none;
-}
-
-.art::after {
-  content: "";
-  position: absolute;
-  right: -40px;
-  top: -40px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  border: 28px solid color-mix(in srgb, var(--mast-text) 12%, transparent);
-  pointer-events: none;
-}
-
-.art-football { background: linear-gradient(120deg, #6cabdd, #1c2c5b 90%); }
-.art-cricket { background: linear-gradient(120deg, #1d9a6c, #0b3d2e 90%); }
-.art-f1 { background: linear-gradient(120deg, #101010, #2a2a2a 60%, #e10600 160%); }
-.art-asian-games { background: linear-gradient(120deg, #ff9933 0%, #ff6a00 60%, #138808 140%); }
-.art-nfl { background: linear-gradient(120deg, #013369, #d50a0a 140%); }
-.art-nba { background: linear-gradient(120deg, #c9082a, #17408b 110%); }
-.art-mlb { background: linear-gradient(120deg, #bf0d3e, #041e42 110%); }
-.art-tennis { background: linear-gradient(120deg, #c8f135, #1f6f3a 100%); }
-.art-neutral { background: linear-gradient(120deg, var(--navy-2), var(--navy) 90%); }
-
 /* Index cards carry data-topic-card; the topic chosen on <html> hides every other card. */
 :root[data-topic="football"] [data-topic-card]:not([data-topic-card="football"]),
 :root[data-topic="cricket"] [data-topic-card]:not([data-topic-card="cricket"]),

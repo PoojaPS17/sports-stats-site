@@ -35,7 +35,7 @@ export function Ticker() {
 
   return (
     <div className="band-deep border-b border-[var(--band-deep-line)]">
-      <div className="container-x flex h-[52px] items-stretch gap-0 px-0! sm:px-0!">
+      <div className="container-x flex h-[52px] items-stretch gap-0 px-0">
         <div className="strip-scroll flex min-w-0 flex-1 items-stretch overflow-x-auto" role="region" aria-label="Latest scores">
           {items.map((chip, i) => (
             <Link key={`${chip.href}-${i}`} href={chip.href} className="strip-chip">

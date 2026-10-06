@@ -61,7 +61,7 @@ export function SpotlightCard({ game }: { game: GameRow }) {
   return (
     <Link
       href={`/${league}/games/${game.espn_id}`}
-      className="card block rounded-2xl! border-[var(--mast-line)]! px-5 py-4 text-[var(--mast-text)] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)]!"
+      className="card block rounded-2xl border-[var(--mast-line)] px-5 py-4 text-[var(--mast-text)] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)]"
       // Team colours are mixed toward navy so light kits never wash out the light text.
       style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${c1} 55%, var(--mast)) 0%, var(--mast) 55%, color-mix(in srgb, ${c2} 55%, var(--mast)) 140%)` }}
     >
