@@ -47,3 +47,34 @@ test("the listener is mounted with analytics, so it follows the consent choice",
   assert.match(read("src/components/FunnelEvents.tsx"), /window\.gtag\("event", "funnel_click"/);
   assert.match(read("src/components/GoogleAnalytics.tsx"), /if \(!GA_ID\) return null;[\s\S]*<FunnelEvents \/>/, "nothing mounts without a GA id");
 });
+
+// next/link calls preventDefault() on an internal click in React's root handler, before the event reaches
+// document. A bubble-phase listener that skips defaultPrevented clicks therefore never fired (2026-10-07).
+test("funnel_click fires for a click that a router link has already prevented", async () => {
+  const { JSDOM } = await import("jsdom");
+  const React = await import("react");
+  const { createRoot } = await import("react-dom/client");
+  const { act } = React;
+  const dom = new JSDOM('<!doctype html><div id="app"></div>', { url: "https://sports-db.live/cricket/series/1554057", pretendToBeVisual: true });
+  const g = globalThis as Record<string, unknown>;
+  const saved = { window: g.window, document: g.document, location: g.location, MouseEvent: g.MouseEvent, IS_REACT_ACT_ENVIRONMENT: g.IS_REACT_ACT_ENVIRONMENT };
+  Object.assign(g, { window: dom.window, document: dom.window.document, location: dom.window.location, MouseEvent: dom.window.MouseEvent, IS_REACT_ACT_ENVIRONMENT: true });
+  const sent: unknown[][] = [];
+  (dom.window as unknown as { gtag: (...a: unknown[]) => void }).gtag = (...a) => void sent.push(a);
+  try {
+    const { FunnelEvents } = await import("../src/components/FunnelEvents");
+    const container = dom.window.document.getElementById("app") as HTMLElement;
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(React.createElement(React.Fragment, null, React.createElement(FunnelEvents), React.createElement("main", null, React.createElement("a", { href: "/cricket/matches/1554063", id: "link" }, "match"))));
+    });
+    // The router's own handler, on the root container: runs before document in the bubble phase.
+    container.addEventListener("click", (e) => e.preventDefault());
+    dom.window.document.getElementById("link")!.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    assert.deepEqual(sent, [["event", "funnel_click", { from_page: "series", to_page: "match", link_area: "content" }]]);
+    await act(async () => root.unmount());
+  } finally {
+    Object.assign(g, saved);
+    dom.window.close();
+  }
+});

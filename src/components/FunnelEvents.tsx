@@ -6,7 +6,9 @@ import { classifyPath, internalPath } from "@/lib/funnel";
 // One click listener for the whole site: a click on a link that stays on SportsDB sends
 // funnel_click with the kind of page it came from and the kind it goes to (homepage to match,
 // match to player, ...). Delegated, so no link needs touching. Goes through gtag, so it follows the
-// same consent choice as every other GA4 hit: nothing is sent where analytics is denied.
+// same consent choice as every other GA4 hit: where analytics is denied, GA4 gets cookieless pings only.
+// It listens in the capture phase: next/link calls preventDefault() on every internal click before the
+// event bubbles up to document, so a bubble-phase listener that skips defaultPrevented clicks sees none.
 export function FunnelEvents() {
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -21,8 +23,8 @@ export function FunnelEvents() {
       const area = a.closest("nav") ? "nav" : a.closest("footer") ? "footer" : a.closest("main") ? "content" : "other";
       window.gtag("event", "funnel_click", { from_page: fromKind, to_page: toKind, link_area: area });
     };
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
   return null;
 }
