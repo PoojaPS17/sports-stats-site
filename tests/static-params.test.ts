@@ -30,6 +30,7 @@ const DYNAMIC_ON_PURPOSE: Record<string, string> = {
   "[league]/games/[id]/page.tsx": "live match state; a cached render is up to 5 minutes old and its pre-state render ships no LiveRefresh timer; a finished game with its report stored is rewritten by the proxy to the cached final/[id] route",
   "[league]/games/[id]/opengraph-image.tsx": "draws the live score",
   "[league]/games/[id]/players/[slug]/card/route.ts": "reads ?format from the request and sets its own cache-control per game (5 min fresh, a day once settled) rather than a static revalidate window",
+  "[league]/standings/card/route.tsx": "reads ?format from the request and sets its own Cache-Control (five minutes at the edge) rather than a static revalidate window",
   "[league]/scores/[date]/page.tsx": "today's scores are live",
   "cricket/matches/[id]/page.tsx": "live match state; a match that is over is rewritten by the proxy to the cached final/[id] route",
   "cricket/matches/[id]/opengraph-image.tsx": "draws the live score",
