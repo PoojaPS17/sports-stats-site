@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { visitorCountry } from "@/lib/country";
 import { pool } from "@/lib/db";
 import { isLeague } from "@/lib/queries";
+import { CRICKET_VIEW_LEAGUE } from "@/lib/viewLeague";
 
 // The host's edge (Cloudflare, or Vercel on the review copy) adds a header with the
 // visitor's IP-geolocated country — nothing fetched from a third party at request
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { league, gameId } = (body ?? {}) as { league?: unknown; gameId?: unknown };
-  if (typeof league !== "string" || !isLeague(league) || typeof gameId !== "string" || !gameId) {
+  if (typeof league !== "string" || !(isLeague(league) || league === CRICKET_VIEW_LEAGUE) || typeof gameId !== "string" || !gameId) {
     return NextResponse.json({ error: "invalid league or gameId" }, { status: 400 });
   }
 

@@ -76,7 +76,6 @@ async function scoresByDate(league: League): Promise<Entry[]> {
 async function core(): Promise<Entry[]> {
   const out: Entry[] = [
     entry("/", "hourly", 1),
-    entry("/top-games", "daily", 0.5),
     entry("/f1", "daily", 0.7),
     entry("/f1/standings", "daily", 0.6),
     entry("/asian-games", "daily", 0.6),

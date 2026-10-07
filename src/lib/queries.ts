@@ -806,7 +806,7 @@ export const TOP_GAMES_WINDOWS: { key: TopGamesWindow; label: string }[] = [
   { key: "alltime", label: "All-Time" },
 ];
 
-const WINDOW_INTERVAL: Record<TopGamesWindow, string | null> = {
+export const WINDOW_INTERVAL: Record<TopGamesWindow, string | null> = {
   today: "1 day",
   "30d": "30 days",
   quarter: "90 days",
@@ -854,7 +854,7 @@ export async function getTopGames(window: TopGamesWindow, filter: TopGamesFilter
      order by v.views desc`,
     [limit, interval, filter.country ?? null, filter.platform ?? null]
   );
-  return rows;
+  return rows.map((r) => ({ ...r, views: Number(r.views) }));
 }
 
 // Every country we've actually seen real traffic from, most-viewed first — powers the

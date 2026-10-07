@@ -42,6 +42,8 @@ import { CricketPartnerships } from "@/components/CricketPartnerships";
 import { CricketNextMatch } from "@/components/CricketNextMatch";
 import { keyMoments, parseMilestones } from "@/lib/cricketMatchMoments";
 import { topPerformers } from "@/lib/cricketPerformers";
+import { ViewTracker } from "@/components/ViewTracker";
+import { CRICKET_VIEW_LEAGUE } from "@/lib/viewLeague";
 
 /** The page title, description and canonical of a match, the same on the public and the final route. */
 export async function cricketMatchMetadata(id: string): Promise<Metadata> {
@@ -152,6 +154,7 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
 
   return (
     <div className="flex flex-col gap-6">
+      <ViewTracker league={CRICKET_VIEW_LEAGUE} gameId={id} />
       <LiveRefresh active={live} />
       {stored && <JsonLd data={cricketSeriesMatchSchema({ ...stored, status_state: state, status_summary: summaryText }, details?.venue ?? null)} />}
       <Breadcrumbs
