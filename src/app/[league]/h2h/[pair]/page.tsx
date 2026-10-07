@@ -122,6 +122,8 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         <ImageActions
           filename={`${league}-${teamA.slug}-vs-${teamB.slug}`}
           shareTitle={`${pairTitle} head-to-head`}
+          // The record picture the page already serves as its share image (record, rivalry label and last results).
+          linkUrl={`/${league}/h2h/${pair}/opengraph-image`}
           width={720}
           card={<HeadToHeadExportCard league={league} h2h={h2h} title={pairTitle} streakText={streakLine} />}
         />
