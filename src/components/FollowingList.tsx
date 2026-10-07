@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FOLLOWS_EVENT, addFollows, getFollows, removeFollow, type FollowItem, type FollowKind } from "@/lib/follow";
+import { CalendarButton } from "@/components/CalendarButton";
 import { MAX_SHARED, decodeFollows, encodeFollows } from "@/lib/followShare";
 
 const GROUPS: { kind: FollowKind; title: string }[] = [
@@ -55,6 +56,8 @@ export function FollowingList() {
     window.history.replaceState(null, "", "/following");
   }
 
+  const hasFixtures = (items ?? []).some((i) => i.kind === "team" || i.kind === "game");
+
   if (items === null) return <p className="text-sm text-[var(--text-muted)]">Loading your follows…</p>;
 
   return (
@@ -102,6 +105,7 @@ export function FollowingList() {
             <button type="button" onClick={copyLink} className={buttonClass}>
               Share my follows
             </button>
+            {hasFixtures && <CalendarButton path={`/calendar/follows?f=${encodeFollows(items)}`} label="Add to calendar" />}
             <span className="text-xs text-[var(--text-muted)]">{items.length > MAX_SHARED ? `The link carries your ${MAX_SHARED} most recent.` : "A link anyone can open, no sign-up."}</span>
           </div>
           {GROUPS.map(({ kind, title }) => {

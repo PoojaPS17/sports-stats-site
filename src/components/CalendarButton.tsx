@@ -86,7 +86,7 @@ export function CalendarButton({ path, label = "Add to calendar" }: { path: stri
             Outlook.com
           </a>
           <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">One-off</p>
-          <a href={`${path}?download=1`} role="menuitem" className={item}>
+          <a href={`${path}${path.includes("?") ? "&" : "?"}download=1`} role="menuitem" className={item}>
             Download .ics file
           </a>
           <button type="button" onClick={copy} role="menuitem" className={item}>
