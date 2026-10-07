@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { isLeague, LEAGUE_LABEL, getPlayerBySlug } from "@/lib/queries";
-import { OG_SIZE, ogCard, ogFallback } from "@/lib/ogCard";
+import { OG_SIZE, ogCard, ogFallback, ogPosition } from "@/lib/ogCard";
 
 export const alt = "Player page";
 export const size = OG_SIZE;
@@ -20,6 +20,6 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const player = isLeague(league) ? await getPlayerBySlug(league, slug) : null;
   if (!player || !isLeague(league)) return new ImageResponse(ogFallback(), size);
   const color = player.team_color ? `#${player.team_color.replace(/^#/, "")}` : undefined;
-  const detail = [player.position, player.team_name].filter(Boolean).join(" · ");
+  const detail = [ogPosition(player.position), player.team_name].filter(Boolean).join(" · ");
   return new ImageResponse(ogCard({ kicker: `${LEAGUE_LABEL[league]} player`, title: player.name, detail: detail || "Season stats · Game log", color }), size);
 }

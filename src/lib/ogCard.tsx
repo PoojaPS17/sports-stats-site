@@ -8,6 +8,12 @@ export function ogFallback(): ReactElement {
   return <div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>;
 }
 
+/** A position worth printing on a card: ESPN's cricket feed marks an unknown role "UKN", which is a gap, not a position. */
+export function ogPosition(position: string | null | undefined): string | null {
+  const p = position?.trim();
+  return p && !/^(ukn|unk|unknown|n\/a|-+)$/i.test(p) ? p : null;
+}
+
 /** A long name steps down so it stays on two lines at most. */
 export function ogTitleSize(title: string, base = 72): number {
   return title.length > 48 ? base - 20 : title.length > 32 ? base - 10 : base;
