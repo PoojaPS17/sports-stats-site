@@ -31,3 +31,12 @@ export function rivalryMeter(h2h: Pick<HeadToHead, "teamA" | "teamB" | "winsA" |
   const label = share <= 0.55 ? "Neck and neck" : share <= 0.65 ? `Slight edge to ${nameOf(leader)}` : share <= 0.8 ? `Clear edge to ${nameOf(leader)}` : "One-sided";
   return { label, last5 };
 }
+
+/** "Celtics have won the last 4", or null when there is no run of two or more. */
+export function streakText(h2h: Pick<HeadToHead, "teamA" | "teamB" | "streak">, nameOf: (t: HeadToHead["teamA"]) => string): string | null {
+  const st = h2h.streak;
+  if (!st || st.length < 2) return null;
+  if (st.team === "A") return `${nameOf(h2h.teamA)} have won the last ${st.length}`;
+  if (st.team === "B") return `${nameOf(h2h.teamB)} have won the last ${st.length}`;
+  return `The last ${st.length} meetings were drawn`;
+}

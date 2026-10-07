@@ -13,7 +13,7 @@ import { GameCard } from "@/components/GameCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ImageActions } from "@/components/ImageActions";
 import { HeadToHeadExportCard } from "@/components/HeadToHeadExportCard";
-import { rivalryMeter } from "@/lib/rivalry";
+import { rivalryMeter, streakText } from "@/lib/rivalry";
 import { ScoreboardExportCard, scoreboardExportWidth } from "@/components/ScoreboardExportCard";
 import { TeamLogo } from "@/components/TeamLogo";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -97,15 +97,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
   const rivalLinks = (team: typeof teamA, other: typeof teamA, rivals: typeof rivalsA) =>
     rivals.filter((r) => r.espn_id !== other.espn_id).slice(0, 10).map((r) => ({ href: h2hPath(league, team.slug, r.slug), label: `${teamDisplayName(team.name)} vs ${teamDisplayName(r.name)}`, sub: `${r.games} meetings on record`, image: r.logo_url, imageName: r.name }));
 
-  const streakText =
-    h2h.streak && h2h.streak.length > 1
-      ? h2h.streak.team === "A"
-        ? `${teamDisplayName(teamA.name)} have won the last ${h2h.streak.length}`
-        : h2h.streak.team === "B"
-          ? `${teamDisplayName(teamB.name)} have won the last ${h2h.streak.length}`
-          : `The last ${h2h.streak.length} meetings were drawn`
-      : null;
-
+  const streakLine = streakText(h2h, (t) => teamDisplayName(t.name));
   const meter = rivalryMeter(h2h, (t) => teamDisplayName(t.name));
   const pairTitle = `${teamDisplayName(teamA.name)} vs ${teamDisplayName(teamB.name)}`;
   const gamesTools = (name: string, title: string, games: GameRow[]) => (
@@ -131,7 +123,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
           filename={`${league}-${teamA.slug}-vs-${teamB.slug}`}
           shareTitle={`${pairTitle} head-to-head`}
           width={720}
-          card={<HeadToHeadExportCard league={league} h2h={h2h} title={pairTitle} streakText={streakText} />}
+          card={<HeadToHeadExportCard league={league} h2h={h2h} title={pairTitle} streakText={streakLine} />}
         />
         <section className="card overflow-hidden">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-6 sm:px-8">
@@ -166,7 +158,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
             <Stat label="Meetings" value={h2h.meetings} sub={h2h.firstSeason ? `since ${formatSeasonLabel(league, h2h.firstSeason)}` : undefined} />
             <Stat label={`${scoreWord} for ${teamA.abbreviation ?? teamDisplayName(teamA.name)}`} value={h2h.goalsA} sub={h2h.meetings ? `${(h2h.goalsA / total).toFixed(1)} per game` : undefined} />
             <Stat label={`${scoreWord} for ${teamB.abbreviation ?? teamDisplayName(teamB.name)}`} value={h2h.goalsB} sub={h2h.meetings ? `${(h2h.goalsB / total).toFixed(1)} per game` : undefined} />
-            <Stat label="Current run" value={h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—"} sub={streakText ?? undefined} />
+            <Stat label="Current run" value={h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—"} sub={streakLine ?? undefined} />
           </div>
         </section>
       </div>

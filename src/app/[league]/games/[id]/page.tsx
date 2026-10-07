@@ -284,7 +284,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         </section>
       )}
 
-      {!isCricket && <HeadToHeadStrip league={league} homeSlug={game.home_slug} awaySlug={game.away_slug} excludeGameId={game.completed ? game.espn_id : null} />}
+      {!isCricket && <HeadToHeadStrip league={league} homeSlug={game.home_slug} awaySlug={game.away_slug} excludeGameId={game.completed ? game.espn_id : null} preGame={game.status_state === "pre" && !game.completed ? { nextLine: `Next meeting ${formatGameDate(game.date, league, { month: "short", day: "numeric" }, game.local_date)}` } : undefined} />}
 
       {!details && show.detailsMissingNote && <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">Match details aren&apos;t available right now.</p>}
 
