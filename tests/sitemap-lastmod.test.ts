@@ -37,10 +37,10 @@ after(async () => {
 const future = (v: unknown) => v != null && new Date(v as string).getTime() > Date.now();
 
 test("a cricket series that ends in the future does not claim a future lastmod", async () => {
-  const entries = await sitemapEntries("core");
+  const entries = await sitemapEntries("cricket-series");
   const series = entries.find((e) => e.url.endsWith("/cricket/series/s1"));
 
-  assert.ok(series, "the series should be in the core sitemap");
+  assert.ok(series, "the series should be in the cricket-series sitemap");
   assert.equal(future(series.lastModified), false, `lastmod ${String(series.lastModified)} is in the future`);
 });
 

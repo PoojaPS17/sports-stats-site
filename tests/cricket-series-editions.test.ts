@@ -399,7 +399,7 @@ test("the sitemap lists each edition once, no emptied league-id row that redirec
   await db.pool.query(`insert into cricket_series (espn_id, name, is_tournament, kind, match_count, start_date, end_date) values ('8050', 'Ranji Trophy', true, 'domestic', 1, '2024-12-31', '2024-12-31')`);
   await db.pool.query(`insert into cricket_series_matches (espn_id, series_espn_id, date, name) values ('2', '8050', '2024-12-31', 'a v b')`);
 
-  const urls = (await sitemap.sitemapEntries("core")).map((e) => e.url).filter((u) => u.includes("/cricket/series/"));
+  const urls = (await sitemap.sitemapEntries("cricket-series")).map((e) => e.url).filter((u) => u.includes("/cricket/series/"));
   assert.equal(new Set(urls).size, urls.length, "no duplicates");
   const ids = urls.map((u) => u.split("/cricket/series/")[1]);
   // The old merged 8044 row still holds a match, so its address renders (it redirects only once emptied) and is listed.
