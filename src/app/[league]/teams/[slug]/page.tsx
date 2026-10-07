@@ -16,7 +16,8 @@ import {
 import { fitTitle, pageMeta } from "@/lib/metadata";
 import { LEAGUE_SHORT } from "@/lib/leagues";
 import { teamNotFound } from "@/lib/legacySlug";
-import { formatWinLossTie, summarizeTeamSeason } from "@/lib/teamSummary";
+import { formatWinLossTie, lastResultDate, seasonResults, summarizeTeamSeason } from "@/lib/teamSummary";
+import { teamClaims } from "@/lib/heroClaims";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ImageActions } from "@/components/ImageActions";
@@ -102,6 +103,8 @@ export default async function TeamPage({
   if (played > 0) meta.push(record);
   if (team.venue_name) meta.push(team.venue_name);
 
+  const claims = teamClaims(seasonResults(games, team.espn_id), { soccer: isSoccer, lastPlayed: lastResultDate(games, team.espn_id) });
+
   // The feed lists every player with a note, most of them "Active" game recaps.
   // Only genuine availability concerns belong under an "Injuries" heading.
   const realInjuries = injuries.filter((i) => i.status.toLowerCase() !== "active");
@@ -114,7 +117,7 @@ export default async function TeamPage({
       <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Teams", href: `/${league}/teams` }, { label: teamDisplayName(team.name) }]} />
 
       <JsonLd data={teamSchema(league, team)} />
-      <TeamHeader league={league} slug={slug} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={meta} />
+      <TeamHeader league={league} slug={slug} name={teamDisplayName(team.name)} logoUrl={team.logo_url} color={team.color} meta={meta} claims={claims} />
 
       {(summary.form.length > 0 || next) && (
         <div className="grid gap-3 sm:grid-cols-2">

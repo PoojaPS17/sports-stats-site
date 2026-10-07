@@ -36,6 +36,26 @@ function resultFor(game: GameRow, teamEspnId: string): ResultLetter | null {
   return "D";
 }
 
+/** Every result in the season list, most recent first (the list is newest first): games that do not count and games with no result are left out, as for recent form. */
+export function seasonResults(games: GameRow[], teamEspnId: string): ResultLetter[] {
+  const out: ResultLetter[] = [];
+  for (const g of games) {
+    if (g.stage === "excluded") continue;
+    const r = resultFor(g, teamEspnId);
+    if (r) out.push(r);
+  }
+  return out;
+}
+
+/** When the team's latest counted result was played, or null when it has none. */
+export function lastResultDate(games: GameRow[], teamEspnId: string): Date | null {
+  for (const g of games) {
+    if (g.stage === "excluded") continue;
+    if (resultFor(g, teamEspnId)) return new Date(g.date);
+  }
+  return null;
+}
+
 // The record is the regular season's. Only the NBA and NFL split a season into stages (playoffs,
 // play-in, preseason and other games that do not count), so those are what is left out; every
 // other league's games count as they always have, round labels or not (a cricket "Match 5" or

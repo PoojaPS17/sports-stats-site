@@ -11,6 +11,7 @@ export function TeamHeader({
   logoUrl,
   color,
   meta,
+  claims,
 }: {
   league: League;
   /** The team page's own slug, for the follow/share links. */
@@ -20,6 +21,8 @@ export function TeamHeader({
   color: string | null;
   /** Optional short facts shown under the name (venue, record, ...). */
   meta?: string[];
+  /** One-number claims from the season's results ("5 straight wins"), shown as pills under the facts. */
+  claims?: string[];
 }) {
   const path = `/${league}/teams/${slug}`;
   return (
@@ -37,6 +40,15 @@ export function TeamHeader({
             <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-[var(--text-muted)]">
               {meta.map((m) => (
                 <span key={m}>{m}</span>
+              ))}
+            </p>
+          )}
+          {claims && claims.length > 0 && (
+            <p className="mt-2 flex flex-wrap gap-2">
+              {claims.map((c) => (
+                <span key={c} className="pill pill-upcoming">
+                  {c}
+                </span>
               ))}
             </p>
           )}
