@@ -11,6 +11,7 @@ import { article as whiteSox121LossesToWildCardSweep } from "@/content/beyondThe
 import { article as skubalDodgersNldsGameOneWin } from "@/content/beyondTheScoreline/skubal-dodgers-nlds-game-one-win";
 import { article as brewersPadresNldsChourioWalkoff } from "@/content/beyondTheScoreline/brewers-padres-nlds-chourio-walkoff";
 import { article as fortyNinersFourOhStartPurdy2023Pace } from "@/content/beyondTheScoreline/49ers-4-0-start-purdy-2023-pace";
+import { article as fazal309PresidentsTrophyRecordStand } from "@/content/beyondTheScoreline/fazal-309-presidents-trophy-record-stand";
 
 export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "mlb" | "tennis" | "neutral";
 
@@ -79,6 +80,7 @@ export const ARTICLES: BeyondTheScorelineArticle[] = [
   skubalDodgersNldsGameOneWin,
   brewersPadresNldsChourioWalkoff,
   fortyNinersFourOhStartPurdy2023Pace,
+  fazal309PresidentsTrophyRecordStand,
 ];
 
 assertUniqueSlugs(ARTICLES);
