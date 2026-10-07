@@ -149,6 +149,30 @@ export async function getCricketSeriesMatches(seriesEspnId: string): Promise<Cri
   return rows;
 }
 
+export type TopCricketMatch = CricketSeriesMatch & { views: number };
+
+/** The cricket match pages opened most in a window (`interval` null = ever), counted under the "cricket" marker in game_views (see viewLeague.ts). */
+export async function getTopCricketMatches(interval: string | null, filter: { country?: string; platform?: string } = {}, limit = 10): Promise<TopCricketMatch[]> {
+  const { rows } = await pool.query(
+    `select m.*, v.views::int as views
+     from (
+       select game_espn_id, count(*) as views
+       from game_views
+       where league = 'cricket'
+         and ($2::interval is null or viewed_at > now() - $2::interval)
+         and ($3::text is null or country = $3)
+         and ($4::text is null or platform = $4)
+       group by game_espn_id
+       order by count(*) desc
+       limit $1
+     ) v
+     join lateral (${MATCH_SELECT} where m.espn_id = v.game_espn_id) m on true
+     order by v.views desc`,
+    [limit, interval, filter.country ?? null, filter.platform ?? null]
+  );
+  return rows;
+}
+
 export async function getCricketSeriesMatch(espnId: string): Promise<CricketSeriesMatch | null> {
   const { rows } = await pool.query(`${MATCH_SELECT} where m.espn_id = $1`, [espnId]);
   return rows[0] ?? null;

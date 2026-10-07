@@ -3,11 +3,14 @@ import Link from "next/link";
 import {
   TOP_GAMES_WINDOWS,
   TRENDING_COUNTRIES,
+  WINDOW_INTERVAL,
   getTopGames,
   getTrackedCountries,
   getTrendingTopics,
   type TopGamesWindow,
 } from "@/lib/queries";
+import { getTopCricketMatches } from "@/lib/cricketSeries";
+import { SeriesMatchRow } from "@/components/CricketSeries";
 import { AdSlot } from "@/components/AdSlot";
 import { GameCard } from "@/components/GameCard";
 import { CountrySelect } from "@/components/CountrySelect";
@@ -15,7 +18,7 @@ import { TrendingCountrySelect } from "@/components/TrendingCountrySelect";
 import { TrendingFigures } from "@/components/TrendingFigures";
 import { TrendingApps } from "@/components/TrendingApps";
 
-export const metadata = pageMeta("Top Sports Games", "The most-viewed matches on SportsDB right now, plus trending sports apps and figures.", "/top-games");
+export const metadata = pageMeta("Top Sports Games", "The most-viewed matches on SportsDB right now, plus trending sports apps and figures.", "/top-games", { noindex: true });
 
 export const revalidate = 300;
 
@@ -59,8 +62,10 @@ export default async function TopGamesPage({
   const activePlatform: PlatformKey = isPlatformKey(platformParam) ? platformParam : "all";
   const activeTrendingCountry = isTrendingCountry(trendingParam) ? trendingParam! : "global";
 
-  const [games, countries, trendingFigures, trendingApps] = await Promise.all([
-    getTopGames(activeWindow, { country: country || undefined, platform: activePlatform === "all" ? undefined : activePlatform }, 10),
+  const filter = { country: country || undefined, platform: activePlatform === "all" ? undefined : activePlatform };
+  const [games, cricket, countries, trendingFigures, trendingApps] = await Promise.all([
+    getTopGames(activeWindow, filter, 10),
+    getTopCricketMatches(WINDOW_INTERVAL[activeWindow], filter, 6),
     getTrackedCountries(),
     getTrendingTopics("wikipedia", activeTrendingCountry),
     getTrendingTopics("app_store_ios", activeTrendingCountry),
@@ -71,8 +76,8 @@ export default async function TopGamesPage({
       <div>
         <h1 className="page-title">Top Sports Games</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          The match pages people are opening most on SportsDB, across the Premier League, NFL, NBA and IPL. The country and
-          device filters use where those visits came from.
+          The match pages people are opening most on SportsDB, across football, the NFL, the NBA, cricket and the rest. The
+          country and device filters use where those visits came from.
         </p>
       </div>
 
@@ -106,11 +111,13 @@ export default async function TopGamesPage({
         </div>
       </div>
 
-      {games.length === 0 ? (
+      {games.length === 0 && cricket.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">
           Nobody has opened a match page under this filter yet. The chart counts visits, so it fills in as people read.
         </p>
       ) : (
+        <>
+          {games.length > 0 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {games.map((g, i) => (
             <div key={`${g.league}-${g.espn_id}`} className="relative">
@@ -124,6 +131,23 @@ export default async function TopGamesPage({
             </div>
           ))}
         </div>
+          )}
+          {cricket.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <h2 className="text-xl font-extrabold tracking-tight">Most-viewed cricket matches</h2>
+              <div className="card grid grid-cols-1 divide-y divide-[var(--border)] overflow-hidden">
+                {cricket.map((m) => (
+                  <div key={m.espn_id}>
+                    <SeriesMatchRow m={m} showSeries />
+                    <p className="px-4 pb-2 text-xs text-[var(--text-muted)]">
+                      {m.views} view{m.views === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-6">
