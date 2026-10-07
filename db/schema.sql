@@ -358,6 +358,31 @@ begin
   create unique index standings_stage_key on standings (league, season, team_espn_id, (coalesce(conference, '')));
 end $$;
 
+-- A daily copy of each league's current table, so the site can say where a team stood last week.
+-- `standings` keeps only the latest values (every fetch overwrites them) and ESPN serves only today's
+-- table, so a day not saved here cannot be rebuilt. One row per team and stage table per UTC day, written
+-- by scripts/snapshot-standings.ts after the daily fetch (a second run the same day replaces that day's
+-- rows). The columns are the ones a position is worked out from: ESPN's `rank` where the league sends one,
+-- else record, points and win percent. `conference` is '' (not null) so it can sit in the key.
+create table if not exists standings_history (
+  league text not null,
+  season int not null,
+  team_espn_id text not null,
+  conference text not null default '',
+  snapshot_date date not null,
+  rank int,
+  playoff_seed int,
+  wins int,
+  losses int,
+  draws int,
+  points int,
+  win_percent numeric,
+  games_behind text,
+  primary key (league, season, team_espn_id, conference, snapshot_date)
+);
+
+create index if not exists standings_history_team_idx on standings_history (league, team_espn_id, snapshot_date desc);
+
 -- One row per real page view of a match-detail page, recorded client-side (see
 -- src/app/api/track-view) so it reflects actual visits rather than server-render
 -- count (which ISR caching would undercount). Powers "Top Games" — genuinely
