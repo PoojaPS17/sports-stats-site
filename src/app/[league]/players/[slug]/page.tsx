@@ -17,6 +17,7 @@ import {
   getPlayerSeasons,
   getSameNamePlayerWithGames,
   getPlayerCricketCareer,
+  getPlayerOtherFormats,
   getPlayerCricketSplits,
   CRICKET_SPLIT_DIMENSIONS,
   type CricketSplitDimension,
@@ -34,6 +35,7 @@ import { PlayerHeader } from "@/components/PlayerHeader";
 import { playerClaims } from "@/lib/playerClaims";
 import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { CricketCareer } from "@/components/CricketCareer";
+import { CricketOtherFormats } from "@/components/CricketOtherFormats";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
@@ -150,14 +152,16 @@ export default async function PlayerPage({
   if (isCricketLeague(league) || !sport) {
     // Every split at once: they are tabs in the page now, so the player has one address and the
     // page renders the same for everyone (which is what lets it be cached).
-    const [career, splitRows] = await Promise.all([
+    const [career, otherFormats, splitRows] = await Promise.all([
       cachedCareer(league, player.espn_id),
+      getPlayerOtherFormats(league, player.espn_id),
       Promise.all(CRICKET_SPLIT_DIMENSIONS.map((d) => getPlayerCricketSplits(league, player.espn_id, d.key))),
     ]);
     const splits = Object.fromEntries(CRICKET_SPLIT_DIMENSIONS.map((d, i) => [d.key, splitRows[i]])) as Record<CricketSplitDimension, CricketSplitRow[]>;
     return (
       <div className="flex flex-col gap-6">
         {header(playerMeta(null, player))}
+        <CricketOtherFormats name={player.name} formats={otherFormats} />
         {career ? (
           <CricketCareer league={league} career={career} splits={splits} />
         ) : (
