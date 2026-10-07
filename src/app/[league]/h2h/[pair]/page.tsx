@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     h2hPath(league, slugs[0], slugs[1]),
     // No counted meeting: the page still renders for visitors, but has nothing to index. The h2h sitemap
     // lists a pair only if it has one (countedMeetingSql), so the two rules stay in step.
-    { noindex: h2h.meetings === 0 }
+    { noindex: h2h.meetings === 0, ownImage: true }
   );
 }
 

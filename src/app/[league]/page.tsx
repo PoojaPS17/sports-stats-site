@@ -27,9 +27,9 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
   const words = scheduleWords(league);
-  if (league === "test") return pageMeta("Test Cricket Results", "Latest Test match results with full four-innings scorecards, and every men's Test since 2015.", "/test");
-  if (isInternationalCricket(league)) return pageMeta(`${label} Results`, `Latest ${label} results with full scorecards.`, `/${league}`);
-  return pageMeta(`${label} Scores & ${words.heading}`, `Latest ${label} results and upcoming ${words.upcoming} with ${words.start}, ${isCricketLeague(league) ? "scorecards" : "box scores"} and match stats.`, `/${league}`);
+  if (league === "test") return pageMeta("Test Cricket Results", "Latest Test match results with full four-innings scorecards, and every men's Test since 2015.", "/test", { ownImage: true });
+  if (isInternationalCricket(league)) return pageMeta(`${label} Results`, `Latest ${label} results with full scorecards.`, `/${league}`, { ownImage: true });
+  return pageMeta(`${label} Scores & ${words.heading}`, `Latest ${label} results and upcoming ${words.upcoming} with ${words.start}, ${isCricketLeague(league) ? "scorecards" : "box scores"} and match stats.`, `/${league}`, { ownImage: true });
 }
 
 function groupByDay(league: League, games: Awaited<ReturnType<typeof getRecentAndUpcoming>>) {
