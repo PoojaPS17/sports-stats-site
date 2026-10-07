@@ -77,43 +77,40 @@ function isoFromSystemd(text: string): string | null {
   return Number.isNaN(t) ? null : new Date(t).toISOString();
 }
 
-// One list-timers row: NEXT LEFT LAST PASSED UNIT ACTIVATES. NEXT and LAST are each a stamp: four
-// words ("Tue 2026-09-29 06:22:00 UTC", the second word matching YYYY-MM-DD) or the single word
-// "n/a". LEFT and PASSED are not fixed width: "14min left" is two words but "1h 30min left" is
-// three, and they collapse to the single word "n/a" when their paired stamp is "n/a". So NEXT and
-// LAST are found by their own shape (a stamp, or "n/a") instead of by counting words for LEFT and
-// PASSED; the words in between are simply skipped up to the "left" or "ago" that ends them, or the
-// single "n/a" that replaces them.
+// One list-timers row: NEXT LEFT LAST PASSED UNIT ACTIVATES. NEXT and LAST are each a stamp of
+// four words ("Tue 2026-09-29 06:22:00 UTC", the second word matching YYYY-MM-DD) or a single
+// empty marker: "-" on systemd 255 (the VM), "n/a" on older releases. LEFT and PASSED vary with the
+// systemd version and the span: "14min left" or a bare "14min", "1h 47min", "4 days", "2 days ago".
+// So nothing is counted: NEXT is read first, the LEFT words are skipped up to the next stamp or
+// marker, and LAST is whatever stamp or marker follows. systemd prints LEFT as a marker exactly
+// when NEXT is one (the service is running, or the timer has no next run), so a marker right after
+// an empty NEXT is LEFT and is stepped over before LAST is read.
 export function parseTimerRow(line: string): { name: string; next: string | null; last: string | null } {
-  const cols = line.split(/\s+/);
-
-  function isStampStart(i: number): boolean {
-    return cols[i + 1] !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(cols[i + 1]);
-  }
-
-  function readStamp(from: number): { text: string | null; nextIndex: number } {
-    if (cols[from] === "n/a") return { text: null, nextIndex: from + 1 };
-    if (isStampStart(from)) return { text: cols.slice(from, from + 4).join(" "), nextIndex: from + 4 };
-    return { text: null, nextIndex: from + 1 };
-  }
-
-  // Skips a LEFT or PASSED field: a single "n/a", or a duration that runs up to and including
-  // the given end word.
-  function skipDuration(from: number, endWord: string): number {
-    if (cols[from] === "n/a") return from + 1;
-    let i = from;
-    while (i < cols.length && cols[i] !== endWord) i += 1;
-    return i < cols.length ? i + 1 : i;
-  }
-
-  const next = readStamp(0);
-  const afterLeft = skipDuration(next.nextIndex, "left");
-  const last = readStamp(afterLeft);
-
+  const cols = line.trim().split(/\s+/);
   const timerIndex = cols.findIndex((c) => c.endsWith(".timer"));
   const name = timerIndex >= 0 ? cols[timerIndex] : cols[cols.length - 2];
+  const limit = timerIndex >= 0 ? timerIndex : cols.length;
 
-  return { name, next: next.text, last: last.text };
+  const isMarker = (i: number) => cols[i] === "-" || cols[i] === "n/a";
+  const isStampStart = (i: number) => i + 3 < limit && /^\d{4}-\d{2}-\d{2}$/.test(cols[i + 1]);
+  const stampAt = (i: number) => cols.slice(i, i + 4).join(" ");
+
+  let i = 0;
+  let next: string | null = null;
+  if (i < limit && isMarker(i)) {
+    i += 1;
+    if (i < limit && isMarker(i)) i += 1; // the LEFT marker paired with an empty NEXT
+  } else if (isStampStart(i)) {
+    next = stampAt(i);
+    i += 4;
+  } else {
+    i += 1;
+  }
+
+  while (i < limit && !isMarker(i) && !isStampStart(i)) i += 1; // the LEFT duration, whatever its shape
+
+  const last = i < limit && isStampStart(i) ? stampAt(i) : null;
+  return { name, next, last };
 }
 
 export async function readHost(deps: HostDeps): Promise<HostData> {

@@ -144,6 +144,37 @@ test("parseTimerRow finds NEXT and LAST by their own shape, not by a fixed word 
   );
 });
 
+test("parseTimerRow reads the rows systemd 255 prints: bare LEFT durations and '-' for an empty stamp", async () => {
+  const { parseTimerRow } = await import("../src/lib/opsHost");
+
+  // Rows copied from the VM (systemd 255.4) on 2026-10-07: LEFT has no "left" word, PASSED keeps "ago".
+  assert.deepEqual(
+    parseTimerRow("Wed 2026-10-07 06:30:00 UTC      54s Wed 2026-10-07 06:20:00 UTC   9min ago sportsdb-deploy.timer           sportsdb-deploy.service"),
+    { name: "sportsdb-deploy.timer", next: "Wed 2026-10-07 06:30:00 UTC", last: "Wed 2026-10-07 06:20:00 UTC" },
+    "a one word bare LEFT"
+  );
+  assert.deepEqual(
+    parseTimerRow("Wed 2026-10-07 08:17:00 UTC 1h 47min Tue 2026-10-06 08:17:05 UTC    22h ago sportsdb-scrape-rosters.timer   sportsdb-scrape@rosters.service"),
+    { name: "sportsdb-scrape-rosters.timer", next: "Wed 2026-10-07 08:17:00 UTC", last: "Tue 2026-10-06 08:17:05 UTC" },
+    "a two word bare LEFT"
+  );
+  assert.deepEqual(
+    parseTimerRow("Mon 2026-10-12 05:41:00 UTC   4 days Mon 2026-10-05 05:41:00 UTC 2 days ago sportsdb-scrape-cricsheet.timer sportsdb-scrape@cricsheet.service"),
+    { name: "sportsdb-scrape-cricsheet.timer", next: "Mon 2026-10-12 05:41:00 UTC", last: "Mon 2026-10-05 05:41:00 UTC" },
+    "durations in days"
+  );
+  assert.deepEqual(
+    parseTimerRow("-                                  - Wed 2026-10-07 06:07:05 UTC  22min ago sportsdb-scrape-daily.timer     sportsdb-scrape@daily.service"),
+    { name: "sportsdb-scrape-daily.timer", next: null, last: "Wed 2026-10-07 06:07:05 UTC" },
+    "'-' NEXT and LEFT (the service is running) leave LAST as the last run, not the next one"
+  );
+  assert.deepEqual(
+    parseTimerRow("Wed 2026-10-07 06:30:00 UTC 54s - - sportsdb-never.timer sportsdb-never.service"),
+    { name: "sportsdb-never.timer", next: "Wed 2026-10-07 06:30:00 UTC", last: null },
+    "'-' LAST and PASSED for a timer that has not fired yet"
+  );
+});
+
 test("a reader that hangs is cut off by the section timeout, not the request", async () => {
   const { hostSection } = await import("../src/lib/opsHost");
   // The section's alarm is unref'd on purpose (a request keeps a server alive, not the alarm), so
