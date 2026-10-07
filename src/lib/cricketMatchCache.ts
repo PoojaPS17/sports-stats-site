@@ -15,8 +15,8 @@
 import { isNeverPlayed } from "./gameStatus";
 import { pool } from "./db";
 
-/** A closed match with no totals to wait for: postponed or cancelled (never played) or abandoned without a ball bowled. A suspended one may resume. */
-const closedWithoutPlay = (text: string) => isNeverPlayed(text) || /abandon/i.test(text);
+/** A closed match with no totals to wait for: postponed or cancelled (never played), abandoned without a ball bowled, or ended "No result" (rain can leave one side without a total). A suspended one may resume. */
+const closedWithoutPlay = (text: string) => isNeverPlayed(text) || /abandon|no result/i.test(text);
 
 /** How long a finished match's render and its ESPN summary are kept: a day (above the site cap on purpose, nothing in it moves). */
 export const FINISHED_MATCH_REVALIDATE = 86400;
