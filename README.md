@@ -34,21 +34,18 @@ npm run dev             # http://localhost:3000
 
 **Live at [sports-db.live](https://sports-db.live)**, self-hosted (not Vercel/Supabase — the section below used to describe that pre-launch setup and was out of date). Layout: Cloudflare (DNS + proxy) in front of a single Oracle Cloud "Always Free" VM (`sportsdb-db`, user `ubuntu`). Postgres and the Next.js app (`sportsdb-app` systemd service, port 3000) both run on that VM; scrapers (`/opt/sportsdb/scrapers`) run there too on systemd timers, not GitHub Actions.
 
-**Code-only deploy** (no schema/migration changes):
+**Deploys are automatic.** `sportsdb-deploy.timer` on the VM polls `origin/main` every ten minutes and runs `deploy/vm/autodeploy.sh` when it moved, so merging to `main` is deploying (a merge is live within about fifteen minutes). The script builds in a second checkout, `/opt/sportsdb/build`, while the live app keeps serving, runs `npm run migrate`, fast-forwards the live checkout, then stops the app only to rename the finished `.next` into place and starts it again: the site is down for the swap only, not the build. A failed build leaves the live app running; a build that fails its health check is swapped back out. Either way the unit fails and `/api/ops/report` lists it under `host.failedUnits`; `journalctl -u sportsdb-deploy` has the reason.
+
+To deploy by hand (the timer is the normal path), run the same script as `ubuntu`:
 
 ```bash
 cd /opt/sportsdb/repo
-sudo systemctl stop sportsdb-app
-git pull --ff-only
-npm ci
-source .env.production   # NEXT_PUBLIC_* vars are build-time, must be sourced before building
-npm run build
-sudo systemctl start sportsdb-app
+bash deploy/vm/autodeploy.sh
 ```
 
-This takes the app down for a few minutes; a failed build leaves the service stopped, so check `systemctl status sportsdb-app` after.
+Do not `npm run build` in `/opt/sportsdb/repo` by hand any more: `next build` empties `.next` first and the running app serves 500s until it finishes.
 
-**If `db/schema.sql` changed**, `git pull` does NOT apply it — run `npm run migrate` (and any relevant `npm run backfill:*` script) by hand afterward, from the VM checkout. Those scripts load `DATABASE_URL` via dotenv from a local `.env`/`.env.local`, which is empty on the VM; the real value lives in `/opt/sportsdb/scrape.env` (loaded automatically for the scraper timers, but not by an interactive shell). Plain `source /opt/sportsdb/scrape.env` has silently failed to export it before — use this instead:
+**If `db/schema.sql` changed**, the deploy runs `npm run migrate` itself; any relevant `npm run backfill:*` script is still run by hand afterward, from the VM checkout. Those scripts load `DATABASE_URL` via dotenv from a local `.env`/`.env.local`, which is empty on the VM; the real value lives in `/opt/sportsdb/scrape.env` (loaded automatically for the scraper timers, but not by an interactive shell). Plain `source /opt/sportsdb/scrape.env` has silently failed to export it before — use this instead:
 
 ```bash
 export DATABASE_URL=$(grep '^DATABASE_URL=' /opt/sportsdb/scrape.env | cut -d= -f2- | tr -d '\r')
