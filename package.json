@@ -13,6 +13,7 @@
     "fetch:scores": "tsx scripts/fetch-scores.ts",
     "fetch:fixtures": "tsx scripts/fetch-fixtures.ts",
     "fetch:standings": "tsx scripts/fetch-standings.ts",
+    "snapshot:standings": "tsx scripts/snapshot-standings.ts",
     "fetch:player-stats": "tsx scripts/fetch-player-stats.ts",
     "fetch:rosters": "tsx scripts/fetch-rosters.ts",
     "fetch:player-photos": "tsx scripts/fetch-player-photos.ts",

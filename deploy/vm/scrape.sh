@@ -68,6 +68,8 @@ job_daily() {
   run migrate
   run seed:teams
   SCRAPE_MODE=full SCRAPE_LEAGUES= run fetch:all
+  # Daily copy of the tables just fetched, so rank movement can be shown later (not recoverable once a day is missed).
+  run snapshot:standings
   run fetch:tennis-daily
   run fetch:cricket-series -- --days 1 --ahead 2
   run fetch:cricket-series -- --days 10 --ahead 90
