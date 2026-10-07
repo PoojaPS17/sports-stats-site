@@ -1,3 +1,4 @@
+import { realPosition } from "@/lib/position";
 import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { cache } from "react";
@@ -234,7 +235,7 @@ export default async function PlayerPage({
                 {" "}
                 Looking for the other {player.name}?{" "}
                 <Link href={`/${league}/players/${sameName.slug}`} className="font-semibold text-[var(--accent)] hover:underline">
-                  {sameName.name}{[sameName.position, sameName.team_name].filter(Boolean).length > 0 ? ` (${[sameName.position, sameName.team_name].filter(Boolean).join(", ")})` : ""}
+                  {sameName.name}{[realPosition(sameName.position), sameName.team_name].filter(Boolean).length > 0 ? ` (${[realPosition(sameName.position), sameName.team_name].filter(Boolean).join(", ")})` : ""}
                 </Link>{" "}
                 has games on record.
               </>
