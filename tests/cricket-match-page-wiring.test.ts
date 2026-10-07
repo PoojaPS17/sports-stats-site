@@ -27,3 +27,15 @@ test("balls are asked for only on a limited-overs match that has started, with t
   assert.match(page, /state !== "pre"/);
   assert.match(page, /fetchCricketBallByBall\(id, [^)]*\{ settled: isSettledCricketMatch\(stored, summary\) \}\)/);
 });
+
+test("the story blocks follow the chart: key moments and top performers side by side, partnerships, the next fixture of the series", () => {
+  assert.match(page, /<CricketKeyMoments/);
+  assert.match(page, /<CricketTopPerformers/);
+  assert.match(page, /<CricketPartnerships/);
+  assert.match(page, /<CricketNextMatch/);
+  assert.match(page, /parseMilestones\(summary\?\.notes, names\)/);
+  assert.match(page, /topPerformers\(scorecard, potm\)/);
+  assert.match(page, /getCricketSeriesMatches\(stored\.series_espn_id\)/);
+  // the Player of the Match is named as such only when the large card is theirs
+  assert.match(page, /largeLabel=\{/);
+});

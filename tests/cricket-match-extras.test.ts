@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { deriveMatchStory } from "../src/lib/cricketBalls";
-import { matchPills, teamColours, splitCricketScore, overNote } from "../src/lib/cricketMatchExtras";
+import { matchPills, teamColours, splitCricketScore, overNote, seriesNote } from "../src/lib/cricketMatchExtras";
 
 const notes = [
   { type: "seriesnote", text: "India led the 5-match series 1-0" },
@@ -85,4 +85,9 @@ test("a stumping names the keeper; a wicket with no bowler in the feed falls bac
   assert.equal(overNote(innings(noBowler).overs[0], innings(noBowler)), "A Batter b Someone 4. Side 10/1 after 2 overs.");
   const bare = { ...noBowler, text: "" };
   assert.equal(overNote(innings(bare).overs[0], innings(bare)), "A Batter bowled 4. Side 10/1 after 2 overs.");
+});
+
+test("the series note reads in the present tense and is null without one", () => {
+  assert.equal(seriesNote([{ type: "seriesnote", text: "India led the 3-match series 1-0" }]), "India lead the 3-match series 1-0");
+  assert.equal(seriesNote([{ type: "toss", text: "x" }]), null);
 });

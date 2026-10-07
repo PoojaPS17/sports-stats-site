@@ -16,7 +16,14 @@ import { MatchHeader } from "@/components/MatchHeader";
 import { CricketMatchHero } from "@/components/CricketMatchHero";
 import { CricketMatchStory } from "@/components/CricketMatchStory";
 import { deriveMatchStory, fetchCricketBallByBall, shouldFetchStory } from "@/lib/cricketBalls";
-import { cssColour, liveStatusLine, matchPills, potmLine } from "@/lib/cricketMatchExtras";
+import { cssColour, liveStatusLine, matchPills, potmLine, seriesNote } from "@/lib/cricketMatchExtras";
+import { CricketKeyMoments } from "@/components/CricketKeyMoments";
+import { CricketTopPerformers } from "@/components/CricketTopPerformers";
+import { CricketPartnerships } from "@/components/CricketPartnerships";
+import { CricketNextMatch } from "@/components/CricketNextMatch";
+import { keyMoments, parseMilestones } from "@/lib/cricketMatchMoments";
+import { topPerformers } from "@/lib/cricketPerformers";
+import { getCricketSeriesMatch, getCricketSeriesMatches } from "@/lib/cricketSeries";
 import { fetchCricketSummaryLive, LIVE_REVALIDATE } from "@/lib/cricketLive";
 import { FINISHED_MATCH_REVALIDATE } from "@/lib/cricketMatchCache";
 import { sideScoreText } from "@/lib/gameDisplay";
@@ -125,11 +132,13 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   if (!game) notFound();
 
   const isCricket = isCricketLeague(league);
-  const [loaded, context, balls] = await Promise.all([
+  const [loaded, context, balls, seriesMatch] = await Promise.all([
     loadDetails(league, id, game.home_team_espn_id, game.away_team_espn_id, game.completed),
     getMatchContext(league, game),
     // The match story needs every ball: limited-overs cricket only, while in play or recently finished.
     isCricket && !isFirstClassCricket(league) && shouldFetchStory({ state: game.status_state, completed: game.completed, date: game.date }) ? fetchCricketBallByBall(id, "8048", { settled: game.completed }) : Promise.resolve(null),
+    // The series this match belongs to, for the next fixture.
+    isCricket ? getCricketSeriesMatch(id) : Promise.resolve(null),
   ]);
   const { details, stored } = loaded;
   // A stored cricket result still reads ESPN's summary once (cached with the page) for the Player of the Match and the notes; nothing waits on it failing.
@@ -185,6 +194,12 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const storyColours: Record<string, string> = {};
   if (heroColours.home) storyColours[game.home_team_espn_id] = heroColours.home;
   if (heroColours.away) storyColours[game.away_team_espn_id] = heroColours.away;
+  // The story blocks: wickets and landmarks, the innings leaders, the stands, the series' next fixture.
+  const names = cricketScorecard.flatMap((t) => [...t.battingRows, ...t.bowlingRows].map((r) => r.name));
+  const moments = isCricket ? keyMoments(story, parseMilestones(summary?.notes, names), cricketScorecard) : [];
+  const performers = isCricket ? topPerformers(cricketScorecard, playerOfTheMatch) : { large: null, small: [] };
+  const teamNames: Record<string, string> = { [game.home_team_espn_id]: teamDisplayName(game.home_name), [game.away_team_espn_id]: teamDisplayName(game.away_name) };
+  const nextMatch = seriesMatch ? ((await getCricketSeriesMatches(seriesMatch.series_espn_id)).find((m) => m.espn_id !== seriesMatch.espn_id && m.date > seriesMatch.date && m.status_state === "pre") ?? null) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -228,6 +243,15 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
       <AdSlot label="Match detail top" />
 
       {story.length > 0 && <CricketMatchStory innings={story} colours={storyColours} />}
+
+      {(moments.length > 0 || performers.large) && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          <CricketKeyMoments moments={moments} colours={storyColours} teams={teamNames} />
+          <CricketTopPerformers large={performers.large} small={performers.small} league={league} playerSlugs={playerSlugs} teams={teamNames} largeLabel={playerOfTheMatch && performers.large?.name === playerOfTheMatch ? "Player of the Match" : "Top scorer"} />
+        </div>
+      )}
+
+      {isCricket && <CricketPartnerships innings={story} colours={storyColours} />}
 
       {context && (
         <section>
@@ -358,6 +382,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           </div>
         </section>
       )}
+
+      {seriesMatch && <CricketNextMatch next={nextMatch} series={{ name: seriesMatch.series_name, href: `/cricket/series/${seriesMatch.series_espn_id}` }} seriesNote={seriesNote(summary?.notes)} />}
 
       <RelatedLinks
         groups={[

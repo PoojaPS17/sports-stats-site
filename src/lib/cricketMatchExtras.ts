@@ -12,14 +12,20 @@ export function matchPills(notes: unknown): string[] {
   const out: string[] = [];
   const toss = by("toss");
   if (toss) out.push(`Toss: ${clean(toss)}`);
-  const series = by("seriesnote");
-  // ESPN writes the series state in the past tense ("led"); the page is read in the present.
-  if (series) out.push(clean(series).replace(/\bled\b/, "lead").replace(/\btrailed\b/, "trail"));
+  const series = seriesNote(notes);
+  if (series) out.push(series);
   const number = by("matchnumber");
   if (number) out.push(clean(number));
   const days = by("matchdays");
   if (days && /night match/i.test(days)) out.push(/day\/night/i.test(days) ? "Day/night match" : "Night match");
   return out;
+}
+
+/** The series state from the notes ("India lead the 3-match series 1-0"); ESPN writes it in the past tense, the page reads in the present. */
+export function seriesNote(notes: unknown): string | null {
+  if (!Array.isArray(notes)) return null;
+  const text = notes.find((n: any) => n?.type === "seriesnote" && typeof n.text === "string")?.text as string | undefined;
+  return text ? clean(text).replace(/\bled\b/, "lead").replace(/\btrailed\b/, "trail") : null;
 }
 
 /** A stored or fed team colour as CSS ("050ceb" or "#050CEB" become "#050ceb"); null when it is not a six-digit hex. */
@@ -53,7 +59,7 @@ export function splitCricketScore(score: string): { main: string; detail: string
  * When the fields cannot write one (no bowler, a catch with no fielder) ESPN's own line is used, then the
  * dismissal type alone.
  */
-function wicketLine(w: StoryWicket): string {
+export function wicketLine(w: StoryWicket): string {
   const runs = w.batterRuns === null ? "" : ` ${w.batterRuns}`;
   const fielder = w.fielder ? (w.keeper ? `\u2020${w.fielder}` : w.fielder) : null;
   let how: string | null = null;
