@@ -6,6 +6,7 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Ticker } from "@/components/Ticker";
+import { SiteNoticeBar } from "@/components/SiteNoticeBar";
 import { SITE_URL } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 import { organizationSchema, websiteSchema } from "@/lib/structuredData";
@@ -86,6 +87,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd data={organizationSchema()} />
         <Nav />
         <Ticker />
+        <SiteNoticeBar />
         <main id="main" className="container-x flex-1 pb-12 pt-6">
           {children}
         </main>
