@@ -95,6 +95,12 @@ test("a stored row closed without play is final with no totals", () => {
   assert.equal(isStoredFinalMatch(stored({ ...none, status_summary: "Match suspended" })), false, "a suspended match may resume");
 });
 
+test("a stored row ending 'No result' is final even when a side's total is missing (rain, a washed-out second innings)", () => {
+  assert.equal(isStoredFinalMatch(stored({ status_summary: "No result", home: { score: "95/4" }, away: { score: null } })), true);
+  assert.equal(isStoredFinalMatch(stored({ status_summary: "No result", status_state: "in", home: { score: "95/4" }, away: { score: null } })), false, "only once the scrape says post");
+  assert.equal(isSettledCricketMatch({ status_state: "post", status_summary: "No result" }, withStatus("post", "No result", ["95/4", ""])), true);
+});
+
 test("the public match route stays dynamic and the final route is the cached one", () => {
   const read = (rel: string) => readFileSync(fileURLToPath(new URL(`../src/app/cricket/matches/${rel}`, import.meta.url)), "utf8");
   const live = read("[id]/page.tsx");
