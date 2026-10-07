@@ -27,10 +27,13 @@ function Icon({ children }: { children: ReactNode }) {
 // responsive DOM - so labels never truncate and the picture looks the same wherever it
 // ends up. Share hands the PNG to the native share sheet where the browser supports
 // files (phones), copies the image to the clipboard on desktop, and saves it otherwise.
-export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle }: { filename: string; card?: ReactNode; imageUrl?: string; width?: number; shareTitle: string }) {
+// `linkUrl` is the address of the same picture rendered on the server (a path on this site): when given, a third button
+// copies that address, so the image travels as a link that unfurls in a chat or a post instead of as a file.
+export function ImageActions({ filename, card, imageUrl, linkUrl, width = 720, shareTitle }: { filename: string; card?: ReactNode; imageUrl?: string; linkUrl?: string; width?: number; shareTitle: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const render = async (): Promise<Blob> => {
     if (imageUrl) {
@@ -52,6 +55,18 @@ export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle
     link.download = `${filename}.png`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function copyLink() {
+    if (!linkUrl) return;
+    try {
+      await navigator.clipboard.writeText(new URL(linkUrl, window.location.origin).toString());
+      setLinkCopied(true);
+      window.gtag?.("event", "share_card", { league: linkUrl.split("/")[1], format: "link", action: "copy_link" });
+      window.setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      /* clipboard refused: the two image buttons beside it still work */
+    }
   }
 
   async function download() {
@@ -126,6 +141,14 @@ export function ImageActions({ filename, card, imageUrl, width = 720, shareTitle
           </Icon>
           {busy === "download" ? "Saving…" : "Download image"}
         </button>
+        {linkUrl && (
+          <button type="button" onClick={copyLink} className={pill}>
+            <Icon>
+              <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+            </Icon>
+            {linkCopied ? "Link copied" : "Copy image link"}
+          </button>
+        )}
         {copied && <span className="text-xs text-[var(--text-muted)]">Paste it into X, WhatsApp or any chat.</span>}
       </div>
       {card && (

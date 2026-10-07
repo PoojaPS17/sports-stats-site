@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLeague, hasStandings, LEAGUE_LABEL, getStandings, getStandingsBySeason, getStandingsSeasons, getMostRecentPlayedSeason, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
+import { isLeague, hasStandings, LEAGUE_LABEL, getSeasonPlayoffGames, formatSeasonLabel } from "@/lib/queries";
+import { currentStandingsView } from "@/lib/standingsView";
 import { summarizePlayoffs } from "@/lib/seasonSummary";
 import { seasonHasFinal } from "@/lib/cricketStandings";
 import { supportsScoreAnalytics } from "@/lib/analytics";
@@ -27,13 +28,7 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
   const { league } = await params;
   if (!isLeague(league) || !hasStandings(league)) notFound();
 
-  const [latest, seasons] = await Promise.all([getStandings(league), getStandingsSeasons(league)]);
-  // A table for the coming season exists (every team 0-0) before a ball is kicked;
-  // showing it as "current" is meaningless, so fall back to the last season with games.
-  const played = latest.some((r) => r.wins + r.losses + (r.draws ?? 0) > 0);
-  const fallbackSeason = played ? null : await getMostRecentPlayedSeason(league);
-  const standings = fallbackSeason ? await getStandingsBySeason(league, fallbackSeason) : latest;
-  const activeSeason = standings[0]?.season ?? seasons[0] ?? null;
+  const { standings, seasons, activeSeason, fallbackSeason } = await currentStandingsView(league);
   const playoffGames = activeSeason ? await getSeasonPlayoffGames(league, activeSeason) : [];
 
   return (
@@ -55,6 +50,7 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
           <ImageActions
             filename={`${league}-standings-${activeSeason}`}
             shareTitle={`${LEAGUE_LABEL[league]} standings`}
+            linkUrl={`/${league}/standings/card`}
             width={standingsExportWidth(league, standings)}
             card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} season${fallbackSeason ? " (final)" : ""}` : null} context={`${LEAGUE_LABEL[league]} standings`} seasonFinished={seasonHasFinal(playoffGames)} />}
           />
