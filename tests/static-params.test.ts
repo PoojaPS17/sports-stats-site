@@ -52,6 +52,7 @@ const ABOVE_CAP: Record<string, string> = {
   "[league]/compare/page.tsx": "reads ?a and ?b in generateMetadata, so every render is per request",
   "[league]/compare/players/page.tsx": "reads ?a and ?b in generateMetadata, so every render is per request",
   "calendar/[league]/route.ts": "reads ?download from the request, so every render is per request",
+  "calendar/follows/route.ts": "reads ?f and ?download from the request, so every render is per request",
   "calendar/[league]/[slug]/route.ts": "reads ?download from the request, so every render is per request",
   "sitemap.ts": "a day-old list of addresses is not a wrong figure",
   "sitemap-index.xml/route.ts": "names the section sitemaps, which change when a section is added",

@@ -13,6 +13,8 @@ import { gameCalledOffLabel, isTimeTbd } from "./gameStatus";
 import { gameDayIso } from "./gameDay";
 import { gameRoundLabel, overtimeFinal } from "./stage";
 import { scoreLineOrder } from "./cricketOrder";
+import { isLeague } from "./leagues";
+import type { FollowItem } from "./follow";
 
 const SITE = SITE_URL;
 const PRODID = "-//SportsDB//Fixtures//EN";
@@ -256,6 +258,44 @@ export async function buildLeagueFeed(league: League): Promise<Feed | null> {
   return {
     filename: `${league}-fixtures.ics`,
     ics: buildIcs(`${label} fixtures`, `All ${label} fixtures and recent results from SportsDB, refreshed automatically.`, games.map((g) => gameEvent(league, g))),
+  };
+}
+
+/** Most events one follows feed carries: a month of fixtures for a long list of teams stays well under this. */
+const FOLLOWS_FEED_LIMIT = 600;
+
+/**
+ * One calendar for everything a visitor follows: the games of followed teams and the followed matches, from
+ * two weeks back onward. Players, series and tournaments have no fixture list of their own and are skipped.
+ * `items` comes from a link, so every value reaches SQL as a bound parameter.
+ */
+export async function buildFollowsFeed(items: Pick<FollowItem, "kind" | "league" | "refId">[]): Promise<Feed> {
+  const teams = items.filter((i) => i.kind === "team" && isLeague(i.league));
+  const games = items.filter((i) => i.kind === "game" && isLeague(i.league));
+  const teamKeys = new Set(teams.map((t) => `${t.league}:${t.refId}`));
+  const empty = { ics: buildIcs("My follows", "Fixtures and results for the teams and matches you follow on SportsDB.", []), filename: "my-follows.ics" };
+  if (teams.length === 0 && games.length === 0) return empty;
+  const { rows } = await pool.query<GameWithVenue>(
+    `${GAME_WITH_VENUE_SELECT}
+     where g.date > now() - interval '14 days'
+       and ((g.league, ht.slug) in (select * from unnest($1::text[], $2::text[]))
+         or (g.league, at.slug) in (select * from unnest($1::text[], $2::text[]))
+         or (g.league, g.espn_id) in (select * from unnest($3::text[], $4::text[])))
+     order by g.date asc
+     limit $5`,
+    [teams.map((t) => t.league), teams.map((t) => t.refId), games.map((g) => g.league), games.map((g) => g.refId), FOLLOWS_FEED_LIMIT]
+  );
+  const events = rows
+    .filter((g) => isLeague(g.league))
+    .map((g) => {
+      const league = g.league as League;
+      // A followed team's side is the title's point of view; a match followed on its own reads as home v away.
+      const side = teamKeys.has(`${g.league}:${g.home_slug}`) ? g.home_team_espn_id : teamKeys.has(`${g.league}:${g.away_slug}`) ? g.away_team_espn_id : undefined;
+      return gameEvent(league, g, side ?? undefined);
+    });
+  return {
+    filename: empty.filename,
+    ics: buildIcs("My follows", "Fixtures and results for the teams and matches you follow on SportsDB. Scores appear in the event title once a game finishes.", events),
   };
 }
 
