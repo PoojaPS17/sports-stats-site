@@ -39,3 +39,11 @@ test("the league game page carries the same story blocks for cricket, with playe
   assert.match(page, /getCricketSeriesMatch\(id\)/);
   assert.match(page, /parseMilestones\(summary\?\.notes, names\)/);
 });
+
+test("the league game page uses the innings tabs for cricket and keeps the export card", () => {
+  assert.match(page, /<CricketScorecardTabs/);
+  assert.match(page, /<CricketScorecardPanel[^>]*playerSlugs=\{playerSlugs\}/);
+  assert.doesNotMatch(page, /<CricketScorecards /);
+  assert.match(page, /scorecardTabs\(cricketScorecard, story, storyColours\)/);
+  assert.match(page, /<CricketScorecardExportCard/);
+});

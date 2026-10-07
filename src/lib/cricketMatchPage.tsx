@@ -8,7 +8,9 @@ import { absoluteUrl } from "@/lib/site";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { LiveRefresh } from "@/components/LiveRefresh";
-import { CricketScorecards } from "@/components/CricketScorecard";
+import { CricketScorecardTabs } from "@/components/CricketScorecardTabs";
+import { CricketScorecardPanel } from "@/components/CricketScorecardPanel";
+import { scorecardTabs } from "@/lib/cricketScorecardView";
 import { ImageActions } from "@/components/ImageActions";
 import { CricketScorecardExportCard } from "@/components/CricketScorecardExportCard";
 import { ExportTeamLine } from "@/components/ExportTeamLine";
@@ -221,24 +223,26 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
           >
             Scorecard
           </SectionHeader>
-          <CricketScorecards league="odi" scorecard={details.scorecard} playerSlugs={new Map()} />
+          <CricketScorecardTabs tabs={scorecardTabs(scorecard, story, colourById).map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league="odi" playerSlugs={new Map()} /> }))} />
         </section>
       ) : (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{calledOff ? `No scorecard: this match was ${calledOff.toLowerCase()}.` : state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
       )}
 
-      <CricketPlayingXi sides={playingXi(summary)} />
-
-      <CricketMatchInfo
-        series={stored ? { name: stored.series_name, href: `/cricket/series/${stored.series_espn_id}` } : seriesName ? { name: seriesName, href: null } : null}
-        stage={description}
-        format={format ? format[0].toUpperCase() + format.slice(1) : null}
-        date={date}
-        venue={details?.venue ? venueWithCity(details.venue, details.city) : null}
-        officials={details?.officials ?? []}
-        playerOfTheMatch={potm}
-        result={state === "post" && summaryText ? summaryText : null}
-      />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
+        <CricketPlayingXi collapsed sides={playingXi(summary)} />
+        <CricketMatchInfo
+          collapsed
+          series={stored ? { name: stored.series_name, href: `/cricket/series/${stored.series_espn_id}` } : seriesName ? { name: seriesName, href: null } : null}
+          stage={description}
+          format={format ? format[0].toUpperCase() + format.slice(1) : null}
+          date={date}
+          venue={details?.venue ? venueWithCity(details.venue, details.city) : null}
+          officials={details?.officials ?? []}
+          playerOfTheMatch={potm}
+          result={state === "post" && summaryText ? summaryText : null}
+        />
+      </div>
 
       {stored && <CricketNextMatch next={nextMatch} series={{ name: stored.series_name, href: `/cricket/series/${stored.series_espn_id}` }} seriesNote={seriesNote(summary?.notes)} />}
 
