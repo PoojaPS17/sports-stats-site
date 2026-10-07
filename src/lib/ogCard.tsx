@@ -49,3 +49,28 @@ export function ogCard({ kicker, title, detail, color = "#c6f135", children }: {
     </div>
   );
 }
+
+/**
+ * The record with the rivalry label and the last results beside it, for the head-to-head share image. The
+ * renderer wants an explicit display on any element with more than one child, so every text here is one string.
+ */
+export function ogRivalry({ record, label, pills }: { record: string; label: string | null; pills: { text: string; border: string }[] }): ReactElement {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
+      <div style={{ fontSize: 96, fontWeight: 800, color: "#c6f135", letterSpacing: -2 }}>{record}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {label && <div style={{ fontSize: 34, fontWeight: 700 }}>{label}</div>}
+        {pills.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 22, color: "#9aa5bd" }}>{`Last ${pills.length}`}</div>
+            {pills.map((p, i) => (
+              <div key={i} style={{ display: "flex", padding: "2px 10px", borderRadius: 999, border: `3px solid ${p.border}`, background: "#1b2742", fontSize: 20, fontWeight: 700 }}>
+                {p.text}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
