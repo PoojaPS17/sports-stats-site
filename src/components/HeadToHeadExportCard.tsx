@@ -8,7 +8,7 @@ import { rivalryMeter } from "@/lib/rivalry";
 
 // The record between two teams: the win split, the bar, and the four headline numbers
 // the live page opens with.
-export function HeadToHeadExportCard({ league, h2h, title, streakText }: { league: League; h2h: HeadToHead; title: string; streakText: string | null }) {
+export function HeadToHeadExportCard({ league, h2h, title, streakText, nextLine }: { league: League; h2h: HeadToHead; title: string; streakText: string | null; nextLine?: string }) {
   const soccer = isSoccer(league);
   const { teamA, teamB } = h2h;
   const total = h2h.meetings || 1;
@@ -29,7 +29,7 @@ export function HeadToHeadExportCard({ league, h2h, title, streakText }: { leagu
     </div>
   );
   return (
-    <ExportShell header={<ExportTitle eyebrow={`${LEAGUE_LABEL[league]} · Head-to-head`} title={title} subtitle={`${h2h.meetings} ${h2h.meetings === 1 ? "meeting" : "meetings"} on record`} />} context={title}>
+    <ExportShell header={<ExportTitle eyebrow={`${LEAGUE_LABEL[league]} · Head-to-head`} title={title} subtitle={`${nextLine ? `${nextLine} · ` : ""}${h2h.meetings} ${h2h.meetings === 1 ? "meeting" : "meetings"} on record`} />} context={title}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12, padding: "8px 0 4px" }}>
         {side(teamA)}
         <div style={{ textAlign: "center" }}>

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rivalryMeter } from "../src/lib/rivalry";
+import { rivalryMeter, streakText } from "../src/lib/rivalry";
 
 const A = { espn_id: "1", name: "Alpha", slug: "alpha", abbreviation: null, logo_url: null, color: null };
 const B = { espn_id: "2", name: "Beta", slug: "beta", abbreviation: null, logo_url: null, color: null };
@@ -35,4 +35,13 @@ test("excluded stages and unplayed games are not in the last five", () => {
   const excluded = { ...(game(true, 5, 0) as object), stage: "excluded" } as never;
   const unplayed = { ...(game(true, 5, 0) as object), completed: false } as never;
   assert.deepEqual(rivalryMeter(h2h(1, 0, [excluded, unplayed, game(true, 1, 0)]), name).last5, ["A"]);
+});
+
+test("a run of two or more is worded for the team that holds it", () => {
+  const base = { teamA: A, teamB: B };
+  assert.equal(streakText({ ...base, streak: { team: "A", length: 4 } }, name), "Alpha have won the last 4");
+  assert.equal(streakText({ ...base, streak: { team: "B", length: 2 } }, name), "Beta have won the last 2");
+  assert.equal(streakText({ ...base, streak: { team: null, length: 3 } }, name), "The last 3 meetings were drawn");
+  assert.equal(streakText({ ...base, streak: { team: "A", length: 1 } }, name), null);
+  assert.equal(streakText({ ...base, streak: null }, name), null);
 });
