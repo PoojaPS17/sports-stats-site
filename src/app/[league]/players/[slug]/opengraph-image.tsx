@@ -21,5 +21,5 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   if (!player || !isLeague(league)) return new ImageResponse(ogFallback(), size);
   const color = player.team_color ? `#${player.team_color.replace(/^#/, "")}` : undefined;
   const detail = [player.position, player.team_name].filter(Boolean).join(" · ");
-  return new ImageResponse(ogCard({ kicker: `${LEAGUE_LABEL[league]} player`, title: player.name, detail: detail || "Career stats · Game log", color }), size);
+  return new ImageResponse(ogCard({ kicker: `${LEAGUE_LABEL[league]} player`, title: player.name, detail: detail || "Season stats · Game log", color }), size);
 }
