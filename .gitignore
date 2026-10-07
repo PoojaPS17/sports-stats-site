@@ -45,3 +45,10 @@ next-env.d.ts
 
 # sha the VM last built and started (deploy/vm/autodeploy.sh)
 .deployed.sha
+# swap directories and the build checkout's stamps (deploy/vm/autodeploy.sh)
+.next.prev/
+.next.failed/
+.next-cache/
+node_modules.prev/
+node_modules.failed/
+.npm-ci.lock-cksum
