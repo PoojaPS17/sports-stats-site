@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { isLeague, LEAGUE_LABEL } from "@/lib/queries";
 import { getHeadToHead } from "@/lib/analytics";
-import { OG_SIZE, ogCard, ogFallback } from "@/lib/ogCard";
+import { OG_SIZE, ogCard, ogFallback, ogRivalry } from "@/lib/ogCard";
 import { rivalryMeter } from "@/lib/rivalry";
 import { teamDisplayName } from "@/lib/teamName";
 
@@ -36,24 +36,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
       kicker: "Head to head",
       title: `${h2h.teamA.name} vs ${h2h.teamB.name}`,
       detail,
-      children: (
-        <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
-          <div style={{ fontSize: 96, fontWeight: 800, color: "#c6f135", letterSpacing: -2 }}>{record}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {meter.label && <div style={{ fontSize: 34, fontWeight: 700 }}>{meter.label}</div>}
-            {meter.last5.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ fontSize: 22, color: "#9aa5bd" }}>Last {meter.last5.length}</div>
-                {meter.last5.map((r, i) => (
-                  <div key={i} style={{ display: "flex", padding: "2px 10px", borderRadius: 999, border: `3px solid ${pill(r).border}`, background: "#1b2742", fontSize: 20, fontWeight: 700 }}>
-                    {pill(r).text}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ),
+      children: ogRivalry({ record, label: meter.label, pills: meter.last5.map(pill) }),
     }),
     size
   );
