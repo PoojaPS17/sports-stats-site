@@ -1232,6 +1232,8 @@ export interface SearchResult {
   slug: string;
   subtitle: string | null;
   image: string | null;
+  /** Folded results only: the same person's pages in other competitions (a cricketer's other formats, a footballer's other leagues). */
+  also?: { league: string; slug: string }[];
 }
 
 // A player has "games on record" when the site holds a box score row for one of his completed games. Tennis players and F1
@@ -1250,7 +1252,10 @@ const playersWithGamesSql = (matched: string) => `select s.league, s.player_espn
 // record (a roster-only namesake, like the Browns' Justin Jefferson who holds the bare slug, must not outrank the player people
 // are looking for), the one with most games first, then by name. The limit applies after the ordering.
 // A short query that is a club's abbreviation (LAL, MCI) finds that club too.
-export async function search(query: string, limit = 20): Promise<SearchResult[]> {
+// `fold` lists a cricketer or footballer once (ESPN keeps one id per person across competitions): the page where he has most
+// games leads and his other pages come back in `also`. The limit then counts people, not pages. The pickers that filter by league
+// read the unfolded list, because the page that matches their league may not be the one that leads.
+export async function search(query: string, limit = 20, options: { fold?: boolean } = {}): Promise<SearchResult[]> {
   const tokens = searchTokens(query);
   // One letter matches most names and reads the whole box-score table for nothing: wait for a second.
   if (tokens.join(" ").length < 2) return [];
@@ -1260,15 +1265,21 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
   const words = (column: string) => terms.map((_, i) => `${foldSql(column)} like $${i + 3}`).join(" and ");
   const rank = (column: string) =>
     `case when ${foldSql(column)} = $1 then 0 when ${foldSql(column)} like $1 || '%' then 1 when ${foldSql(column)} like '% ' || $1 || '%' then 2 else 3 end`;
+  const fold = options.fold === true;
   const { rows } = await pool.query(
-    `select type, league, name, slug, subtitle, image from (
+    `select type, league, name, slug, subtitle, image${fold ? ", pages" : ""} from (
+       ${fold ? `select r.*, row_number() over (partition by grp order by match_rank, has_games desc, games desc, league, slug) as rn,
+                 jsonb_agg(jsonb_build_object('league', league, 'slug', slug)) over (partition by grp) as pages from (` : ""}
        select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games, 0 as games,
-              case when lower(abbreviation) = $1 then 0 else ${rank("name")} end as match_rank
+              case when lower(abbreviation) = $1 then 0 else ${rank("name")} end as match_rank,
+              'team:' || league || ':' || slug as grp
        from teams where (${words("name")}) or lower(abbreviation) = $1
        union all
        select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image,
               (p.league in ('atp', 'wta', 'f1') or h.player_espn_id is not null) as has_games, coalesce(h.games, 0) as games,
-              ${rank("p.name")} as match_rank
+              ${rank("p.name")} as match_rank,
+              case when p.league = any($${terms.length + 3}::text[]) then 'cricket:' || p.espn_id when p.league = any($${terms.length + 4}::text[]) then 'soccer:' || p.espn_id
+                   else 'player:' || p.league || ':' || p.slug end as grp
        from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
        left join (${playersWithGamesSql(words("p2.name"))}) h on h.league = p.league and h.player_espn_id = p.espn_id
        where (${words("p.name")}) and ${notPseudoAthleteSql()}
@@ -1280,15 +1291,24 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
               nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
                                                    when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
                                       to_char(s.start_date, 'YYYY')), '') as subtitle,
-              null as image, true as has_games, 0 as games, ${rank("s.name")} as match_rank
+              null as image, true as has_games, 0 as games, ${rank("s.name")} as match_rank, 'series:' || s.espn_id as grp
        from cricket_series s
        where ((${words("s.name")}) or (${words("coalesce(s.short_name, '')")}) or lower(s.abbreviation) = $1) and ${seriesHasPlaySql("s")}
-     ) r
+     ${fold ? ") r" : ""}
+     ) ${fold ? "f where rn = 1" : "r"}
      order by match_rank, has_games desc, case type when 'team' then 0 when 'series' then 1 else 2 end, games desc, name, type, league, slug
      limit $2`,
-    [phrase, limit, ...terms]
+    [phrase, limit, ...terms, CRICKET_LEAGUES, SOCCER_LEAGUES]
   );
-  return rows;
+  return fold ? rows.map(withAlso) : rows;
+}
+
+// The folded query returns every page of a person with the leading one chosen; `also` is the rest, in the site's order.
+function withAlso(row: SearchResult & { pages: { league: string; slug: string }[] }): SearchResult {
+  const { pages, ...result } = row;
+  const order = new Map<string, number>([...CRICKET_LEAGUES, ...SOCCER_LEAGUES].map((l, i) => [l as string, i]));
+  const also = pages.filter((p) => !(p.league === result.league && p.slug === result.slug)).sort((a, b) => (order.get(a.league) ?? 0) - (order.get(b.league) ?? 0));
+  return also.length > 0 ? { ...result, also } : result;
 }
 
 export interface GameSearchResult {
