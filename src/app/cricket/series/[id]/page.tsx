@@ -8,6 +8,8 @@ import { CricketPointsTable } from "@/components/CricketPointsTable";
 import { CricketSeriesLeaders } from "@/components/CricketSeriesLeaders";
 import { cricketSeriesSoFar, seriesLeadersClause } from "@/lib/cricketSeriesStats";
 import { cricketSeriesOverview, seriesVenues } from "@/lib/cricketSeriesOverview";
+import { CricketDidYouKnow } from "@/components/CricketDidYouKnow";
+import { seriesDidYouKnow } from "@/lib/cricketDidYouKnow";
 import { getCricketSeriesStats } from "@/lib/cricketSeriesStatsData";
 import { normalizeStage } from "@/lib/stage";
 import { teamDisplayName } from "@/lib/teamName";
@@ -192,6 +194,8 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
       {showTable && table && <CricketPointsTable table={table} />}
 
       <CricketSeriesLeaders stats={stats} teams={s.teams} />
+
+      <CricketDidYouKnow lines={seriesDidYouKnow(stats)} />
 
       {fixtures.length > 0 && (
         <section>

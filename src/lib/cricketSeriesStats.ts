@@ -86,6 +86,10 @@ export interface CricketSeriesStats {
   bowling: BowlingLeader[];
   highestScore: InningsHighlight | null;
   bestBowling: InningsHighlight | null;
+  /** Summed over every stored row: runs off the bat (extras are not in the rows), boundaries and wickets taken. */
+  totals: { runs: number; fours: number; sixes: number; wickets: number; hasBoundaries: boolean };
+  /** The most sixes by one player, with the number; null when no row records sixes. */
+  mostSixes: { name: string; teamId: string; sixes: number } | null;
 }
 
 // Overs are written "12.3" (12 overs and 3 balls), so they are summed as balls.
@@ -114,6 +118,8 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
   const bowls = new Map<string, BowlingAcc>();
   let highestScore: (InningsHighlight & { runs: number; notOut: boolean }) | null = null;
   let bestBowling: (InningsHighlight & { wickets: number; conceded: number }) | null = null;
+  const totals = { runs: 0, fours: 0, sixes: 0, wickets: 0, hasBoundaries: false };
+  const sixesBy = new Map<string, { name: string; teamId: string; sixes: number }>();
 
   for (const r of rows) {
     matches.add(r.match_espn_id);
@@ -125,6 +131,15 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
         const acc = bats.get(who.playerId) ?? { ...who, innings: 0, notOuts: 0, runs: 0, balls: 0, high: { runs: -1, notOut: false } };
         acc.innings++;
         acc.runs += b.runs;
+        totals.runs += b.runs;
+        if (b.fours !== null && b.sixes !== null) {
+          totals.hasBoundaries = true;
+          totals.fours += b.fours;
+          totals.sixes += b.sixes;
+          const six = sixesBy.get(who.playerId) ?? { name: who.name, teamId: who.teamId, sixes: 0 };
+          six.sixes += b.sixes;
+          sixesBy.set(who.playerId, six);
+        }
         if (b.notOut) acc.notOuts++;
         acc.balls = acc.balls === null || b.ballsFaced === null ? null : acc.balls + b.ballsFaced;
         if (betterScore(b, acc.high)) acc.high = { runs: b.runs, notOut: b.notOut };
@@ -138,6 +153,7 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
         acc.innings++;
         acc.conceded += w.conceded;
         acc.wickets += w.wickets;
+        totals.wickets += w.wickets;
         acc.balls += ballsOf(w.overs, bpo);
         if (betterFigures(w, acc.bestFigures)) acc.bestFigures = { wickets: w.wickets, conceded: w.conceded };
         bowls.set(who.playerId, acc);
@@ -160,7 +176,7 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
   bowling.sort((a, b) => b.wickets - a.wickets || a.conceded - b.conceded || a.name.localeCompare(b.name));
 
   const strip = <T extends InningsHighlight>(h: T | null): InningsHighlight | null => (h ? { playerId: h.playerId, name: h.name, teamId: h.teamId, figure: h.figure, matchId: h.matchId, stage: h.stage } : null);
-  return { matches: matches.size, batting: batting.slice(0, limit), bowling: bowling.slice(0, limit), highestScore: strip(highestScore), bestBowling: strip(bestBowling) };
+  return { matches: matches.size, batting: batting.slice(0, limit), bowling: bowling.slice(0, limit), highestScore: strip(highestScore), bestBowling: strip(bestBowling), totals, mostSixes: [...sixesBy.values()].filter((x) => x.sixes > 0).sort((a, b) => b.sixes - a.sixes || a.name.localeCompare(b.name))[0] ?? null };
 }
 
 /** "Most runs: Eve Alpha (125); most wickets: Dee Bravo (7)." Null when there are no leaders yet. */
