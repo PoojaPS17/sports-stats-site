@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
 import { getPowerRankings, supportsScoreAnalytics, type FixtureDifficultyRow } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
+import { supportsProjections } from "@/lib/simulator";
 import { AdSlot } from "@/components/AdSlot";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -71,9 +72,11 @@ export default async function PowerRankingsPage({ params }: { params: Promise<{ 
         title={`${label} Power Rankings`}
         subtitle={pr.season ? `${formatSeasonLabel(league, pr.season)} season. Ratings update after every result.` : undefined}
       >
-        <Link href={`/${league}/projections`} className="nav-pill nav-pill-active">
-          Season projections →
-        </Link>
+        {supportsProjections(league) && (
+          <Link href={`/${league}/projections`} className="nav-pill nav-pill-active">
+            Season projections →
+          </Link>
+        )}
       </PageHeader>
       <AdSlot label={`${label} power rankings top`} />
 

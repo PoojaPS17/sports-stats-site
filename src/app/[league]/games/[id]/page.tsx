@@ -54,7 +54,7 @@ import { GameCard } from "@/components/GameCard";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { h2hPath } from "@/lib/h2h";
 import { supportsScoreAnalytics } from "@/lib/analytics";
-import { supportsMatchweeks, weekIndexPath, weekNoun } from "@/lib/matchweeks";
+import { gameSeasonLinks } from "@/lib/gameLinks";
 import { formatSeasonLabel } from "@/lib/queries";
 import type { League } from "@/lib/queries";
 import { SOCCER_CARDS_NOTE } from "@/lib/playerCopy";
@@ -413,11 +413,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           },
           {
             title: game.season_year ? `${formatSeasonLabel(league, game.season_year)} season` : "This season",
-            links: [
-              ...(game.season_year ? [{ href: `/${league}/standings/${game.season_year}`, label: `${formatSeasonLabel(league, game.season_year)} standings` }] : []),
-              ...(supportsMatchweeks(league) && game.season_year ? [{ href: weekIndexPath(league, game.season_year), label: `Every ${weekNoun(league).toLowerCase()} of ${formatSeasonLabel(league, game.season_year)}` }] : []),
-              { href: `/${league}/leaders`, label: `${LEAGUE_LABEL[league]} leaders` },
-            ],
+            links: gameSeasonLinks(league, game.season_year),
           },
         ]}
       />
