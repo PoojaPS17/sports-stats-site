@@ -10,6 +10,6 @@ export async function GET(request: Request) {
   const type = searchParams.get("type");
   if (q.length < 2) return NextResponse.json({ results: [] });
 
-  const results = (await search(q, 40)).filter((r) => (!league || r.league === league) && (!type || r.type === type)).slice(0, 8);
+  const results = (await search(q, 60)).filter((r) => (!league || r.league === league) && (!type || r.type === type)).slice(0, 8);
   return NextResponse.json({ results }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } });
 }

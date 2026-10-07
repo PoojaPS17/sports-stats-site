@@ -13,6 +13,7 @@ import { seriesHasPlaySql } from "./cricketSeriesKey";
 import { sortStandings } from "./standingsOrder";
 import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
+import { foldSql, likeTerm, searchTokens } from "./searchText";
 
 export type { League } from "./leagues";
 export { sortStandings } from "./standingsOrder";
@@ -1186,25 +1187,40 @@ export interface SearchResult {
 // drivers have no box scores here (their results live in other tables), so they are not held back by the rule.
 // `player_game_stats` has no index on the player, so this is read ONCE, as a distinct (league, player) set joined to the matched
 // players, never as a per-row EXISTS: that scanned the table once per matched player (seconds for a one-letter query).
-const PLAYERS_WITH_GAMES_SQL = `select distinct s.league, s.player_espn_id from player_game_stats s
+// Only the matched players' rows are counted (`matched` is the name test on `players p2`), which lets the planner drop the rest of the
+// table before it joins games: a quarter off the time of a broad query.
+const playersWithGamesSql = (matched: string) => `select s.league, s.player_espn_id, count(*) as games from player_game_stats s
                                  join games g on g.league = s.league and g.espn_id = s.game_espn_id
-                                 where g.completed`;
+                                 where g.completed and (s.league, s.player_espn_id) in (select p2.league, p2.espn_id from players p2 where ${matched})
+                                 group by s.league, s.player_espn_id`;
 
-// Results with games on record come first, then by name: a roster-only namesake (the Browns' Justin Jefferson holds the bare slug
-// because he was inserted first; the Vikings receiver has an id suffix) must not outrank the player people are looking for.
-// Teams and series have no such rule and count as having games. The limit applies after the ordering.
+// A name matches when every word of the query is in it (any order, any case, accents ignored). Best matches come first: the
+// whole name, then a name that starts with the query, then a word that does; then clubs, series and players with games on
+// record (a roster-only namesake, like the Browns' Justin Jefferson who holds the bare slug, must not outrank the player people
+// are looking for), the one with most games first, then by name. The limit applies after the ordering.
+// A short query that is a club's abbreviation (LAL, MCI) finds that club too.
 export async function search(query: string, limit = 20): Promise<SearchResult[]> {
-  const like = `%${query}%`;
+  const tokens = searchTokens(query);
+  // One letter matches most names and reads the whole box-score table for nothing: wait for a second.
+  if (tokens.join(" ").length < 2) return [];
+  const phrase = tokens.join(" ");
+  const terms = tokens.map(likeTerm);
+  // $1 is the whole query folded; $2 the limit; $3.. one pattern per word.
+  const words = (column: string) => terms.map((_, i) => `${foldSql(column)} like $${i + 3}`).join(" and ");
+  const rank = (column: string) =>
+    `case when ${foldSql(column)} = $1 then 0 when ${foldSql(column)} like $1 || '%' then 1 when ${foldSql(column)} like '% ' || $1 || '%' then 2 else 3 end`;
   const { rows } = await pool.query(
     `select type, league, name, slug, subtitle, image from (
-       select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games
-       from teams where name ilike $1
+       select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games, 0 as games,
+              case when lower(abbreviation) = $1 then 0 else ${rank("name")} end as match_rank
+       from teams where (${words("name")}) or lower(abbreviation) = $1
        union all
        select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image,
-              (p.league in ('atp', 'wta', 'f1') or h.player_espn_id is not null) as has_games
+              (p.league in ('atp', 'wta', 'f1') or h.player_espn_id is not null) as has_games, coalesce(h.games, 0) as games,
+              ${rank("p.name")} as match_rank
        from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-       left join (${PLAYERS_WITH_GAMES_SQL}) h on h.league = p.league and h.player_espn_id = p.espn_id
-       where p.name ilike $1 and ${notPseudoAthleteSql()}
+       left join (${playersWithGamesSql(words("p2.name"))}) h on h.league = p.league and h.player_espn_id = p.espn_id
+       where (${words("p.name")}) and ${notPseudoAthleteSql()}
        union all
        -- Every cricket series and tournament in the database that has play on record, current or past (Ranji Trophy,
        -- PSL, a bilateral tour). An emptied series row (one an edition split has taken every match from) is not a
@@ -1213,13 +1229,53 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
               nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
                                                    when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
                                       to_char(s.start_date, 'YYYY')), '') as subtitle,
-              null as image, true as has_games
+              null as image, true as has_games, 0 as games, ${rank("s.name")} as match_rank
        from cricket_series s
-       where (s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1) and ${seriesHasPlaySql("s")}
+       where ((${words("s.name")}) or (${words("coalesce(s.short_name, '')")}) or lower(s.abbreviation) = $1) and ${seriesHasPlaySql("s")}
      ) r
-     order by has_games desc, name, type, league, slug
+     order by match_rank, has_games desc, case type when 'team' then 0 when 'series' then 1 else 2 end, games desc, name, type, league, slug
      limit $2`,
-    [like, limit]
+    [phrase, limit, ...terms]
+  );
+  return rows;
+}
+
+export interface GameSearchResult {
+  league: string;
+  espn_id: string;
+  date: string;
+  local_date: string | null;
+  home: string;
+  away: string;
+  home_score: string | null;
+  away_score: string | null;
+  completed: boolean;
+}
+
+/**
+ * Games between clubs whose names fit the query: "lakers celtics" or "lakers vs celtics" lists their meetings, "lakers" the club's
+ * games. Each word of the query must be in the two team names together. The ones nearest today come first, so a club's search
+ * opens on its latest and next games.
+ */
+export async function searchGames(query: string, limit = 12): Promise<GameSearchResult[]> {
+  const tokens = searchTokens(query);
+  // A single short word names too many clubs to list their games usefully.
+  if (tokens.length === 0 || tokens.join("").length < 3) return [];
+  const terms = tokens.map(likeTerm);
+  const both = terms.map((_, i) => `(${foldSql("h.name")} || ' ' || ${foldSql("a.name")}) like $${i + 2}`).join(" and ");
+  const either = terms.map((_, i) => `${foldSql("name")} like $${i + 2}`).join(" or ");
+  const { rows } = await pool.query(
+    `with mt as (select league, espn_id from teams where ${either})
+     select g.league, g.espn_id, g.date, g.local_date::text as local_date, h.name as home, a.name as away,
+            coalesce(g.home_score_display, g.home_score::text) as home_score, coalesce(g.away_score_display, g.away_score::text) as away_score, g.completed
+     from games g
+     join teams h on h.league = g.league and h.espn_id = g.home_team_espn_id
+     join teams a on a.league = g.league and a.espn_id = g.away_team_espn_id
+     where ((g.league, g.home_team_espn_id) in (select league, espn_id from mt) or (g.league, g.away_team_espn_id) in (select league, espn_id from mt))
+       and ${both}
+     order by abs(extract(epoch from g.date - now())), g.league, g.espn_id
+     limit $1`,
+    [limit, ...terms]
   );
   return rows;
 }
