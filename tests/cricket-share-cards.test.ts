@@ -23,6 +23,8 @@ const stats: CricketSeriesStats = {
   bowling: [{ playerId: "2", name: "Scott Boland", teamId: "b", innings: 6, overs: "98", conceded: 240, wickets: 14, best: "5/31", economy: 2.45 }],
   highestScore: null,
   bestBowling: null,
+  totals: { runs: 0, fours: 0, sixes: 0, wickets: 0, hasBoundaries: false },
+  mostSixes: null,
 };
 
 test("cricketSeriesCardModel: kind and format as the eyebrow, the dates, then the table leader and the leaders as facts", () => {

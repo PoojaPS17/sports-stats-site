@@ -42,6 +42,8 @@ import { CricketPartnerships } from "@/components/CricketPartnerships";
 import { CricketNextMatch } from "@/components/CricketNextMatch";
 import { keyMoments, parseMilestones } from "@/lib/cricketMatchMoments";
 import { topPerformers } from "@/lib/cricketPerformers";
+import { CricketDidYouKnow } from "@/components/CricketDidYouKnow";
+import { matchDidYouKnow } from "@/lib/cricketDidYouKnow";
 import { ViewTracker } from "@/components/ViewTracker";
 import { CRICKET_VIEW_LEAGUE } from "@/lib/viewLeague";
 
@@ -194,6 +196,8 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
       )}
 
       <CricketPartnerships innings={story} colours={colourById} />
+
+      {kind === "result" && <CricketDidYouKnow lines={matchDidYouKnow(scorecard)} />}
 
       {details && details.scorecard.length > 0 ? (
         <section className="flex flex-col gap-4">
