@@ -21,8 +21,10 @@ export function RelatedLinks({ groups, title = "Related pages", description }: {
           <div key={g.title} className="card px-4 py-3">
             <h3 className="mb-2 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{g.title}</h3>
             <ul className="flex flex-col gap-1.5 text-sm">
+              {/* The key is the address alone, never the label glued on: Next.js ships list keys in the page
+                  payload and Google read "/seriea/teams/sampdoriaSampdoria" out of it as a URL (128 Googlebot 404s). */}
               {g.links.map((l) => (
-                <li key={l.href + l.label}>
+                <li key={l.href}>
                   <Link href={l.href} prefetch={false} className="flex items-center gap-2 hover:text-[var(--accent)]">
                     {(l.image || l.imageName) && <TeamLogo name={l.imageName ?? l.label} logoUrl={l.image ?? null} size={18} />}
                     <span className="min-w-0">
