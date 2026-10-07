@@ -955,6 +955,31 @@ export interface CricketCareerStats {
 // list beside the match totals; a limited-overs match is its own single innings.
 const CRICKET_INNINGS = `cross join lateral jsonb_array_elements(coalesce(pgs.stats->'innings', jsonb_build_array(pgs.stats))) as inn`;
 
+export interface CricketOtherFormat { league: League; slug: string; matches: number; runs: number; wickets: number }
+
+// The same cricketer in the other competitions on record. ESPN keeps one id per person across
+// competitions, so the id is the join; a competition with no match figures for him is left out.
+export async function getPlayerOtherFormats(league: League, playerEspnId: string): Promise<CricketOtherFormat[]> {
+  if (!isCricketLeague(league)) return [];
+  const { rows } = await pool.query(
+    `select pgs.league, p.slug,
+       count(distinct pgs.game_espn_id) as matches,
+       coalesce(sum((inn->'batting'->>'runs')::int), 0) as runs,
+       coalesce(sum((inn->'bowling'->>'wickets')::int), 0) as wickets
+     from player_game_stats pgs
+     join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
+     ${CRICKET_INNINGS}
+     where pgs.player_espn_id = $2 and pgs.league = any($3::text[]) and pgs.league <> $1
+     group by pgs.league, p.slug`,
+    [league, playerEspnId, CRICKET_LEAGUES]
+  );
+  const order = new Map(CRICKET_LEAGUES.map((l, i) => [l as string, i]));
+  return rows
+    .map((r) => ({ league: r.league as League, slug: r.slug as string, matches: Number(r.matches), runs: Number(r.runs), wickets: Number(r.wickets) }))
+    .filter((r) => r.matches > 0)
+    .sort((a, b) => (order.get(a.league) ?? 0) - (order.get(b.league) ?? 0));
+}
+
 // Computed fresh from every backfilled match's per-player figures (see
 // backfill-cricket-player-stats.ts) rather than a maintained running total — always
 // correct, and re-running the backfill can never double-count. Only covers whichever
