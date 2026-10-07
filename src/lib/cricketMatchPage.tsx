@@ -186,19 +186,6 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
 
       <AdSlot label="Cricket live match top" />
 
-      {story.length > 0 && <CricketMatchStory innings={story} colours={colourById} />}
-
-      {(moments.length > 0 || performers.large) && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-          <CricketKeyMoments moments={moments} colours={colourById} teams={teamNames} />
-          <CricketTopPerformers large={performers.large} small={performers.small} league="odi" playerSlugs={new Map()} teams={teamNames} largeLabel={potm && performers.large?.name === potm ? "Player of the Match" : "Top scorer"} />
-        </div>
-      )}
-
-      <CricketPartnerships innings={story} colours={colourById} />
-
-      {kind === "result" && <CricketDidYouKnow lines={matchDidYouKnow(scorecard)} />}
-
       {details && details.scorecard.length > 0 ? (
         <section className="flex flex-col gap-4">
           <SectionHeader
@@ -235,6 +222,19 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
       ) : (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{calledOff ? `No scorecard: this match was ${calledOff.toLowerCase()}.` : state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
       )}
+
+      <CricketPartnerships innings={story} colours={colourById} />
+
+      {story.length > 0 && <CricketMatchStory innings={story} colours={colourById} />}
+
+      {(moments.length > 0 || performers.large) && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          <CricketKeyMoments moments={moments} colours={colourById} teams={teamNames} />
+          <CricketTopPerformers large={performers.large} small={performers.small} league="odi" playerSlugs={new Map()} teams={teamNames} largeLabel={potm && performers.large?.name === potm ? "Player of the Match" : "Top scorer"} />
+        </div>
+      )}
+
+      {kind === "result" && <CricketDidYouKnow lines={matchDidYouKnow(scorecard)} />}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
         <CricketPlayingXi collapsed sides={playingXi(summary)} />

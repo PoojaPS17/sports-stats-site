@@ -43,6 +43,8 @@ import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
 import { CricketScorecardTabs } from "@/components/CricketScorecardTabs";
 import { CricketScorecardPanel } from "@/components/CricketScorecardPanel";
 import { scorecardTabs } from "@/lib/cricketScorecardView";
+import { CricketDidYouKnow } from "@/components/CricketDidYouKnow";
+import { matchDidYouKnow } from "@/lib/cricketDidYouKnow";
 import { ViewTracker } from "@/components/ViewTracker";
 import { MatchFacts } from "@/components/MatchFacts";
 import { MatchTimeline } from "@/components/MatchTimeline";
@@ -244,6 +246,26 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
       <AdSlot label="Match detail top" />
 
+      {isCricket && cricketScorecard.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <SectionHeader
+            tools={
+              <ImageActions
+                filename={`${id}-scorecard-${league}`}
+                width={860}
+                shareTitle={`${matchName} scorecard`}
+                card={<CricketScorecardExportCard header={<MatchScoreHeader league={league} game={game} scorecard={cricketScorecard} />} context={`${matchName} · Scorecard`} scorecard={cricketScorecard} />}
+              />
+            }
+          >
+            Scorecard
+          </SectionHeader>
+          <CricketScorecardTabs tabs={scorecardTabs(cricketScorecard, story, storyColours).map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league={league} playerSlugs={playerSlugs} /> }))} />
+        </section>
+      )}
+
+      {isCricket && <CricketPartnerships innings={story} colours={storyColours} />}
+
       {story.length > 0 && <CricketMatchStory innings={story} colours={storyColours} />}
 
       {(moments.length > 0 || performers.large) && (
@@ -253,7 +275,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         </div>
       )}
 
-      {isCricket && <CricketPartnerships innings={story} colours={storyColours} />}
+      {isCricket && game.completed && <CricketDidYouKnow lines={matchDidYouKnow(cricketScorecard)} />}
 
       {context && (
         <section>
@@ -337,24 +359,6 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
         <section>
           <SectionHeader tools={<ImageActions filename={`${id}-leaders-${league}`} width={860} shareTitle={`${matchName} game leaders`} card={<MatchLeadersExportCard league={league} game={game} leaders={leaders} />} />}>Game leaders</SectionHeader>
           <MatchLeaders league={league} game={game} gameId={id} leaders={leaders} playerSlugs={playerSlugs} />
-        </section>
-      )}
-
-      {isCricket && cricketScorecard.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <SectionHeader
-            tools={
-              <ImageActions
-                filename={`${id}-scorecard-${league}`}
-                width={860}
-                shareTitle={`${matchName} scorecard`}
-                card={<CricketScorecardExportCard header={<MatchScoreHeader league={league} game={game} scorecard={cricketScorecard} />} context={`${matchName} · Scorecard`} scorecard={cricketScorecard} />}
-              />
-            }
-          >
-            Scorecard
-          </SectionHeader>
-          <CricketScorecardTabs tabs={scorecardTabs(cricketScorecard, story, storyColours).map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league={league} playerSlugs={playerSlugs} /> }))} />
         </section>
       )}
 
