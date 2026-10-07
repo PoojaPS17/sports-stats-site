@@ -55,7 +55,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const [results, games] = q.trim() ? await Promise.all([search(q.trim(), RESULT_LIMIT), searchGames(q.trim(), GAME_LIMIT)]) : [[], []];
+  const [results, games] = q.trim() ? await Promise.all([search(q.trim(), RESULT_LIMIT, { fold: true }), searchGames(q.trim(), GAME_LIMIT)]) : [[], []];
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,18 +87,35 @@ export default async function SearchPage({
           {results.length > 0 && (
             <section className="flex flex-col gap-2">
               {games.length > 0 && <h2 className="text-sm font-semibold text-[var(--text-muted)]">Teams, players and series</h2>}
-              {results.map((r, i) => (
-                <Link key={i} href={resultHref(r)} className="card flex items-center gap-3 px-4 py-3">
-                  <TeamLogo name={resultName(r)} logoUrl={r.image} size={32} />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{resultName(r)}</span>
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {resultLeagueLabel(r)} {r.type === "player" ? "player" : r.type === "series" ? "series" : "team"}
-                      {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}
-                    </span>
+              {results.map((r, i) => {
+                const main = (
+                  <Link href={resultHref(r)} className={r.also ? "flex items-center gap-3 px-4 py-3" : "card flex items-center gap-3 px-4 py-3"}>
+                    <TeamLogo name={resultName(r)} logoUrl={r.image} size={32} />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{resultName(r)}</span>
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {resultLeagueLabel(r)} {r.type === "player" ? "player" : r.type === "series" ? "series" : "team"}
+                        {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}
+                      </span>
+                    </div>
+                  </Link>
+                );
+                if (!r.also) return <div key={i} className="contents">{main}</div>;
+                // The same person in other competitions: one row, with a link to each of his other pages.
+                return (
+                  <div key={i} className="card flex flex-col">
+                    {main}
+                    <p className="flex flex-wrap gap-x-3 gap-y-1 px-4 pb-3 pl-[60px] text-xs text-[var(--text-muted)]">
+                      Also in
+                      {r.also.map((a) => (
+                        <Link key={a.league} href={`/${a.league}/players/${a.slug}`} className="font-semibold text-[var(--accent)] hover:underline">
+                          {isLeague(a.league) ? LEAGUE_LABEL[a.league] : a.league}
+                        </Link>
+                      ))}
+                    </p>
                   </div>
-                </Link>
-              ))}
+                );
+              })}
               {results.length >= RESULT_LIMIT && <p className="text-sm text-[var(--text-muted)]">Showing the first {RESULT_LIMIT}. Add a first name or a team to narrow it down.</p>}
             </section>
           )}
