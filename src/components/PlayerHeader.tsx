@@ -14,6 +14,7 @@ export function PlayerHeader({
   teamColor,
   meta,
   photoCredit,
+  claims,
 }: {
   league: League;
   /** The player page's own slug, for the follow/share links. */
@@ -27,6 +28,8 @@ export function PlayerHeader({
   meta?: string[];
   /** Attribution for a Wikimedia Commons photo (ESPN had no headshot); shown under the facts. */
   photoCredit?: { credit: string; license: string; sourceUrl: string } | null;
+  /** One-number claims from this season's games ("Season high 41 points"), shown as pills under the facts. */
+  claims?: string[];
 }) {
   const path = `/${league}/players/${slug}`;
   return (
@@ -68,6 +71,15 @@ export function PlayerHeader({
             <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-[var(--text-muted)]">
               {meta.map((m) => (
                 <span key={m}>{m}</span>
+              ))}
+            </p>
+          )}
+          {claims && claims.length > 0 && (
+            <p className="mt-2 flex flex-wrap gap-2">
+              {claims.map((c) => (
+                <span key={c} className="pill pill-upcoming">
+                  {c}
+                </span>
               ))}
             </p>
           )}

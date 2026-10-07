@@ -31,6 +31,7 @@ import { playerNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { SectionHeader } from "@/components/SectionHeader";
 import { PlayerHeader } from "@/components/PlayerHeader";
+import { playerClaims } from "@/lib/playerClaims";
 import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { CricketCareer } from "@/components/CricketCareer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -117,7 +118,7 @@ export default async function PlayerPage({
   const headerTeamSlug = onRoster ? player.team_slug : null;
   const lastClub = !onRoster && player.team_name ? [`Last on record with ${teamDisplayName(player.team_name)}`] : [];
 
-  const header = (meta: string[], description?: string) => (
+  const header = (meta: string[], description?: string, claims?: string[]) => (
     <>
       <Breadcrumbs
         items={[
@@ -136,6 +137,7 @@ export default async function PlayerPage({
         teamSlug={headerTeamSlug}
         teamColor={player.team_color}
         meta={[...meta, ...lastClub]}
+        claims={claims}
         photoCredit={player.photo_credit ? { credit: player.photo_credit, license: player.photo_license ?? "see source", sourceUrl: player.photo_source_url ?? "https://commons.wikimedia.org" } : null}
       />
       <Link href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
@@ -224,7 +226,7 @@ export default async function PlayerPage({
 
   return (
     <div className="flex flex-col gap-6">
-      {header(playerMeta(sport, player), summary)}
+      {header(playerMeta(sport, player), summary, anyGames ? playerClaims(profile.rows, profile.profile.form, sport) : undefined)}
 
       {!anyGames ? (
         <>
