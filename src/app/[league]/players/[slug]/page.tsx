@@ -87,14 +87,14 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (isCricketLeague(league)) {
     // The career figures a searcher wants are in the description (see cricketPlayerSeo.ts); the page reads the same career once more from the cache.
     const career = await cachedCareer(league, player.espn_id);
-    return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), cricketPlayerDescription(league, player.name, player.team_name, career), `/${league}/players/${slug}`);
+    return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), cricketPlayerDescription(league, player.name, player.team_name, career), `/${league}/players/${slug}`, { ownImage: true });
   }
   const staged = await loadStaged(league, player);
   const profile = staged?.regular ?? null;
   const seasons = hasGames(staged) ? [] : await getPlayerSeasons(league, player.espn_id);
   const empty = !hasGames(staged) && seasons.length === 0;
   // The competition is named because a player has a page in each one he plays in.
-  return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), profileSummary(league, player.name, profile, true), `/${league}/players/${slug}`, { noindex: empty });
+  return pageMeta(fitTitle(`${player.name} ${LEAGUE_LABEL[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats & Game Log`, `${player.name} ${LEAGUE_SHORT[league]} Stats`), profileSummary(league, player.name, profile, true), `/${league}/players/${slug}`, { noindex: empty, ownImage: true });
 }
 
 export default async function PlayerPage({
