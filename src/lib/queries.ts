@@ -13,6 +13,8 @@ import { seriesHasPlaySql } from "./cricketSeriesKey";
 import { sortStandings } from "./standingsOrder";
 import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
+import { foldSql, likeTerm, searchTokens } from "./searchText";
+import { CRICKET_LEAGUES } from "./leagues";
 
 export type { League } from "./leagues";
 export { sortStandings } from "./standingsOrder";
@@ -1186,25 +1188,40 @@ export interface SearchResult {
 // drivers have no box scores here (their results live in other tables), so they are not held back by the rule.
 // `player_game_stats` has no index on the player, so this is read ONCE, as a distinct (league, player) set joined to the matched
 // players, never as a per-row EXISTS: that scanned the table once per matched player (seconds for a one-letter query).
-const PLAYERS_WITH_GAMES_SQL = `select distinct s.league, s.player_espn_id from player_game_stats s
+// Only the matched players' rows are counted (`matched` is the name test on `players p2`), which lets the planner drop the rest of the
+// table before it joins games: a quarter off the time of a broad query.
+const playersWithGamesSql = (matched: string) => `select s.league, s.player_espn_id, count(*) as games from player_game_stats s
                                  join games g on g.league = s.league and g.espn_id = s.game_espn_id
-                                 where g.completed`;
+                                 where g.completed and (s.league, s.player_espn_id) in (select p2.league, p2.espn_id from players p2 where ${matched})
+                                 group by s.league, s.player_espn_id`;
 
-// Results with games on record come first, then by name: a roster-only namesake (the Browns' Justin Jefferson holds the bare slug
-// because he was inserted first; the Vikings receiver has an id suffix) must not outrank the player people are looking for.
-// Teams and series have no such rule and count as having games. The limit applies after the ordering.
+// A name matches when every word of the query is in it (any order, any case, accents ignored). Best matches come first: the
+// whole name, then a name that starts with the query, then a word that does; then clubs, series and players with games on
+// record (a roster-only namesake, like the Browns' Justin Jefferson who holds the bare slug, must not outrank the player people
+// are looking for), the one with most games first, then by name. The limit applies after the ordering.
+// A short query that is a club's abbreviation (LAL, MCI) finds that club too.
 export async function search(query: string, limit = 20): Promise<SearchResult[]> {
-  const like = `%${query}%`;
+  const tokens = searchTokens(query);
+  // One letter matches most names and reads the whole box-score table for nothing: wait for a second.
+  if (tokens.join(" ").length < 2) return [];
+  const phrase = tokens.join(" ");
+  const terms = tokens.map(likeTerm);
+  // $1 is the whole query folded; $2 the limit; $3.. one pattern per word.
+  const words = (column: string) => terms.map((_, i) => `${foldSql(column)} like $${i + 3}`).join(" and ");
+  const rank = (column: string) =>
+    `case when ${foldSql(column)} = $1 then 0 when ${foldSql(column)} like $1 || '%' then 1 when ${foldSql(column)} like '% ' || $1 || '%' then 2 else 3 end`;
   const { rows } = await pool.query(
     `select type, league, name, slug, subtitle, image from (
-       select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games
-       from teams where name ilike $1
+       select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games, 0 as games,
+              case when lower(abbreviation) = $1 then 0 else ${rank("name")} end as match_rank
+       from teams where (${words("name")}) or lower(abbreviation) = $1
        union all
        select 'player' as type, p.league, p.name, p.slug, t.name as subtitle, coalesce(p.headshot_url, p.photo_url) as image,
-              (p.league in ('atp', 'wta', 'f1') or h.player_espn_id is not null) as has_games
+              (p.league in ('atp', 'wta', 'f1') or h.player_espn_id is not null) as has_games, coalesce(h.games, 0) as games,
+              ${rank("p.name")} as match_rank
        from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
-       left join (${PLAYERS_WITH_GAMES_SQL}) h on h.league = p.league and h.player_espn_id = p.espn_id
-       where p.name ilike $1 and ${notPseudoAthleteSql()}
+       left join (${playersWithGamesSql(words("p2.name"))}) h on h.league = p.league and h.player_espn_id = p.espn_id
+       where (${words("p.name")}) and ${notPseudoAthleteSql()}
        union all
        -- Every cricket series and tournament in the database that has play on record, current or past (Ranji Trophy,
        -- PSL, a bilateral tour). An emptied series row (one an edition split has taken every match from) is not a
@@ -1213,13 +1230,114 @@ export async function search(query: string, limit = 20): Promise<SearchResult[]>
               nullif(concat_ws(' · ', case s.kind when 'other' then 'Youth, A-team and other' when 'womens-international' then 'Women''s international'
                                                    when 'womens-domestic' then 'Women''s domestic' else initcap(s.kind) end,
                                       to_char(s.start_date, 'YYYY')), '') as subtitle,
-              null as image, true as has_games
+              null as image, true as has_games, 0 as games, ${rank("s.name")} as match_rank
        from cricket_series s
-       where (s.name ilike $1 or s.short_name ilike $1 or s.abbreviation ilike $1) and ${seriesHasPlaySql("s")}
+       where ((${words("s.name")}) or (${words("coalesce(s.short_name, '')")}) or lower(s.abbreviation) = $1) and ${seriesHasPlaySql("s")}
      ) r
-     order by has_games desc, name, type, league, slug
+     order by match_rank, has_games desc, case type when 'team' then 0 when 'series' then 1 else 2 end, games desc, name, type, league, slug
      limit $2`,
-    [like, limit]
+    [phrase, limit, ...terms]
+  );
+  return rows;
+}
+
+export interface GameSearchResult {
+  /** Where the result opens: a game page, a cricket scorecard, a tennis tournament, an F1 weekend. */
+  href: string;
+  title: string;
+  /** "Basketball", "Tennis", "Formula 1"...: the league key the date is read in, and the label printed under the title. */
+  league: string;
+  label: string;
+  detail: string | null;
+  date: string;
+  local_date: string | null;
+}
+
+/**
+ * Everything played, found by what it was called or who took part: games (all leagues), cricket series matches the scorecards
+ * are not held for, tennis matches (singles and doubles, any round) and tournaments, and F1 race weekends. Each word of the query
+ * must be in the text of the event: both teams or players, the round, the tournament, the circuit, the year ("lakers celtics 2024",
+ * "wimbledon final", "monaco grand prix", "djokovic alcaraz"). The ones nearest today come first, so a club's search opens on its
+ * latest and next games.
+ */
+export async function searchGames(query: string, limit = 20): Promise<GameSearchResult[]> {
+  const tokens = searchTokens(query);
+  // One short word names too many clubs to list their games usefully.
+  if (tokens.length === 0 || tokens.join("").length < 3) return [];
+  const terms = tokens.map(likeTerm);
+  // $1 is the limit, $2 the cricket league keys; the words start at $3.
+  // A word of the query must begin a word of the event ("man" is Manchester, not Hermanos): hyphens and stops split words too.
+  const all = (haystack: string) => terms.map((_, i) => `' ' || translate(${haystack}, '-.', '  ') like '% ' || ltrim($${i + 3}, '%')`).join(" and ");
+  const any = (haystack: string) => terms.map((_, i) => `${haystack} like $${i + 3}`).join(" or ");
+  const f = foldSql;
+  // Games still to come first, soonest first, then the past, newest first.
+  const nearest = (date: string) => `case when ${date} >= now() then extract(epoch from ${date} - now()) else 1e12 + extract(epoch from now() - ${date}) end`;
+  // The tables are large and folding every row's names costs seconds, so each kind is first cut to the events that involve
+  // something named by at least one word (a club, a player, a team, a tournament, a round), with the names folded once per
+  // distinct club or player; the all-words test then runs on that short list only.
+  const { rows } = await pool.query(
+    `with mt as (select league, espn_id from teams where ${any(f("name"))}),
+          mp as (select espn_id from players where league in ('atp', 'wta') and ${any(f("name"))}),
+          tt as (select espn_id from tennis_tournaments where ${any(f("name"))}),
+          cn as (select n from (select home ->> 'name' as n from cricket_series_matches union select away ->> 'name' from cricket_series_matches) x
+                 where n is not null and (${any(f("n"))})),
+          cs as (select espn_id from cricket_series where ${any(f("name"))}),
+          gc as materialized (select g.* from games g
+                              where (g.league, g.home_team_espn_id) in (select league, espn_id from mt) or (g.league, g.away_team_espn_id) in (select league, espn_id from mt)
+                                 or (${any("lower(coalesce(g.round, ''))")})),
+          tc as materialized (select m.* from tennis_matches m
+                              where m.player1_espn_id in (select espn_id from mp) or m.player2_espn_id in (select espn_id from mp)
+                                 or m.tournament_espn_id in (select espn_id from tt)
+                                 or (${any(f("coalesce(m.side1 ->> 'names', '')"))}) or (${any(f("coalesce(m.side2 ->> 'names', '')"))}))
+     select href, title, league, label, detail, date, local_date from (
+       (select '/' || g.league || '/games/' || g.espn_id as href, a.name || ' at ' || h.name as title, g.league, 'game' as label,
+               nullif(concat_ws(' · ', nullif(g.round, ''),
+                         case when g.league = any($2) then (case when g.completed then g.status_summary end)
+                              when g.completed and g.home_score is not null and g.away_score is not null
+                                then coalesce(g.home_score_display, g.home_score::text) || '-' || coalesce(g.away_score_display, g.away_score::text) end), '') as detail,
+               g.date, g.local_date::text as local_date, ${nearest("g.date")} as near
+        from gc g
+        join teams h on h.league = g.league and h.espn_id = g.home_team_espn_id
+        join teams a on a.league = g.league and a.espn_id = g.away_team_espn_id
+        where ${all(`(${f("h.name")} || ' ' || ${f("a.name")} || ' ' || lower(coalesce(g.round, '')) || ' ' || coalesce(g.season_year::text, '') || ' ' || extract(year from g.date)::text)`)}
+        order by near limit $1)
+       union all
+       -- Cricket matches in a series whose scorecard SportsDB does not hold under a league (the rest are the games above).
+       (select '/cricket/matches/' || m.espn_id, (m.away ->> 'name') || ' at ' || (m.home ->> 'name'), 'cricket', 'cricket',
+               nullif(concat_ws(' · ', s.name, nullif(m.description, ''), nullif(case when m.status_state = 'post' then m.status_summary end, '')), ''), m.date, null, ${nearest("m.date")}
+        from cricket_series_matches m join cricket_series s on s.espn_id = m.series_espn_id
+        where (m.home ->> 'name' in (select n from cn) or m.away ->> 'name' in (select n from cn) or m.series_espn_id in (select espn_id from cs))
+          and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates))
+          and ${all(`(${f("coalesce(m.home ->> 'name', '')")} || ' ' || ${f("coalesce(m.away ->> 'name', '')")} || ' ' || ${f("s.name")} || ' ' || lower(coalesce(m.description, '')) || ' ' || extract(year from m.date)::text)`)}
+        order by 8 limit $1)
+       union all
+       (select coalesce('/tennis/tournaments/' || m.tournament_espn_id, '/tennis/scores/' || to_char(m.day, 'YYYY-MM-DD')),
+               coalesce(nullif(array_to_string(array(select jsonb_array_elements_text(m.side1 -> 'names')), ' / '), ''), p1.name, '?') || ' v ' ||
+               coalesce(nullif(array_to_string(array(select jsonb_array_elements_text(m.side2 -> 'names')), ' / '), ''), p2.name, '?'),
+               'tennis', 'tennis',
+               nullif(concat_ws(' · ', m.tournament_name, nullif(m.round, ''), case when m.completed then m.score_display end), ''), m.date, to_char(m.day, 'YYYY-MM-DD'), ${nearest("m.date")}
+        from tc m
+        left join players p1 on p1.league = m.tour and p1.espn_id = m.player1_espn_id
+        left join players p2 on p2.league = m.tour and p2.espn_id = m.player2_espn_id
+        where ${all(`(${f("coalesce(nullif(array_to_string(array(select jsonb_array_elements_text(m.side1 -> 'names')), ' '), ''), p1.name, '')")} || ' ' || ${f("coalesce(nullif(array_to_string(array(select jsonb_array_elements_text(m.side2 -> 'names')), ' '), ''), p2.name, '')")} || ' ' || ${f("m.tournament_name")} || ' ' || lower(coalesce(m.round, '')) || ' ' || extract(year from m.date)::text)`)}
+        order by 8 limit $1)
+       union all
+       (select '/tennis/tournaments/' || t.espn_id, t.name || ' ' || t.season, 'tennis', 'tennis tournament',
+               nullif(concat_ws(' · ', t.location, case when t.major then 'Grand Slam' end), ''), coalesce(t.start_date, make_date(t.season, 1, 1)), null,
+               ${nearest("coalesce(t.start_date, make_date(t.season, 1, 1))")}
+        from tennis_tournaments t
+        where ${all(`(${f("t.name")} || ' ' || ${f("coalesce(t.location, '')")} || ' ' || t.season::text)`)}
+        order by 8 limit $1)
+       union all
+       (select '/f1/events/' || e.espn_id, e.name || ' ' || coalesce(e.season_year::text, ''), 'f1', 'formula 1',
+               nullif(concat_ws(' · ', e.circuit_name, e.circuit_country), ''), e.date, null, ${nearest("e.date")}
+        from f1_events e
+        where ${all(`(${f("e.name")} || ' ' || ${f("coalesce(e.circuit_name, '')")} || ' ' || ${f("coalesce(e.circuit_city, '')")} || ' ' || ${f("coalesce(e.circuit_country, '')")} || ' ' || coalesce(e.season_year::text, ''))`)}
+        order by 8 limit $1)
+     ) r
+     order by case when label in ('tennis tournament', 'formula 1') then 0 else 1 end, near, href
+     limit $1`,
+    [limit, CRICKET_LEAGUES, ...terms]
   );
   return rows;
 }

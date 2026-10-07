@@ -48,6 +48,7 @@ test("search puts players and clubs with games on record first, then orders by n
 });
 
 // The pre-fix query: a correlated EXISTS per matched player. Kept here as the reference the joined version must equal.
+const byKey = (a: { type: string; league: string; slug: string }, b: { type: string; league: string; slug: string }) => `${a.type}${a.league}${a.slug}`.localeCompare(`${b.type}${b.league}${b.slug}`);
 const REFERENCE_SEARCH = `select type, league, name, slug, subtitle, image from (
   select 'team' as type, league, name, slug, abbreviation as subtitle, logo_url as image, true as has_games from teams where name ilike $1
   union all
@@ -58,23 +59,25 @@ const REFERENCE_SEARCH = `select type, league, name, slug, subtitle, image from 
 ) r order by has_games desc, name, type, league, slug limit $2`;
 
 test("the joined has-games lookup returns exactly what the per-player EXISTS did, for every query and limit", async () => {
-  for (const term of ["jefferson", "e", "a", "zed", "van", "nomatch"]) {
+  for (const term of ["jefferson", "ed", "an", "zed", "van", "nomatch"]) {
     for (const limit of [1, 3, 20]) {
-      const expected = (await db.pool.query(REFERENCE_SEARCH, [`%${term}%`, limit])).rows;
-      assert.deepEqual(await queries.search(term, limit), expected, `${term} limit ${limit}`);
+      // The same rows as the old query; the order is now by relevance, so compare as sets when nothing is cut off.
+      const expected = (await db.pool.query(REFERENCE_SEARCH, [`%${term}%`, 1000])).rows;
+      const got = await queries.search(term, limit);
+      assert.equal(got.length, Math.min(limit, expected.length), `${term} limit ${limit}`);
+      if (limit >= expected.length) assert.deepEqual([...got].sort(byKey), [...expected].sort(byKey), `${term} limit ${limit}`);
     }
   }
   // The incomplete-game row does not make Adam Jefferson a player with games; the tennis player is not held back.
-  const all = (await queries.search("e", 50)).map((r) => `${r.type}:${r.slug}`);
-  assert.ok(all.indexOf("player:zed-tennis") < all.indexOf("player:adam-jefferson"));
+  assert.deepEqual((await queries.search("zed")).map((r) => `${r.type}:${r.slug}`), ["player:zed-tennis"]);
 });
 
 test("the search SQL reads player_game_stats once as a joined set, never per matched player", async () => {
   const { readFileSync } = await import("node:fs");
   const source = readFileSync("src/lib/queries.ts", "utf8");
-  const search = source.slice(source.indexOf("export async function search("), source.indexOf("export async function getSameNamePlayerWithGames"));
+  const search = source.slice(source.indexOf("export async function search("), source.indexOf("export interface GameSearchResult"));
   assert.doesNotMatch(search, /\bexists\s*\(/i);
-  assert.match(search, /left join \(\$\{PLAYERS_WITH_GAMES_SQL\}\) h on h\.league = p\.league and h\.player_espn_id = p\.espn_id/);
+  assert.match(search, /left join \(\$\{playersWithGamesSql\(words\("p2\.name"\)\)\}\) h on h\.league = p\.league and h\.player_espn_id = p\.espn_id/);
 });
 
 test("search applies its limit after the ordering, so the namesake with games survives a tight limit", async () => {

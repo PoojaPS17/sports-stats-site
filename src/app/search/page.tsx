@@ -2,7 +2,8 @@ import { pageMeta } from "@/lib/metadata";
 import { teamDisplayName } from "@/lib/teamName";
 import { f1TeamLabel } from "@/lib/f1Names";
 import Link from "next/link";
-import { search, LEAGUE_LABEL, isLeague, type SearchResult } from "@/lib/queries";
+import { search, searchGames, LEAGUE_LABEL, isLeague, type SearchResult, type GameSearchResult } from "@/lib/queries";
+import { formatGameDate } from "@/lib/gameDay";
 import { isTour, TOUR_LABEL } from "@/lib/tennisTours";
 import { TeamLogo } from "@/components/TeamLogo";
 import { SearchBar } from "@/components/SearchBar";
@@ -34,6 +35,18 @@ function resultLeagueLabel(r: SearchResult): string {
   return r.league;
 }
 
+// Enough for a common surname across every league; the page says so when the list was cut.
+const RESULT_LIMIT = 60;
+const GAME_LIMIT = 30;
+
+const EVENT_LABEL: Record<string, string> = { cricket: "Cricket", tennis: "Tennis match", "tennis tournament": "Tennis tournament", "formula 1": "Formula 1" };
+
+function gameLine(g: GameSearchResult): string {
+  const label = g.label === "game" ? (isLeague(g.league) ? LEAGUE_LABEL[g.league] : g.league) : (EVENT_LABEL[g.label] ?? g.label);
+  const when = formatGameDate(g.date, g.league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, g.local_date);
+  return [label, when, g.detail].filter(Boolean).join(" · ");
+}
+
 export const metadata = pageMeta("Search", "Find any team, player or driver across football, NFL, NBA, cricket, tennis and F1.", "/search", { noindex: true });
 
 export default async function SearchPage({
@@ -42,7 +55,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const results = q.trim() ? await search(q.trim()) : [];
+  const [results, games] = q.trim() ? await Promise.all([search(q.trim(), RESULT_LIMIT), searchGames(q.trim(), GAME_LIMIT)]) : [[], []];
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,27 +68,41 @@ export default async function SearchPage({
 
       {q.trim() === "" ? (
         <p className="text-sm text-[var(--text-muted)]">Search for any team, driver, player or cricket series we track.</p>
-      ) : results.length === 0 ? (
+      ) : results.length === 0 && games.length === 0 ? (
         <p className="text-sm text-[var(--text-muted)]">No results for &ldquo;{q}&rdquo;.</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {results.map((r, i) => (
-            <Link
-              key={i}
-              href={resultHref(r)}
-              className="card flex items-center gap-3 px-4 py-3"
-            >
-              <TeamLogo name={resultName(r)} logoUrl={r.image} size={32} />
-              <div className="flex flex-col">
-                <span className="font-medium">{resultName(r)}</span>
-                <span className="text-xs text-[var(--text-muted)]">
-                  {resultLeagueLabel(r)} {r.type === "player" ? "player" : r.type === "series" ? "series" : "team"}
-                  {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <>
+          {games.length > 0 && (
+            <section className="flex flex-col gap-2">
+              <h2 className="text-sm font-semibold text-[var(--text-muted)]">Games and matches</h2>
+              {games.map((g, i) => (
+                <Link key={`${g.href}-${i}`} href={g.href} className="card flex flex-col px-4 py-3">
+                  <span className="font-medium">{g.title}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{gameLine(g)}</span>
+                </Link>
+              ))}
+              {games.length >= GAME_LIMIT && <p className="text-sm text-[var(--text-muted)]">Showing {GAME_LIMIT} games and matches. Add a team, player, round or year to narrow it down.</p>}
+            </section>
+          )}
+          {results.length > 0 && (
+            <section className="flex flex-col gap-2">
+              {games.length > 0 && <h2 className="text-sm font-semibold text-[var(--text-muted)]">Teams, players and series</h2>}
+              {results.map((r, i) => (
+                <Link key={i} href={resultHref(r)} className="card flex items-center gap-3 px-4 py-3">
+                  <TeamLogo name={resultName(r)} logoUrl={r.image} size={32} />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{resultName(r)}</span>
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {resultLeagueLabel(r)} {r.type === "player" ? "player" : r.type === "series" ? "series" : "team"}
+                      {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+              {results.length >= RESULT_LIMIT && <p className="text-sm text-[var(--text-muted)]">Showing the first {RESULT_LIMIT}. Add a first name or a team to narrow it down.</p>}
+            </section>
+          )}
+        </>
       )}
     </div>
   );

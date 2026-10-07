@@ -37,6 +37,8 @@ export async function startTestDb(): Promise<TestDb> {
       user: "postgres",
       password: "password",
       persistent: false,
+      // Production is UTF8; the default here is SQL_ASCII, where accent folding cannot be tested.
+      initdbFlags: ["--encoding=UTF8", "--locale=C"],
       onLog: () => {},
       onError: () => {},
     });
