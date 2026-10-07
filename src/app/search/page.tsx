@@ -37,10 +37,14 @@ function resultLeagueLabel(r: SearchResult): string {
 
 // Enough for a common surname across every league; the page says so when the list was cut.
 const RESULT_LIMIT = 60;
+const GAME_LIMIT = 30;
+
+const EVENT_LABEL: Record<string, string> = { cricket: "Cricket", tennis: "Tennis match", "tennis tournament": "Tennis tournament", "formula 1": "Formula 1" };
 
 function gameLine(g: GameSearchResult): string {
-  const score = g.completed && g.home_score != null && g.away_score != null ? `${g.home_score}-${g.away_score}` : null;
-  return `${formatGameDate(g.date, g.league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, g.local_date)}${score ? ` · ${score}` : ""}`;
+  const label = g.label === "game" ? (isLeague(g.league) ? LEAGUE_LABEL[g.league] : g.league) : (EVENT_LABEL[g.label] ?? g.label);
+  const when = formatGameDate(g.date, g.league, { weekday: "short", month: "short", day: "numeric", year: "numeric" }, g.local_date);
+  return [label, when, g.detail].filter(Boolean).join(" · ");
 }
 
 export const metadata = pageMeta("Search", "Find any team, player or driver across football, NFL, NBA, cricket, tennis and F1.", "/search", { noindex: true });
@@ -51,7 +55,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const [results, games] = q.trim() ? await Promise.all([search(q.trim(), RESULT_LIMIT), searchGames(q.trim())]) : [[], []];
+  const [results, games] = q.trim() ? await Promise.all([search(q.trim(), RESULT_LIMIT), searchGames(q.trim(), GAME_LIMIT)]) : [[], []];
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,13 +74,14 @@ export default async function SearchPage({
         <>
           {games.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-sm font-semibold text-[var(--text-muted)]">Games</h2>
-              {games.map((g) => (
-                <Link key={`${g.league}-${g.espn_id}`} href={`/${g.league}/games/${g.espn_id}`} className="card flex flex-col px-4 py-3">
-                  <span className="font-medium">{`${g.away} at ${g.home}`}</span>
-                  <span className="text-xs text-[var(--text-muted)]">{`${isLeague(g.league) ? LEAGUE_LABEL[g.league] : g.league} · ${gameLine(g)}`}</span>
+              <h2 className="text-sm font-semibold text-[var(--text-muted)]">Games and matches</h2>
+              {games.map((g, i) => (
+                <Link key={`${g.href}-${i}`} href={g.href} className="card flex flex-col px-4 py-3">
+                  <span className="font-medium">{g.title}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{gameLine(g)}</span>
                 </Link>
               ))}
+              {games.length >= GAME_LIMIT && <p className="text-sm text-[var(--text-muted)]">Showing {GAME_LIMIT} games and matches. Add a team, player, round or year to narrow it down.</p>}
             </section>
           )}
           {results.length > 0 && (

@@ -10,9 +10,12 @@ const FOLD_PAIRS: [string, string][] = [
 const FROM = FOLD_PAIRS.map(([chars]) => chars).join("");
 const TO = FOLD_PAIRS.map(([chars, plain]) => plain.repeat([...chars].length)).join("");
 
-/** SQL that lower-cases a column and folds its accents, to compare with a term made by `foldText`. */
+/**
+ * SQL that lower-cases a column and folds its accents, to compare with a term made by `foldText`. A value whose bytes equal its
+ * characters is plain ASCII, where lower-casing is the whole job: translate() on every row of a large table is what costs.
+ */
 export function foldSql(column: string): string {
-  return `translate(lower(${column}), '${FROM}', '${TO}')`;
+  return `(case when octet_length(${column}) = char_length(${column}) then lower(${column}) else translate(lower(${column}), '${FROM}', '${TO}') end)`;
 }
 
 /** The same folding in code: lower case, plain letters. */

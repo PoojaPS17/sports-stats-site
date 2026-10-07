@@ -75,7 +75,7 @@ test("the joined has-games lookup returns exactly what the per-player EXISTS did
 test("the search SQL reads player_game_stats once as a joined set, never per matched player", async () => {
   const { readFileSync } = await import("node:fs");
   const source = readFileSync("src/lib/queries.ts", "utf8");
-  const search = source.slice(source.indexOf("export async function search("), source.indexOf("export async function getSameNamePlayerWithGames"));
+  const search = source.slice(source.indexOf("export async function search("), source.indexOf("export interface GameSearchResult"));
   assert.doesNotMatch(search, /\bexists\s*\(/i);
   assert.match(search, /left join \(\$\{playersWithGamesSql\(words\("p2\.name"\)\)\}\) h on h\.league = p\.league and h\.player_espn_id = p\.espn_id/);
 });
