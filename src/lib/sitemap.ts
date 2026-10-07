@@ -27,16 +27,23 @@ const SEASON_PAGE_LEAGUES = ALL_LEAGUES.filter((l) => playerSport(l) !== null);
 // exactly what a second hand-kept copy of ["nba", "nfl"] invited.
 const CARD_LEAGUES: League[] = [...PERFORMANCE_CARD_LEAGUES];
 
+// The pages that earn (cricket, the hubs, the current games, the articles) come first and the
+// bulk player files last. Google documents no meaning for the order of a sitemap index, so this
+// is only a courtesy to anyone reading robots.txt; the cut-down player files are the lever.
 export const SITEMAP_IDS: string[] = [
+  "cricket-matches",
+  "cricket-series",
   "core",
-  "f1",
-  "tennis",
   "beyond-the-scoreline",
-  ...SEASON_PAGE_LEAGUES.map((l) => `pseasons-${l}`),
-  ...ALL_LEAGUES.flatMap((l) => [`teams-${l}`, `players-${l}`, `games-${l}`]),
-  ...LEAGUES.filter((l) => supportsMatchweeks(l)).map((l) => `weeks-${l}`),
+  ...ALL_LEAGUES.map((l) => `games-${l}`),
+  "tennis",
+  "f1",
+  ...ALL_LEAGUES.map((l) => `teams-${l}`),
   ...ALL_LEAGUES.filter((l) => supportsScoreAnalytics(l)).map((l) => `h2h-${l}`),
   ...CARD_LEAGUES.map((l) => `performances-${l}`),
+  ...LEAGUES.filter((l) => supportsMatchweeks(l)).map((l) => `weeks-${l}`),
+  ...ALL_LEAGUES.map((l) => `players-${l}`),
+  ...SEASON_PAGE_LEAGUES.map((l) => `pseasons-${l}`),
 ];
 
 const entry = (path: string, changeFrequency: Entry["changeFrequency"], priority: number, lastModified?: string | Date | null): Entry => ({
@@ -78,26 +85,8 @@ async function core(): Promise<Entry[]> {
     entry("/privacy", "yearly", 0.2),
     entry("/terms", "yearly", 0.2),
   ];
+  // The cricket series and match pages themselves are in cricket-series.xml and cricket-matches.xml.
   out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7), entry("/cricket/series", "hourly", 0.8));
-  // Every series with at least one match on record; a finished one no longer changes.
-  // lastmod is `updated_at`, not `end_date`: a series that runs into next season has an end
-  // date months away, and a page cannot have been modified on a day that has not happened.
-  // `end_date` still decides how often the page is worth re-reading.
-  const { rows: cricketSeries } = await pool.query(
-    `select s.espn_id, s.updated_at, (s.end_date >= now() - interval '30 days') as recent from cricket_series s
-     where exists (select 1 from cricket_series_matches m where m.series_espn_id = s.espn_id)
-     order by s.start_date desc`
-  );
-  for (const { espn_id, updated_at, recent } of cricketSeries) out.push(entry(`/cricket/series/${espn_id}`, recent ? "daily" : "yearly", recent ? 0.5 : 0.3, updated_at));
-  // Matches outside the archived competitions live at /cricket/matches; the archived
-  // ones are in their league's games sitemap.
-  const { rows: seriesMatches } = await pool.query(
-    `select m.espn_id, m.updated_at from cricket_series_matches m
-     where m.date >= now() - interval '45 days' and m.date <= now() + interval '14 days'
-       and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates))
-     order by m.date desc`
-  );
-  for (const { espn_id, updated_at } of seriesMatches) out.push(entry(`/cricket/matches/${espn_id}`, "hourly", 0.4, updated_at));
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
   const { rows: tournaments } = await pool.query(`select espn_id, updated_at from tennis_tournaments order by season desc, start_date`);
   for (const { espn_id, updated_at } of tournaments) out.push(entry(`/tennis/tournaments/${espn_id}`, "weekly", 0.5, updated_at));
@@ -163,17 +152,67 @@ function playedSql(league: League): string {
   return "true";
 }
 
-// A player's page for each season they played a game in.
+// The current season and the one before, measured on completed games: next season's schedule is
+// loaded months early, and counting it would leave one played season listed until it starts.
+const RECENT_SEASON_SQL = `(select max(season_year) from games where league = $1 and completed) - 1`;
+
+// A player's page for each of the two most recent seasons they played a game in. Older seasons
+// stay linked from the player's page; listing all of them (93,000 URLs on 2026-10-07) sent most of
+// Googlebot's discovery budget to pages that earn nothing.
 async function playerSeasons(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
     `select distinct p.slug, g.season_year from player_game_stats s
      join games g on g.league = s.league and g.espn_id = s.game_espn_id
      join players p on p.league = s.league and p.espn_id = s.player_espn_id
-     where s.league = $1 and g.season_year is not null and g.completed and ${notPseudoAthleteSql()} and ${playedSql(league)}
+     where s.league = $1 and g.season_year is not null and g.completed and g.season_year >= ${RECENT_SEASON_SQL}
+       and ${notPseudoAthleteSql()} and ${playedSql(league)}
      order by p.slug, g.season_year desc`,
     [league]
   );
   return rows.map(({ slug, season_year }) => entry(`/${league}/players/${slug}/${season_year}`, "yearly", 0.3));
+}
+
+// When a cricket match page last changed. A finished match's row is touched again by later
+// refetches (a venue fill, a relabel) that change nothing a reader sees, so its date is clamped to
+// five days after the start: scorecards settle within three days (SETTLED_AFTER_DAYS in
+// scripts/lib/cricket-series-stats.ts) and a Test lasts five. A live or scheduled match carries its
+// row's date. Never ahead of now: a match called off before its start date is 'post' with a start
+// still ahead, and least() keeps it at the row's date.
+const MATCH_LASTMOD_SQL = `case when m.status_state = 'post' then least(m.updated_at, m.date + interval '5 days') else m.updated_at end`;
+
+// Every series with at least one match on record, in its own sitemap: these pages are the site's
+// clicks, and a small file that changes daily is re-read often. lastmod is the newest of the
+// series row, its matches (clamped as above) and its player figures: a result or a stats block
+// lands without touching the series row (cricket-series-ingest.ts only writes updated_at when
+// counts, dates or teams change). Never `end_date`: a series running into next season would claim
+// a day that has not happened. `end_date` still decides how often the page is worth re-reading.
+async function cricketSeries(): Promise<Entry[]> {
+  const { rows } = await pool.query(
+    `select s.espn_id, (s.end_date >= now() - interval '30 days') as recent,
+            least(now(), greatest(
+              s.updated_at,
+              coalesce((select max(${MATCH_LASTMOD_SQL}) from cricket_series_matches m where m.series_espn_id = s.espn_id), s.updated_at),
+              coalesce((select max(p.updated_at) from cricket_series_player_stats p where p.series_espn_id = s.espn_id), s.updated_at)
+            )) as lastmod
+     from cricket_series s
+     where exists (select 1 from cricket_series_matches m where m.series_espn_id = s.espn_id)
+     order by s.start_date desc`
+  );
+  return rows.map(({ espn_id, recent, lastmod }) => entry(`/cricket/series/${espn_id}`, recent ? "daily" : "yearly", recent ? 0.5 : 0.3, lastmod));
+}
+
+// A year of matches plus the fortnight ahead: match pages earn most of the site's impressions for
+// weeks after the result, and a year is about 5,400 URLs. Matches with a scorecard under one of
+// their candidate leagues (internationals, the archived competitions) are in that league's games
+// sitemap and redirect from here, so they are left out.
+async function cricketMatches(): Promise<Entry[]> {
+  const { rows } = await pool.query(
+    `select m.espn_id, ${MATCH_LASTMOD_SQL} as lastmod from cricket_series_matches m
+     where m.date >= now() - interval '365 days' and m.date <= now() + interval '14 days'
+       and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates))
+     order by m.date desc`
+  );
+  return rows.map(({ espn_id, lastmod }) => entry(`/cricket/matches/${espn_id}`, "hourly", 0.4, lastmod));
 }
 
 // Race weekends, plus every constructor and every driver with a race result on record
@@ -220,13 +259,19 @@ function beyondTheScoreline(): Entry[] {
 
 // Only players with something on the page: a game on record or a season stat line.
 // Roster-only players (no figures yet) render with noindex, so they stay out here too.
+// Outside cricket, only players active in the current or previous season: a game played or a
+// season stat line in that window. The rest stay reachable through box scores and keep their
+// index entries; they just stop competing for discovery crawls. Cricket keeps everyone: its
+// players are few, its pages are the ones that earn, and a World Cup squad is four years apart.
 async function players(league: League): Promise<Entry[]> {
+  const window = isCricketLeague(league) ? "" : `and g.season_year >= ${RECENT_SEASON_SQL}`;
+  const seasonWindow = isCricketLeague(league) ? "" : `and s.season >= ${RECENT_SEASON_SQL}`;
   const { rows } = await pool.query(
     `select p.slug from players p
      where p.league = $1 and ${notPseudoAthleteSql()}
        and (exists (select 1 from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
-                    where s.league = p.league and s.player_espn_id = p.espn_id and g.completed and ${playedSql(league)})
-            or exists (select 1 from player_season_stats s where s.league = p.league and s.player_espn_id = p.espn_id))
+                    where s.league = p.league and s.player_espn_id = p.espn_id and g.completed ${window} and ${playedSql(league)})
+            or exists (select 1 from player_season_stats s where s.league = p.league and s.player_espn_id = p.espn_id ${seasonWindow}))
      order by p.slug`,
     [league]
   );
@@ -316,6 +361,9 @@ export async function sitemapEntries(id: string): Promise<Entry[]> {
   if (id === "f1") return f1();
   if (id === "tennis") return tennisPlayers();
   if (id === "beyond-the-scoreline") return beyondTheScoreline();
+  // Before the split below: "cricket-matches" is not a league called "matches".
+  if (id === "cricket-series") return cricketSeries();
+  if (id === "cricket-matches") return cricketMatches();
   const [kind, league] = id.split("-") as [string, League];
   if (!ALL_LEAGUES.includes(league)) return [];
   if (kind === "teams") return teams(league);
