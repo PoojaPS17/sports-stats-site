@@ -13,6 +13,7 @@ import { GameCard } from "@/components/GameCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ImageActions } from "@/components/ImageActions";
 import { HeadToHeadExportCard } from "@/components/HeadToHeadExportCard";
+import { rivalryMeter } from "@/lib/rivalry";
 import { ScoreboardExportCard, scoreboardExportWidth } from "@/components/ScoreboardExportCard";
 import { TeamLogo } from "@/components/TeamLogo";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -105,6 +106,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
           : `The last ${h2h.streak.length} meetings were drawn`
       : null;
 
+  const meter = rivalryMeter(h2h, (t) => teamDisplayName(t.name));
   const pairTitle = `${teamDisplayName(teamA.name)} vs ${teamDisplayName(teamB.name)}`;
   const gamesTools = (name: string, title: string, games: GameRow[]) => (
     <ImageActions filename={`${league}-${teamA.slug}-vs-${teamB.slug}-${name}`} shareTitle={`${pairTitle}: ${title.toLowerCase()}`} width={scoreboardExportWidth(league)} card={<ScoreboardExportCard league={league} title={`${pairTitle}: ${title.toLowerCase()}`} subtitle={`${LEAGUE_LABEL[league]} head-to-head`} games={games} withDate />} />
@@ -120,6 +122,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           {h2h.meetings} {LEAGUE_LABEL[league]} {h2h.meetings === 1 ? "meeting" : "meetings"} on record
+          {meter.label && <> · <strong className="font-semibold text-[var(--text)]">{meter.label}</strong></>}
         </p>
       </div>
 

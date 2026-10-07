@@ -4,6 +4,7 @@ import { ExportShell, ExportTitle } from "./ExportShell";
 import { formatSeasonLabel, LEAGUE_LABEL, type League } from "@/lib/queries";
 import { isSoccer, type HeadToHead } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
+import { rivalryMeter } from "@/lib/rivalry";
 
 // The record between two teams: the win split, the bar, and the four headline numbers
 // the live page opens with.
@@ -12,12 +13,15 @@ export function HeadToHeadExportCard({ league, h2h, title, streakText }: { leagu
   const { teamA, teamB } = h2h;
   const total = h2h.meetings || 1;
   const short = (t: typeof teamA) => t.abbreviation ?? teamDisplayName(t.name);
+  const tag = (t: typeof teamA) => t.abbreviation ?? teamDisplayName(t.name).slice(0, 3).toUpperCase();
   const stats = [
     { label: "Meetings", value: h2h.meetings, sub: h2h.firstSeason ? `since ${formatSeasonLabel(league, h2h.firstSeason)}` : undefined },
     { label: `${soccer ? "Goals" : "Points"} for ${short(teamA)}`, value: h2h.goalsA, sub: h2h.meetings ? `${(h2h.goalsA / total).toFixed(1)} per game` : undefined },
     { label: `${soccer ? "Goals" : "Points"} for ${short(teamB)}`, value: h2h.goalsB, sub: h2h.meetings ? `${(h2h.goalsB / total).toFixed(1)} per game` : undefined },
     { label: "Current run", value: h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—", sub: streakText ?? undefined },
   ];
+  const meter = rivalryMeter(h2h, (t) => teamDisplayName(t.name));
+  const pill = (r: "A" | "B" | "D") => ({ text: r === "A" ? tag(teamA) : r === "B" ? tag(teamB) : "D", border: r === "A" ? teamA.color ?? CARD.accent : r === "B" ? teamB.color ?? "#d97706" : CARD.textFaint });
   const side = (t: typeof teamA) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}>
       <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo_url} color={t.color} size={64} />
@@ -44,6 +48,19 @@ export function HeadToHeadExportCard({ league, h2h, title, streakText }: { leagu
           <span style={{ width: `${(h2h.winsA / total) * 100}%`, background: teamA.color ?? CARD.accent }} />
           <span style={{ width: `${(h2h.draws / total) * 100}%`, background: CARD.textFaint }} />
           <span style={{ flex: 1, background: teamB.color ?? "#d97706" }} />
+        </div>
+      )}
+      {(meter.label || meter.last5.length > 0) && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: CARD.text }}>{meter.label ?? ""}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: CARD.textMuted }}>
+            Last {meter.last5.length}
+            {meter.last5.map((r, i) => (
+              <span key={i} style={{ padding: "1px 7px", borderRadius: 999, border: `2px solid ${pill(r).border}`, fontSize: 10, fontWeight: 800, color: CARD.text }}>
+                {pill(r).text}
+              </span>
+            ))}
+          </span>
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 8 }}>
