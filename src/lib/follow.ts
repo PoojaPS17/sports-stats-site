@@ -1,7 +1,8 @@
 // Client-side "follow" list for the personalized homepage. There is no login system
 // on the site, so follows live in this browser's localStorage rather than an account —
 // see components/home/HomeBuilder.tsx, which seeds a visitor's homepage blocks from this.
-export type FollowKind = "team" | "player" | "game" | "series" | "tournament";
+export const FOLLOW_KINDS = ["team", "player", "game", "series", "tournament"] as const;
+export type FollowKind = (typeof FOLLOW_KINDS)[number];
 
 export type FollowItem = {
   kind: FollowKind;
@@ -69,6 +70,17 @@ export function toggleFollow(item: Omit<FollowItem, "addedAt">): boolean {
   all.splice(idx, 1);
   writeAll(all);
   return false;
+}
+
+/** Adds the items not already followed, newest first on the list; returns how many were new. */
+export function addFollows(items: Omit<FollowItem, "addedAt">[]): number {
+  const all = readAll();
+  const have = new Set(all.map((f) => followKey(f.kind, f.league, f.refId)));
+  const fresh = items.filter((i) => !have.has(followKey(i.kind, i.league, i.refId)));
+  if (fresh.length === 0) return 0;
+  const now = Date.now();
+  writeAll([...all, ...fresh.map((i, n) => ({ ...i, addedAt: now + n }))]);
+  return fresh.length;
 }
 
 export function removeFollow(kind: FollowKind, league: string, refId: string) {

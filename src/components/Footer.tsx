@@ -91,6 +91,7 @@ export function Footer() {
               { label: "F1 Standings", href: "/f1/standings" },
               { label: "Top Games", href: "/top-games" },
               { label: "Search", href: "/search" },
+              { label: "My follows", href: "/following" },
               { label: "Contact", href: "/contact" },
               { label: "Privacy Policy", href: "/privacy" },
               { label: "Terms of Use", href: "/terms" },
