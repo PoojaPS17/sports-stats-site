@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useState } from "react";
+import { FunnelEvents } from "@/components/FunnelEvents";
 import { CONSENT_KEY, CONSENT_REGIONS, COOKIE_SETTINGS_EVENT, GA_ID } from "@/lib/consent";
 
 type Choice = "granted" | "denied";
@@ -79,6 +80,7 @@ try { var c = localStorage.getItem('${CONSENT_KEY}'); if (c === 'granted' || c =
 gtag('js', new Date());
 gtag('config', '${GA_ID}');`}
       </Script>
+      <FunnelEvents />
       <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
       {open && (
         <div role="dialog" aria-label="Cookie choice" className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-pop)]">
