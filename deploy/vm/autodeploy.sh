@@ -63,8 +63,8 @@ main() {
   # Detached at origin/main: the build checkout never carries a branch of its own.
   git checkout --quiet --detach origin/main || fail "git checkout origin/main in $build"
   # .next/cache is the compiler's cache, kept here between builds so they stay warm; it is not
-  # handed over (the live app makes its own, which also stops the runtime fetch cache growing
-  # across deploys: it was 7.6 GB on 2026-10-07).
+  # handed over wholesale. Only the live app's ESPN fetch cache travels with the swap (see below),
+  # pruned to a day, because the whole cache once grew to 7.6 GB across deploys (2026-10-07).
   rm -rf .next
   mkdir .next
   [ -d .next-cache ] && mv .next-cache .next/cache
@@ -103,11 +103,20 @@ main() {
   live_lock_before="$(cksum package-lock.json)"
   git merge --ff-only --quiet origin/main || fail "fast-forward to origin/main (local commits on the VM?)"
 
+  # The ESPN responses the live app has fetched (revalidate 86400, key independent of the build) are
+  # carried into the new .next so a deploy does not send every page back to ESPN. Entries older
+  # than a day go first, while the app still serves; the carry itself is best effort and can never
+  # fail a deploy.
+  find .next/cache/fetch-cache -type f -mmin +1440 -delete 2>/dev/null || true
+
   # ---- Swap: the only window the app is down ---------------------------------------------------
   rm -rf .next.prev .next.failed node_modules.prev
   sudo systemctl stop sportsdb-app || fail "stop sportsdb-app"
   mv .next .next.prev 2>/dev/null
   mv "$build/.next" .next || swap_back "could not move the new .next into $repo"
+  if [ -d .next.prev/cache/fetch-cache ]; then
+    mkdir -p .next/cache && mv .next.prev/cache/fetch-cache .next/cache/fetch-cache || log "fetch-cache carry-over skipped"
+  fi
   if [ "$live_lock_before" != "$(cksum package-lock.json)" ] || [ ! -d node_modules ]; then
     log "package-lock.json changed, taking the build checkout's node_modules"
     mv node_modules node_modules.prev 2>/dev/null

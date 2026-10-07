@@ -94,7 +94,7 @@ test("install.sh installs and enables the deploy timer", () => {
 // to a log, so the test can read the ORDER of the deploy's steps without a VM. The build must finish
 // before the app is stopped (every merge took the site offline for the whole build until 2026-10-07:
 // twelve merges that day gave Googlebot 86 server errors and it cut its crawl rate by three quarters).
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 
@@ -113,6 +113,13 @@ function fakeVm(opts: { lockAfterFetch?: string; healthy?: boolean } = {}) {
   mkdirSync(join(repo, "node_modules"), { recursive: true });
   mkdirSync(join(repo, ".next"));
   writeFileSync(join(repo, ".next", "BUILD_ID"), "old");
+  // The live app's ESPN fetch cache: one fresh entry, one two days old.
+  const fetchCache = join(repo, ".next", "cache", "fetch-cache");
+  mkdirSync(fetchCache, { recursive: true });
+  writeFileSync(join(fetchCache, "fresh"), "x");
+  writeFileSync(join(fetchCache, "stale"), "x");
+  const twoDays = new Date(Date.now() - 2 * 86400_000);
+  utimesSync(join(fetchCache, "stale"), twoDays, twoDays);
   writeFileSync(join(repo, "node_modules", ".installed-from"), "lock-v1");
   writeFileSync(join(repo, "package-lock.json"), "lock-v1");
   writeFileSync(join(repo, ".env.production"), "NEXT_PUBLIC_SITE_URL=https://example.test\n");
@@ -191,7 +198,10 @@ test("autodeploy.sh builds in its own checkout while the app serves, and stops i
   assert.equal(readFileSync(join(vm.repo, "node_modules", ".installed-from"), "utf8"), "lock-v1");
   // The compiler cache stays with the build checkout for the next build; the live app starts its own.
   assert.equal(readFileSync(join(vm.build, ".next-cache", "compiler"), "utf8").trim(), "warm");
-  assert.ok(!existsSync(join(vm.repo, ".next", "cache")), "the live .next starts without the build's cache");
+  assert.ok(!existsSync(join(vm.repo, ".next", "cache", "compiler")), "the live .next starts without the compiler's cache");
+  // The ESPN fetch cache travels with the swap, minus entries older than a day.
+  assert.ok(existsSync(join(vm.repo, ".next", "cache", "fetch-cache", "fresh")), "a fresh fetch-cache entry is carried over");
+  assert.ok(!existsSync(join(vm.repo, ".next", "cache", "fetch-cache", "stale")), "an entry older than a day is pruned");
   assert.ok(!existsSync(join(vm.repo, ".next.prev")), "the previous build is removed once the new one is healthy");
 });
 
