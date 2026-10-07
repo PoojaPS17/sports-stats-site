@@ -18,6 +18,7 @@ import {
   getSameNamePlayerWithGames,
   getPlayerCricketCareer,
   getPlayerOtherFormats,
+  getPlayerOtherLeagues,
   getPlayerCricketSplits,
   CRICKET_SPLIT_DIMENSIONS,
   type CricketSplitDimension,
@@ -36,6 +37,7 @@ import { playerClaims } from "@/lib/playerClaims";
 import { PlayerSeasonStats } from "@/components/PlayerSeasonStats";
 import { CricketCareer } from "@/components/CricketCareer";
 import { CricketOtherFormats } from "@/components/CricketOtherFormats";
+import { FootballOtherLeagues } from "@/components/FootballOtherLeagues";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { JsonLd } from "@/components/JsonLd";
 import { athleteSchema } from "@/lib/structuredData";
@@ -179,6 +181,7 @@ export default async function PlayerPage({
   const anyGames = hasGames(staged);
   // Two players can share a name (the bare slug went to whoever was stored first): a page with no games points to the namesake who has some.
   const sameName = anyGames ? null : await getSameNamePlayerWithGames(league, player.name, player.espn_id);
+  const otherLeagues = sport === "soccer" ? await getPlayerOtherLeagues(league, player.espn_id) : [];
   // No box-score row in the regular season (ESPN lists games for the player and no stat line): games only, no stats, clubs or log.
   const storedOnly = storedGamesOnly(profile);
   const split = staged.split;
@@ -231,6 +234,7 @@ export default async function PlayerPage({
   return (
     <div className="flex flex-col gap-6">
       {header(playerMeta(sport, player), summary, anyGames ? playerClaims(profile.rows, profile.profile.form, sport) : undefined)}
+      <FootballOtherLeagues name={player.name} leagues={otherLeagues} />
 
       {!anyGames ? (
         <>

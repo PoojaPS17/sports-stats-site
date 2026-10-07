@@ -2,7 +2,7 @@ import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
 import { CALLED_OFF, isGameCalledOff } from "./gameStatus";
 import { dayTimeZone } from "./gameDay";
-import { isCricketLeague } from "./leagues";
+import { isCricketLeague, isSoccerLeague } from "./leagues";
 import type { League } from "./leagues";
 import { presentDetails, type GameDetails } from "./matchDetail";
 import type { GameStage } from "./gameStage";
@@ -14,7 +14,7 @@ import { sortStandings } from "./standingsOrder";
 import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 import { foldSql, likeTerm, searchTokens } from "./searchText";
-import { CRICKET_LEAGUES } from "./leagues";
+import { CRICKET_LEAGUES, SOCCER_LEAGUES } from "./leagues";
 
 export type { League } from "./leagues";
 export { sortStandings } from "./standingsOrder";
@@ -977,6 +977,31 @@ export async function getPlayerOtherFormats(league: League, playerEspnId: string
   return rows
     .map((r) => ({ league: r.league as League, slug: r.slug as string, matches: Number(r.matches), runs: Number(r.runs), wickets: Number(r.wickets) }))
     .filter((r) => r.matches > 0)
+    .sort((a, b) => (order.get(a.league) ?? 0) - (order.get(b.league) ?? 0));
+}
+
+export interface FootballOtherLeague { league: League; slug: string; apps: number; goals: number; assists: number }
+
+// The same footballer in the other competitions on record (ESPN keeps one id per person). Counts what the
+// page's own log counts: completed games in which he made an appearance (APP = 1).
+export async function getPlayerOtherLeagues(league: League, playerEspnId: string): Promise<FootballOtherLeague[]> {
+  if (!isSoccerLeague(league)) return [];
+  const { rows } = await pool.query(
+    `select pgs.league, p.slug,
+       count(*) as apps,
+       coalesce(sum(nullif(pgs.stats->'match'->>'G', '')::numeric), 0) as goals,
+       coalesce(sum(nullif(pgs.stats->'match'->>'A', '')::numeric), 0) as assists
+     from player_game_stats pgs
+     join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id and g.completed
+     join players p on p.league = pgs.league and p.espn_id = pgs.player_espn_id
+     where pgs.player_espn_id = $2 and pgs.league = any($3::text[]) and pgs.league <> $1
+       and nullif(pgs.stats->'match'->>'APP', '')::numeric = 1
+     group by pgs.league, p.slug`,
+    [league, playerEspnId, SOCCER_LEAGUES]
+  );
+  const order = new Map(SOCCER_LEAGUES.map((l, i) => [l as string, i]));
+  return rows
+    .map((r) => ({ league: r.league as League, slug: r.slug as string, apps: Number(r.apps), goals: Number(r.goals), assists: Number(r.assists) }))
     .sort((a, b) => (order.get(a.league) ?? 0) - (order.get(b.league) ?? 0));
 }
 
