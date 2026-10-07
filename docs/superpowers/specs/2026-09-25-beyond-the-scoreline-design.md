@@ -112,6 +112,17 @@ art: { number: "8", caption: "straight wins to open the season, the best start i
 
 `tests/beyond-the-scoreline-registry.test.ts` holds every registered article to this, and CI typechecks each PR, so a draft that omits the block or writes a paragraph into `number` fails before review rather than after publication.
 
+### 9. Data-first structure (added 2026-10-07, site owner feedback: lead with the numbers, not the news)
+
+The articles up to this point read as competent beat-reporter news stories with a chart bolted on partway through (e.g. `fazal-309-presidents-trophy-record-stand`: a strong story, but the stats block didn't land until after two paragraphs of scene-setting, and there was no comparison against the rest of the field). The site owner's framing: this section does not compete with ESPN, Cricinfo or a wire service on breaking the news first, so its edge has to be the data interpretation, not the event report. Every article going forward is **a bridge between data and story**, not a news brief with a chart attached, structured like this:
+
+- **Title**: frame the numbers as the subject, not the event. `"Fazal's 309 Not Out Headlines the President's Trophy"` describes what happened; `"Fazal's 309: The Numbers Behind One of the Season's Biggest Innings"` promises analysis. Prefer a title built on "the numbers behind X", "X by the numbers", or "what the stats say about X" over a pure news headline, while still fitting `TITLE_BUDGET` (§3).
+- **Open with the moment, briefly** — one short paragraph, as before — then put the headline stats block (the existing by-the-numbers tile chart) right after it, not several paragraphs down. A reader should see the hard numbers (the headline figure plus its immediate supporting numbers: balls faced, boundaries, strike rate, a partnership or streak) before any background that belongs later in the piece.
+- **A required "how unusual is this" section**: every article needs at least one explicit comparison that answers "is this normal, or extraordinary?" by placing the headline number against a reference set the reader can see, not a sentence asserting significance. A top-10/leaderboard chart for the competition or season (the pattern `PresidentsTrophyTopScoresChart` set: a ranked bar list with the subject highlighted) is the default shape for this; a historical list or a rate stat against the field works the same way when that fits the story better. This is the section that makes an article uniquely SportsDB rather than a rewritten news brief, and it is never optional, even when the second visual required by §7 is this one.
+- **Close by answering, in prose, what the numbers mean** for the competition or season narrative (a title race, the record book, a player's own arc), not a plain restatement of the scoreline.
+
+This amends, not replaces, §7's length/depth bar and the house style in §6: still no em dashes, no AI tells, the same fact-checking discipline, and every number sourced. It changes order and emphasis, not the length target.
+
 ## Explicitly out of scope
 
 - Any database table, admin UI, or publish/draft flag mechanism — file-based + git is the whole workflow (see §1).
