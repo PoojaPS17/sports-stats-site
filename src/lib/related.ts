@@ -2,6 +2,7 @@
 // a player page, most-faced rivals and top players on a team page. Each helper is
 // one indexed query against the latest season's stats, cheap enough to run on
 // every render.
+import { realPosition } from "@/lib/position";
 import { countedMeetingSql } from "./analytics";
 import { pool } from "./db";
 import { isSoccerLeague, type League } from "./leagues";
@@ -121,8 +122,9 @@ const NFL_PEER_GROUPS: Record<string, string[]> = { QB: ["QB"], RB: ["RB", "FB"]
 
 /** The league's leading players at the same position this season. */
 export async function getPositionPeers(league: League, position: string | null | undefined, excludeEspnId: string, limit = 8): Promise<RelatedLink[]> {
-  if (!position || metricSql(league) === "0") return [];
-  const positions = league === "nfl" ? NFL_PEER_GROUPS[position] : [position];
+  const pos = realPosition(position);
+  if (!pos || metricSql(league) === "0") return [];
+  const positions = league === "nfl" ? NFL_PEER_GROUPS[pos] : [pos];
   if (!positions) return [];
   const { rows } = await pool.query<SeasonMetricRow>(
     `${SELECT}

@@ -1,3 +1,4 @@
+import { realPosition } from "@/lib/position";
 import type { ReactElement } from "react";
 import { PixelBall } from "@/components/Logo";
 
@@ -9,10 +10,7 @@ export function ogFallback(): ReactElement {
 }
 
 /** A position worth printing on a card: ESPN's cricket feed marks an unknown role "UKN", which is a gap, not a position. */
-export function ogPosition(position: string | null | undefined): string | null {
-  const p = position?.trim();
-  return p && !/^(ukn|unk|unknown|n\/a|-+)$/i.test(p) ? p : null;
-}
+export const ogPosition = realPosition;
 
 /** A long name steps down so it stays on two lines at most. */
 export function ogTitleSize(title: string, base = 72): number {

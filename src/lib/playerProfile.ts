@@ -3,6 +3,7 @@
 // landmarks and recent form. All of it is computed from the stored game log rather
 // than maintained as running totals, so a re-run of the backfill can never
 // double-count and every number on the page traces back to a game you can open.
+import { realPosition } from "@/lib/position";
 import { EspnSeasons, type EspnSeasonTotals } from "./espnSeason";
 import type { GameStage } from "./gameStage";
 import { isSoccerLeague, type League } from "./leagues";
@@ -1033,8 +1034,9 @@ const POSITION_NAMES: Record<PlayerSport, Record<string, string>> = {
 };
 
 export function positionLabel(sport: PlayerSport | null, position: string | null | undefined): string | null {
-  if (!position) return null;
-  return (sport && POSITION_NAMES[sport][position]) ?? position;
+  const pos = realPosition(position);
+  if (!pos) return null;
+  return (sport && POSITION_NAMES[sport][pos]) ?? pos;
 }
 
 /** Short facts for the profile header: position, number, age, height and weight. */

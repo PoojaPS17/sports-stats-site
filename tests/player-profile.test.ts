@@ -520,3 +520,9 @@ test("boxOnlyShort counts a listed game with no season year, so a description do
   // It adds one however many such games there are.
   assert.equal(buildProfile("nba", [...games(7, 6), orphan, { ...orphan, game_espn_id: "x9" }]).boxOnlyShort, 1);
 });
+
+test("placeholder positions are left off the profile header", async () => {
+  const { positionLabel, playerMeta } = await import("../src/lib/playerProfile");
+  assert.equal(positionLabel("cricket" as never, "UKN"), null);
+  assert.deepEqual(playerMeta("cricket" as never, { position: "UKN", jersey: null }), []);
+});
