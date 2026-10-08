@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { heroLine, type LoadedBlock } from "../src/lib/homeHeroLine";
+import { HERO_FALLBACK_COLOUR, heroLine, heroTeamColours, type LoadedBlock } from "../src/lib/homeHeroLine";
 import type { HomeBlock, LiveBlockData, PlayerFormBlockData, StandingsBlockData, TeamNextBlockData, F1DriversBlockData } from "../src/lib/blockTypes";
 
 const now = new Date("2026-09-30T14:00:00Z");
@@ -60,4 +60,19 @@ test("the live block counts games across sports and the fallback names the count
 test("a fixture on another day is not 'today'", () => {
   const tomorrow: LoadedBlock = { ...arsenalToday, data: { ...(arsenalToday.data as TeamNextBlockData), next: [{ ...(arsenalToday.data as TeamNextBlockData).next[0], date: "2026-10-01T14:10:00Z" }] } };
   assert.equal(heroLine([tomorrow], opts).headline, "Your 1 block, 0 live.");
+});
+
+const team = (name: string, color: string | null): LoadedBlock => ({
+  block: block("team-next", `${name}: next three`),
+  data: { team: { name, href: "/x", color }, last: null, next: [] } satisfies TeamNextBlockData,
+});
+
+test("the hero glows with the first two different team colours, in block order", () => {
+  assert.deepEqual(heroTeamColours([liveEmpty, team("Eastmere", "8b1e3f"), team("Coral Coast", "#0E7490"), team("Third", "123456")]), ["#8b1e3f", "#0e7490"]);
+});
+
+test("one team gives its colour twice, a repeated colour is skipped, and no team colour gives the brand blue", () => {
+  assert.deepEqual(heroTeamColours([team("Eastmere", "8b1e3f")]), ["#8b1e3f", "#8b1e3f"]);
+  assert.deepEqual(heroTeamColours([team("A", "8b1e3f"), team("B", "8B1E3F"), team("C", "0e7490")]), ["#8b1e3f", "#0e7490"]);
+  assert.deepEqual(heroTeamColours([liveEmpty, team("India", null), team("Odd", "not-a-colour")]), [HERO_FALLBACK_COLOUR, HERO_FALLBACK_COLOUR]);
 });

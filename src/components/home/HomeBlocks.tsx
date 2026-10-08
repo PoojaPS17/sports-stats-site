@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditionContext } from "@/lib/editions";
 import type { HomeBlock } from "@/lib/blockTypes";
-import { heroLine, type LoadedBlock } from "@/lib/homeHeroLine";
+import { heroLine, heroTeamColours, type LoadedBlock } from "@/lib/homeHeroLine";
 import { addBlock, applyHomeAttribute, clearSetup, decodeSetup, isSetup, moveBlock, newSetup, readSetup, removeBlock, reorderBlocks, SETUP_EVENT, writeSetup, type HomeSetup } from "@/lib/homeSetup";
 import { BlockFrame } from "./BlockFrame";
 import { BlockPalette } from "./BlockPalette";
@@ -99,7 +99,7 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
           <HomeBuilder ctx={ctx} initial={setup} onClose={() => setEditing(false)} />
         </section>
       ) : (
-        <BuiltHero setup={setup} headline={line.headline} sub={line.sub} liveCount={line.liveCount} onEdit={() => setEditing(true)} />
+        <BuiltHero setup={setup} headline={line.headline} sub={line.sub} liveCount={line.liveCount} colours={heroTeamColours(loaded)} onEdit={() => setEditing(true)} />
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
