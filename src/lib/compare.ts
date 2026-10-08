@@ -4,7 +4,8 @@
 import { pool } from "./db";
 import { hasTies, isCricketLeague, type League } from "./leagues";
 import { countRegularGames } from "./compareGames";
-import { trunc2 } from "./cricketFormat";
+import { highScoreText, trunc2 } from "./cricketFormat";
+import { playerTeamIdSql } from "./playerTeamSql";
 import { strikeRateTile } from "./cricketRecorded";
 import { playerSport } from "./playerProfile";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
@@ -292,7 +293,7 @@ async function getPlayerProfile(league: League, slug: string): Promise<PlayerPro
     `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.position, p.jersey, p.age, p.height,
             t.name as team_name, t.slug as team_slug, t.color as team_color, t.logo_url as team_logo
      from players p
-     left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+     left join teams t on t.league = p.league and t.espn_id = ${playerTeamIdSql("p")}
      where p.league = $1 and p.slug = $2 and ${notPseudoAthleteSql()}`,
     [league, slug]
   );
@@ -342,6 +343,12 @@ function strikeRateMetric(a: CricketCareerStats | null, b: CricketCareerStats | 
   return { ...m, aText: side(a, m.aText), bText: side(b, m.bText) };
 }
 
+// The highest score keeps its asterisk when the innings was not out ("254*"); the bar still compares the runs.
+function highestScoreMetric(a: CricketCareerStats | null, b: CricketCareerStats | null): Metric {
+  const m = metric("Highest score", a?.highestScore ?? null, b?.highestScore ?? null);
+  return { ...m, aText: a ? highScoreText(a.highestScore, a.highestScoreNotOut, "—") : m.aText, bText: b ? highScoreText(b.highestScore, b.highestScoreNotOut, "—") : m.bText };
+}
+
 export function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | null, league?: League): MetricGroup[] {
   const g = (k: keyof CricketCareerStats) => [a?.[k] ?? null, b?.[k] ?? null] as [number | null, number | null];
   return [
@@ -358,7 +365,7 @@ export function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStat
         metric("Runs", ...g("runs")),
         metric("Average", ...g("average"), { digits: 2, truncate: true }),
         strikeRateMetric(a, b),
-        metric("Highest score", ...g("highestScore")),
+        highestScoreMetric(a, b),
         metric("Hundreds", ...g("hundreds")),
         metric("Fifties", ...g("fifties")),
         metric("Not outs", ...g("notOuts"), { noBar: true }),

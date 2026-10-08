@@ -56,7 +56,7 @@ after(async () => {
 });
 
 const career = (over: Partial<CricketCareerStats> = {}): CricketCareerStats => ({
-  matches: 146, inningsBatted: 144, runs: 6433, ballsFaced: 7000, inningsWithBalls: 144, notOuts: 10, hundreds: 16, fifties: 37, highestScore: 200,
+  matches: 146, inningsBatted: 144, runs: 6433, ballsFaced: 7000, inningsWithBalls: 144, notOuts: 10, hundreds: 16, fifties: 37, highestScore: 200, highestScoreNotOut: false,
   average: 48.01, strikeRate: 86.76, inningsBowled: 5, overs: 20, runsConceded: 100, wickets: 3, economy: 5, fiveWicketHauls: 0, catches: 4, ...over,
 });
 

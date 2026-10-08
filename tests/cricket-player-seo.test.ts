@@ -15,6 +15,7 @@ const career = (over: Partial<CricketCareerStats> = {}): CricketCareerStats => (
   hundreds: 8,
   fifties: 55,
   highestScore: 113,
+  highestScoreNotOut: false,
   average: 38.67,
   strikeRate: 131.2,
   inningsBowled: 26,

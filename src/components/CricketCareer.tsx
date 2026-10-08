@@ -3,7 +3,7 @@ import { SectionHeader } from "./SectionHeader";
 import { CricketSplitTabs } from "./CricketSplitTabs";
 import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL } from "@/lib/queries";
 import { cricketCareerNote } from "@/lib/cricketCareerNote";
-import { trunc2 } from "@/lib/cricketFormat";
+import { highScoreText, trunc2 } from "@/lib/cricketFormat";
 import { NOT_RECORDED, strikeRateTile } from "@/lib/cricketRecorded";
 import type { League, CricketCareerStats, CricketSplitDimension, CricketSplitRow } from "@/lib/queries";
 
@@ -81,7 +81,7 @@ export function CricketCareer({
               <Stat label="Matches" value={String(career.matches)} />
               <Stat label="Innings" value={String(career.inningsBatted)} />
               <Stat label="Runs" value={String(career.runs)} />
-              <Stat label="Highest" value={career.highestScore === null ? "-" : String(career.highestScore)} />
+              <Stat label="Highest" value={highScoreText(career.highestScore, career.highestScoreNotOut)} />
               <Stat label="Average" value={trunc2(career.average)} />
               <Stat label="Strike Rate" value={strikeRate.value} note={strikeRate.note} />
               <Stat label="100s" value={String(career.hundreds)} />
