@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { paletteGroups } from "@/lib/blockCatalogue";
 import type { EditionContext } from "@/lib/editions";
 import type { HomeBlock } from "@/lib/blockTypes";
-import { searchResultToBlock } from "@/lib/followBlocks";
+import { searchResultsToPalette, type PaletteResult } from "@/lib/followBlocks";
 import type { SearchResult } from "@/lib/queries";
 
 // The "Add more blocks" palette: grouped chips plus a search box for any team, player or
@@ -12,7 +12,7 @@ import type { SearchResult } from "@/lib/queries";
 // and, inside a dialog, from the built page's "+ Add another block".
 export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: EditionContext; existing: Set<string>; onPick: (block: HomeBlock) => void; dark?: boolean }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<HomeBlock[]>([]);
+  const [results, setResults] = useState<PaletteResult[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,11 +23,11 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
       return;
     }
     const id = window.setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      fetch(`/api/search?q=${encodeURIComponent(q)}&fold=1`)
         .then((r) => r.json())
         .then((d: { results: SearchResult[] }) => {
           if (cancelled) return;
-          setResults(d.results.map(searchResultToBlock).filter((b): b is HomeBlock => b !== null).slice(0, 6));
+          setResults(searchResultsToPalette(d.results, 6));
         })
         .catch(() => {
           if (!cancelled) setResults([]);
@@ -39,8 +39,8 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
     };
   }, [query]);
 
-  const chip = (b: HomeBlock) => {
-    const on = existing.has(b.id);
+  const chip = (b: HomeBlock, ids: string[] = [b.id]) => {
+    const on = ids.some((id) => existing.has(id));
     return (
       <button
         key={b.id}
@@ -67,7 +67,7 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
       {paletteGroups(ctx).map((g) => (
         <div key={g.name} className="flex gap-3">
           <span className={`w-[74px] shrink-0 pt-2 text-[11px] font-bold uppercase tracking-[0.12em] ${dark ? "text-[var(--mast-muted)]" : "text-[var(--text-faint)]"}`}>{g.name}</span>
-          <div className="flex flex-wrap gap-2">{g.blocks.map(chip)}</div>
+          <div className="flex flex-wrap gap-2">{g.blocks.map((b) => chip(b))}</div>
         </div>
       ))}
       <label className="flex flex-col gap-2">
@@ -82,7 +82,7 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
           }`}
         />
       </label>
-      {results.length > 0 && <div className="flex flex-wrap gap-2">{results.map(chip)}</div>}
+      {results.length > 0 && <div className="flex flex-wrap gap-2">{results.map((r) => chip(r.block, r.ids))}</div>}
     </div>
   );
 }
