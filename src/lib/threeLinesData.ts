@@ -17,15 +17,15 @@ import { cricketFacts, gameScope, teamStreakFacts, type CricketInningsRow } from
 
 const NON_CRICKET = ALL_LEAGUES.filter((l) => !isCricketLeague(l));
 
-/** Streaks for the teams that played a counted game in the last FRESH_HOURS. */
-export async function readTeamStreakFacts(): Promise<LineFact[]> {
+/** Streaks for the teams that played a counted game in the last `hours` (default FRESH_HOURS). */
+export async function readTeamStreakFacts(hours: number = FRESH_HOURS): Promise<LineFact[]> {
   const { rows: recent } = await pool.query<{ league: League; season_year: number; team: string }>(
     `select distinct g.league, g.season_year, t.team
      from games g
      cross join lateral (values (g.home_team_espn_id), (g.away_team_espn_id)) as t(team)
      where g.league = any($1) and g.completed and g.season_year is not null
        and g.date > now() - make_interval(hours => $2) and g.date <= now()`,
-    [NON_CRICKET, FRESH_HOURS]
+    [NON_CRICKET, hours]
   );
   const groups = new Map<string, { league: League; season: number; teams: string[] }>();
   for (const r of recent) {
@@ -98,8 +98,8 @@ const toRow = (r: RawInnings): CricketInningsRow => ({
   at: new Date(r.at),
 });
 
-/** Hundreds and five-fors from matches that ended in the window. */
-export async function readCricketFacts(): Promise<LineFact[]> {
+/** Every hundred and five-wicket innings from matches that ended in the last `hours`, as stored. */
+export async function readCricketRows(hours: number = FRESH_HOURS, limit = 30): Promise<CricketInningsRow[]> {
   const [archived, series] = await Promise.all([
     pool.query<RawInnings>(
       `select g.league, g.espn_id as match_id, inn.n as innings_no, pgs.player_espn_id as player_id, p.name as player_name,
@@ -119,8 +119,8 @@ export async function readCricketFacts(): Promise<LineFact[]> {
          and ${ENDED_AT} > now() - make_interval(hours => $2) and ${ENDED_AT} <= now()
          and ((inn.j->'batting'->>'runs')::int >= 100 or (inn.j->'bowling'->>'wickets')::int >= 5)
        order by at desc
-       limit 30`,
-      [CRICKET_LEAGUES, FRESH_HOURS]
+       limit ${Math.trunc(limit)}`,
+      [CRICKET_LEAGUES, hours]
     ),
     pool.query<RawInnings>(
       `select 'cricket' as league, m.espn_id as match_id, inn.n as innings_no, s.player_espn_id as player_id, s.player_name,
@@ -138,11 +138,16 @@ export async function readCricketFacts(): Promise<LineFact[]> {
          and (m.home->>'id' = s.team_espn_id or m.away->>'id' = s.team_espn_id)
          and ((inn.j->'batting'->>'runs')::int >= 100 or (inn.j->'bowling'->>'wickets')::int >= 5)
        order by m.date desc
-       limit 30`,
-      [FRESH_HOURS, CRICKET_LEAGUES]
+       limit ${Math.trunc(limit)}`,
+      [hours, CRICKET_LEAGUES]
     ),
   ]);
-  return cricketFacts([...archived.rows, ...series.rows].map(toRow));
+  return [...archived.rows, ...series.rows].map(toRow);
+}
+
+/** Hundreds and five-fors from matches that ended in the window. */
+export async function readCricketFacts(hours: number = FRESH_HOURS, limit = 30): Promise<LineFact[]> {
+  return cricketFacts(await readCricketRows(hours, limit));
 }
 
 /** Every candidate fact. A family whose read fails contributes nothing rather than failing the page. */
