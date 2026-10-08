@@ -113,7 +113,8 @@ export function extractCricketMatchStats(summary: any): { venue: string | null; 
           const boundariesKnown = (team?.boundaries ?? 0) > 0 || (team?.runs ?? 0) < 50;
           entry.batting = {
             runs: get("runs"),
-            ballsFaced: ballsKnown ? ballsFaced : null,
+            // Runs off no balls is a batter the scorers gave no balls inside an otherwise recorded card: not a zero.
+            ballsFaced: ballsKnown && !(ballsFaced === 0 && get("runs") > 0) ? ballsFaced : null,
             fours: boundariesKnown ? get("fours") : null,
             sixes: boundariesKnown ? get("sixes") : null,
             notOut: get("notouts") > 0,

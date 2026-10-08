@@ -4,13 +4,16 @@ import { CricketSplitTabs } from "./CricketSplitTabs";
 import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL } from "@/lib/queries";
 import { cricketCareerNote } from "@/lib/cricketCareerNote";
 import { trunc2 } from "@/lib/cricketFormat";
+import { NOT_RECORDED, strikeRateTile } from "@/lib/cricketRecorded";
 import type { League, CricketCareerStats, CricketSplitDimension, CricketSplitRow } from "@/lib/queries";
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, note }: { label: string; value: string; /** Under the label: what the figure covers when it is not all of the player's innings. */ note?: string | null }) {
   return (
     <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-center">
-      <p className="text-lg font-extrabold tabular-nums">{value}</p>
+      {/* "not recorded" is a sentence, not a figure: smaller, and not bold, so it does not read as a result. */}
+      <p className={value === NOT_RECORDED ? "py-1 text-xs font-semibold text-[var(--text-muted)]" : "text-lg font-extrabold tabular-nums"}>{value}</p>
       <p className="text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{label}</p>
+      {note && <p className="mt-0.5 text-[0.6rem] leading-tight text-[var(--text-muted)]">{note}</p>}
     </div>
   );
 }
@@ -63,6 +66,7 @@ export function CricketCareer({
   career: CricketCareerStats;
   splits: Record<CricketSplitDimension, CricketSplitRow[]>;
 }) {
+  const strikeRate = strikeRateTile(career.strikeRate, career.inningsWithBalls, career.inningsBatted, trunc2);
   return (
     <>
       <section>
@@ -79,7 +83,7 @@ export function CricketCareer({
               <Stat label="Runs" value={String(career.runs)} />
               <Stat label="Highest" value={career.highestScore === null ? "-" : String(career.highestScore)} />
               <Stat label="Average" value={trunc2(career.average)} />
-              <Stat label="Strike Rate" value={trunc2(career.strikeRate)} />
+              <Stat label="Strike Rate" value={strikeRate.value} note={strikeRate.note} />
               <Stat label="100s" value={String(career.hundreds)} />
               <Stat label="50s" value={String(career.fifties)} />
             </div>

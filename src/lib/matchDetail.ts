@@ -2,6 +2,7 @@
    JSON, same justification the scraper scripts use for the same API responses */
 import type { League } from "./queries";
 import { cricketSummaryPaths, fetchCricketSummaryVia } from "./cricketSummary";
+import { maskUnrecorded } from "./cricketRecorded";
 
 // Competitions fed by ESPN; the international formats (Cricsheet) have no live source.
 const SPORT_PATH: Partial<Record<League, string>> = {
@@ -218,7 +219,8 @@ function decodeEntities(text: string): string {
 // entries for the same player; the innings number keeps them apart on the page.
 export function parseCricketScorecard(data: any): CricketTeamScorecard[] {
   const competitors: any[] = data.header?.competitions?.[0]?.competitors ?? [];
-  return (data.rosters ?? []).map((r: any) => {
+  // Balls faced and boundaries ESPN never recorded come back as 0: written "-" (lib/cricketRecorded.ts), not as a zero.
+  return maskUnrecorded((data.rosters ?? []).map((r: any) => {
     const battingRows: CricketInningsRow[] = [];
     const bowlingRows: CricketInningsRow[] = [];
 
@@ -284,7 +286,7 @@ export function parseCricketScorecard(data: any): CricketTeamScorecard[] {
       bowlingRows,
       innings,
     };
-  });
+  }));
 }
 
 /* ------------------------------------------------------------------------ */

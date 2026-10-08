@@ -2,6 +2,7 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import type { League } from "@/lib/queries";
 import type { CricketTeamScorecard, CricketInningsRow, CricketInningsTotal } from "@/lib/matchDetail";
+import { UNRECORDED_LEGEND, hasUnrecordedCells, maskUnrecorded } from "@/lib/cricketRecorded";
 
 function ScorecardTable({
   league,
@@ -89,7 +90,9 @@ export interface ScorecardBlock {
 
 // A first-class match has four blocks; a limited-overs match two; a super over adds its own.
 // Reports stored before innings were tracked fall back to one block per team.
-export function scorecardBlocks(scorecard: CricketTeamScorecard[]): ScorecardBlock[] {
+export function scorecardBlocks(stored: CricketTeamScorecard[]): ScorecardBlock[] {
+  // A card stored before unrecorded values were written "-" still shows them that way.
+  const scorecard = maskUnrecorded(stored);
   const tracked = scorecard.some((t) => t.battingRows.some((r) => r.innings !== undefined) || t.bowlingRows.some((r) => r.innings !== undefined));
   if (!tracked) {
     return scorecard
@@ -143,6 +146,7 @@ export function CricketScorecards({ league, scorecard, playerSlugs }: { league: 
           </h3>
           <ScorecardTable league={league} title={b.batting.title} labels={b.batting.labels} rows={b.batting.rows} playerSlugs={playerSlugs} />
           <ScorecardTable league={league} title={b.bowling.title} labels={b.bowling.labels} rows={b.bowling.rows} playerSlugs={playerSlugs} />
+          {hasUnrecordedCells(b.batting.rows, b.batting.labels) && <p className="px-4 pb-3 text-xs text-[var(--text-muted)]">{UNRECORDED_LEGEND}</p>}
         </div>
       ))}
     </>

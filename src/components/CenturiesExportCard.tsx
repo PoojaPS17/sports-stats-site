@@ -4,6 +4,8 @@ import { ExportShell, ExportTitle, ExportTable, EXPORT_ROW_LIMIT } from "./Expor
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
 import { formatGameDate } from "@/lib/gameDay";
 import { inningsStrikeRate } from "@/lib/cricketFormat";
+import { UNRECORDED_CELL, UNRECORDED_LEGEND } from "@/lib/cricketRecorded";
+import { CARD } from "@/lib/exportTheme";
 
 type Century = Awaited<ReturnType<typeof import("@/lib/queries").getCricketCenturies>>[number];
 
@@ -25,15 +27,18 @@ export function CenturiesExportCard({ league, centuries, title, subtitle }: { le
           cells: [
             teamDisplayName(c.team_name),
             { text: `${c.runs}${c.not_out ? "*" : ""}`, tone: "strong", bold: true },
-            String(c.balls_faced ?? "-"),
-            String(c.fours ?? "-"),
-            String(c.sixes ?? "-"),
-            inningsStrikeRate(c.runs, c.balls_faced),
+            String(c.balls_faced ?? UNRECORDED_CELL),
+            String(c.fours ?? UNRECORDED_CELL),
+            String(c.sixes ?? UNRECORDED_CELL),
+            inningsStrikeRate(c.runs, c.balls_faced, UNRECORDED_CELL),
             `vs ${teamDisplayName(c.opponent_name)}`,
             formatGameDate(c.date, league, { month: "short", day: "numeric", year: "numeric" }, c.local_date),
           ],
         }))}
       />
+      {centuries.slice(0, EXPORT_ROW_LIMIT).some((c) => c.balls_faced === null || c.fours === null) && (
+        <div style={{ marginTop: 8, fontSize: 11, color: CARD.textMuted }}>{UNRECORDED_LEGEND}</div>
+      )}
     </ExportShell>
   );
 }

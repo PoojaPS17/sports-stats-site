@@ -100,6 +100,9 @@ export function CricketSeriesLeaders({ stats, teams }: { stats: CricketSeriesSta
           </div>
         )}
       </div>
+      {stats.batting.some((b) => b.strikeRate === null) && (
+        <p className="text-xs text-[var(--text-muted)]">A dash under SR means balls faced were not recorded for at least one of that player&apos;s innings.</p>
+      )}
       {(stats.highestScore || stats.bestBowling) && (
         <p className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-[var(--text-muted)]">
           {stats.highestScore && highlight("Highest score", stats.highestScore)}

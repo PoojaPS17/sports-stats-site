@@ -937,7 +937,10 @@ export interface CricketCareerStats {
   matches: number;
   inningsBatted: number;
   runs: number;
+  /** Balls faced over the innings that recorded them (`inningsWithBalls` of `inningsBatted`); not a career total unless those are equal. */
   ballsFaced: number;
+  /** Innings with balls faced recorded. Older scorecards have none: ESPN's 0 for an unrecorded value is not counted. */
+  inningsWithBalls: number;
   notOuts: number;
   hundreds: number;
   fifties: number;
@@ -952,6 +955,10 @@ export interface CricketCareerStats {
   fiveWicketHauls: number;
   catches: number;
 }
+
+// An innings whose balls faced were recorded: a stored number, and not runs off no balls (a batter the scorers gave
+// no balls inside an otherwise recorded card, written 0 by the feed, is as unrecorded as the whole card).
+const BALLS_RECORDED = `(inn->'batting'->>'ballsFaced') is not null and ((inn->'batting'->>'ballsFaced')::int > 0 or (inn->'batting'->>'runs')::int = 0)`;
 
 // One row per innings a player batted or bowled in. A Test stores its innings as a
 // list beside the match totals; a limited-overs match is its own single innings.
@@ -1020,8 +1027,9 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
        count(distinct pgs.game_espn_id) as matches,
        count(*) filter (where inn->'batting' is not null) as innings_batted,
        coalesce(sum((inn->'batting'->>'runs')::int), 0) as runs,
-       coalesce(sum((inn->'batting'->>'ballsFaced')::int), 0) as balls_faced,
-       coalesce(sum((inn->'batting'->>'runs')::int) filter (where inn->'batting'->>'ballsFaced' is not null), 0) as runs_with_balls,
+       coalesce(sum((inn->'batting'->>'ballsFaced')::int) filter (where ${BALLS_RECORDED}), 0) as balls_faced,
+       coalesce(sum((inn->'batting'->>'runs')::int) filter (where ${BALLS_RECORDED}), 0) as runs_with_balls,
+       count(*) filter (where ${BALLS_RECORDED}) as innings_with_balls,
        count(*) filter (where (inn->'batting'->>'notOut')::boolean is true) as not_outs,
        count(*) filter (where (inn->'batting'->>'runs')::int >= 100) as hundreds,
        count(*) filter (where (inn->'batting'->>'runs')::int >= 50 and (inn->'batting'->>'runs')::int < 100) as fifties,
@@ -1055,12 +1063,14 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
     inningsBatted,
     runs,
     ballsFaced,
+    inningsWithBalls: Number(r.innings_with_balls),
     notOuts,
     hundreds: Number(r.hundreds),
     fifties: Number(r.fifties),
     highestScore: r.highest_score === null ? null : Number(r.highest_score),
     average: dismissals > 0 ? runs / dismissals : null,
-    // Only over the innings whose balls faced were recorded; older scorecards have none.
+    // Only over the innings whose balls faced were recorded (`inningsWithBalls`); older scorecards have none, and
+    // the page says "not recorded" or "over n of m innings" rather than show this beside a full runs total.
     strikeRate: ballsFaced > 0 ? (Number(r.runs_with_balls) / ballsFaced) * 100 : null,
     inningsBowled: Number(r.innings_bowled),
     overs,
@@ -1195,15 +1205,17 @@ export interface CenturyRow {
 // computed fresh from the backfilled per-match batting figures — not a maintained
 // list, so it's always consistent with whatever games are actually in the database.
 // `limit` keeps the newest N (every row carries `total`, the count before the limit).
+// Balls, fours and sixes come back null when unrecorded (the feed's 0): no ball faced for a hundred, and a hundred
+// with neither a four nor a six, are the scorers' gaps, not figures.
 export async function getCricketCenturies(league: League, limit: number | null = null): Promise<CenturyRow[]> {
   const { rows } = await pool.query(
     `select p.espn_id as player_espn_id, p.name as player_name, p.slug as player_slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
             t.name as team_name, t.slug as team_slug, t.logo_url as team_logo, t.color as team_color,
             ot.name as opponent_name, ot.slug as opponent_slug,
             (inn->'batting'->>'runs')::int as runs,
-            (inn->'batting'->>'ballsFaced')::int as balls_faced,
-            (inn->'batting'->>'fours')::int as fours,
-            (inn->'batting'->>'sixes')::int as sixes,
+            case when (inn->'batting'->>'ballsFaced')::int > 0 then (inn->'batting'->>'ballsFaced')::int end as balls_faced,
+            case when (inn->'batting'->>'fours')::int + (inn->'batting'->>'sixes')::int > 0 then (inn->'batting'->>'fours')::int end as fours,
+            case when (inn->'batting'->>'fours')::int + (inn->'batting'->>'sixes')::int > 0 then (inn->'batting'->>'sixes')::int end as sixes,
             coalesce((inn->'batting'->>'notOut')::boolean, false) as not_out,
             g.date, g.local_date::text as local_date, g.venue, g.round, g.status_summary,
             (count(*) over ())::int as total

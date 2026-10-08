@@ -1,6 +1,7 @@
 // Top performers from the parsed scorecard: the Player of the Match's best line (or the match's top
 // scorer) for the large card, the leading batter and bowler of each innings for the small ones.
 import type { CricketInningsRow, CricketTeamScorecard } from "./matchDetail";
+import { maskUnrecorded } from "./cricketRecorded";
 
 export interface Performer {
   athleteId: string;
@@ -61,7 +62,8 @@ const strip = (p: Bat | Bowl): Performer => ({ athleteId: p.athleteId, name: p.n
  * scorecard does not have); `small` is each innings' leading batter then bowler, skipping the large card's
  * player, four at most.
  */
-export function topPerformers(scorecard: CricketTeamScorecard[], potm: string | null): { large: Performer | null; small: Performer[] } {
+export function topPerformers(stored: CricketTeamScorecard[], potm: string | null): { large: Performer | null; small: Performer[] } {
+  const scorecard = maskUnrecorded(stored); // an unrecorded "0 balls" is a dash here, so the detail line omits it
   const bats: Bat[] = [];
   const bowls: Bowl[] = [];
   scorecard.forEach((team, t) => {
