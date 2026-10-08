@@ -15,11 +15,11 @@ export function pct(p: number): string {
   return `${Math.round(p * 100)}%`;
 }
 
-// Same tint as the live page's probability cells: blue for good outcomes, red for bad.
+// Same tint as the live page's probability cells: blue for good outcomes, slate for bad.
 function prob(p: number, negative: boolean): ExportCell {
   if (p === 0) return "—";
   const a = 0.05 + Math.min(1, p) * 0.35;
-  return { text: pct(p), bold: p >= 0.5, tone: "strong", background: negative ? `rgba(220, 38, 38, ${a})` : `rgba(29, 78, 216, ${a})` };
+  return { text: pct(p), bold: p >= 0.5, tone: "strong", background: negative ? `rgba(74, 97, 120, ${a})` : `rgba(37, 99, 217, ${a})` };
 }
 
 export function ProjectionTableExportCard({ league, proj, title, subtitle }: { league: League; proj: SeasonProjection; title: string; subtitle: string }) {

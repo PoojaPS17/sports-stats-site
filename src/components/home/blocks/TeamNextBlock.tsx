@@ -23,7 +23,7 @@ function SummaryCard({ name, color, s }: { name: string; color: string | null; s
       {s.form.length > 0 && (
         <div className="mt-3 flex gap-1" role="img" aria-label={`Last ${s.form.length}, oldest first: ${s.form.join(" ")}`}>
           {s.form.map((r, i) => (
-            <span key={i} className={`flex h-[21px] w-[21px] items-center justify-center rounded-md text-[10.5px] font-extrabold text-white shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)] ${r === "W" ? "bg-[#15803d]" : r === "L" ? "bg-[#dc2626]" : "bg-[#64748b]"}`}>
+            <span key={i} className={`flex h-[21px] w-[21px] items-center justify-center rounded-md text-[10.5px] font-extrabold text-white shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)] ${r === "W" ? "bg-[#1b7a43]" : r === "L" ? "bg-[#4a6178]" : "bg-[#7b8fa7]"}`}>
               {r}
             </span>
           ))}

@@ -4,7 +4,7 @@ import type { League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
 import { fmtDate } from "./PlayerStatsShared";
 
-const RESULT_FILL: Record<string, string> = { W: "#10b981", D: "#9ca3af", L: "#f43f5e" };
+const RESULT_FILL: Record<string, string> = { W: "var(--win-fill)", D: "var(--draw-fill)", L: "var(--loss)" };
 
 // Last ten games, oldest to newest: one bar per game for the sport's form figure,
 // coloured by the team's result that day.

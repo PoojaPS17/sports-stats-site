@@ -36,7 +36,7 @@ function pct(p: number): string {
 
 function Prob({ p, negative = false }: { p: number; negative?: boolean }) {
   const strength = Math.min(1, p);
-  const bg = negative ? `rgba(220, 38, 38, ${0.05 + strength * 0.35})` : `rgba(29, 78, 216, ${0.05 + strength * 0.35})`;
+  const bg = negative ? `rgba(74, 97, 120, ${0.05 + strength * 0.35})` : `rgba(37, 99, 217, ${0.05 + strength * 0.35})`;
   return (
     <td className="px-2 py-2 text-right tabular-nums">
       <span className={`inline-block min-w-[3.5rem] rounded-md px-1.5 py-0.5 text-center text-sm ${p >= 0.5 ? "font-bold" : "font-medium"}`} style={{ background: p > 0 ? bg : "transparent" }}>

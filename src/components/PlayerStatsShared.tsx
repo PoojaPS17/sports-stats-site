@@ -38,9 +38,9 @@ export function careerStripStats(profile: PlayerProfile): { label: string; value
 }
 
 const RESULT_CLASS: Record<string, string> = {
-  W: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  W: "bg-[var(--win-tint)] text-[var(--win)]",
   D: "bg-[var(--surface-muted)] text-[var(--text-muted)]",
-  L: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+  L: "bg-[var(--loss-tint)] text-[var(--loss)]",
 };
 
 /** "W 2–1" chip, from the player's side. */
