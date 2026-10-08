@@ -8,8 +8,8 @@ test("blockId is the type alone without params, else the type and the param valu
   assert.equal(blockId("team-next", { team: "arsenal", league: "epl" }), "team-next:epl:arsenal");
 });
 
-test("isBlockType accepts the seven types and nothing else", () => {
-  for (const t of ["live", "team-next", "standings", "series-standings", "player-form", "f1-drivers", "bts"]) assert.equal(isBlockType(t), true);
+test("isBlockType accepts the eight types and nothing else", () => {
+  for (const t of ["live", "team-next", "standings", "series-standings", "player-form", "f1-drivers", "bts", "moments"]) assert.equal(isBlockType(t), true);
   assert.equal(isBlockType("news"), false);
   assert.equal(isBlockType(""), false);
 });
@@ -47,8 +47,27 @@ test("player-form takes a league and a player slug", () => {
   assert.equal(validateBlockParams("player-form", { league: "nba", player: "" }).ok, false);
 });
 
+test("moments takes a list of league:team entries and a whole-seconds since", () => {
+  const since = "1790000000";
+  assert.deepEqual(validateBlockParams("moments", { teams: "epl:arsenal,cricket:6", since }), { ok: true, params: { teams: "epl:arsenal,cricket:6", since } });
+  // Duplicates collapse, order is kept.
+  assert.deepEqual(validateBlockParams("moments", { teams: "epl:arsenal,nba:boston-celtics,epl:arsenal", since }), { ok: true, params: { teams: "epl:arsenal,nba:boston-celtics", since } });
+  for (const teams of ["", "epl", "epl:", ":arsenal", "epl:arsenal:x", "f1:ferrari", "cricket:india", "epl:Arsenal FC", "epl:arsenal,,nba:x"]) {
+    assert.equal(validateBlockParams("moments", { teams, since }).ok, false, teams);
+  }
+  assert.equal(validateBlockParams("moments", { since }).ok, false);
+  for (const bad of ["", "abc", "-5", "1.5", "17900000000000000", "12345678"]) assert.equal(validateBlockParams("moments", { teams: "epl:arsenal", since: bad }).ok, false, bad);
+  assert.equal(validateBlockParams("moments", { teams: "epl:arsenal" }).ok, false);
+});
+
+test("moments names at most twelve teams", () => {
+  const twelve = Array.from({ length: 12 }, (_, i) => `epl:team-${i}`).join(",");
+  assert.equal(validateBlockParams("moments", { teams: twelve, since: "1790000000" }).ok, true);
+  assert.equal(validateBlockParams("moments", { teams: `${twelve},epl:one-more`, since: "1790000000" }).ok, false);
+});
+
 test("cache lifetimes follow the spec and the header carries four times the lifetime as stale window", () => {
-  assert.deepEqual(BLOCK_CACHE_SECONDS, { live: 30, "team-next": 60, standings: 900, "series-standings": 900, "player-form": 900, "f1-drivers": 3600, bts: 3600 });
+  assert.deepEqual(BLOCK_CACHE_SECONDS, { live: 30, "team-next": 60, standings: 900, "series-standings": 900, "player-form": 900, "f1-drivers": 3600, bts: 3600, moments: 120 });
   assert.equal(cacheHeader("live"), "public, s-maxage=30, stale-while-revalidate=120");
   assert.equal(cacheHeader("bts"), "public, s-maxage=3600, stale-while-revalidate=14400");
 });

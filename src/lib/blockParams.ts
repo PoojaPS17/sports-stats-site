@@ -11,7 +11,13 @@ export const BLOCK_CACHE_SECONDS: Record<BlockType, number> = {
   "player-form": 900,
   "f1-drivers": 3600,
   bts: 3600,
+  moments: 120,
 };
+
+/** Teams one moments request may name (a setup holds at most 12 blocks). */
+export const MAX_MOMENT_TEAMS = 12;
+/** How far back moments reach, whatever the visitor's last visit was. */
+export const MOMENTS_LOOKBACK_DAYS = 7;
 
 export function isBlockType(value: string): value is BlockType {
   return (BLOCK_TYPES as readonly string[]).includes(value);
@@ -39,6 +45,21 @@ export function validateBlockParams(type: BlockType, raw: Record<string, string 
       if (league === "cricket") return SIDE_ID.test(team) ? ok({ league, team }) : fail("team must be a cricket side id");
       if (!isLeague(league)) return fail("league must be a competition with teams, or cricket");
       return SLUG.test(team) ? ok({ league, team }) : fail("team must be a team slug");
+    }
+    case "moments": {
+      // teams: "epl:arsenal,cricket:6" (league:slug, or cricket:side-id); since: whole epoch seconds.
+      const since = raw.since ?? "";
+      if (!/^[0-9]{9,11}$/.test(since)) return fail("since must be epoch seconds");
+      const entries = (raw.teams ?? "").split(",");
+      if (entries.length > MAX_MOMENT_TEAMS) return fail(`teams must name at most ${MAX_MOMENT_TEAMS} teams`);
+      const seen = new Set<string>();
+      for (const entry of entries) {
+        const [league = "", team = "", ...rest] = entry.split(":");
+        const check = rest.length === 0 ? validateBlockParams("team-next", { league, team }) : fail("team entry must be league:team");
+        if (!check.ok) return fail(`teams: ${check.error}`);
+        seen.add(`${league}:${team}`);
+      }
+      return ok({ teams: [...seen].join(","), since });
     }
     case "standings": {
       const league = raw.league ?? "";

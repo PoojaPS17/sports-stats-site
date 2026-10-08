@@ -28,6 +28,7 @@ import { groupStandings } from "@/components/StandingsTable";
 import { playerSport, sportProfile } from "./playerProfile";
 import { isGameCalledOff } from "./gameStatus";
 import { teamDisplayName } from "./teamName";
+import { loadMoments, parseTeams } from "./moments";
 
 const NEXT = 3;
 const TABLE_ROWS = 6;
@@ -48,6 +49,8 @@ export async function loadBlock(type: BlockType, params: Record<string, string>)
       return loadF1Drivers();
     case "bts":
       return loadBts();
+    case "moments":
+      return loadMoments(parseTeams(params.teams), Number(params.since));
   }
 }
 

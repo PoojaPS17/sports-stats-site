@@ -149,6 +149,19 @@ export async function getCricketSeriesMatches(seriesEspnId: string): Promise<Cri
   return rows;
 }
 
+/** Finished matches (state "post") any of these sides played that started after `from` and before now, newest first. */
+export async function getCricketSideResults(sideIds: string[], from: Date): Promise<CricketSeriesMatch[]> {
+  if (sideIds.length === 0) return [];
+  const { rows } = await pool.query(
+    `${MATCH_SELECT}
+     where m.status_state = 'post' and m.date > $1 and m.date <= now()
+       and (m.home->>'id' = any($2::text[]) or m.away->>'id' = any($2::text[]))
+     order by m.date desc, m.espn_id`,
+    [from, sideIds]
+  );
+  return rows;
+}
+
 export type TopCricketMatch = CricketSeriesMatch & { views: number };
 
 /** The cricket match pages opened most in a window (`interval` null = ever), counted under the "cricket" marker in game_views (see viewLeague.ts). */
