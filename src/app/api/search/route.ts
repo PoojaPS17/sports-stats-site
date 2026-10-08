@@ -10,6 +10,8 @@ export async function GET(request: Request) {
   const type = searchParams.get("type");
   if (q.length < 2) return NextResponse.json({ results: [] });
 
-  const results = (await search(q, 60)).filter((r) => (!league || r.league === league) && (!type || r.type === type)).slice(0, 8);
+  // fold=1 lists a cricketer or footballer once (his other pages come back in `also`); a league filter needs every page.
+  const fold = searchParams.get("fold") === "1" && !league;
+  const results = (await search(q, 60, { fold })).filter((r) => (!league || r.league === league) && (!type || r.type === type)).slice(0, 8);
   return NextResponse.json({ results }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } });
 }
