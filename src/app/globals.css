@@ -22,7 +22,7 @@
   --tint-2: #dceaf8;
   --final-bg: var(--navy);
   --surface-hover: #f1f7fc;
-  --border: #dde8f2;
+  --border: var(--border-strong); /* option C: one visible card outline everywhere */
   --border-strong: #b3c7db;
   --ctl: #7b8fa7; /* unselected control edges: 3:1 on white and on the page background */
   --text: #102a43;
@@ -152,7 +152,7 @@
     --tint-2: #1f4373;
     --final-bg: #16345a;
     --surface-hover: #1b3c66;
-    --border: #25446d;
+    --border: var(--border-strong);
     --border-strong: #3b6190;
     --ctl: #6a88ae;
     --text: #eaf2fb;
@@ -220,7 +220,7 @@
   --tint-2: #1f4373;
   --final-bg: #16345a;
   --surface-hover: #1b3c66;
-  --border: #25446d;
+  --border: var(--border-strong);
   --border-strong: #3b6190;
   --ctl: #6a88ae;
   --text: #eaf2fb;
@@ -622,7 +622,7 @@
   a.card:hover,
   .card-link:hover,
   .player-grid > a:hover {
-    border-color: var(--border-strong);
+    border-color: var(--sig-ink); /* rest edge is now --border-strong, so hover goes to the interaction blue */
     box-shadow: var(--shadow-pop);
     transform: translateY(-2px);
   }
