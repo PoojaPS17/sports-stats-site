@@ -9,6 +9,7 @@ import { BlockFrame } from "./BlockFrame";
 import { BlockPalette } from "./BlockPalette";
 import { BuiltHero } from "./BuiltHero";
 import { HomeBuilder } from "./HomeBuilder";
+import { MomentsMissed } from "./MomentsMissed";
 import { renderBlock } from "./blocks";
 import { useBlocksData } from "./useBlocksData";
 import { useDragReorder } from "./useDragReorder";
@@ -101,6 +102,8 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
       ) : (
         <BuiltHero setup={setup} headline={line.headline} sub={line.sub} liveCount={line.liveCount} colours={heroTeamColours(loaded)} onEdit={() => setEditing(true)} />
       )}
+
+      {!editing && <MomentsMissed blocks={blocks} />}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {blocks.map((b, i) => (

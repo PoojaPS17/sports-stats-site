@@ -12,6 +12,7 @@ const TAG: Record<HomeBlock["type"], string> = {
   "player-form": "Last 5",
   "f1-drivers": "Formula 1",
   bts: "Desk",
+  moments: "Catch-up",
 };
 
 // One block's chrome on the built page: drag handle, name in the display face, a tag, the

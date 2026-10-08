@@ -26,5 +26,8 @@ export function renderBlock(block: HomeBlock, state: BlockState | undefined): Re
       return <F1DriversBlock data={data as F1DriversBlockData} />;
     case "bts":
       return <BtsBlock data={data as BtsBlockData} />;
+    case "moments":
+      // Drawn by MomentsMissed above the grid, never as a block of the setup.
+      return null;
   }
 }

@@ -40,7 +40,8 @@ export function normaliseBlocks(input: unknown): HomeBlock[] | null {
   for (const item of input) {
     if (!item || typeof item !== "object") continue;
     const { type, params, label } = item as { type?: unknown; params?: unknown; label?: unknown };
-    if (typeof type !== "string" || !isBlockType(type)) continue;
+    // "moments" is built from the team blocks and the last visit on every load: it is not something to save or share.
+    if (typeof type !== "string" || !isBlockType(type) || type === "moments") continue;
     if (!params || typeof params !== "object") continue;
     const raw = Object.fromEntries(Object.entries(params as Record<string, unknown>).map(([k, v]) => [k, typeof v === "string" ? v : undefined]));
     const check = validateBlockParams(type, raw);

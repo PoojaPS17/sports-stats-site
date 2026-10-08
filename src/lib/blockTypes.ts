@@ -6,7 +6,7 @@ import type { CricketSeriesMatch } from "./cricketSeries";
 import type { TennisMatch } from "./tennis";
 import type { ArtPalette } from "./beyondTheScoreline";
 
-export const BLOCK_TYPES = ["live", "team-next", "standings", "series-standings", "player-form", "f1-drivers", "bts"] as const;
+export const BLOCK_TYPES = ["live", "team-next", "standings", "series-standings", "player-form", "f1-drivers", "bts", "moments"] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
 export interface HomeBlock {
@@ -107,7 +107,34 @@ export interface BtsBlockData {
   articles: { slug: string; title: string; number: string; caption: string; palette: ArtPalette; sport: string; href: string }[];
 }
 
-export type BlockPayload = LiveBlockData | TeamNextBlockData | StandingsBlockData | PlayerFormBlockData | F1DriversBlockData | BtsBlockData;
+/** One finished result from a followed team's side: the team's own score first, the opponent named, a link to the game. */
+export interface Moment {
+  /** `league/espn_id` (cricket: `cricket/espn_id`): one per game however many followed teams played in it. */
+  id: string;
+  /** ISO instant of the start of the game. */
+  date: string;
+  /** The followed team the result is told from. */
+  team: string;
+  opponent: string;
+  home: boolean;
+  /** "2-1" from the team's side, or "185/4 v 180/9" for cricket; null when the feed carries no score line. */
+  score: string | null;
+  result: "W" | "L" | "D";
+  /** The result in words, cricket only: "India beat Australia by 5 wickets". */
+  summary: string | null;
+  href: string;
+  league: string;
+}
+
+/** What happened to the visitor's teams since they last looked: `moments` is the newest few of `total`. */
+export interface MomentsBlockData {
+  /** ISO instant the window starts at: the visit time, or seven days ago when that is older. */
+  since: string;
+  total: number;
+  moments: Moment[];
+}
+
+export type BlockPayload = LiveBlockData | TeamNextBlockData | StandingsBlockData | PlayerFormBlockData | F1DriversBlockData | BtsBlockData | MomentsBlockData;
 
 /** What the route returns: `block` is null when the entity no longer exists. */
 export interface BlockResponse {
