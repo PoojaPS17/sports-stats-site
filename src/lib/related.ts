@@ -5,6 +5,7 @@
 import { realPosition } from "@/lib/position";
 import { countedMeetingSql } from "./analytics";
 import { pool } from "./db";
+import { isPlaceholderTeamSql } from "./playoffSeries";
 import { isSoccerLeague, type League } from "./leagues";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { ON_ROSTER_SQL } from "./queries";
@@ -106,7 +107,7 @@ export async function getCurrentSeasonTeams(league: League): Promise<TeamChip[]>
   const { rows } = await pool.query(
     `select t.espn_id, t.slug, t.name, t.logo_url, t.color
      from teams t
-     where t.league = $1 and exists (
+     where t.league = $1 and not ${isPlaceholderTeamSql("t")} and exists (
        select 1 from games g where g.league = t.league and (g.home_team_espn_id = t.espn_id or g.away_team_espn_id = t.espn_id)
          and g.season_year = (select max(season_year) from games where league = t.league)
      )

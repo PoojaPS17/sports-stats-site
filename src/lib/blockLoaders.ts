@@ -26,7 +26,8 @@ import { topBands } from "./standingsZones";
 import { usesRecordOrder } from "./standingsOrder";
 import { groupStandings } from "@/components/StandingsTable";
 import { playerSport, sportProfile } from "./playerProfile";
-import { isGameCalledOff } from "./gameStatus";
+import { isGameCalledOff, isTimeTbd } from "./gameStatus";
+import { formatGameDate } from "./gameDay";
 import { teamDisplayName } from "./teamName";
 import { loadMoments, parseTeams } from "./moments";
 import { PRESEASON_LABEL } from "./standingsSeasons";
@@ -88,6 +89,8 @@ function fixtureFromGame(league: League, g: GameRow, teamEspnId: string): Fixtur
     live: g.status_state === "in",
     status: g.status_state === "in" ? g.status_detail : null,
     league,
+    // A placeholder clock time would read as a real one: the day and "TBD" instead.
+    ...(isTimeTbd(g, league) ? { tbd: `${formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" }, g.local_date)} · TBD` } : {}),
     ...(g.season_type === 1 ? { preseason: true } : {}),
   };
 }

@@ -13,6 +13,9 @@ import { getMatchContext } from "@/lib/matchContext";
 import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
+import { NotPlayedGame } from "@/components/NotPlayedGame";
+import { getNotNeeded } from "@/lib/playoffSeriesData";
+import { isPlaceholderName, notPlayedText } from "@/lib/playoffSeries";
 import { CricketMatchHero } from "@/components/CricketMatchHero";
 import { CricketMatchStory } from "@/components/CricketMatchStory";
 import { deriveMatchStory, fetchCricketBallByBall, shouldFetchStory } from "@/lib/cricketBalls";
@@ -102,6 +105,13 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const game = await getGameByEspnId(league, id);
   if (!game) return {};
+  // A game its series no longer needs is a page that says so, kept out of search results.
+  const notNeeded = await getNotNeeded(game);
+  if (notNeeded) {
+    const { first, second } = gameSides(league, game);
+    const sides = `${teamDisplayName(first)} vs ${teamDisplayName(second)}`;
+    return pageMeta(`${sides}: not played`, `${notPlayedText(notNeeded)}. ${sides} was only scheduled in case the series went the distance.`, `/${league}/games/${id}`, { noindex: true });
+  }
   const date = formatGameDate(game.date, league, { month: "short", day: "numeric", year: "numeric" }, game.local_date);
   // The NFL and NBA name the visitors first ("Chiefs at Bills"); football and cricket
   // name the home side first.
@@ -134,6 +144,20 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
 
   const game = await getGameByEspnId(league, id);
   if (!game) notFound();
+
+  const notNeeded = await getNotNeeded(game);
+  if (notNeeded) {
+    const matchName = matchupLabel(league, game);
+    return (
+      <div className="flex flex-col gap-6">
+        <Breadcrumbs items={[{ label: LEAGUE_LABEL[league], href: `/${league}` }, { label: "Scores", href: `/${league}` }, { label: matchName }]} />
+        <h1 className="sr-only">
+          {matchName}, {LEAGUE_LABEL[league]}: not played
+        </h1>
+        <NotPlayedGame league={league} game={game} notNeeded={notNeeded} />
+      </div>
+    );
+  }
 
   const isCricket = isCricketLeague(league);
   const [loaded, context, balls, seriesMatch] = await Promise.all([
@@ -205,6 +229,10 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const teamNames: Record<string, string> = { [game.home_team_espn_id]: teamDisplayName(game.home_name), [game.away_team_espn_id]: teamDisplayName(game.away_name) };
   const nextMatch = seriesMatch ? ((await getCricketSeriesMatches(seriesMatch.series_espn_id)).find((m) => m.espn_id !== seriesMatch.espn_id && m.date > seriesMatch.date && m.status_state === "pre") ?? null) : null;
 
+  // A "Winner of CLE-CHW" side is no team yet: nothing links to a page for it.
+  const homeTeam = !isPlaceholderName(game.home_name);
+  const awayTeam = !isPlaceholderName(game.away_name);
+  const bothTeams = homeTeam && awayTeam;
   return (
     <div className="flex flex-col gap-6">
       <ViewTracker league={league} gameId={id} />
@@ -396,19 +424,19 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           {
             title: "Teams",
             links: [
-              { href: `/${league}/teams/${game.home_slug}`, label: teamDisplayName(game.home_name), sub: "Schedule, results and roster", image: game.home_logo, imageName: teamDisplayName(game.home_name) },
-              { href: `/${league}/teams/${game.away_slug}`, label: teamDisplayName(game.away_name), sub: "Schedule, results and roster", image: game.away_logo, imageName: teamDisplayName(game.away_name) },
+              ...(homeTeam ? [{ href: `/${league}/teams/${game.home_slug}`, label: teamDisplayName(game.home_name), sub: "Schedule, results and roster", image: game.home_logo, imageName: teamDisplayName(game.home_name) }] : []),
+              ...(awayTeam ? [{ href: `/${league}/teams/${game.away_slug}`, label: teamDisplayName(game.away_name), sub: "Schedule, results and roster", image: game.away_logo, imageName: teamDisplayName(game.away_name) }] : []),
               ...(game.season_year
                 ? [
-                    { href: `/${league}/teams/${game.home_slug}/${game.season_year}`, label: `${teamDisplayName(game.home_name)} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
-                    { href: `/${league}/teams/${game.away_slug}/${game.season_year}`, label: `${teamDisplayName(game.away_name)} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" },
+                    ...(homeTeam ? [{ href: `/${league}/teams/${game.home_slug}/${game.season_year}`, label: `${teamDisplayName(game.home_name)} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" }] : []),
+                    ...(awayTeam ? [{ href: `/${league}/teams/${game.away_slug}/${game.season_year}`, label: `${teamDisplayName(game.away_name)} ${formatSeasonLabel(league, game.season_year)}`, sub: "Every result that season" }] : []),
                   ]
                 : []),
             ],
           },
           {
             title: "Head-to-head",
-            links: supportsScoreAnalytics(league)
+            links: supportsScoreAnalytics(league) && bothTeams
               ? [
                   { href: h2hPath(league, game.home_slug, game.away_slug), label: matchupLabel(league, game), sub: "Head-to-head record and every meeting" },
                   { href: `/${league}/compare?a=${game.home_slug}&b=${game.away_slug}`, label: "Compare the two teams", sub: "Season stats side by side" },

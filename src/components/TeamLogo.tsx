@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isPlaceholderName } from "@/lib/playoffSeries";
 
 // "Delhi Capitals Women" (or an abbreviation-style "Delhi Capitals-W") reads as DC, not CW: the
 // women's-team suffix carries no identity.
@@ -41,6 +42,19 @@ export function TeamLogo({
     const img = ref.current;
     if (img && img.complete && img.naturalWidth === 0) setFailed(true);
   }, [logoUrl]);
+  // A side still being decided ("Winner of CLE-CHW") is no club: a neutral disc, not the first letter of an abbreviation.
+  if (isPlaceholderName(name)) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="flex shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--border)] bg-[var(--surface-muted)] text-[0.7rem] font-bold text-[var(--text-muted)]"
+        role="img"
+        aria-label={name}
+      >
+        ?
+      </div>
+    );
+  }
   if (logoUrl && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
