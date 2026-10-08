@@ -24,6 +24,7 @@ import { articleArt } from "./articleArt";
 import { hasStandings, isCricketLeague, LEAGUE_LABEL, type League } from "./leagues";
 import { topBands } from "./standingsZones";
 import { usesRecordOrder } from "./standingsOrder";
+import { groupStandings } from "@/components/StandingsTable";
 import { playerSport, sportProfile } from "./playerProfile";
 import { isGameCalledOff } from "./gameStatus";
 import { teamDisplayName } from "./teamName";
@@ -85,10 +86,23 @@ function fixtureFromGame(league: League, g: GameRow, teamEspnId: string): Fixtur
   };
 }
 
+// The table a team sits in: its division (NFL, MLB) or conference, the same grouping the standings
+// page prints, so "2nd" here is the "2" on that page. Soccer and cricket are one table.
+function tableOf(league: League, rows: StandingRow[], teamEspnId: string): { rows: StandingRow[]; name: string | null } {
+  const { mode, sections } = groupStandings(league, rows);
+  const section = sections.find(([, list]) => list.some((r) => r.team_espn_id === teamEspnId));
+  if (!section) return { rows: [], name: null };
+  return { rows: section[1], name: mode === "default" && sections.length > 1 ? section[0] : null };
+}
+
+const DIFFERENCE_WORD = (league: League) => (league === "mlb" ? "run" : usesRecordOrder(league) ? "point" : "goal");
+
 async function teamSummary(league: League, teamEspnId: string, games: GameRow[]): Promise<TeamSummary> {
-  const rows = await getStandings(league);
-  const i = rows.findIndex((r) => r.team_espn_id === teamEspnId);
-  const row = i === -1 ? null : rows[i];
+  const table = tableOf(league, await getStandings(league), teamEspnId);
+  const i = table.rows.findIndex((r) => r.team_espn_id === teamEspnId);
+  const row = i === -1 ? null : table.rows[i];
+  // A table nobody has played in is listed by name: no position to report yet.
+  const ranked = row !== null && !row.unranked;
   const record = usesRecordOrder(league);
   const played = row ? row.wins + row.losses + (row.draws ?? 0) + (row.no_result ?? 0) : 0;
   const diff = row && row.goals_for !== null && row.goals_against !== null ? row.goals_for - row.goals_against : null;
@@ -100,10 +114,10 @@ async function teamSummary(league: League, teamEspnId: string, games: GameRow[])
     .filter((r): r is "W" | "L" | "D" => r !== null)
     .reverse();
   return {
-    leagueLabel: LEAGUE_LABEL[league],
-    position: row ? (row.rank ?? i + 1) : null,
-    figure: row ? (record ? `${row.wins}-${row.losses}` : `${row.points ?? 0} pts`) : null,
-    record: row ? `${played} played${diff !== null ? ` · ${diff > 0 ? "+" : ""}${diff} goal difference` : ""}` : null,
+    leagueLabel: table.name ? `${LEAGUE_LABEL[league]} · ${table.name}` : LEAGUE_LABEL[league],
+    position: ranked ? (row.rank !== null && !record ? row.rank : i + 1) : null,
+    figure: ranked ? (record ? `${row.wins}-${row.losses}` : `${row.points ?? 0} pts`) : null,
+    record: ranked ? `${played} played${diff !== null ? ` · ${diff > 0 ? "+" : ""}${diff} ${DIFFERENCE_WORD(league)} difference` : ""}` : null,
     form,
   };
 }

@@ -72,6 +72,36 @@ test("a team missing from the table still gets its form, with no position", asyn
   assert.deepEqual(block.summary, { leagueLabel: "Premier League", position: null, figure: null, record: null, form: ["D"] });
 });
 
+test("a division team is placed in its division, with the sport's own word for the margin", async () => {
+  await q(
+    `insert into teams (league, espn_id, name, slug, abbreviation, color) values
+       ('nfl','11','Baltimore Ravens','baltimore-ravens','BAL','241773'), ('nfl','12','Cleveland Browns','cleveland-browns','CLE','311d00'),
+       ('nfl','13','Dallas Cowboys','dallas-cowboys','DAL','041e42'), ('nfl','14','New York Giants','new-york-giants','NYG','0b2265'),
+       ('mlb','21','Atlanta Braves','atlanta-braves','ATL','ce1141'), ('mlb','22','Miami Marlins','miami-marlins','MIA','00a3e0'), ('mlb','23','New York Yankees','new-york-yankees','NYY','003087')`
+  );
+  await q(
+    `insert into standings (league, season, team_espn_id, conference, division, wins, losses, draws, goals_for, goals_against, win_percent) values
+       ('nfl', 2026, '11', 'American Football Conference', 'AFC North', 3, 1, 0, 100, 80, 0.75), ('nfl', 2026, '12', 'American Football Conference', 'AFC North', 4, 0, 0, 90, 60, 1),
+       ('nfl', 2026, '13', 'National Football Conference', 'NFC East', 2, 2, 0, 70, 70, 0.5), ('nfl', 2026, '14', 'National Football Conference', 'NFC East', 1, 3, 0, 60, 90, 0.25),
+       ('mlb', 2026, '21', 'National League', 'NL East', 94, 68, null, 700, 600, 0.58), ('mlb', 2026, '22', 'National League', 'NL East', 80, 82, null, 600, 620, 0.49), ('mlb', 2026, '23', 'American League', 'AL East', 90, 72, null, 650, 600, 0.55)`
+  );
+  const ravens = (await (await call("team-next", "?league=nfl&team=baltimore-ravens")).json()).block.summary;
+  assert.deepEqual(ravens, { leagueLabel: "NFL · AFC North", position: 2, figure: "3-1", record: "4 played · +20 point difference", form: [] });
+  const giants = (await (await call("team-next", "?league=nfl&team=new-york-giants")).json()).block.summary;
+  assert.equal(giants.position, 2);
+  const braves = (await (await call("team-next", "?league=mlb&team=atlanta-braves")).json()).block.summary;
+  assert.deepEqual(braves, { leagueLabel: "MLB · NL East", position: 1, figure: "94-68", record: "162 played · +100 run difference", form: [] });
+});
+
+test("a team in a table nobody has played in yet has no position, so the card shows no made-up rank", async () => {
+  await q(`insert into teams (league, espn_id, name, slug, abbreviation, color) values ('nba','31','Boston Celtics','boston-celtics','BOS','007a33'), ('nba','32','Miami Heat','miami-heat','MIA','98002e')`);
+  await q(`insert into standings (league, season, team_espn_id, conference, wins, losses, goals_for, goals_against, win_percent) values ('nba', 2026, '31', 'Eastern Conference', 0, 0, null, null, 0), ('nba', 2026, '32', 'Eastern Conference', 0, 0, null, null, 0)`);
+  const { block } = await (await call("team-next", "?league=nba&team=boston-celtics")).json();
+  assert.equal(block.summary.position, null);
+  assert.equal(block.summary.figure, null);
+  assert.equal(block.summary.record, null);
+});
+
 test("a team that does not exist is a null block, not an error", async () => {
   const res = await call("team-next", "?league=epl&team=nobody");
   assert.equal(res.status, 200);
