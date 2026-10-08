@@ -28,6 +28,7 @@
 // most `--cap`, default 40). A match that still fails is logged with its id and the error and
 // the run exits 1, so a gap the 21-day sweep keeps missing shows up instead of staying invisible.
 import { normalizeStage } from "../src/lib/stage";
+import { CLASS_TO_LEAGUE, type IntlLeague } from "../src/lib/cricketClasses";
 import { resolveCricketWinner } from "../src/lib/cricketResult";
 import { pool } from "./lib/db";
 import { CARD_VERSION, extractCricketMatchStats } from "./lib/cricket-career";
@@ -38,11 +39,11 @@ import { extractGameDetails } from "../src/lib/matchDetail";
 import { fetchCricketSummaryVia } from "../src/lib/cricketSummary";
 import { isScorecardOverdue, overdueWarning } from "./lib/cricket-player-rows";
 
-export type IntlLeague = "test" | "odi" | "t20i" | "wodi" | "wt20i";
+export type { IntlLeague };
 export const INTL_LEAGUES: IntlLeague[] = ["test", "odi", "t20i", "wodi", "wt20i"];
 // ESPN's `class.internationalClassId`: 1 = men's Test, 2 = men's ODI, 3 = men's T20I (women's
 // internationals and every domestic/first-class card use other ids).
-export const CLASS_TO_LEAGUE: Record<string, IntlLeague> = { "1": "test", "2": "odi", "3": "t20i", "9": "wodi", "10": "wt20i" };
+export { CLASS_TO_LEAGUE };
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
 const REQUEST_DELAY_MS = 150;

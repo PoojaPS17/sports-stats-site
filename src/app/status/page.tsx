@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { pool } from "@/lib/db";
+import { getLeagueStatusRows } from "@/lib/leagueStatus";
 import { LEAGUE_LABEL, isLeague } from "@/lib/queries";
 import { MAX_AGE_MINUTES } from "../../../scripts/lib/heartbeat";
 import { pageMeta } from "@/lib/metadata";
@@ -13,13 +14,6 @@ export const metadata = pageMeta(
   "The age of the newest result for every league and whether the live and daily updates are running on time.",
   "/status"
 );
-
-interface LeagueRow {
-  league: string;
-  newest_completed: Date | null;
-  next_scheduled: Date | null;
-  completed_7d: string;
-}
 
 function ago(when: Date | null): string {
   if (!when) return "none yet";
@@ -40,14 +34,8 @@ const JOBS: { scraper: string; label: string }[] = [
 ];
 
 export default async function StatusPage() {
-  const [{ rows: leagues }, { rows: runs }] = await Promise.all([
-    pool.query<LeagueRow>(
-      `select league,
-              max(date) filter (where completed) as newest_completed,
-              min(date) filter (where not completed and date > now()) as next_scheduled,
-              count(*) filter (where completed and date > now() - interval '7 days') as completed_7d
-       from games group by league order by league`
-    ),
+  const [leagues, { rows: runs }] = await Promise.all([
+    getLeagueStatusRows(),
     pool.query<{ scraper: string; age: string }>(`select scraper, extract(epoch from (now() - last_ok_at)) / 60 as age from scrape_runs`),
   ]);
   const ages = new Map(runs.map((r) => [r.scraper, Number(r.age)]));

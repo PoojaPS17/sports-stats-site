@@ -20,6 +20,7 @@ import { foldSql, likeTerm, searchTokens } from "./searchText";
 import { CRICKET_LEAGUES, SOCCER_LEAGUES } from "./leagues";
 import { withStoredNotOuts } from "./cricketNotOut";
 import { playerTeamIdSql } from "./playerTeamSql";
+import { canonicalTeamIdSql, isAliasTeamSql, teamIdsFor } from "./teamAliases";
 
 export type { League } from "./leagues";
 export { sortStandings } from "./standingsOrder";
@@ -105,12 +106,12 @@ export const GAME_SELECT = `
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
     g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.season_type, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
     g.local_date::text as local_date, g.end_date::text as end_date,
-    g.home_team_espn_id, g.away_team_espn_id,
+    ${canonicalTeamIdSql("g.league", "g.home_team_espn_id")} as home_team_espn_id, ${canonicalTeamIdSql("g.league", "g.away_team_espn_id")} as away_team_espn_id,
     ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
     ${TEAM_NAME_SQL("at")} as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
   from games g
-  join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
-  join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
+  join teams ht on ht.league = g.league and ht.espn_id = ${canonicalTeamIdSql("g.league", "g.home_team_espn_id")}
+  join teams at on at.league = g.league and at.espn_id = ${canonicalTeamIdSql("g.league", "g.away_team_espn_id")}
 `;
 
 // Only the single-game detail view needs odds/broadcast/weather context, so this has
@@ -429,7 +430,7 @@ export async function findPlayerSlugByLegacy(league: string, slug: string): Prom
 export async function getAllTeams(league: League): Promise<TeamRow[]> {
   const { rows } = await pool.query(
     // ESPN's "CLE/CHW" stand-in for a side still being decided is a label, not a club: no row in a team list.
-    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams t where league = $1 and not ${isPlaceholderTeamSql("t")} order by name`,
+    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams t where league = $1 and not ${isPlaceholderTeamSql("t")} and not ${isAliasTeamSql("t")} order by name`,
     [league]
   );
   return rows;
@@ -438,9 +439,9 @@ export async function getAllTeams(league: League): Promise<TeamRow[]> {
 export async function getTeamGamesBySeason(league: League, teamEspnId: string, season: number): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
-     where g.league = $1 and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2) and g.season_year = $3
+     where g.league = $1 and (g.home_team_espn_id = any($2::text[]) or g.away_team_espn_id = any($2::text[])) and g.season_year = $3
      order by g.date desc`,
-    [league, teamEspnId, season]
+    [league, teamIdsFor(league, teamEspnId), season]
   );
   return presentGames(rows);
 }
@@ -451,9 +452,9 @@ export async function getTeamGamesBySeason(league: League, teamEspnId: string, s
 export async function getTeamSeasons(league: League, teamEspnId: string): Promise<number[]> {
   const { rows } = await pool.query(
     `select distinct season_year from games
-     where league = $1 and (home_team_espn_id = $2 or away_team_espn_id = $2) and season_year is not null
+     where league = $1 and (home_team_espn_id = any($2::text[]) or away_team_espn_id = any($2::text[])) and season_year is not null
      order by season_year desc`,
-    [league, teamEspnId]
+    [league, teamIdsFor(league, teamEspnId)]
   );
   return rows.map((r) => r.season_year as number);
 }
@@ -767,9 +768,9 @@ export const ON_ROSTER_SQL = `(select max(roster_seen_at) from players r where r
 export async function getTeamRoster(league: League, teamEspnId: string): Promise<RosterPlayer[]> {
   const { rows } = await pool.query(
     `select p.espn_id, p.name, p.slug, p.position, p.jersey, p.height, p.weight, p.age, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.is_captain, p.is_wicketkeeper
-     from players p where p.league = $1 and p.team_espn_id = $2 and ${notPseudoAthleteSql()} and (${ON_ROSTER_SQL})
+     from players p where p.league = $1 and p.team_espn_id = any($2::text[]) and ${notPseudoAthleteSql()} and (${ON_ROSTER_SQL})
      order by p.is_captain desc nulls last, p.position, p.name`,
-    [league, teamEspnId]
+    [league, teamIdsFor(league, teamEspnId)]
   );
   return rows;
 }

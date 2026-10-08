@@ -43,7 +43,7 @@ export function MobileMenu() {
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
         aria-controls="mobile-menu"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--header-text)] transition hover:bg-[var(--header-hover-bg)] lg:hidden"
+        className="flex h-9 w-9 max-[340px]:w-[1.875rem] items-center justify-center rounded-lg text-[var(--header-text)] transition hover:bg-[var(--header-hover-bg)] lg:hidden"
       >
         {open ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">

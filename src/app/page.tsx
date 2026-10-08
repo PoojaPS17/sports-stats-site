@@ -22,6 +22,10 @@ import { getEditionContext } from "@/lib/editionContext";
 import { sportLines } from "@/lib/sportPicks";
 import { getSiteCounts } from "@/lib/siteCounts";
 import { TryAName } from "@/components/home/TryAName";
+import { BestOfWeek } from "@/components/home/BestOfWeek";
+import { WhoLeads } from "@/components/home/WhoLeads";
+import { OnTheBrink } from "@/components/home/OnTheBrink";
+import { HomeExplainers } from "@/components/home/HomeExplainers";
 
 // Title, description and share card come from the root layout. The canonical lives here and not
 // in the layout, so no page can inherit the home address by accident.
@@ -69,6 +73,7 @@ function LeagueBlock({ section }: { section: HomeSection }) {
 export default async function HomePage() {
   const [home, editionContext, counts] = await Promise.all([getHomeData(), getEditionContext(), getSiteCounts()]);
   const beyondTheScorelineArticles = listArticles().slice(0, 3);
+  const lines = sportLines({ liveCricket: home.liveCricket.length, liveTennis: home.liveTennis.length, sections: home.sections });
 
   // League blocks most active first; the cricket block ranks by its own live count
   // (a full day of internationals outranks a league with nothing on). Leagues
@@ -81,7 +86,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-10">
       <section className="home-builder-hero band band-deep bleed relative -mt-6 overflow-hidden bg-[radial-gradient(600px_300px_at_100%_0%,rgba(56,182,232,0.18),transparent_60%),radial-gradient(500px_260px_at_0%_100%,rgba(37,99,217,0.35),transparent_60%)] py-7 sm:py-11" suppressHydrationWarning>
-        <SportPicker ctx={editionContext} lines={sportLines({ liveCricket: home.liveCricket.length, liveTennis: home.liveTennis.length, sections: home.sections })} liveNow={home.liveGames.length + home.liveCricket.length + home.liveTennis.length} counts={counts} />
+        <SportPicker ctx={editionContext} lines={lines} liveNow={home.liveGames.length + home.liveCricket.length + home.liveTennis.length} counts={counts} />
       </section>
       <CollapsedBar />
       <div className="home-firstvisit">
@@ -90,6 +95,10 @@ export default async function HomePage() {
       <div className="home-skeleton" aria-hidden />
       <TodayInThreeLines />
       <TryAName />
+      <BestOfWeek />
+      <WhoLeads />
+      <OnTheBrink />
+      <HomeExplainers lines={lines} />
       <HomeBlocks ctx={editionContext} />
       <h2 className="home-else display text-[28px] text-[var(--text)]">Everything else is still here</h2>
 

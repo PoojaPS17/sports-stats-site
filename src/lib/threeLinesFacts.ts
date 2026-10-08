@@ -31,7 +31,7 @@ export function teamStreakFacts(args: { league: League; teamEspnId: string; team
   const name = teamDisplayName(args.teamName);
   const where = leagueNameWithArticle(league);
   const href = `/${league}/teams/${args.teamSlug}`;
-  const base = { sport: sportOf(league), href, at: lastPlayed.toISOString() };
+  const base = { sport: sportOf(league), league, href, at: lastPlayed.toISOString() };
   const id = (kind: string) => `team:${league}:${teamEspnId}:${kind}`;
   const out: LineFact[] = [];
   for (const claim of claims) {
@@ -84,7 +84,7 @@ export function cricketFacts(rows: CricketInningsRow[]): LineFact[] {
   const out: LineFact[] = [];
   for (const r of rows) {
     const href = r.league === "cricket" ? `/cricket/matches/${r.matchId}` : `/${r.league}/games/${r.matchId}`;
-    const base = { sport: "cricket", href, at: r.at.toISOString() };
+    const base = { sport: "cricket", league: r.league, href, at: r.at.toISOString() };
     const who = `${r.playerName}`;
     const side = `${teamDisplayName(r.teamName)} against ${teamDisplayName(r.opponentName)}`;
     if (r.runs !== null && r.runs >= HUNDRED) {

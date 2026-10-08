@@ -1,4 +1,6 @@
 import { isCalledOff } from "./gameStatus";
+import { cricketResult } from "./h2hOutcome";
+import { isCricketLeague, isFirstClassCricket } from "./leagues";
 import type { GameRow } from "./queries";
 
 export type ResultLetter = "W" | "L" | "D";
@@ -20,6 +22,17 @@ export function formatWinLossTie(wins: number, losses: number, ties: number | nu
 function resultFor(game: GameRow, teamEspnId: string): ResultLetter | null {
   if (!game.completed) return null;
   const isHome = game.home_team_espn_id === teamEspnId;
+  // Cricket: the stored winner flags are missing on thousands of finished internationals, and the runs are only a
+  // first innings (a Test) or a total that a rain-shortened chase (DLS) can reverse. The result line ESPN stored
+  // names the winner, so it decides first (the same reading as the head-to-head pages, h2hOutcome.ts).
+  if (isCricketLeague(game.league)) {
+    const r = cricketResult(game);
+    if (r === "home" || r === "away") return (r === "home") === isHome ? "W" : "L";
+    if (r === "draw" || r === "tie") return "D";
+    if (r === "noResult") return null;
+    // "unknown": the line names no team and the flags are empty. A Test's runs say nothing about who won it.
+    if (isFirstClassCricket(game.league)) return null;
+  }
   const won = isHome ? game.home_winner : game.away_winner;
   const lost = isHome ? game.away_winner : game.home_winner;
   if (won === true) return "W";
