@@ -203,7 +203,7 @@
     --zone-4: #2dd4bf;
 
     --header-border: #25446d;
-    --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
 
     --pill-final-bg: #1b3355;
     --pill-final-text: #b4c6dc;
@@ -271,7 +271,7 @@
   --zone-4: #2dd4bf;
 
   --header-border: #25446d;
-  --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
+  --header-hover-bg: rgba(255, 255, 255, 0.07);
 
   --pill-final-bg: #1b3355;
   --pill-final-text: #b4c6dc;
@@ -329,7 +329,7 @@
       --header-text: #eef1f7;
       --header-text-muted: #9aa5bd;
       --header-border: #1f2738;
-      --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
+      --header-hover-bg: rgba(255, 255, 255, 0.07);
       --sig: var(--logo-lit);
       --sig-ink: var(--logo-lit);
       --surface: #0f1420;
@@ -361,7 +361,7 @@
     --header-text: #eef1f7;
     --header-text-muted: #9aa5bd;
     --header-border: #1f2738;
-    --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
     --sig: var(--logo-lit);
     --sig-ink: var(--logo-lit);
     --surface: #0f1420;
@@ -523,7 +523,7 @@
     --mast-text: var(--band-deep-text);
     --mast-muted: var(--band-deep-muted);
     --mast-line: var(--band-deep-line);
-    --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
     /* Coral reads as text on navy; the ink version is for light surfaces. */
     --live: var(--live-fill);
     --win: var(--win-fill);
