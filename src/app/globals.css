@@ -333,6 +333,7 @@ footer.band-deep a[href="/"] {
   }
   :root:not([data-theme="light"]) footer.band-deep a[href="/"] {
     --sig: var(--logo-lit);
+    --mast-text: #eef1f7;
   }
 }
 
@@ -365,6 +366,7 @@ footer.band-deep a[href="/"] {
 
 :root[data-theme="dark"] footer.band-deep a[href="/"] {
   --sig: var(--logo-lit);
+  --mast-text: #eef1f7;
 }
 
 /* Unselected form controls on light surfaces draw their edge at 3:1 (--ctl). Navy bands and the
