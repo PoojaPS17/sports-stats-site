@@ -97,7 +97,8 @@ async function renderCareer(id: string) {
   const { CricketCareer } = await import("../src/components/CricketCareer");
   const career = await queries.getPlayerCricketCareer("test", id);
   const splits = { team: [], opponent: [], venue: [] } as never;
-  return renderToStaticMarkup(createElement(CricketCareer, { league: "test", career: career!, splits }));
+  // The coverage note above the tiles says "not recorded" on purpose (pre-1980 scorecards); the assertions below are about the tiles.
+  return renderToStaticMarkup(createElement(CricketCareer, { league: "test", career: career!, splits })).replace(/<p class="-mt-2 mb-3[^>]*>.*?<\/p>/, "");
 }
 
 test("the career panel: a full career shows the rate alone, a partial one 'over n of m innings', an unrecorded one 'not recorded'", async () => {

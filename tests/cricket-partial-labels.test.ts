@@ -8,13 +8,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { startTestDb, type TestDb } from "./helpers/testDb";
 import {
   archiveColumnLabel,
+  archiveIsPartial,
   archiveScope,
+  archiveStartYear,
   careerMayBeIncomplete,
   compareCoverageLine,
   comparePartialWarning,
   cricketFormatNote,
   missingFormatNote,
 } from "../src/lib/cricketCoverage";
+import { FIRST_TEST_YEAR, TEST_ARCHIVE_START_YEAR, formatSeasonLabel } from "../src/lib/leagues";
+import { testHubDescription, testsSince } from "../src/lib/testArchiveCopy";
+import { h2hSince } from "../src/lib/h2h";
 import { cricketPlayerDescription } from "../src/lib/cricketPlayerSeo";
 import { cricketCareerNote } from "../src/lib/cricketCareerNote";
 import type { CricketCareerStats } from "../src/lib/queries";
@@ -63,7 +68,8 @@ const career = (over: Partial<CricketCareerStats> = {}): CricketCareerStats => (
 /* ---------------------------------- the rules ---------------------------------- */
 
 test("scope is stated for every partial archive, and only while it is partial", () => {
-  assert.equal(archiveScope("test"), "since 2015");
+  assert.equal(archiveScope("test", 2015), "since 2015");
+  assert.equal(archiveScope("test"), null, "the live archive is every Test, so no scope");
   assert.equal(archiveScope("odi"), "since 2002");
   assert.equal(archiveScope("wodi"), "since 2009");
   assert.equal(archiveScope("wt20i"), "since 2009");
@@ -76,8 +82,8 @@ test("scope is stated for every partial archive, and only while it is partial", 
 });
 
 test("a career may be incomplete when its first stored match is in the archive's first dense year or before", () => {
-  assert.equal(careerMayBeIncomplete("test", 2015), true);
-  assert.equal(careerMayBeIncomplete("test", 2016), false);
+  assert.equal(careerMayBeIncomplete("test", 2015, 2015), true);
+  assert.equal(careerMayBeIncomplete("test", 2016, 2015), false);
   assert.equal(careerMayBeIncomplete("odi", 2003), true);
   assert.equal(careerMayBeIncomplete("odi", 2009), true);
   assert.equal(careerMayBeIncomplete("odi", 2010), false);
@@ -92,16 +98,28 @@ test("a career may be incomplete when its first stored match is in the archive's
 test("the warning names who, and is silent when nobody is partial", () => {
   assert.equal(comparePartialWarning("odi", []), null);
   assert.match(comparePartialWarning("odi", ["Sachin Tendulkar"])!, /^Partial comparison: Sachin Tendulkar's career may have begun before our ODIs archive does \(since 2002\)/);
-  assert.match(comparePartialWarning("test", ["A B", "C D"])!, /A B's and C D's careers .*\(since 2015\), so those totals are lower/);
+  assert.match(comparePartialWarning("test", ["A B", "C D"], 2015)!, /A B's and C D's careers .*\(since 2015\), so those totals are lower/);
   assert.equal(comparePartialWarning("test", ["A B"], 1877), null);
   assert.equal(compareCoverageLine("test", 1877), null);
-  assert.match(compareCoverageLine("test")!, /Tests held on this site, since 2015\. Matches before then are not included\./);
+  assert.match(compareCoverageLine("test", 2015)!, /Tests held on this site, since 2015\. Matches before then are not included\./);
 });
 
 test("flipping the Test archive to 1877 leaves no 2015 in the Test words", () => {
   assert.doesNotMatch(cricketPlayerDescription("test", "A B", "India", career(), 1877), /since/);
   assert.match(cricketPlayerDescription("test", "A B", "India", career(), 2015), /^A B Test Cricket stats since 2015: 146 matches/);
   assert.equal(missingFormatNote("A B", "odi", 2004, ["odi"], 1877), null);
+});
+
+test("the live Test archive starts at the first Test ever played, and a 1877 season resolves", () => {
+  assert.equal(TEST_ARCHIVE_START_YEAR, 1877);
+  assert.equal(TEST_ARCHIVE_START_YEAR, FIRST_TEST_YEAR);
+  assert.equal(archiveIsPartial("test"), false);
+  assert.equal(archiveStartYear("test"), null);
+  assert.equal(testsSince(), "since 1877");
+  assert.equal(formatSeasonLabel("test", 1877), "1877");
+  assert.match(testHubDescription(), /every men's Test since 1877\./);
+  assert.doesNotMatch(cricketCareerNote("test"), /2015|Tests before/);
+  assert.equal(h2hSince("test", 1877), "since 1877");
 });
 
 /* ------------------------------- meta descriptions ------------------------------- */
@@ -111,13 +129,13 @@ test("a partial archive's description carries its scope; a domestic league's doe
   assert.match(odi, /^Sachin Tendulkar ODI Internationals stats since 2002: 146 matches, 6,433 runs/);
   assert.ok(odi.length <= 160, odi);
   assert.match(cricketPlayerDescription("wodi", "Mithali Raj", "India", career()), /stats since 2009: 146 matches/);
-  assert.match(cricketPlayerDescription("test", "Alastair Cook", "England", career({ matches: 52 })), /Test Cricket stats since 2015: 52 matches/);
+  assert.match(cricketPlayerDescription("test", "Alastair Cook", "England", career({ matches: 52 }), 2015), /Test Cricket stats since 2015: 52 matches/);
   assert.equal(
     cricketPlayerDescription("ipl", "Virat Kohli", "RCB", career({ matches: 252, runs: 8004 })),
     "Virat Kohli IPL stats: 252 matches, 8,004 runs at 48.01 with 16 hundreds and 37 fifties, best 200, for RCB. Match log and splits."
   );
   // the scope survives the shortening for a very long name
-  const long = cricketPlayerDescription("test", "Alyssa Jane Healy-Starc Longname", "Sydney Sixers Women Cricket Club", career());
+  const long = cricketPlayerDescription("test", "Alyssa Jane Healy-Starc Longname", "Sydney Sixers Women Cricket Club", career(), 2015);
   assert.ok(long.length <= 160, `${long.length}`);
   assert.match(long, /since 2015/);
 });
@@ -178,7 +196,7 @@ test("the table marks no better figure and draws no bars when told the compariso
 
 test("a long ODI career with no Test page gets the note; a recent one, or one with Tests, does not", async () => {
   const note = async (league: "odi" | "test" | "t20i", id: string, name: string, others: Awaited<ReturnType<typeof queries.getPlayerOtherFormats>>) =>
-    cricketFormatNote(name, league, await queries.getPlayerFirstStoredYears(id), others.map((o) => o.league));
+    cricketFormatNote(name, league, await queries.getPlayerFirstStoredYears(id), others.map((o) => o.league), 2015);
   const oldOthers = await queries.getPlayerOtherFormats("odi", "old");
   assert.deepEqual(oldOthers.map((o) => o.league), ["t20i"]);
   assert.equal(

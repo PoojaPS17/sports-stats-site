@@ -1,7 +1,7 @@
 // "On the brink": a player a few units short of a round number, scoped to ONE SEASON of a league.
 //
 // Why a season and never a career: a career total is only true when the archive holds every game the player
-// ever played, and none of ours does. Cricket is partial by design (Tests since 2015, ODIs incomplete before
+// ever played, and none of ours does. Cricket is partial by design (Tests are now complete from 1877, ODIs incomplete before
 // 2009, women's since 2009) and the box-score history of every other sport starts around 2015, so "N from
 // 10,000 career runs" or "N from 500 career goals" would be a claim about a total we do not hold. A season that
 // is in progress, with every finished game's box score stored, is a total we do hold, and the leaders page
