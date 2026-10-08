@@ -4,6 +4,7 @@ import { pool } from "./db";
 import { GAME_SELECT, type GameRow, type League } from "./queries";
 import { ALL_LEAGUES } from "./leagues";
 import { CALLED_OFF } from "./gameStatus";
+import { currentStandingsSeasonSql } from "./standingsSeasons";
 import { displayF1Event, type F1EventRow } from "./f1";
 
 // Which competitions lead the upcoming list when fixtures fall on the same day.
@@ -48,7 +49,7 @@ export async function getUpcomingGames(limit = 6, perLeague = 2, withinDays = 7)
        select league, team_espn_id,
               rank() over (partition by league, season, coalesce(conference, '') order by points desc nulls last, win_percent desc nulls last, wins desc) as pos
        from standings s
-       where season = (select max(season) from standings x where x.league = s.league and (x.wins + x.losses + coalesce(x.draws, 0)) > 0)
+       where season = ${currentStandingsSeasonSql("s.league", "(x.wins + x.losses + coalesce(x.draws, 0)) > 0")}
      ),
      -- A team in two stage tables (group, then Super Eights) counts by its best place.
      pos as (select league, team_espn_id, min(pos) as pos from ranked group by 1, 2)

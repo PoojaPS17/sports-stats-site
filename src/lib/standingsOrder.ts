@@ -35,6 +35,8 @@ export interface OrderableStanding extends RankableStanding {
   name: string;
   /** Set by sortStandings on every row of a table nobody has played in yet. */
   unranked?: boolean;
+  /** Set (by the caller) on every row of a preseason table: ordered by record, with no positions or seeds. */
+  preseason?: boolean;
 }
 
 const usesEspnRank = (league: League) => isSoccerLeague(league) || isCricketLeague(league);
@@ -121,11 +123,16 @@ export function sortStandings<T extends OrderableStanding>(league: League, rows:
     return a.localeCompare(b);
   });
   const cmp = standingsComparator<T>(league);
+  // Exhibition records seed nobody: a preseason table is ordered by win percentage, then wins, then name. ESPN's playoff
+  // seed, which breaks a tie in a real table, is built from those same preseason records and would only pretend to rank.
+  const preseasonCmp: Compare<T> = (a, b) => byNumber(num(a.win_percent), num(b.win_percent), "desc") || b.wins - a.wins;
   const out: T[] = [];
   for (const key of keys) {
     const table = tables.get(key)!;
     if (!table.some((r) => hasPlayed(league, r))) {
       out.push(...[...table].sort(byName).map((r) => ({ ...r, unranked: true })));
+    } else if (table.every((r) => r.preseason)) {
+      out.push(...[...table].sort((a, b) => preseasonCmp(a, b) || byName(a, b)));
     } else {
       out.push(...[...table].sort((a, b) => cmp(a, b) || byName(a, b)));
     }
@@ -147,6 +154,12 @@ export function leagueWideRank<T extends RankableStanding>(league: League, rows:
 
 /** A table in which nobody has played yet has no positions to show (sortStandings flags its rows). */
 export const notStarted = (rows: { unranked?: boolean }[]) => rows.length > 0 && rows.every((r) => r.unranked);
+
+/** A preseason table (exhibition records): listed, but not ranked or seeded. */
+export const isPreseasonTable = (rows: { preseason?: boolean }[]) => rows.length > 0 && rows.every((r) => r.preseason);
+
+/** True where a row has a table position to show: not in a table nobody has played in, and not in a preseason table. */
+export const hasPosition = (r: { unranked?: boolean; preseason?: boolean }) => !r.unranked && !r.preseason;
 
 const gamesPlayed = (r: { wins: number; losses: number; draws: number | null; no_result: number | null }) => r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0);
 

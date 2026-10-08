@@ -66,6 +66,8 @@ export interface TeamCompareSide {
   position: number | null;
   /** In the current table, but the season has not started, so there is no position to show. */
   notStarted: boolean;
+  /** In the current table, but it is a preseason one (exhibition records): no position either. */
+  preseason: boolean;
   teamsInTable: number;
   form: ("W" | "D" | "L")[];
   eloRank: number | null;
@@ -115,13 +117,15 @@ export async function getTeamComparison(league: League, slugA: string, slugB: st
     // the whole league, by the same order as a team's finishes on its history page.
     // A season nobody has played yet has no order, so no position either.
     const notStarted = posIdx >= 0 && Boolean(standings[posIdx].unranked);
-    const position = notStarted ? null : leagueRanks ? leagueRanks.get(t.espn_id) ?? null : posIdx >= 0 ? posIdx + 1 : null;
+    const preseason = posIdx >= 0 && Boolean(standings[posIdx].preseason);
+    const position = notStarted || preseason ? null : leagueRanks ? leagueRanks.get(t.espn_id) ?? null : posIdx >= 0 ? posIdx + 1 : null;
     const eloIdx = power.rows.findIndex((r) => r.team.espn_id === t.espn_id);
     const ov = find(overall, t.espn_id);
     return {
       team: t,
       position,
       notStarted,
+      preseason,
       teamsInTable: standings.length,
       form: ov?.form ?? [],
       eloRank: eloIdx >= 0 ? eloIdx + 1 : null,

@@ -5,6 +5,7 @@ import { summarizePlayoffs } from "@/lib/seasonSummary";
 import { seasonHasFinal } from "@/lib/cricketStandings";
 import { getComputedTable, getCurrentSeason, supportsScoreAnalytics, type TableScope } from "@/lib/analytics";
 import { pageMeta } from "@/lib/metadata";
+import { preseasonNoteFor } from "@/lib/standingsView";
 import { AdSlot } from "@/components/AdSlot";
 import { StandingsTable } from "@/components/StandingsTable";
 import { SeasonTabs } from "@/components/SeasonTabs";
@@ -98,12 +99,17 @@ export default async function StandingsSeasonPage({
     getSeasonPlayoffGames(league, season),
   ]);
 
+  // A preseason table is exhibition records: labelled, with the date the real season starts, and no positions (standingsSeasons.ts).
+  const preseason = standings.length > 0 && standings.every((r) => r.preseason) ? await preseasonNoteFor(league, season) : null;
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={`${LEAGUE_LABEL[league]} Standings`} subtitle={`${formatSeasonLabel(league, season)} season`} />
+      <PageHeader title={`${LEAGUE_LABEL[league]} Standings`} subtitle={`${formatSeasonLabel(league, season)} ${preseason ? "preseason" : "season"}`} />
       <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />
 
       <SeasonTabs league={league} basePath={`/${league}/standings`} seasons={seasons} activeSeason={season} />
+
+      {preseason && <p className="card px-4 py-3 text-sm text-[var(--text-muted)]">{preseason}</p>}
 
       <SeasonSummary league={league} playoffResults={summarizePlayoffs(playoffGames)} standings={standings} />
 
@@ -113,7 +119,7 @@ export default async function StandingsSeasonPage({
             filename={`${league}-standings-${season}`}
             shareTitle={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`}
             width={standingsExportWidth(league, standings)}
-            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={`${formatSeasonLabel(league, season)} season`} context={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`} seasonFinished={seasonHasFinal(playoffGames)} />}
+            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={`${formatSeasonLabel(league, season)} ${preseason ? "preseason" : "season"}`} context={`${LEAGUE_LABEL[league]} standings ${formatSeasonLabel(league, season)}`} seasonFinished={seasonHasFinal(playoffGames)} />}
           />
         )}
         <StandingsTable league={league} standings={standings} seasonFinished={seasonHasFinal(playoffGames)} />
