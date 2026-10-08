@@ -21,7 +21,8 @@ test("the card body mirrors the site's light tokens and the band is the fixed br
   const t = lightTokens();
   assert.equal(CARD.bg, t.bg);
   assert.equal(CARD.surface, t.surface);
-  assert.equal(CARD.border, t.border);
+  // The page's --border now takes the --border-strong value (site-outline); export cards keep the original faint edge.
+  assert.equal(CARD.border, "#dde8f2");
   assert.equal(CARD.text, t.text);
   assert.equal(CARD.textMuted, t["text-muted"]);
   assert.equal(CARD.textFaint, t["text-faint"]);
