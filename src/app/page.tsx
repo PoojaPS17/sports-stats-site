@@ -17,6 +17,7 @@ import { SportPicker } from "@/components/home/SportPicker";
 import { HomeBlocks } from "@/components/home/HomeBlocks";
 import { CollapsedBar } from "@/components/home/CollapsedBar";
 import { RightNow } from "@/components/home/RightNow";
+import { TodayInThreeLines } from "@/components/home/TodayInThreeLines";
 import { getEditionContext } from "@/lib/editionContext";
 import { sportLines } from "@/lib/sportPicks";
 import { getSiteCounts } from "@/lib/siteCounts";
@@ -86,6 +87,7 @@ export default async function HomePage() {
         <RightNow />
       </div>
       <div className="home-skeleton" aria-hidden />
+      <TodayInThreeLines />
       <HomeBlocks ctx={editionContext} />
       <h2 className="home-else display text-[28px] text-[var(--text)]">Everything else is still here</h2>
 
