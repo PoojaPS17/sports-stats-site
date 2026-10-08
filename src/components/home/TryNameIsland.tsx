@@ -121,7 +121,7 @@ function CardView({ card, followed, onFollow }: { card: TryCard; followed: boole
               onClick={onFollow}
               aria-pressed={followed}
               className={`inline-flex h-10 items-center rounded-[11px] border-[1.5px] px-3.5 text-[13px] font-extrabold transition-colors ${
-                followed ? "border-[var(--win)] bg-[var(--win)] text-white" : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--sig-ink)]"
+                followed ? "border-[var(--win)] bg-[var(--win)] text-[var(--on-result)]" : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--sig-ink)]"
               }`}
             >
               {followed ? "✓ On your page" : `+ Follow ${card.name}`}

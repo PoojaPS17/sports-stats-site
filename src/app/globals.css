@@ -284,6 +284,20 @@ header.sticky {
   --header-border: #b8d4ec;
   --header-hover-bg: rgba(6, 6, 64, 0.06);
   --sig: #1470af;
+  --sig-ink: #1470af;
+  --surface: #ffffff;
+  --surface-muted: #eaf2fa;
+  --surface-hover: #f3f7fb;
+  --border: #b8d4ec;
+  --border-strong: #8fb8dc;
+  --text: #060640;
+  --text-muted: #4a4a72;
+  --text-faint: #646488;
+  --accent: #1470af;
+  --accent-soft: #eaf2fa;
+  --accent-hover: #0f5688;
+  --shadow-card: 0 1px 2px rgba(0, 23, 67, 0.06), 0 8px 24px -12px rgba(0, 23, 67, 0.16);
+  --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
 }
 
 footer.band-deep a[href="/"] {
@@ -302,6 +316,20 @@ footer.band-deep a[href="/"] {
     --header-border: #1f2738;
     --header-hover-bg: rgba(255, 255, 255, 0.07);
     --sig: var(--logo-lit);
+    --sig-ink: var(--logo-lit);
+    --surface: #0f1420;
+    --surface-muted: #161c2b;
+    --surface-hover: #1a2132;
+    --border: #1f2738;
+    --border-strong: #2e3850;
+    --text: #e9edf6;
+    --text-muted: #9aa6bf;
+    --text-faint: #6b7890;
+    --accent: #c6f135;
+    --accent-soft: #23301a;
+    --accent-hover: #d8f766;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+    --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
   :root:not([data-theme="light"]) footer.band-deep a[href="/"] {
     --sig: var(--logo-lit);
@@ -319,6 +347,20 @@ footer.band-deep a[href="/"] {
   --header-border: #1f2738;
   --header-hover-bg: rgba(255, 255, 255, 0.07);
   --sig: var(--logo-lit);
+  --sig-ink: var(--logo-lit);
+  --surface: #0f1420;
+  --surface-muted: #161c2b;
+  --surface-hover: #1a2132;
+  --border: #1f2738;
+  --border-strong: #2e3850;
+  --text: #e9edf6;
+  --text-muted: #9aa6bf;
+  --text-faint: #6b7890;
+  --accent: #c6f135;
+  --accent-soft: #23301a;
+  --accent-hover: #d8f766;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 :root[data-theme="dark"] footer.band-deep a[href="/"] {
@@ -464,9 +506,6 @@ main :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), 
     /* Coral reads as text on navy; the ink version is for light surfaces. */
     --live: var(--live-fill);
     --win: var(--win-fill);
-    /* Helpers that colour themselves with the page's muted text (LastUpdated, labels) must read on navy. */
-    --text-muted: var(--band-deep-muted);
-    --text-faint: var(--band-deep-muted);
   }
 
   /* Sports Blue is 2.8:1 on navy, so focus on a navy band is drawn in white. */

@@ -33,7 +33,7 @@ export default async function AsianGamesPage() {
         <h1 className="page-title">{edition.hostCity} {edition.year}</h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           {edition.hostCity}, {edition.hostCountry} &middot; {edition.startDate} to {edition.endDate}
-          {open && <span className="ml-2 rounded-full bg-[var(--live)] px-2 py-0.5 text-xs font-bold text-white">LIVE</span>}
+          {open && <span className="ml-2 rounded-full bg-[var(--live)] px-2 py-0.5 text-xs font-bold text-[var(--on-result)]">LIVE</span>}
         </p>
         <Link href="/asian-games/medal-tally" className="mt-3 inline-block text-sm font-semibold text-[var(--accent)] hover:underline">
           View the medal tally &rarr;

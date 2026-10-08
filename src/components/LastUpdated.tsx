@@ -29,7 +29,7 @@ export function LastUpdated({ iso }: { iso: string }) {
 
   return (
     <span
-      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-[var(--border)] pl-3 text-[11px] text-[var(--text-muted)]"
+      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-[var(--mast-line)] pl-3 text-[11px] text-[var(--mast-muted)]"
       title={`Data last refreshed ${iso}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-[var(--win)]" />

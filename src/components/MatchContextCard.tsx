@@ -18,7 +18,7 @@ function Form({ form }: { form: FormResult[] }) {
       {[...form].reverse().map((r, i) => (
         <span
           key={i}
-          className={`inline-block h-5 w-5 rounded text-center text-[11px] font-bold leading-5 text-white ${r === "W" ? "bg-[var(--win)]" : r === "L" ? "bg-[var(--loss)]" : "bg-[var(--draw)]"}`}
+          className={`inline-block h-5 w-5 rounded text-center text-[11px] font-bold leading-5 text-[var(--on-result)] ${r === "W" ? "bg-[var(--win)]" : r === "L" ? "bg-[var(--loss)]" : "bg-[var(--draw)]"}`}
         >
           {r}
         </span>
