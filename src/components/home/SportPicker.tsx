@@ -7,9 +7,10 @@ import { followsToBlocks, searchResultToBlock } from "@/lib/followBlocks";
 import { getFollows } from "@/lib/follow";
 import type { HomeBlock } from "@/lib/blockTypes";
 import { MAX_BLOCKS, newSetup, readSetup, SETUP_EVENT, writeDeclined, writeSetup } from "@/lib/homeSetup";
-import { blocksForSports, SPORT_PICK_LABEL, SPORT_PICKS, type SportPick } from "@/lib/sportPicks";
+import { blocksForSports, isSportPick, PICKED_EVENT, PICK_TOGGLE_EVENT, SPORT_PICK_LABEL, SPORT_PICKS, type SportPick } from "@/lib/sportPicks";
 import type { SearchResult } from "@/lib/queries";
 import type { SiteCounts } from "@/lib/siteCounts";
+import { buildLogMs, startSteps } from "@/lib/makeItYours";
 
 // Line-drawn glyphs, one per tile, in the same 24-unit box.
 const GLYPH: Record<SportPick | "all" | "check", string> = {
@@ -44,6 +45,12 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<HomeBlock[]>([]);
   const [saveError, setSaveError] = useState(false);
+  // The lines of the build log while the page forms: the blocks about to be saved, nothing else.
+  const [building, setBuilding] = useState<string[] | null>(null);
+  const buildTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (buildTimer.current !== null) window.clearTimeout(buildTimer.current);
+  }, []);
   const bandRef = useRef<HTMLDivElement>(null);
   const [dock, setDock] = useState(false);
   const [finalHost, setFinalHost] = useState<HTMLElement | null>(null);
@@ -121,6 +128,19 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
     };
   }, [query]);
 
+  // The "Start here" cards further down the page toggle a sport here and read back which are picked.
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const sport = (e as CustomEvent<unknown>).detail;
+      if (typeof sport === "string" && isSportPick(sport)) setSports((list) => (list.includes(sport) ? list.filter((x) => x !== sport) : [...list, sport]));
+    };
+    window.addEventListener(PICK_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(PICK_TOGGLE_EVENT, onToggle);
+  }, []);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(PICKED_EVENT, { detail: sports }));
+  }, [sports]);
+
   const blocks = useMemo(() => blocksForSports(sports, edition, ctx, extra), [sports, edition, ctx, extra]);
   const chosen = new Set(extra.map((b) => b.id));
 
@@ -128,9 +148,18 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
 
   const toggleSport = (s: SportPick) => setSports((list) => (list.includes(s) ? list.filter((x) => x !== s) : [...list, s]));
   const toggleExtra = (b: HomeBlock) => setExtra((list) => (list.some((x) => x.id === b.id) ? list.filter((x) => x.id !== b.id) : list.length >= MAX_BLOCKS - 2 ? list : [...list, b]));
-  const build = () => {
-    if (blocks.length === 0) return;
+  const save = () => {
+    startSteps();
     setSaveError(!writeSetup(newSetup(edition.key, country, blocks)));
+    setBuilding(null);
+  };
+  const build = () => {
+    if (blocks.length === 0 || building) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return save();
+    // A short, honest log: each line is a block this page will have. It ends by saving, exactly as before.
+    setBuilding(blocks.map((b) => b.label));
+    bandRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    buildTimer.current = window.setTimeout(save, buildLogMs(blocks.length));
   };
 
   const toTop = () => bandRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -251,10 +280,24 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
       <div className="sticky bottom-3 z-10 lg:top-24 lg:bottom-auto">
         <div className="rounded-[22px] bg-[var(--bg)] p-3 text-[var(--text)] shadow-[0_-6px_40px_-6px_rgba(0,0,0,0.55)] lg:p-3.5 lg:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)]" aria-live="polite">
           <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            <span>Your page, forming</span>
+            <span>{building ? "Building your page" : "Your page, forming"}</span>
             <b className="text-[var(--sig-ink)]">{blocks.length} {blocks.length === 1 ? "block" : "blocks"}</b>
           </div>
-          {blocks.length === 0 ? (
+          {building ? (
+            <div role="status" className="sp-log">
+              <ul>
+                {building.map((label, i) => (
+                  <li key={i} style={{ "--i": i } as React.CSSProperties}>
+                    <i aria-hidden>✓</i>
+                    {label}
+                  </li>
+                ))}
+              </ul>
+              <div className="sp-log-bar" style={{ "--t": `${buildLogMs(building.length)}ms` } as React.CSSProperties}>
+                <i />
+              </div>
+            </div>
+          ) : blocks.length === 0 ? (
             <ul className="grid gap-1.5" aria-label="Your page so far">
               <li className="flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--border)] px-2.5 py-2 text-[12.5px] font-bold text-[var(--text-faint)]">Tap a sport and watch this fill</li>
               <li className="hidden items-center gap-2.5 rounded-xl border border-dashed border-[var(--border)] px-2.5 py-2 text-[12.5px] font-bold text-[var(--text-faint)] lg:flex">Your next block</li>
@@ -271,7 +314,7 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
             </ol>
           )}
           <div className="mt-2.5 flex items-center gap-2.5">
-            <button type="button" onClick={build} disabled={blocks.length === 0} className="h-12 shrink-0 rounded-xl bg-[var(--volt)] px-5 text-[15px] font-extrabold text-[var(--navy)] shadow-[inset_0_0_0_1.5px_var(--navy)] disabled:opacity-45">
+            <button type="button" onClick={build} disabled={blocks.length === 0 || building !== null} className="h-12 shrink-0 rounded-xl bg-[var(--volt)] px-5 text-[15px] font-extrabold text-[var(--navy)] shadow-[inset_0_0_0_1.5px_var(--navy)] disabled:opacity-45">
               Build my page
             </button>
             <p className="text-[11.5px] font-semibold leading-snug text-[var(--text-muted)]">

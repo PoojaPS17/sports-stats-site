@@ -387,3 +387,19 @@ test("the missing-internationals id list, check and rollback files agree on the 
     for (const id of list) assert.ok(pairs.has(id), `${file} lacks ${id}`);
   }
 });
+
+/* ---------- the two --ids forms (list from this PR, range from #116) ---------- */
+
+test("--ids is told apart by its value: a league:id list is list mode, an id or range is range mode", async () => {
+  const range = await import("../scripts/lib/cricket-id-range");
+  assert.equal(importer.isIdListValue("odi:1126321,wt20i:1138196"), true);
+  assert.equal(importer.isIdListValue("odi:1126321"), true);
+  assert.equal(importer.isIdListValue("62387-63862"), false);
+  assert.equal(importer.isIdListValue("62396"), false);
+  assert.equal(importer.isIdListValue(undefined), false);
+  // the range parser still handles its own form and rejects a list (main never hands it one)
+  assert.deepEqual(range.parseIdModeArgs(["--ids", "62387-63862", "--league", "test", "--dry-run"]), { from: 62387, to: 63862, league: "test", force: false, dryRun: true, workers: 2, delayMs: 400, attempts: 8 });
+  assert.ok("error" in (range.parseIdModeArgs(["--ids", "odi:1126321"]) as object));
+  // list mode is unaffected by range-mode flags living elsewhere: parseIdList takes only the list
+  assert.deepEqual(importer.parseIdList("test:63000"), [{ league: "test", id: "63000" }]);
+});

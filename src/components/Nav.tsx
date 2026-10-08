@@ -17,8 +17,8 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--header-border)] bg-[var(--mast)] text-[var(--mast-text)]">
-      <div className="container-x flex h-[var(--header-h)] items-center gap-1.5">
-        <Link href="/" className="mr-3 flex shrink-0 items-center gap-2.5 text-[var(--mast-text)]" aria-label="SportsDB home">
+      <div className="container-x flex h-[var(--header-h)] items-center gap-1.5 max-[400px]:gap-0.5 max-[340px]:gap-0 max-[340px]:px-2">
+        <Link href="/" className="mr-3 max-[400px]:mr-0 flex shrink-0 items-center gap-2.5 text-[var(--mast-text)]" aria-label="SportsDB home">
           <LogoMark size={30} />
           <Wordmark size={26} />
         </Link>
@@ -44,7 +44,7 @@ export function Nav() {
           )}
         </nav>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-1.5 max-[400px]:gap-0.5 max-[340px]:gap-0">
           {/* 176px until the nav has room at 1536px: the "More" menu folds Asian Games and Top Games out of the top-level nav so the rest fits from 1024px. */}
           <div className="hidden w-44 xl:block 2xl:w-64">
             <SearchBar />
@@ -52,7 +52,7 @@ export function Nav() {
           <Link
             href="/search"
             aria-label="Search"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--mast-text)] transition hover:bg-[var(--header-hover-bg)] xl:hidden"
+            className="flex h-9 w-9 max-[340px]:w-[1.875rem] items-center justify-center rounded-lg text-[var(--mast-text)] transition hover:bg-[var(--header-hover-bg)] xl:hidden"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />
@@ -66,7 +66,7 @@ export function Nav() {
             rel="noopener noreferrer"
             aria-label="Follow SportsDB on X"
             title="Follow us on X"
-            className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-2.5 text-[13px] font-bold transition 2xl:bg-[var(--sig)] 2xl:text-[var(--sig-on)] 2xl:hover:bg-[var(--sig)] 2xl:hover:brightness-95 text-[var(--mast-text)] hover:bg-[var(--header-hover-bg)]"
+            className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-2.5 max-[340px]:px-[0.4375rem] text-[13px] font-bold transition 2xl:bg-[var(--sig)] 2xl:text-[var(--sig-on)] 2xl:hover:bg-[var(--sig)] 2xl:hover:brightness-95 text-[var(--mast-text)] hover:bg-[var(--header-hover-bg)]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />

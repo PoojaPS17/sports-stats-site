@@ -31,6 +31,15 @@
 // (every other day's matches are imported first), instead of finishing silently with a hole in the window.
 // `--allow-failed-days` prints the same message but exits 0.
 //
+//   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --ids 62387-63862 [--league test] [--force] [--workers 2] [--delay 400] [--attempts 8] [--dry-run]
+//
+// `--ids` loads a block of ESPN event ids oldest first with no header-feed discovery (for history the
+// daily feed cannot be swept, e.g. the pre-2000 Tests). It is resumable: ids already in games are skipped
+// unless `--force`; ESPN is read gently (2 workers, 400 ms apart, up to 8 attempts with backoff) and ids that
+// fail are re-run in up to three further passes. The daily job never passes `--ids`.
+// The two `--ids` forms are told apart by the value: `odi:1126321,wt20i:1138196` (league:id list, contains a
+// colon) is the list mode above; `62387-63862` (digits, optional dash) is the range mode.
+//
 //   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --reconcile [--league wt20i] [--cap N]
 //
 // `--reconcile` is the un-windowed safety net the daily scrape also runs: every finished
@@ -39,6 +48,7 @@
 // most `--cap`, default 40). A match that still fails is logged with its id and the error and
 // the run exits 1, so a gap the 21-day sweep keeps missing shows up instead of staying invisible.
 import { normalizeStage } from "../src/lib/stage";
+import { CLASS_TO_LEAGUE, type IntlLeague } from "../src/lib/cricketClasses";
 import { resolveCricketWinner } from "../src/lib/cricketResult";
 import { pool } from "./lib/db";
 import { CARD_VERSION, extractCricketMatchStats } from "./lib/cricket-career";
@@ -48,12 +58,13 @@ import { storeCricketDates } from "./lib/games";
 import { extractGameDetails } from "../src/lib/matchDetail";
 import { fetchCricketSummaryVia } from "../src/lib/cricketSummary";
 import { isScorecardOverdue, overdueWarning } from "./lib/cricket-player-rows";
+import { idsToFetch, parseIdModeArgs, retriesForAttempts, type IdRangeArgs } from "./lib/cricket-id-range";
 
-export type IntlLeague = "test" | "odi" | "t20i" | "wodi" | "wt20i";
+export type { IntlLeague };
 export const INTL_LEAGUES: IntlLeague[] = ["test", "odi", "t20i", "wodi", "wt20i"];
 // ESPN's `class.internationalClassId`: 1 = men's Test, 2 = men's ODI, 3 = men's T20I (women's
 // internationals and every domestic/first-class card use other ids).
-export const CLASS_TO_LEAGUE: Record<string, IntlLeague> = { "1": "test", "2": "odi", "3": "t20i", "9": "wodi", "10": "wt20i" };
+export { CLASS_TO_LEAGUE };
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
 const REQUEST_DELAY_MS = 150;
@@ -288,20 +299,21 @@ export type MatchOutcome =
   | { kind: "skip"; line: string }
   | { kind: "declined"; line: string };
 
-export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
-  return (await writeMatchResult(f, dryRun)).kind === "written";
+export async function writeMatch(f: Found, dryRun: boolean, summaryOptions: { retries?: number; backoffMs?: number } = {}): Promise<boolean> {
+  return (await writeMatchResult(f, dryRun, { summaryOptions })).kind === "written";
 }
 
 /**
  * `requirePlay` (the --ids import): a match with squads but no batting or bowling figure for anyone (a toss-only
  * no-result, a washout) is skipped rather than filed as an international. The date sweep keeps filing those, as before.
  */
-export async function writeMatchResult(f: Found, dryRun: boolean, options: { requirePlay?: boolean } = {}): Promise<MatchOutcome> {
+export async function writeMatchResult(f: Found, dryRun: boolean, options: { requirePlay?: boolean; summaryOptions?: { retries?: number; backoffMs?: number } } = {}): Promise<MatchOutcome> {
   // ESPN's 502 error body ({"code":2502,...}) parses as JSON, so a bare getJson reads it as a
   // summary with no competitors and the match is skipped as if ESPN had nothing. The shared
   // read rejects it, retries, and tries the IPL id then the series id (lib/cricketSummary.ts).
   const summary = await fetchCricketSummaryVia((path) => getJson(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${f.id}`, 1), f.id, [...new Set([`cricket/${FALLBACK_SERIES}`, `cricket/${f.seriesId}`])], {
     accept: (s) => Boolean(s?.header?.competitions?.[0]?.competitors?.length),
+    ...options.summaryOptions,
   });
   const comp = summary?.header?.competitions?.[0];
   const home = comp?.competitors?.find((c: any) => c.homeAway === "home");
@@ -582,6 +594,11 @@ async function reconcileMain() {
   process.exit(result.failed.length > 0 ? 1 : 0);
 }
 
+/** True for the list form of `--ids` (league:espnId entries); the range form is digits and a dash. */
+export function isIdListValue(value: string | undefined): boolean {
+  return typeof value === "string" && value.includes(":");
+}
+
 /** Parses `league:espnId,league:espnId`; throws on a malformed entry, an unknown league, or a repeat. */
 export function parseIdList(raw: string): { league: IntlLeague; id: string }[] {
   const out: { league: IntlLeague; id: string }[] = [];
@@ -647,9 +664,65 @@ async function idsMain() {
   process.exit(failed.length > 0 ? 1 : 0);
 }
 
+/* ------------------------------------------------------------------------ */
+/* Id-range mode                                                             */
+/* ------------------------------------------------------------------------ */
+
+async function idRangeMain(a: IdRangeArgs) {
+  console.log(`[import-cricket-espn] ids ${a.from}-${a.to} as ${a.league}${a.force ? " (force)" : ""}${a.dryRun ? " (dry run)" : ""}, ${a.workers} worker(s), ${a.delayMs} ms, ${a.attempts} attempts`);
+  const { rows: stored } = await pool.query(`select espn_id from games where league = $1 and espn_id = any($2::text[])`, [
+    a.league,
+    Array.from({ length: a.to - a.from + 1 }, (_, i) => String(a.from + i)),
+  ]);
+  let queue = idsToFetch(a.from, a.to, stored.map((r) => r.espn_id), a.force);
+  console.log(`[import-cricket-espn] ${a.to - a.from + 1 - queue.length} already stored, ${queue.length} to fetch`);
+  const summaryOptions = { retries: retriesForAttempts(a.attempts), backoffMs: 500 };
+  let written = 0;
+  const skipped: string[] = [];
+  let failed: string[] = [];
+  const started = Date.now();
+  for (let pass = 1; pass <= 4 && queue.length > 0; pass++) {
+    if (pass > 1) console.log(`[import-cricket-espn] pass ${pass}: re-running ${queue.length} failed id(s)`);
+    const todo = [...queue];
+    failed = [];
+    let cursor = 0;
+    let done = 0;
+    const work = async () => {
+      while (cursor < todo.length) {
+        const id = todo[cursor++];
+        try {
+          // Date, name and series are read from the summary itself; the IPL path serves any cricket event.
+          if (await writeMatch({ id, league: a.league, seriesId: FALLBACK_SERIES, date: "", name: `event ${id}` }, a.dryRun, summaryOptions)) written++;
+          else if (!skipped.includes(id)) skipped.push(id);
+        } catch (err) {
+          failed.push(id);
+          console.error(`[import-cricket-espn] ${a.league} ${id} failed: ${err instanceof Error ? err.message : err}`);
+        }
+        if (++done % 50 === 0) console.log(`[import-cricket-espn] ${done}/${todo.length} this pass, ${written} written, ${failed.length} failed, ${Math.round((Date.now() - started) / 60000)} min`);
+        await sleep(a.delayMs);
+      }
+    };
+    await Promise.all(Array.from({ length: a.workers }, work));
+    queue = failed.sort((x, y) => Number(x) - Number(y));
+  }
+  console.log(`[import-cricket-espn] ids done: ${written} written, ${skipped.length} skipped by writeMatch${skipped.length ? ` (${skipped.join(", ")})` : ""}, ${failed.length} failed${failed.length ? ` (${failed.join(", ")})` : ""}, ${Math.round((Date.now() - started) / 1000)} s`);
+  await pool.end();
+  process.exit(failed.length > 0 ? 1 : 0);
+}
+
 async function main() {
+  // `--ids odi:1,wt20i:2` (a league:id list, always has a colon) is the list mode; `--ids 62387-63862` the range mode.
+  const idsValue = process.argv[process.argv.indexOf("--ids") + 1];
+  if (process.argv.includes("--ids") && isIdListValue(idsValue)) return idsMain();
+  const idArgs = parseIdModeArgs(process.argv.slice(2));
+  if (idArgs) {
+    if ("error" in idArgs) {
+      console.error(`[import-cricket-espn] ${idArgs.error}\nusage: import-cricket-espn.ts --ids FROM-TO [--league test] [--force] [--workers N] [--delay MS] [--attempts N] [--dry-run]`);
+      process.exit(2);
+    }
+    return idRangeMain(idArgs);
+  }
   if (process.argv.includes("--reconcile")) return reconcileMain();
-  if (process.argv.includes("--ids")) return idsMain();
   const { since, until, league, step, dryRun } = parseArgs();
   console.log(`[import-cricket-espn] ${league ?? "odi+t20i"} ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}${dryRun ? " (dry run)" : ""}`);
   const { found, failedDays } = await discover(since, until, league, step);

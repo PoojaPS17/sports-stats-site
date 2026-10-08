@@ -27,7 +27,7 @@ import { CricketNextMatch } from "@/components/CricketNextMatch";
 import { keyMoments, parseMilestones } from "@/lib/cricketMatchMoments";
 import { topPerformers } from "@/lib/cricketPerformers";
 import { getCricketSeriesMatch, getCricketSeriesMatches } from "@/lib/cricketSeries";
-import { fetchCricketSummaryLive, LIVE_REVALIDATE } from "@/lib/cricketLive";
+import { fetchCricketSummaryLive, fetchCricketSummaryResilient, LIVE_REVALIDATE } from "@/lib/cricketLive";
 import { FINISHED_MATCH_REVALIDATE } from "@/lib/cricketMatchCache";
 import { sideScoreText } from "@/lib/gameDisplay";
 import { venueWithCity } from "@/components/MatchFacts";
@@ -170,7 +170,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   ]);
   const { details, stored } = loaded;
   // A stored cricket result still reads ESPN's summary once (cached with the page) for the Player of the Match and the notes; nothing waits on it failing.
-  const summary: any | null = isCricket ? (loaded.summary ?? (await fetchCricketSummaryLive(id, "8048", { revalidate: game.completed ? FINISHED_MATCH_REVALIDATE : LIVE_REVALIDATE }))) : null;
+  const summary: any | null = isCricket ? (loaded.summary ?? (await fetchCricketSummaryResilient(id, seriesMatch?.series_espn_id, { revalidate: game.completed ? FINISHED_MATCH_REVALIDATE : LIVE_REVALIDATE }))) : null;
   const story = balls ? deriveMatchStory(balls) : [];
   const playerOfTheMatch: string | null = summary?.header?.competitions?.[0]?.status?.featuredAthletes?.find((a: any) => a.name === "playerOfTheMatch")?.athlete?.displayName ?? null;
   const teamStats = details?.team_stats ?? [];
