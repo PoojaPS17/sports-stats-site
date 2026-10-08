@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { League } from "@/lib/leagues";
 import type { CricketInningsRow } from "@/lib/matchDetail";
+import { UNRECORDED_LEGEND, hasUnrecordedCells } from "@/lib/cricketRecorded";
 import { economyWidth, strikeRateWidth, type ScorecardTabData } from "@/lib/cricketScorecardView";
 
 /** The tint behind a strike rate or an economy: the side's colour, the loss colour for an expensive over rate, the soft accent without a colour. */
@@ -115,6 +116,7 @@ export function CricketScorecardPanel({ tab, league, playerSlugs }: { tab: Score
       <Table title={block.batting.title} labels={block.batting.labels} rows={block.batting.rows} league={league} playerSlugs={playerSlugs} bar={{ column: 4, of: (v) => ({ width: strikeRateWidth(v), colour }) }} foot={foot} />
       <div className="flex flex-col gap-3">
         <Table title={block.bowling.title} labels={block.bowling.labels} rows={block.bowling.rows} league={league} playerSlugs={playerSlugs} bar={{ column: 4, of: (v) => ({ width: economyWidth(v), colour, loss: Number(v) > 10 }) }} />
+        {hasUnrecordedCells(block.batting.rows, block.batting.labels) && <p className="card px-4 py-2.5 text-xs leading-relaxed text-[var(--text-muted)]">{UNRECORDED_LEGEND}</p>}
         {fallOfWickets && (
           <p className="card px-4 py-2.5 text-xs leading-relaxed text-[var(--text-muted)]">
             <span className="font-semibold text-[var(--text)]">Fall of wickets</span> {fallOfWickets}

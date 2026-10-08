@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { TEST_ARCHIVE_START_YEAR, isCricketLeague, scheduleWords } from "@/lib/leagues";
+import { isCricketLeague, scheduleWords } from "@/lib/leagues";
+import { testHubDescription, testHubIntro } from "@/lib/testArchiveCopy";
 import { isLeague, isInternationalCricket, LEAGUE_LABEL, leagueNameWithArticle, getRecentAndUpcoming, getLatestResults, getMostRecentPlayedSeason, formatSeasonLabel } from "@/lib/queries";
 import { getCurrentSeasonTeams } from "@/lib/related";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
   const words = scheduleWords(league);
-  if (league === "test") return pageMeta("Test Cricket Results", `Latest Test match results with full four-innings scorecards, and every men's Test since ${TEST_ARCHIVE_START_YEAR}.`, "/test", { ownImage: true });
+  if (league === "test") return pageMeta("Test Cricket Results", testHubDescription(), "/test", { ownImage: true });
   if (isInternationalCricket(league)) return pageMeta(`${label} Results`, `Latest ${label} results with full scorecards.`, `/${league}`, { ownImage: true });
   return pageMeta(`${label} Scores & ${words.heading}`, `Latest ${label} results and upcoming ${words.upcoming} with ${words.start}, ${isCricketLeague(league) ? "scorecards" : "box scores"} and match stats.`, `/${league}`, { ownImage: true });
 }
@@ -78,7 +79,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
       {international && (
         <p className="text-xs text-[var(--text-muted)]">
           {league === "test"
-            ? `Every men's Test since the start of ${TEST_ARCHIVE_START_YEAR}, with new results added daily: completed matches only. A Test in progress is on the cricket series pages.`
+            ? testHubIntro()
             : league === "wodi" || league === "wt20i"
             ? "Women's internationals, refreshed daily: completed matches only, no fixtures or live scores."
             : "Men's internationals, refreshed daily: completed matches only, no fixtures or live scores."}
