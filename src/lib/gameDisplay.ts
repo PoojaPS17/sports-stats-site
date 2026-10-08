@@ -57,7 +57,7 @@ export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRo
   if (off) return `${when} · ${off}`;
   if (isUpcomingGame(g)) {
     // A fixture with no kickoff time yet has a day and "TBD": the feed's placeholder clock time would read as a real one.
-    if (isTimeTbd(g)) return `${when} · TBD`;
+    if (isTimeTbd(g, league)) return `${when} · TBD`;
     // A US game's kickoff names its zone (the card's footer says UTC, which a bare clock time would invite reading as UTC too);
     // every other league keeps its wording exactly.
     const zone = dayTimeZone(league) === "UTC" ? "" : ` ${dayZoneLabel(league)}`;
@@ -140,7 +140,7 @@ export function scoreboardTileStatus(league: League, g: StatusFields & StageFiel
   if (g.completed) return finishedPillLabel(league, g);
   if (live) return g.status_detail ?? "Live";
   // No kickoff time set yet: the tile's date says which day, and a placeholder clock time would be wrong.
-  if (isTimeTbd(g)) return "TBD";
+  if (isTimeTbd(g, league)) return "TBD";
   return `${new Date(g.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: dayTimeZone(league) })} ${dayZoneLabel(league)}`;
 }
 

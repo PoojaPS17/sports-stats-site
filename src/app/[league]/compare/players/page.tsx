@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel } from "@/lib/queries";
 import { getPlayerComparison, getPlayerLabel, type PlayerCompareSide } from "@/lib/compare";
+import { archiveScope } from "@/lib/cricketCoverage";
+import { isCricketLeague } from "@/lib/leagues";
 import { pageMeta } from "@/lib/metadata";
 import { careerWording } from "@/lib/playerCopy";
 import { AdSlot } from "@/components/AdSlot";
@@ -31,7 +33,13 @@ export async function generateMetadata({
   if (a && b) {
     const cmp = await getPlayerComparison(league, a, b);
     if (cmp) {
-      return pageMeta(`${cmp.a.player.name} vs ${cmp.b.player.name}`, `${cmp.a.player.name} and ${cmp.b.player.name} ${label} stats compared side by side, category by category.`, `/${league}/compare/players`);
+      // A cricket archive that starts after the format did says so: the totals are over the matches the site holds.
+      const scope = isCricketLeague(league) ? archiveScope(league) : null;
+      return pageMeta(
+        `${cmp.a.player.name} vs ${cmp.b.player.name}`,
+        `${cmp.a.player.name} and ${cmp.b.player.name} ${label} stats${scope ? ` ${scope}` : ""} compared side by side, category by category.`,
+        `/${league}/compare/players`
+      );
     }
   }
   return pageMeta(`Compare ${label} Players`, `Pick any two ${label} players and compare their season statistics side by side.`, `/${league}/compare/players`);
@@ -43,7 +51,7 @@ function sideOf(side: PlayerCompareSide) {
   return { name: p.name, logoUrl: p.headshot_url, color: p.team_color, lines: [teamDisplayName(p.team_name) ?? "Free agent", ...(facts ? [facts] : [])] };
 }
 
-function PlayerCard({ league, side }: { league: string; side: PlayerCompareSide }) {
+function PlayerCard({ league, side, coverage }: { league: string; side: PlayerCompareSide; coverage?: { label: string | null; partial: boolean } }) {
   const p = side.player;
   const facts = [p.position, p.jersey ? `#${p.jersey}` : null, p.age ? `${p.age} yrs` : null, p.height].filter(Boolean).join(" · ");
   return (
@@ -61,6 +69,12 @@ function PlayerCard({ league, side }: { league: string; side: PlayerCompareSide 
           <span className="truncate">{teamDisplayName(p.team_name) ?? "Free agent"}</span>
         </span>
         {facts && <span className="block text-xs text-[var(--text-faint)]">{facts}</span>}
+        {coverage?.label && (
+          <span className="mt-0.5 block text-xs font-semibold text-[var(--text-muted)]">
+            {coverage.label}
+            {coverage.partial ? " · may be incomplete" : ""}
+          </span>
+        )}
       </span>
     </Link>
   );
@@ -87,7 +101,9 @@ export default async function ComparePlayersPage({
       ? cmp.a.season === cmp.b.season
         ? `${formatSeasonLabel(league, cmp.a.season)} season totals`
         : `Latest season for each: ${formatSeasonLabel(league, cmp.a.season)} vs ${formatSeasonLabel(league, cmp.b.season)}`
-      : careerWording(league, true).compareNote
+      : cmp.coverage?.label
+        ? `Career figures on this site: ${cmp.coverage.label}`
+        : careerWording(league, true).compareNote
     : "Pick any two players to see their stats side by side";
 
   return (
@@ -112,9 +128,15 @@ export default async function ComparePlayersPage({
       {cmp && (
         <>
             <div className="grid grid-cols-2 gap-3">
-              <PlayerCard league={league} side={cmp.a} />
-              <PlayerCard league={league} side={cmp.b} />
+              <PlayerCard league={league} side={cmp.a} coverage={cmp.coverage && { label: cmp.coverage.label, partial: cmp.coverage.partialA }} />
+              <PlayerCard league={league} side={cmp.b} coverage={cmp.coverage && { label: cmp.coverage.label, partial: cmp.coverage.partialB }} />
             </div>
+            {cmp.coverage?.warning && (
+              <p role="note" className="card border-l-4 border-l-[var(--accent)] px-4 py-3 text-sm font-semibold text-[var(--text)]">
+                {cmp.coverage.warning}
+              </p>
+            )}
+            {cmp.coverage?.line && <p className="-mt-3 text-xs text-[var(--text-muted)]">{cmp.coverage.line}</p>}
             {cmp.groups.length === 0 ? (
               <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No season stats on record for one or both players yet.</p>
             ) : (
@@ -133,6 +155,8 @@ export default async function ComparePlayersPage({
                     groups={cmp.groups}
                     nameA={cmp.a.player.name.split(" ").slice(-1)[0]}
                     nameB={cmp.b.player.name.split(" ").slice(-1)[0]}
+                    neutral={Boolean(cmp.coverage?.warning)}
+                    notice={cmp.coverage?.warning ?? cmp.coverage?.line ?? null}
                   />
                 }
               />
@@ -142,10 +166,15 @@ export default async function ComparePlayersPage({
                 colorB={cmp.b.player.team_color}
                 nameA={cmp.a.player.name.split(" ").slice(-1)[0]}
                 nameB={cmp.b.player.name.split(" ").slice(-1)[0]}
+                neutral={Boolean(cmp.coverage?.warning)}
               />
             </>
           )}
-          <p className="text-xs text-[var(--text-faint)]">Bold marks the better figure for each stat. For stats like interceptions thrown, fouls or turnovers, lower is treated as better.</p>
+          <p className="text-xs text-[var(--text-faint)]">
+            {cmp.coverage?.warning
+              ? "No figure is marked as better and no bars are drawn, because at least one career here is only partly on this site."
+              : "Bold marks the better figure for each stat. For stats like interceptions thrown, fouls or turnovers, lower is treated as better."}
+          </p>
         </>
       )}
     </div>

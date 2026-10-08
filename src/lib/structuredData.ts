@@ -2,6 +2,7 @@ import { gameDayIso, gameStartDateIso } from "./gameDay";
 import { isCricketLeague, isSoccerLeague, isUsSport } from "./leagues";
 import type { CricketTeamScorecard } from "./matchDetail";
 import { isTimeTbd, schemaEventStatus, schemaStatusForLabel } from "./gameStatus";
+import { isPlaceholderName } from "./playoffSeries";
 import { f1EventDescription, f1EventStatus } from "./f1Status";
 import type { F1EventRow } from "./f1";
 import { scoreLineSides } from "./gamePage";
@@ -229,13 +230,14 @@ export function gameSchema(league: League, game: GameRow, venue?: string | null,
   const team = (name: string, slug: string, logo: string | null) => ({
     "@type": "SportsTeam",
     name,
-    url: absoluteUrl(`/${league}/teams/${slug}`),
+    // A side still being decided ("Winner of CLE-CHW") has no page of its own.
+    ...(isPlaceholderName(name) ? {} : { url: absoluteUrl(`/${league}/teams/${slug}`) }),
     ...(logo ? { logo } : {}),
   });
   // American sports say "Away at Home"; football and cricket list the home side first.
   const matchup = isUsSport(league) ? `${game.away_name} at ${game.home_name}` : `${game.home_name} ${isSoccerLeague(league) ? "vs" : "v"} ${game.away_name}`;
   // A fixture with no kickoff time yet carries its day only; a placeholder clock time would be a false claim.
-  const startDate = isTimeTbd(game) ? gameDayIso(game.date, league) : gameStartDateIso(game.date, league);
+  const startDate = isTimeTbd(game, league) ? gameDayIso(game.date, league) : gameStartDateIso(game.date, league);
   const endDate = eventEndDate(game, startDate);
   const sides = [team(game.home_name, game.home_slug, game.home_logo), team(game.away_name, game.away_slug, game.away_logo)];
   return {

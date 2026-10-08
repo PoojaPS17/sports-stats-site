@@ -22,7 +22,7 @@ export function Kickoff({
   format: LocalTimeFormat;
   className?: string;
 }) {
-  if (isTimeTbd(game)) {
+  if (isTimeTbd(game, league)) {
     const day = formatGameDate(game.date, league, { weekday: "short", month: "short", day: "numeric" }, game.local_date);
     return <span className={className}>{format === "time" ? "TBD" : format === "date" ? day : `${day} · TBD`}</span>;
   }

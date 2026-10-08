@@ -8,6 +8,7 @@
 //   - domestic leagues and World Cups: no year is stated; a match with no scorecard is not counted.
 import { LEAGUE_LABEL, isFirstClassCricket, isInternationalCricket, type League } from "./leagues";
 import { testCareerCopy } from "./testArchiveCopy";
+import { ODI_ARCHIVE_START_YEAR, ODI_FULL_FROM_YEAR, T20I_ARCHIVE_START_YEAR, WOMENS_ARCHIVE_START_YEAR } from "./cricketCoverage";
 
 const MATCHES_SENTENCE = "Matches counts every match on this site the player was in the playing XI for.";
 
@@ -17,13 +18,13 @@ export function testCareerNote(): string {
 
 export function womensInternationalCareerNote(league: "wodi" | "wt20i"): string {
   const format = league === "wodi" ? "ODIs" : "T20 internationals";
-  return `Counts the women's ${format} held on this site (World Cups included). Coverage begins in 2009, so earlier matches are not included, and a small number of later matches are missing. Totals can be lower than Cricinfo's for players who played earlier. ${MATCHES_SENTENCE}`;
+  return `Counts the women's ${format} held on this site (World Cups included). Coverage begins in ${WOMENS_ARCHIVE_START_YEAR}, so earlier matches are not included, and a small number of later matches are missing. Totals are lower than Cricinfo's for players who played before then. ${MATCHES_SENTENCE}`;
 }
 
 export function mensInternationalCareerNote(league: "odi" | "t20i"): string {
   return league === "odi"
-    ? `Counts the men's ODIs held on this site (World Cups included). Coverage begins in 2002. Some ODIs from 2002 to 2008 and a few later ones are missing, so totals can be lower than Cricinfo's, mostly for players who played before 2009. ${MATCHES_SENTENCE}`
-    : `Counts the men's T20 internationals held on this site (World Cups included). Coverage begins in 2005. A small number of matches are missing, so totals can be lower than Cricinfo's for players who played earlier. ${MATCHES_SENTENCE}`;
+    ? `Counts the men's ODIs held on this site (World Cups included). Coverage begins in ${ODI_ARCHIVE_START_YEAR} and is incomplete until ${ODI_FULL_FROM_YEAR}: many ODIs from ${ODI_ARCHIVE_START_YEAR} to ${ODI_FULL_FROM_YEAR - 1} and a few later ones are missing. Totals are lower than Cricinfo's for anyone who played before ${ODI_FULL_FROM_YEAR}, and for a long career that began earlier the gap can be large. ${MATCHES_SENTENCE}`
+    : `Counts the men's T20 internationals held on this site (World Cups included). Coverage begins in ${T20I_ARCHIVE_START_YEAR}. A small number of matches are missing, so totals can be lower than Cricinfo's for players who played earlier. ${MATCHES_SENTENCE}`;
 }
 
 export function domesticCareerNote(league: League): string {

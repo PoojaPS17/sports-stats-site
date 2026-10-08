@@ -43,6 +43,8 @@ export interface FixtureLine {
   live: boolean;
   status: string | null;
   league: string;
+  /** "Mon, Oct 12 · TBD" for a game whose start time the feed has not set; absent for every other game. */
+  tbd?: string;
   /** True for a preseason game (exhibition: the card tags it, since the same list holds the regular season). Absent otherwise. */
   preseason?: boolean;
 }

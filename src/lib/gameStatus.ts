@@ -47,10 +47,36 @@ export function schemaStatusForLabel(label: string | null): string {
 export const schemaEventStatus = (g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined }): string =>
   schemaStatusForLabel(gameCalledOffLabel(g));
 
+/** Leagues whose future playoff rows ESPN files at midnight Eastern with the bare status "Scheduled" until the real time is set. */
+const MIDNIGHT_PLACEHOLDER_LEAGUES = ["mlb", "nba", "nfl"];
+
+let easternClock: Intl.DateTimeFormat | null = null;
+/** True when the instant is exactly 00:00:00 on the US Eastern clock (04:00 UTC in summer, 05:00 UTC in winter). */
+function isEasternMidnight(date: string | Date): boolean {
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return false;
+  easternClock ??= new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hourCycle: "h23", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const parts = easternClock.formatToParts(d);
+  const at = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? NaN);
+  return at("hour") === 0 && at("minute") === 0 && at("second") === 0;
+}
+
 /**
- * A fixture whose kickoff time the feed has not set: ESPN files a placeholder clock time (NFL week 18 is stored
- * at 05:00 UTC, "12:00 AM ET") with the status text "1/10 - TBD". Such a game has a date and no time, and every
- * display shows "TBD" in place of a clock time.
+ * A fixture whose kickoff time the feed has not set. Two shapes, both a placeholder clock time that would read as a
+ * real one:
+ *  - ESPN files NFL week 18 at 05:00 UTC ("12:00 AM ET") with the status text "1/10 - TBD";
+ *  - ESPN files every game of a baseball league-championship round at 04:00 UTC ("12:00 AM EDT") with the plain
+ *    status "Scheduled", which says nothing. Only given `league` (and the game's `date`) can that be told apart from
+ *    a real kickoff, and only for the US leagues whose kickoffs are never at midnight Eastern: a bare "Scheduled" at
+ *    exactly 00:00:00 ET. The NBA writes its real late tip-offs as text ("Tue, November 10th at 11:00 PM EST"), and
+ *    cricket, soccer and MLS (a 9 PM Pacific kickoff is midnight Eastern) are never read this way.
  */
-export const isTimeTbd = (g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined }): boolean =>
-  g.status_state === "pre" && !g.completed && /\bTBD\b/i.test(g.status_detail ?? "") && !isCalledOff(g.status_detail);
+export const isTimeTbd = (
+  g: { completed: boolean; status_state: string | null; status_detail: string | null | undefined; date?: string | Date },
+  league?: string,
+): boolean =>
+  g.status_state === "pre" &&
+  !g.completed &&
+  !isCalledOff(g.status_detail) &&
+  (/\bTBD\b/i.test(g.status_detail ?? "") ||
+    (league !== undefined && MIDNIGHT_PLACEHOLDER_LEAGUES.includes(league) && /^scheduled$/i.test((g.status_detail ?? "").trim()) && g.date !== undefined && isEasternMidnight(g.date)));

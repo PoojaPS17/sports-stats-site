@@ -140,7 +140,7 @@ test("a pair that met in both home/away orders is listed once and counts both me
 test("a pair with counted meetings is indexable and keeps its record description", async () => {
   const meta = await pageModule.generateMetadata(params({ league: "nba", pair: "alpha-vs-bravo" }));
   assert.equal(robotsIndex(meta), true);
-  assert.match(meta.description ?? "", /record \(2-0-0 in 2 meetings\)/);
+  assert.match(meta.description ?? "", /record since [\d-]+ \(2-0-0 in 2 meetings\)/);
 });
 
 test("a pair with a meeting but a team outside the current standings is not listed, though its page is indexable", async () => {
