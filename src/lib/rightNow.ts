@@ -13,7 +13,7 @@
 import type { GameRow } from "./queries";
 import type { CricketSeriesMatch, SeriesSide } from "./cricketSeriesTypes";
 import type { HomeData } from "./homeData";
-import type { StoryInnings } from "./cricketBalls";
+import { shouldFetchStory, type StoryInnings } from "./cricketBalls";
 import { matchStoryModel } from "./cricketMatchStoryModel";
 import { isCricketLeague, LEAGUE_LABEL, type League } from "./leagues";
 import { scoreLineSides } from "./gamePage";
@@ -74,6 +74,8 @@ export interface RightNowPick {
   story: { eventId: string; seriesId: string } | null;
   /** Index of the chasing side in `sides`, a chase only. */
   chasingIndex: 0 | 1 | null;
+  /** A league game whose stored win-probability line may be drawn (set for every league game; the reader decides whether the sport has one). */
+  winProb: { league: League; id: string; homeName: string } | null;
 }
 
 /* ---------------- score text ---------------- */
@@ -251,13 +253,13 @@ function cricketLiveFromSeries(m: CricketSeriesMatch, order: number): Candidate 
     return {
       ballsLeft: chase.ballsLeft,
       order,
-      pick: { ...base, rule: "chase", mode: "live", why: "A chase in progress", sides: o.sides, line: status, chase, stateLabel: "2nd innings", story: { eventId: m.espn_id, seriesId: m.series_espn_id }, chasingIndex: o.chasingIndex },
+      pick: { ...base, rule: "chase", mode: "live", why: "A chase in progress", sides: o.sides, line: status, chase, stateLabel: "2nd innings", story: { eventId: m.espn_id, seriesId: m.series_espn_id }, chasingIndex: o.chasingIndex, winProb: null },
     };
   }
   return {
     ballsLeft: Number.POSITIVE_INFINITY,
     order,
-    pick: { ...base, rule: "cricket", mode: "live", why: "Cricket in play", sides: rawSides, line: status, chase: null, stateLabel: null, story: null, chasingIndex: null },
+    pick: { ...base, rule: "cricket", mode: "live", why: "Cricket in play", sides: rawSides, line: status, chase: null, stateLabel: null, story: { eventId: m.espn_id, seriesId: m.series_espn_id }, chasingIndex: null, winProb: null },
   };
 }
 
@@ -272,9 +274,9 @@ function cricketLiveFromGame(g: GameRow, order: number): Candidate {
   const base = { href: gameHref(g), competition: gameCompetition(g), league, startIso: null } as const;
   if (chase && chasing !== null) {
     const o = chaseOrder(rawSides, chasing);
-    return { ballsLeft: chase.ballsLeft, order, pick: { ...base, rule: "chase", mode: "live", why: "A chase in progress", sides: o.sides, line: status, chase, stateLabel: "2nd innings", story: { eventId: g.espn_id, seriesId: "8048" }, chasingIndex: o.chasingIndex } };
+    return { ballsLeft: chase.ballsLeft, order, pick: { ...base, rule: "chase", mode: "live", why: "A chase in progress", sides: o.sides, line: status, chase, stateLabel: "2nd innings", story: { eventId: g.espn_id, seriesId: "8048" }, chasingIndex: o.chasingIndex, winProb: null } };
   }
-  return { ballsLeft: Number.POSITIVE_INFINITY, order, pick: { ...base, rule: "cricket", mode: "live", why: "Cricket in play", sides: rawSides, line: status, chase: null, stateLabel: null, story: null, chasingIndex: null } };
+  return { ballsLeft: Number.POSITIVE_INFINITY, order, pick: { ...base, rule: "cricket", mode: "live", why: "Cricket in play", sides: rawSides, line: status, chase: null, stateLabel: null, story: { eventId: g.espn_id, seriesId: "8048" }, chasingIndex: null, winProb: null } };
 }
 
 function marginOf(g: GameRow): number {
@@ -300,6 +302,7 @@ function liveGamePick(g: GameRow): RightNowPick {
     league,
     story: null,
     chasingIndex: null,
+    winProb: null,
   };
 }
 
@@ -324,8 +327,10 @@ function restingGamePick(g: GameRow, mode: "next" | "latest"): RightNowPick {
     stateLabel: null,
     startIso: new Date(g.date).toISOString(),
     league,
-    story: null,
+    // A finished cricket game's chart is the match page's own story (read while the match is recent enough for that page to read it).
+    story: mode === "latest" && isCricketLeague(league) && shouldFetchStory({ state: g.status_state, completed: g.completed, date: g.date }) ? { eventId: g.espn_id, seriesId: "8048" } : null,
     chasingIndex: null,
+    winProb: mode === "latest" && !isCricketLeague(league) ? { league, id: g.espn_id, homeName: teamDisplayName(g.home_name) } : null,
   };
 }
 
@@ -344,6 +349,7 @@ function nextSeriesPick(m: CricketSeriesMatch): RightNowPick {
     league: null,
     story: null,
     chasingIndex: null,
+    winProb: null,
   };
 }
 
@@ -364,6 +370,7 @@ const NONE: RightNowPick = {
   league: null,
   story: null,
   chasingIndex: null,
+  winProb: null,
 };
 
 const DAY = 86_400_000;
@@ -409,7 +416,7 @@ export function pickRightNow(home: Source, now: number = Date.now()): RightNowPi
 export interface RightNowWorm {
   /** SVG viewBox of the plot area only, so the chart fills the card. */
   viewBox: string;
-  lines: { teamId: string; period: number; points: string; chasing: boolean }[];
+  lines: { teamId: string; team: string; period: number; points: string; chasing: boolean }[];
   /** Where the chasing worm ends, as percentages of the plot, for the pulsing dot. */
   dot: { left: number; top: number } | null;
 }
@@ -425,7 +432,7 @@ export function storyView(story: StoryInnings[]): { worm: RightNowWorm | null; l
   return {
     worm: {
       viewBox: `${x0} ${y0} ${x1 - x0} ${y1 - y0}`,
-      lines: model.worm.map((w) => ({ teamId: w.teamId, period: w.period, points: w.points, chasing: w.period === last.period })),
+      lines: model.worm.map((w) => ({ teamId: w.teamId, team: story.find((i) => i.period === w.period)?.team ?? "", period: w.period, points: w.points, chasing: w.period === last.period })),
       dot: chasing ? { left: Math.round(((chasing.end.x - x0) / (x1 - x0)) * 1000) / 10, top: Math.round(((Math.min(chasing.end.y, y1) - y0) / (y1 - y0)) * 1000) / 10 } : null,
     },
     lastBalls: over ? over.balls.map((b) => b.symbol) : null,
@@ -441,5 +448,23 @@ export interface RightNowView {
   lastBalls: string[] | null;
   /** The innings the story read for the chasing side; null when none matched. */
   overNumber: number | null;
+  /** A finished game's home win-probability line, from the stored play-by-play the game page draws; null where the sport or the stored game has none. */
+  prob?: RightNowProb | null;
+}
+
+export interface RightNowProb {
+  viewBox: string;
+  points: string;
+  homeName: string;
+  /** Home win probability at the last stored play, 0 to 100. */
+  endPct: number;
+}
+
+/** The stored win-probability points as a polyline in a 320 by 100 box (100% at the top). Fewer than two points draw nothing. */
+export function probView(points: { home: number }[], homeName: string): RightNowProb | null {
+  if (points.length < 2) return null;
+  const x = (i: number) => ((i / (points.length - 1)) * 320).toFixed(1);
+  const y = (pct: number) => ((1 - Math.min(100, Math.max(0, pct)) / 100) * 100).toFixed(1);
+  return { viewBox: "0 0 320 100", points: points.map((p, i) => `${x(i)},${y(p.home)}`).join(" "), homeName, endPct: Math.round(points[points.length - 1].home) };
 }
 

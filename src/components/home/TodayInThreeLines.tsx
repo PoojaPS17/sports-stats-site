@@ -28,14 +28,12 @@ export async function TodayInThreeLines() {
       <SectionHeader plain description="From results stored in the last two days. Each line links to the page with the figure.">
         <span id="home-three-lines">Today in three lines</span>
       </SectionHeader>
-      <ol className="card divide-y divide-[var(--border)] overflow-hidden">
+      <ol className="card t3">
         {lines.map((fact, i) => (
           <li key={fact.id}>
-            <Link href={fact.href} className="grid grid-cols-[28px_1fr] items-baseline gap-2.5 px-4 py-3 text-sm font-semibold text-[var(--text)] hover:bg-[var(--sig-soft)]">
-              <span aria-hidden className="text-xl font-extrabold tracking-tight text-[var(--sig-ink)]">
-                {i + 1}
-              </span>
-              <span className="min-w-0 break-words">
+            <Link href={fact.href} className="t3-line">
+              <b aria-hidden>{i + 1}</b>
+              <span>
                 <Line fact={fact} />
               </span>
             </Link>

@@ -33,6 +33,7 @@ export interface PlayerGameRow {
   playerSlug?: string | null;
   playerName: string;
   teamName: string;
+  teamColor?: string | null;
   opponentName: string;
   /** Goals / points / passing yards, per `kind`. */
   value: number;
@@ -48,7 +49,7 @@ export function playerGameFacts(rows: PlayerGameRow[]): BestFact[] {
     const sportFamily = r.kind === "hat-trick" ? "soccer" : r.kind === "forty-points" ? "nba" : "nfl";
     const pick = pickSportOf(sportFamily);
     const follow: FactFollow | undefined = pick ? { sport: pick, ...(r.playerSlug && isLeague(r.league) ? { block: { type: "player-form" as const, params: { league: r.league, player: r.playerSlug }, label: `${r.playerName}: last five` } } : {}) } : undefined;
-    const base = { league: r.league, href: `/${r.league}/games/${r.gameId}`, at: r.at.toISOString(), id: `${r.kind}:${r.league}:${r.gameId}:${r.playerId}`, ...(follow ? { follow } : {}) };
+    const base = { league: r.league, href: `/${r.league}/games/${r.gameId}`, at: r.at.toISOString(), who: { name: teamDisplayName(r.teamName), color: r.teamColor ?? null }, id: `${r.kind}:${r.league}:${r.gameId}:${r.playerId}`, ...(follow ? { follow } : {}) };
     if (r.kind === "hat-trick" && r.value >= HAT_TRICK) {
       const figure = `${r.value} goals`;
       out.push({ ...base, sport: "soccer", kind: r.kind, figure, text: `${r.playerName} scored ${figure} for ${side}.`, weight: factWeight("hat-trick", r.value) });
@@ -106,4 +107,29 @@ export function bestChips(facts: Pick<LineFact, "sport">[]): BestChip[] {
 /** Whether a card shows under the chosen chip. "all" shows everything. */
 export function chipShows(fact: Pick<LineFact, "sport">, chip: string): boolean {
   return chip === "all" || chipKey(fact) === chip;
+}
+
+/** The pill on a card, by what the fact is. Only kinds the stored rows can prove: nothing here is a guess (no "upset", which needs rankings the site does not hold for these sports). */
+export const BADGE: Record<BestFact["kind"], string> = {
+  hundred: "Hundred",
+  "five-for": "Five-for",
+  "hat-trick": "Hat-trick",
+  "forty-points": "40+ points",
+  "passing-yards": "400+ yards",
+  "win-streak": "Win streak",
+  unbeaten: "Unbeaten",
+  "season-perfect": "Perfect",
+};
+
+/** The card's big figure and the small unit after it, cut from the fact's own `figure` ("112*", "5/23", "3 goals", "all 4"). */
+export function bigFigure(fact: Pick<BestFact, "figure">): { num: string; unit: string } {
+  const m = /^(all \d+|\d+\/\d+|\d+\*?)(?:\s+(.+))?$/.exec(fact.figure.trim());
+  return m ? { num: m[1], unit: m[2] ?? "" } : { num: fact.figure, unit: "" };
+}
+
+/** The link's words: the page it goes to ("Scorecard" for cricket, "Team" for a run, "Match" for a game). */
+export function goLabel(fact: Pick<BestFact, "kind" | "sport">): string {
+  if (fact.kind === "hundred" || fact.kind === "five-for") return "Scorecard";
+  if (fact.kind === "win-streak" || fact.kind === "unbeaten" || fact.kind === "season-perfect") return "Team";
+  return "Match";
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { blockId, type HomeBlock } from "@/lib/blockTypes";
 import type { BestChip } from "@/lib/bestOfWeek";
@@ -11,8 +12,11 @@ export interface BestItem {
   /** The sport chip this card sits under. */
   chip: string;
   follow: FactFollow | null;
-  /** The server-drawn card body (a link). */
+  /** The server-drawn card body. */
   card: ReactNode;
+  /** The page the card's figure is on, and the link's words. */
+  href: string;
+  go: string;
 }
 
 /** The block a card's Follow adds: the same shape the Try-a-name Follow and the picker write. */
@@ -69,14 +73,21 @@ export function BestRail({ chips, items }: { chips: BestChip[]; items: BestItem[
           const what = block ? block.label.replace(/: next three$|: last five$/, "") : it.follow && isSportPick(it.follow.sport) ? SPORT_PICK_LABEL[it.follow.sport] : "";
           return (
             <li key={it.id} hidden={chip !== "all" && it.chip !== chip} className="bw-card card">
-              {it.card}
-              {it.follow && (
-                <div className="bw-foot" hidden={!mounted}>
+              <Link href={it.href} className="bw-link">
+                {it.card}
+              </Link>
+              <div className="bw-foot">
+                <Link href={it.href} className="bw-go">
+                  {it.go}
+                </Link>
+                {it.follow && (
+                  <span hidden={!mounted}>
                   <button type="button" className="bw-follow" aria-pressed={on} aria-label={`${on ? "Following" : "Follow"} ${what}`} title={`${on ? "On your page" : `Add ${what} to your page`}`} onClick={() => it.follow && follow(it.follow)}>
                     {on ? "✓ Following" : "+ Follow"}
                   </button>
-                </div>
-              )}
+                  </span>
+                )}
+              </div>
             </li>
           );
         })}

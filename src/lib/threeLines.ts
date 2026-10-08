@@ -54,6 +54,8 @@ export interface LineFact {
   weight: number;
   /** What following this fact adds to the visitor's page; absent where the sport is not in the picker. */
   follow?: FactFollow;
+  /** The side the fact belongs to, for a card's crest and name: the team's stored name and ESPN colour (bare hex) when it has one. */
+  who?: { name: string; color: string | null };
 }
 
 /** The sport family of a league key: all football competitions are one sport, all cricket competitions another. */

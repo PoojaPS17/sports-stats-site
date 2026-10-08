@@ -156,7 +156,7 @@ test("a chase whose sentence contradicts its score is shown as plain cricket, wi
 test("with nothing in play: a fixture within a day is Next up, labelled as such, never live", () => {
   const soon = game("soon", { status_state: "pre", completed: false, date: iso(5), home_score: null, away_score: null, status_detail: null });
   const done = game("done", { status_state: "post", completed: true, date: iso(-6), home_score: 3, away_score: 1, home_winner: true, away_winner: false, status_summary: "Arsenal won 3-1" });
-  const pick = pickRightNow(home({ upcomingGames: [soon], sections: [{ league: "epl", games: [done], liveCount: 0, windowCount: 1, snapshot: null }] }), NOW);
+  const pick = pickRightNow(home({ upcomingGames: [soon], sections: [{ league: "epl", games: [done], liveCount: 0, windowCount: 1 }] }), NOW);
   assert.equal(pick.mode, "next");
   assert.equal(pick.why, "Next up");
   assert.equal(pick.href, "/epl/games/soon");
@@ -170,15 +170,15 @@ test("with nothing in play and no fixture within a day, a result from the last t
   const later = game("later", { status_state: "pre", completed: false, date: iso(80), home_score: null, away_score: null });
   const done = game("done", { status_state: "post", completed: true, date: iso(-6), home_score: 3, away_score: 1, home_winner: true, away_winner: false, status_summary: "Arsenal won 3-1" });
   const older = game("older", { status_state: "post", completed: true, date: iso(-100), home_score: 0, away_score: 0 });
-  const pick = pickRightNow(home({ upcomingGames: [later], sections: [{ league: "epl", games: [older, done], liveCount: 0, windowCount: 2, snapshot: null }] }), NOW);
+  const pick = pickRightNow(home({ upcomingGames: [later], sections: [{ league: "epl", games: [older, done], liveCount: 0, windowCount: 2 }] }), NOW);
   assert.equal(pick.mode, "latest");
   assert.equal(pick.href, "/epl/games/done");
   assert.equal(pick.line, "Arsenal won 3-1");
   assert.deepEqual(pick.sides.map((s) => [s.name, s.main, s.dim]), [["Arsenal", "3", false], ["Chelsea", "1", true]]);
   // Nothing recent: the fixture, however far off.
-  assert.equal(pickRightNow(home({ upcomingGames: [later], sections: [{ league: "epl", games: [older], liveCount: 0, windowCount: 1, snapshot: null }] }), NOW).mode, "next");
+  assert.equal(pickRightNow(home({ upcomingGames: [later], sections: [{ league: "epl", games: [older], liveCount: 0, windowCount: 1 }] }), NOW).mode, "next");
   // No fixture at all: the old result rather than nothing.
-  assert.equal(pickRightNow(home({ sections: [{ league: "epl", games: [older], liveCount: 0, windowCount: 1, snapshot: null }] }), NOW).mode, "latest");
+  assert.equal(pickRightNow(home({ sections: [{ league: "epl", games: [older], liveCount: 0, windowCount: 1 }] }), NOW).mode, "latest");
 });
 
 test("a cricket fixture counts as Next up, soonest first across sports", () => {

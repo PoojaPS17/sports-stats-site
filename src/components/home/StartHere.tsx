@@ -6,6 +6,7 @@ import { LADDER } from "@/lib/homeLadder";
 import { writeDeclined } from "@/lib/homeSetup";
 import { isSportPick, PICKED_EVENT, PICK_TOGGLE_EVENT, SPORT_PICKS, SPORT_PICK_LABEL, type SportPick } from "@/lib/sportPicks";
 import type { SportLines } from "./SportPicker";
+import { Glyph } from "./Glyph";
 
 // "Start here": one card per sport with its best pages as plain links (in the server HTML, so crawlers and visitors
 // who will not pick still have somewhere to go), and a button that adds the sport to the picker above. The picker owns
@@ -31,7 +32,12 @@ export function StartHere({ lines }: { lines: SportLines }) {
         const line = lines[sport];
         return (
           <article key={sport} className="card hx-lad">
-            <h3>{SPORT_PICK_LABEL[sport]}</h3>
+            <h3>
+              <span className="pk-ib">
+                <Glyph name={sport} />
+              </span>
+              {SPORT_PICK_LABEL[sport]}
+            </h3>
             <p className="hx-lad-line">
               {line.live > 0 && <span className="hx-livedot" aria-hidden />}
               {line.text}
@@ -50,8 +56,13 @@ export function StartHere({ lines }: { lines: SportLines }) {
         );
       })}
       <button type="button" className="card hx-lad hx-lad-any" onClick={writeDeclined}>
-        <h3>Everything</h3>
-        <p className="hx-lad-line">The full homepage, busiest leagues first</p>
+        <h3>
+          <span className="pk-ib">
+            <Glyph name="all" />
+          </span>
+          Everything
+        </h3>
+        <p className="hx-lad-line">Ranked by importance, not by sport</p>
         <span className="hx-lad-go">Just show me everything →</span>
       </button>
     </div>

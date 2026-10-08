@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { SectionHeader } from "@/components/SectionHeader";
 import { getBestOfWeek } from "@/lib/bestOfWeekData";
-import { ageLabel, bestChips, chipKey, competitionLabel, type BestFact } from "@/lib/bestOfWeek";
+import { ageLabel, bestChips, bigFigure, BADGE, chipKey, competitionLabel, goLabel, type BestFact } from "@/lib/bestOfWeek";
+import { Crest } from "./Crest";
 import { BestRail, type BestItem } from "./BestRail";
 
 // Module 5 of the first visit: the standout performances of the last seven days, across sports (rules in
@@ -30,17 +30,26 @@ export async function BestOfWeek() {
     chip: chipKey(fact),
     follow: fact.follow ?? null,
     card: (
-      <Link href={fact.href} className="bw-link">
-        <span className="bw-meta">
-          <span className="bw-comp">{competitionLabel(fact)}</span>
-          <span className="bw-age">{ageLabel(fact.at, now)}</span>
+      <>
+        <span className="bw-top">
+          {fact.who && <Crest name={fact.who.name} color={fact.who.color} size={22} />}
+          {fact.who && <b>{fact.who.name}</b>}
+          <span>{competitionLabel(fact)}</span>
+        </span>
+        <span className="bw-num">
+          {bigFigure(fact).num}
+          {bigFigure(fact).unit && <small>{bigFigure(fact).unit}</small>}
+          <span className="bw-badge">{BADGE[fact.kind]}</span>
         </span>
         <span className="bw-text">
           <Sentence fact={fact} />
         </span>
         {fact.note && <span className="bw-note">{fact.note}</span>}
-      </Link>
+        <span className="bw-age">{ageLabel(fact.at, now)}</span>
+      </>
     ),
+    go: `${goLabel(fact)} →`,
+    href: fact.href,
   }));
   return (
     <section className="home-firstvisit" data-module="best-of-week" aria-labelledby="home-best-of-week">
