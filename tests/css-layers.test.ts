@@ -100,3 +100,9 @@ test("no className needs the ! important modifier any more", () => {
   }
   assert.deepEqual(offenders, []);
 });
+
+test("the root clips sideways overflow, because the header row is wider than a 360-375px phone", () => {
+  // `overflow-x: clip` on <body> alone leaves the document scrollable sideways (4px at 375px, 19px at 360px);
+  // it has to be on <html>. `clip`, not `hidden`, so the sticky header keeps working.
+  assert.match(css, /@layer base\s*\{\s*html\s*\{[^}]*overflow-x:\s*clip/);
+});

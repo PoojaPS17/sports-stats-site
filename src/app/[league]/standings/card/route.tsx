@@ -14,10 +14,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ leag
   if (!(format in STANDINGS_CARD_SIZES)) return new Response("Bad format", { status: 400 });
   if (!isLeague(league) || !hasStandings(league)) return new Response("Not found", { status: 404 });
 
-  const { standings, activeSeason, fallbackSeason } = await currentStandingsView(league);
+  const { standings, activeSeason, fallbackSeason, preseason } = await currentStandingsView(league);
   if (standings.length === 0) return new Response("Not found", { status: 404 });
 
-  const subtitle = activeSeason ? `${formatSeasonLabel(league, activeSeason)} season${fallbackSeason ? " (final)" : ""}` : null;
+  const subtitle = activeSeason ? `${formatSeasonLabel(league, activeSeason)} ${preseason ? "preseason" : "season"}${fallbackSeason ? " (final)" : ""}` : null;
   const element = standingsCardElement({ league, standings, subtitle, format: format as StandingsCardFormat });
   const png = new ImageResponse(element, { ...STANDINGS_CARD_SIZES[format as StandingsCardFormat], fonts: CARD_FONTS });
   const headers = new Headers(png.headers);

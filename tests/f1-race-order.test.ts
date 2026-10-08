@@ -288,3 +288,25 @@ test("2023 Qatar: Sainz did not start; f1.com lists him last with DNS", () => {
   assert.equal(o.order.length, 20);
   for (const id of ["600001776", "600014128", "600026763"]) assert.equal(F1_RACE_OVERRIDES[id].order.length, 19, "f1.com lists 19 drivers, no non-starter");
 });
+
+// f1.com prints DNS for these drivers; ESPN says STATUS_RETIRED with 0 laps, as it does for a lap-1 crash (see F1_DID_NOT_START_DRIVERS).
+test("a driver f1.com lists as DNS is labelled DNS in his race only, and only when ESPN has him retired with no laps", () => {
+  assert.equal(f1ResultLabel("600057428", "5752", "STATUS_RETIRED", "below"), "DNS"); // China: Piastri
+  assert.equal(f1ResultLabel("600057427", "5752", "STATUS_RETIRED", "below"), "DNS"); // Australia: Piastri
+  assert.equal(f1ResultLabel("600057434", "4665", "STATUS_RETIRED", "below"), "Ret"); // Monaco: Verstappen, f1.com prints DNF
+  assert.equal(f1ResultLabel("600057428", "4665", "STATUS_RETIRED", "below"), "Ret"); // China: Verstappen retired on lap 46
+  assert.equal(f1ResultLabel("600057428", "5752", "STATUS_RETIRED"), null, "no laps known: no claim");
+  assert.equal(f1ResultLabel("600057428", "5752", "STATUS_CLASSIFIED", "classified"), null);
+  assert.deepEqual(f1ResultFor("600057428", "5579", 20, "STATUS_RETIRED", "below"), { label: "DNS", position: null });
+});
+
+test("the DNS drivers go after the retired ones in the classification", () => {
+  const rows = [
+    { driver_espn_id: "a", position: 1, status: "STATUS_CLASSIFIED", laps: 56, winner: true },
+    { driver_espn_id: "5752", position: 19, status: "STATUS_RETIRED", laps: 0, winner: false },
+    { driver_espn_id: "4665", position: 16, status: "STATUS_RETIRED", laps: 45, winner: false },
+    { driver_espn_id: "5579", position: 20, status: "STATUS_RETIRED", laps: 0, winner: false },
+  ];
+  const out = orderF1Classification("600057428", rows);
+  assert.deepEqual(out.map((r) => [r.driver_espn_id, r.result_label, r.position]), [["a", null, 1], ["4665", "Ret", null], ["5752", "DNS", null], ["5579", "DNS", null]]);
+});

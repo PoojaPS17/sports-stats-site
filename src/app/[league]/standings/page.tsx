@@ -28,20 +28,22 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
   const { league } = await params;
   if (!isLeague(league) || !hasStandings(league)) notFound();
 
-  const { standings, seasons, activeSeason, fallbackSeason } = await currentStandingsView(league);
+  const { standings, seasons, activeSeason, fallbackSeason, preseason } = await currentStandingsView(league);
   const playoffGames = activeSeason ? await getSeasonPlayoffGames(league, activeSeason) : [];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title={`${LEAGUE_LABEL[league]} Standings`}
-        subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} season${fallbackSeason ? " (final). The new season has not started yet." : ""}` : undefined}
+        subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} ${preseason ? "preseason" : "season"}${fallbackSeason ? " (final). The new season has not started yet." : ""}` : undefined}
       >
         {supportsScoreAnalytics(league) && <StandingsViewTabs league={league} active="overall" />}
       </PageHeader>
       <AdSlot label={`${LEAGUE_LABEL[league]} standings top`} />
 
       <SeasonTabs league={league} basePath={`/${league}/standings`} seasons={seasons} activeSeason={activeSeason} />
+
+      {preseason && <p className="card px-4 py-3 text-sm text-[var(--text-muted)]">{preseason}</p>}
 
       <SeasonSummary league={league} playoffResults={summarizePlayoffs(playoffGames)} standings={standings} />
 
@@ -52,7 +54,7 @@ export default async function StandingsPage({ params }: { params: Promise<{ leag
             shareTitle={`${LEAGUE_LABEL[league]} standings`}
             linkUrl={`/${league}/standings/card`}
             width={standingsExportWidth(league, standings)}
-            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} season${fallbackSeason ? " (final)" : ""}` : null} context={`${LEAGUE_LABEL[league]} standings`} seasonFinished={seasonHasFinal(playoffGames)} />}
+            card={<StandingsExportCard league={league} standings={standings} title={`${LEAGUE_LABEL[league]} standings`} subtitle={activeSeason ? `${formatSeasonLabel(league, activeSeason)} ${preseason ? "preseason" : "season"}${fallbackSeason ? " (final)" : ""}` : null} context={`${LEAGUE_LABEL[league]} standings`} seasonFinished={seasonHasFinal(playoffGames)} />}
           />
         )}
         <StandingsTable league={league} standings={standings} seasonFinished={seasonHasFinal(playoffGames)} />

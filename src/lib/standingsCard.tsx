@@ -14,7 +14,8 @@ const TABLE_ROWS = 20;
 export type CardSection = FittedSection<CardRow>;
 
 export interface CardRow {
-  position: number;
+  /** Null in a preseason table: exhibition records seed nobody. */
+  position: number | null;
   name: string;
   color: string;
   /** The figure the table is ordered by: points in football and cricket, the record elsewhere. */
@@ -33,7 +34,7 @@ function pct(value: string): string {
   return Number.isFinite(n) ? n.toFixed(3).replace(/^0/, "") : "";
 }
 
-function cardRow(league: League, mode: "soccer" | "cricket" | "default", r: StandingRow, position: number): CardRow {
+function cardRow(league: League, mode: "soccer" | "cricket" | "default", r: StandingRow, position: number | null): CardRow {
   const base = { position, name: r.name, color: dotColor(r.color) };
   if (mode === "soccer") return { ...base, primary: String(r.points ?? "-"), secondary: `${r.wins}-${r.draws ?? 0}-${r.losses}` };
   if (mode === "cricket") return { ...base, primary: String(r.points ?? "-"), secondary: `${r.wins}-${r.losses}` };
@@ -47,7 +48,7 @@ function cardRow(league: League, mode: "soccer" | "cricket" | "default", r: Stan
  */
 export function layoutStandings(league: League, standings: StandingRow[], format: StandingsCardFormat): { columns: CardSection[][]; hiddenGroups: number } {
   const { mode, sections } = groupStandings(league, standings);
-  const rows: [string, CardRow[]][] = sections.map(([title, list]) => [title, list.map((r, i) => cardRow(league, mode, r, i + 1))]);
+  const rows: [string, CardRow[]][] = sections.map(([title, list]) => [title, list.map((r, i) => cardRow(league, mode, r, r.preseason ? null : i + 1))]);
   // A single table needs no heading of its own: the title over it already names the league.
   return fitSections(rows, format, { cap: sections.length > 1 ? GROUP_ROWS : TABLE_ROWS, columnCount: sections.length > 1 ? 2 : 1, headed: sections.length > 1 });
 }
@@ -57,7 +58,7 @@ export function standingsCardElement({ league, standings, subtitle, format }: { 
   const { columns, hiddenGroups } = layoutStandings(league, standings, format);
   const headed = columns.flat().length > 1 || hiddenGroups > 0;
   const omitted = hiddenGroups > 0 || columns.some((c) => c.some((s) => s.hidden > 0));
-  const drawn: FittedSection<ChartRow>[][] = columns.map((c) => c.map((s) => ({ ...s, rows: s.rows.map((r) => ({ position: String(r.position), dot: r.color, name: r.name, primary: r.primary, secondary: r.secondary })) })));
+  const drawn: FittedSection<ChartRow>[][] = columns.map((c) => c.map((s) => ({ ...s, rows: s.rows.map((r) => ({ position: r.position === null ? "–" : String(r.position), dot: r.color, name: r.name, primary: r.primary, secondary: r.secondary })) })));
   return chartCardElement({
     kicker: subtitle ?? "Standings",
     title: `${LEAGUE_LABEL[league]} standings`,

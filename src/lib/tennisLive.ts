@@ -4,7 +4,7 @@
 import { pool } from "./db";
 import { easternDay, parseTennisEvent, TENNIS_HEADER_URL, type FeedMatch } from "./tennisFeed";
 import type { TennisMatch, TennisSide } from "./tennis";
-import { idsFollowingOnCourt, occupiesCourt } from "./tennisDisplay";
+import { idsFollowingOnCourt, occupiesCourt, withoutUnplayedSets } from "./tennisDisplay";
 
 const LIVE_REVALIDATE = 10;
 
@@ -82,7 +82,7 @@ export async function overlayLiveTennis(day: string, rows: TennisMatch[], tour?:
     // abbreviates; everything about the state of play comes from the feed.
     if (stored && stored.side1.names.length === fresh.side1.names.length && fresh.side1.names.some((n) => /^[A-Z]\.\s/.test(n))) fresh.side1.names = stored.side1.names;
     if (stored && stored.side2.names.length === fresh.side2.names.length && fresh.side2.names.some((n) => /^[A-Z]\.\s/.test(n))) fresh.side2.names = stored.side2.names;
-    byId.set(m.id, fresh);
+    byId.set(m.id, withoutUnplayedSets(fresh));
   }
   const matches = [...byId.values()];
   const order = ["mens-singles", "womens-singles", "mens-doubles", "womens-doubles", "mixed-doubles"];

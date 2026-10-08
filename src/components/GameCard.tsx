@@ -119,7 +119,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           completed={game.completed}
           round={game.round}
           stage={game.stage}
-          competitionType={game.competition_type}
+          competitionType={game.competition_type} seasonType={game.season_type}
           note={game.note}
           league={league}
           clock={false}

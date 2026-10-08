@@ -29,6 +29,7 @@ import { playerSport, sportProfile } from "./playerProfile";
 import { isGameCalledOff } from "./gameStatus";
 import { teamDisplayName } from "./teamName";
 import { loadMoments, parseTeams } from "./moments";
+import { PRESEASON_LABEL } from "./standingsSeasons";
 
 const NEXT = 3;
 const TABLE_ROWS = 6;
@@ -87,6 +88,7 @@ function fixtureFromGame(league: League, g: GameRow, teamEspnId: string): Fixtur
     live: g.status_state === "in",
     status: g.status_state === "in" ? g.status_detail : null,
     league,
+    ...(g.season_type === 1 ? { preseason: true } : {}),
   };
 }
 
@@ -109,21 +111,27 @@ async function teamSummary(league: League, teamEspnId: string, games: GameRow[])
   const record = usesRecordOrder(league);
   const played = row ? row.wins + row.losses + (row.draws ?? 0) + (row.no_result ?? 0) : 0;
   // A team that has not played yet sits in the table only by its name's tie-break, so it has no position either.
-  const ranked = row !== null && !row.unranked && played > 0;
+  const ranked = row !== null && !row.unranked && !row.preseason && played > 0;
+  // A preseason table seeds nobody: the card says so and gives the exhibition record, the same table the standings block lists.
+  const preseason = row !== null && Boolean(row.preseason);
   const diff = row && row.goals_for !== null && row.goals_against !== null ? row.goals_for - row.goals_against : null;
+  // Recent form is the team page's: a game that does not count (preseason, All-Star, the Cup final) is not a result.
   const form = games
-    .filter((g) => g.completed)
+    .filter((g) => g.completed && g.stage !== "excluded")
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
     .map((g) => fixtureFromGame(league, g, teamEspnId).result)
     .filter((r): r is "W" | "L" | "D" => r !== null)
     .reverse();
   return {
-    leagueLabel: table.name ? `${LEAGUE_LABEL[league]} · ${table.name}` : LEAGUE_LABEL[league],
+    leagueLabel: preseason ? `${LEAGUE_LABEL[league]} · ${PRESEASON_LABEL}` : table.name ? `${LEAGUE_LABEL[league]} · ${table.name}` : LEAGUE_LABEL[league],
     position: ranked ? (row.rank !== null && !record ? row.rank : i + 1) : null,
     figure: ranked ? (record ? `${row.wins}-${row.losses}` : `${row.points ?? 0} pts`) : null,
-    record: ranked ? `${played} played${diff !== null ? ` · ${diff > 0 ? "+" : ""}${diff} ${DIFFERENCE_WORD(league)} difference` : ""}` : null,
+    record: preseason
+      ? played > 0 ? `${PRESEASON_LABEL} record ${row!.wins}-${row!.losses}${row!.draws ? `-${row!.draws}` : ""}` : null
+      : ranked ? `${played} played${diff !== null ? ` · ${diff > 0 ? "+" : ""}${diff} ${DIFFERENCE_WORD(league)} difference` : ""}` : null,
     form,
+    ...(preseason ? { preseason: true } : {}),
   };
 }
 
@@ -182,14 +190,17 @@ async function loadCricketSide(sideId: string): Promise<TeamNextBlockData | null
 
 function tableFrom(league: League, rows: StandingRow[], label: string, href: string): StandingsBlockData {
   // Bands read against the whole table: ESPN's notes for a finished season, position while it runs.
-  const bands = topBands(league, rows, TABLE_ROWS);
+  const preseason = rows.length > 0 && rows.every((r) => r.preseason);
+  const bands = preseason ? [] : topBands(league, rows, TABLE_ROWS);
   const record = usesRecordOrder(league);
   return {
     label,
     href,
     record,
+    ...(preseason ? { preseason: true } : {}),
     rows: rows.slice(0, TABLE_ROWS).map((r, i) => {
-      const position = r.rank ?? i + 1;
+      // Exhibition records seed nobody: no position in a preseason table.
+      const position = preseason ? null : r.rank ?? i + 1;
       return {
         position,
         name: teamDisplayName(r.name),

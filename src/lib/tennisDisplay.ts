@@ -18,7 +18,17 @@ type Fields = Pick<TennisMatch, "completed" | "status_state" | "status_detail" |
   side1?: { sets?: unknown[] };
   side2?: { sets?: unknown[] };
   after_court_match?: boolean;
+  /** The listed start, ISO. With `now`, lets a match that never got a result stop reading as upcoming. */
+  date?: string;
 };
+
+/**
+ * A match still "pre" this long after its listed start is not upcoming. ESPN's daily listing can drop a match that was
+ * played in the small hours of its day without ever moving it out of "M/d - TBD" (the scraper now finishes those from
+ * the match's own resource; a Davis Cup tie of 2016 that ESPN never filled stays "TBD" for good). A start time is
+ * midnight Eastern when ESPN has no time, so a day plus a few hours is the earliest safe point.
+ */
+export const NO_RESULT_AFTER_HOURS = 30;
 
 export type TennisMatchStatus = { kind: "live" | "result" | "called-off" | "upcoming"; label: string | null };
 
@@ -28,14 +38,17 @@ export type TennisMatchStatus = { kind: "live" | "result" | "called-off" | "upco
  * - not in play, no winner, and a called-off status: called off, with the reason;
  * - still "pre" but with a score on the board: play started and stopped and ESPN never moved it out of "pre"
  *   (the SP Open doubles final stood at 4-3 with a start time in the past): suspended, never a start time;
+ * - still "pre" more than NO_RESULT_AFTER_HOURS after its listed start, with nothing on the board: "No result" (ESPN never
+ *   gave it one; never "Upcoming" or a start time in the past);
  * - a start time ESPN has not set ("M/d - 'TBD'", with a placeholder date of midnight Eastern): "Time TBD";
  * - anything else: upcoming.
  */
-export function tennisMatchStatus(m: Fields): TennisMatchStatus {
+export function tennisMatchStatus(m: Fields, now: number = Date.now()): TennisMatchStatus {
   if (m.status_state === "in") return { kind: "live", label: m.status_detail ?? "Live" };
   if (m.winner_side == null && isCalledOff(m.status_detail)) return { kind: "called-off", label: calledOffLabel(m.status_detail) };
   if (m.completed || m.winner_side != null) return { kind: "result", label: m.status_detail && m.status_detail !== "Final" ? m.status_detail : "Final" };
   if (m.status_state === "pre" && ((m.side1?.sets?.length ?? 0) > 0 || (m.side2?.sets?.length ?? 0) > 0)) return { kind: "called-off", label: "Suspended" };
+  if (m.status_state === "pre" && m.date && now - Date.parse(m.date) > NO_RESULT_AFTER_HOURS * 3_600_000) return { kind: "called-off", label: "No result" };
   if (m.status_detail && /\bTBD\b/i.test(m.status_detail)) return { kind: "upcoming", label: "Time TBD" };
   return { kind: "upcoming", label: null };
 }
@@ -97,4 +110,24 @@ export function occupiesCourt(m: { status_detail: string | null; completed: bool
   const d = m.status_detail ?? "";
   if (/\bTBD\b/i.test(d) || isNeverPlayed(d)) return false;
   return m.completed || !isCalledOff(d);
+}
+
+
+type SetsSide = { sets: TennisSet[] };
+
+/**
+ * A finished match without the sets that were never played. ESPN stores a retirement as "6-4 0-0 ret" and a few
+ * finished matches carry a third "0-0": a set with no game played by either side. Only trailing sets of a finished
+ * match are dropped (a set in play starts 0-0 and is real), and only when both sides show 0 games and no tie-break.
+ * 183 completed production matches carried one on 2026-10-08.
+ */
+export function withoutUnplayedSets<T extends { completed: boolean; status_state: string | null; side1: SetsSide; side2: SetsSide }>(m: T): T {
+  if (!m.completed && m.status_state !== "post") return m;
+  const a = m.side1.sets ?? [];
+  const b = m.side2.sets ?? [];
+  let n = Math.max(a.length, b.length);
+  const empty = (s: TennisSet | undefined) => !s || (s.games === 0 && s.tiebreak == null);
+  while (n > 0 && empty(a[n - 1]) && empty(b[n - 1])) n--;
+  if (n === a.length && n === b.length) return m;
+  return { ...m, side1: { ...m.side1, sets: a.slice(0, n) }, side2: { ...m.side2, sets: b.slice(0, n) } };
 }
