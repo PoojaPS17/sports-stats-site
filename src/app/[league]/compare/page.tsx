@@ -93,7 +93,7 @@ export default async function CompareTeamsPage({
     return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
   };
   type Side = NonNullable<typeof cmp>["a"];
-  const positionText = (s: Side) => (s.position ? `${ordinal(s.position)} of ${s.teamsInTable}` : s.notStarted ? "Season not started" : "Not in current table");
+  const positionText = (s: Side) => (s.position ? `${ordinal(s.position)} of ${s.teamsInTable}` : s.notStarted ? "Season not started" : s.preseason ? "Preseason" : "Not in current table");
   // Football writes W D L; the American leagues write W-L, and W-L-T once a team has a tie.
   const recordText = (s: Side) => (s.overall ? (soccer ? `${s.overall.wins}W ${s.overall.draws}D ${s.overall.losses}L` : formatWinLossTie(s.overall.wins, s.overall.losses, s.overall.draws)) : null);
   const sideOf = (s: Side) => ({

@@ -92,7 +92,7 @@ export function MatchHeader({ league, game, scorecard }: { league: League; game:
   return (
     <div className="card overflow-hidden px-6 py-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} localDate={game.local_date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} note={game.note} league={league} kickoff="datetime" />
+        <StatusPill statusState={game.status_state} statusDetail={game.status_detail} date={game.date} localDate={game.local_date} completed={game.completed} round={game.round} stage={game.stage} competitionType={game.competition_type} seasonType={game.season_type} note={game.note} league={league} kickoff="datetime" />
         <div className="flex items-center gap-3">
           {/* An upcoming match's pill already carries its date and kickoff time; print the date once.
               A finished match prints the day it was played on -- a range for a Test that ran several days. */}

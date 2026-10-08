@@ -4,10 +4,12 @@ import type { MetadataRoute } from "next";
 import { pool } from "./db";
 import { ALL_LEAGUES, LEAGUES, hasNewsFeed, hasStandings, isCricketLeague, type League } from "./leagues";
 import { TOURS } from "./tennisTours";
+import { OTHER_TOUR_PLAYER_SQL } from "./tennis";
 import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
 import { hasWeeks, loadWeeks } from "./matchweekPage";
 import { countedMeetingSql, supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
+import { getStandingsSeasons } from "./queries";
 import { h2hPath } from "./h2h";
 import { supportsProjections } from "./simulator";
 import { playerSport } from "./playerProfile";
@@ -113,8 +115,8 @@ async function core(): Promise<Entry[]> {
     // The hub answers 200 noindex when the league has no rounds yet (no games, or only preseason ones), so it is listed only when it has rounds to show.
     if (supportsMatchweeks(league) && hasWeeks(await loadWeeks(league))) out.push(entry(weekIndexPath(league), "daily", 0.7));
     if (supportsProjections(league)) out.push(entry(`/${league}/projections`, "daily", 0.8));
-    const { rows: seasons } = await pool.query(`select distinct season from standings where league = $1 order by season desc`, [league]);
-    for (const { season } of seasons) out.push(entry(`/${league}/standings/${season}`, "yearly", 0.4));
+    // Not a phantom season (a repeat of the last one): its page is a 404 (see standingsSeasons.ts).
+    for (const season of await getStandingsSeasons(league)) out.push(entry(`/${league}/standings/${season}`, "yearly", 0.4));
   }
   return out;
 }
@@ -245,6 +247,8 @@ async function tennisPlayers(): Promise<Entry[]> {
      )
      select p.league as tour, p.slug from players p
      join played x on x.tour = p.league and x.espn_id = p.espn_id
+     -- a woman's ATP row (a United Cup rubber) redirects to her WTA page, so it is not listed
+     where not ${OTHER_TOUR_PLAYER_SQL("p")}
      order by p.league, p.slug`
   );
   return rows.map(({ tour, slug }) => entry(`/tennis/${tour}/players/${slug}`, "weekly", 0.5));

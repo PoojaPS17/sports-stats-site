@@ -3,10 +3,11 @@
 // history, and record books. Everything here is pure aggregation of data the
 // scrapers already store — nothing is fetched from ESPN.
 import { pool } from "./db";
+import { currentRun, meetingResult, tallyMeetings } from "./h2hOutcome";
 import { hasTies, isCricketLeague, isUsSport, SOCCER_LEAGUES, type League } from "./leagues";
 import type { GameStage } from "./gameStage";
 import { CALLED_OFF, isCalledOff } from "./gameStatus";
-import type { GameRow } from "./queries";
+import { getStandingsSeasonStatuses, type GameRow } from "./queries";
 import { leagueWideRank } from "./standingsOrder";
 
 /* ------------------------------------------------------------------------ */
@@ -89,9 +90,11 @@ export async function getTeamMap(league: League): Promise<Map<string, TeamRef>> 
   return new Map(rows.map((r) => [r.espn_id as string, r as TeamRef]));
 }
 
+// A game that says nothing about strength (preseason, All-Star, the NBA Cup final: stage 'excluded') does not start a
+// season: the NBA's preseason games would otherwise make the new season "current" with no regular-season game played.
 export async function getCurrentSeason(league: League): Promise<number | null> {
   const { rows } = await pool.query(
-    `select max(season_year) as season from games where league = $1 and completed = true`,
+    `select max(season_year) as season from games where league = $1 and completed = true and stage <> 'excluded'`,
     [league]
   );
   return rows[0]?.season ?? null;
@@ -390,12 +393,22 @@ export async function getPowerRankings(league: League, nextN = 5): Promise<Power
 /* ------------------------------------------------------------------------ */
 
 export interface HeadToHead {
+  league: League;
   teamA: TeamRef;
   teamB: TeamRef;
+  /** Counted meetings: wins + draws + ties + noResults + unknown. */
   meetings: number;
   winsA: number;
   winsB: number;
+  /** Football draws, NFL ties and Test draws. */
   draws: number;
+  /** Cricket matches that finished level (a super over does not break them): neither side's win. 0 outside cricket. */
+  ties: number;
+  /** Cricket matches with no result (rain, abandoned). 0 outside cricket. */
+  noResults: number;
+  /** Cricket meetings whose result the data does not state; left out of every count above. 0 outside cricket. */
+  unknown: number;
+  /** Goals or points for each side; 0 for cricket, whose stored scores are a side's first innings, not a total. */
   goalsA: number;
   goalsB: number;
   /** Most recent first. */
@@ -439,7 +452,7 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
     `select
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.season_type, g.competition_type, g.note, g.completed,
        g.local_date::text as local_date, g.end_date::text as end_date,
        g.home_team_espn_id, g.away_team_espn_id,
        ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
@@ -462,9 +475,12 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
   // ESPN keeps its original (past) event with a 0-0 score and the replay is a separate event.
   const upcoming = [...games].reverse().find((g) => !g.completed && !isCalledOff(g.status_detail)) ?? null;
 
-  let winsA = 0;
-  let winsB = 0;
-  let draws = 0;
+  // Who won each counted meeting, from teamA's side. Cricket's stored scores are a side's first innings (or a
+  // limited-overs total that DLS or a super over can overturn), so its results come from the match's result line
+  // and winner flags (h2hOutcome.ts); every other league compares the scores, as before.
+  const cricket = isCricketLeague(league);
+  const results = counted.map((g) => meetingResult(league, g, teamA.espn_id));
+  const tally = tallyMeetings(league, counted, teamA.espn_id);
   let goalsA = 0;
   let goalsB = 0;
   let biggestWinA: GameRow | null = null;
@@ -472,53 +488,41 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
   let bestMarginA = 0;
   let bestMarginB = 0;
 
-  function sideOf(g: GameRow, id: string) {
-    const isHome = g.home_team_espn_id === id;
-    return { gf: isHome ? g.home_score! : g.away_score!, ga: isHome ? g.away_score! : g.home_score! };
-  }
-
-  for (const g of counted) {
-    const a = sideOf(g, teamA.espn_id);
-    goalsA += a.gf;
-    goalsB += a.ga;
-    if (a.gf > a.ga) {
-      winsA++;
-      if (a.gf - a.ga > bestMarginA) {
-        bestMarginA = a.gf - a.ga;
+  // Goals and points for, and the biggest wins, are score arithmetic: for cricket the scores do not add up to
+  // runs or a margin (a Test side's first innings only), so those figures stay empty rather than wrong.
+  if (!cricket) {
+    counted.forEach((g, i) => {
+      const isHome = g.home_team_espn_id === teamA.espn_id;
+      const gf = isHome ? g.home_score! : g.away_score!;
+      const ga = isHome ? g.away_score! : g.home_score!;
+      goalsA += gf;
+      goalsB += ga;
+      if (results[i] === "A" && gf - ga > bestMarginA) {
+        bestMarginA = gf - ga;
         biggestWinA = g;
-      }
-    } else if (a.gf < a.ga) {
-      winsB++;
-      if (a.ga - a.gf > bestMarginB) {
-        bestMarginB = a.ga - a.gf;
+      } else if (results[i] === "B" && ga - gf > bestMarginB) {
+        bestMarginB = ga - gf;
         biggestWinB = g;
       }
-    } else draws++;
+    });
   }
 
-  let streak: HeadToHead["streak"] = null;
-  if (counted.length > 0) {
-    const first = sideOf(counted[0], teamA.espn_id);
-    const kind: "A" | "B" | null = first.gf > first.ga ? "A" : first.gf < first.ga ? "B" : null;
-    let length = 0;
-    for (const g of counted) {
-      const s = sideOf(g, teamA.espn_id);
-      const k = s.gf > s.ga ? "A" : s.gf < s.ga ? "B" : null;
-      if (k !== kind) break;
-      length++;
-    }
-    streak = { team: kind, length };
-  }
+  // The current run, newest meeting first: who has won the last N, or how many were drawn in a row.
+  const streak: HeadToHead["streak"] = currentRun(results);
 
   const seasons = counted.map((g) => g.season_year).filter((s): s is number => s != null);
 
   return {
     teamA,
     teamB,
+    league,
     meetings: counted.length,
-    winsA,
-    winsB,
-    draws,
+    winsA: tally.winsA,
+    winsB: tally.winsB,
+    draws: tally.draws,
+    ties: tally.ties,
+    noResults: tally.noResults,
+    unknown: tally.unknown,
     goalsA,
     goalsB,
     games: completed,
@@ -568,6 +572,8 @@ export async function getTeamHistory(league: League, teamEspnId: string): Promis
      from standings where league = $1`,
     [league]
   );
+  // A season that only repeats the last one (a phantom) or is a preseason table holds no finish: it counts as not played.
+  const notAFinish = new Set((await getStandingsSeasonStatuses(league)).filter((s) => s.phantom || s.preseason).map((s) => s.season));
   const seasonGames = new Map<number, number>();
   const partitions = new Map<string, typeof rows>();
   for (const r of rows) {
@@ -598,7 +604,7 @@ export async function getTeamHistory(league: League, teamEspnId: string): Promis
         goals_against: r.goals_against,
         win_percent: r.win_percent,
         conference: r.conference,
-        played: (seasonGames.get(r.season) ?? 0) > 0,
+        played: (seasonGames.get(r.season) ?? 0) > 0 && !notAFinish.has(r.season),
       };
     });
 }

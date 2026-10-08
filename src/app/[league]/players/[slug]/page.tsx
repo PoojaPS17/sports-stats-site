@@ -18,6 +18,7 @@ import {
   getSameNamePlayerWithGames,
   getPlayerCricketCareer,
   getPlayerOtherFormats,
+  getPlayerFirstStoredYears,
   getPlayerOtherLeagues,
   getPlayerCricketSplits,
   CRICKET_SPLIT_DIMENSIONS,
@@ -44,6 +45,7 @@ import { athleteSchema } from "@/lib/structuredData";
 import { buildStagedProfile, goalBands, hasGames, noBoxScoreGames, playerMeta, playerSport, positionLabel, storedGamesOnly, unlistedGameCount, type StagedProfile } from "@/lib/playerProfile";
 import { profileSummary } from "@/lib/playerDescriptions";
 import { cricketPlayerDescription } from "@/lib/cricketPlayerSeo";
+import { cricketFormatNote } from "@/lib/cricketCoverage";
 import { PlayerCareerStrip } from "@/components/PlayerCareerStrip";
 import { ImageActions } from "@/components/ImageActions";
 import { PlayerExportCard } from "@/components/PlayerExportCard";
@@ -154,16 +156,17 @@ export default async function PlayerPage({
   if (isCricketLeague(league) || !sport) {
     // Every split at once: they are tabs in the page now, so the player has one address and the
     // page renders the same for everyone (which is what lets it be cached).
-    const [career, otherFormats, splitRows] = await Promise.all([
+    const [career, otherFormats, firstYears, splitRows] = await Promise.all([
       cachedCareer(league, player.espn_id),
       getPlayerOtherFormats(league, player.espn_id),
+      getPlayerFirstStoredYears(player.espn_id),
       Promise.all(CRICKET_SPLIT_DIMENSIONS.map((d) => getPlayerCricketSplits(league, player.espn_id, d.key))),
     ]);
     const splits = Object.fromEntries(CRICKET_SPLIT_DIMENSIONS.map((d, i) => [d.key, splitRows[i]])) as Record<CricketSplitDimension, CricketSplitRow[]>;
     return (
       <div className="flex flex-col gap-6">
         {header(playerMeta(null, player))}
-        <CricketOtherFormats name={player.name} formats={otherFormats} />
+        <CricketOtherFormats name={player.name} formats={otherFormats} note={cricketFormatNote(player.name, league, firstYears, otherFormats.map((f) => f.league))} />
         {career ? (
           <CricketCareer league={league} career={career} splits={splits} />
         ) : (

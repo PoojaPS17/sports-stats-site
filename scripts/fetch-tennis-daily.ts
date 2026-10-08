@@ -17,7 +17,8 @@
 // request each (full name, country, headshot); a scheduled run caps that so a big
 // day cannot stall the scrape — the next run picks up the rest.
 import { pool } from "./lib/db";
-import { fetchTennisDay, fetchTennisEvent, fetchTennisSeasonEventRefs, fetchTennisAthlete, fetchByRef, type Tour } from "./lib/tennis";
+import { fetchTennisDay, fetchTennisEvent, fetchTennisSeasonEventRefs, fetchTennisAthlete, fetchByRef, fetchTennisCompetition, type Tour } from "./lib/tennis";
+import { reconcileStaleMatches } from "./lib/tennisReconcile";
 import { uniqueSlugFor } from "./lib/players";
 import { isCalledOff } from "../src/lib/gameStatus";
 
@@ -447,6 +448,12 @@ async function main() {
   }
   console.log(`[fetch-tennis-daily] ${days} days: ${total} matches, ${fetched.size} player details fetched`);
   if (!dryRun) await fillTournamentDates(playerCap === Infinity ? 1000 : 40);
+  // Matches the daily windows never carried after play (see scripts/lib/tennisReconcile.ts). A scheduled run only; a
+  // backfill (--since) reads every day itself.
+  if (!dryRun && playerCap !== Infinity) {
+    const r = await reconcileStaleMatches(pool, fetchTennisCompetition, { log: (m) => console.error(`[fetch-tennis-daily] reconcile: ${m}`) });
+    if (r.looked > 0) console.log(`[fetch-tennis-daily] reconcile: ${r.completed} of ${r.looked} stale matches completed, ${r.byes} byes marked`);
+  }
   await pool.end();
 }
 

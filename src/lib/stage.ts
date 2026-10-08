@@ -77,9 +77,16 @@ export function finalLabel(league: League, statusDetail: string | null | undefin
 // query for those must not pick these up).
 export { specialStageLabel };
 
-/** The stage label a card shows: the game's round, else its play-in / Cup-final label, else its NBA Cup note label (see gameNote.ts), else null. */
-export function gameRoundLabel(g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null }): string | null {
-  return normalizeStage(g.round) ?? specialStageLabel(g) ?? cupNoteLabel(g);
+/** ESPN's season type of a preseason game (games.season_type). */
+const PRESEASON_GAME = 1;
+export const PRESEASON_GAME_LABEL = "Preseason";
+
+/**
+ * The stage label a card shows: the game's round, else its play-in / Cup-final label, else "Preseason" for an
+ * exhibition game (games.season_type 1), else its NBA Cup note label (see gameNote.ts), else null.
+ */
+export function gameRoundLabel(g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null; season_type?: number | null }): string | null {
+  return normalizeStage(g.round) ?? specialStageLabel(g) ?? (g.season_type === PRESEASON_GAME && g.competition_type !== "ALLSTAR" ? PRESEASON_GAME_LABEL : null) ?? cupNoteLabel(g);
 }
 
 /**
@@ -89,11 +96,13 @@ export function gameRoundLabel(g: { round: string | null; stage?: string | null;
  */
 export function finishedPillLabel(
   league: League,
-  g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null; status_detail: string | null | undefined },
+  g: { round: string | null; stage?: string | null; competition_type?: string | null; note?: string | null; season_type?: number | null; status_detail: string | null | undefined },
   fallback?: string,
 ): string {
   const stage = gameRoundLabel(g);
   const ot = overtimeFinal(g.status_detail);
+  // "Preseason" is not a result: a finished exhibition game still says it is over ("Preseason · Final").
+  if (stage === PRESEASON_GAME_LABEL) return `${stage} · ${ot ?? (fallback === undefined ? finalLabel(league, g.status_detail) : fallback)}`;
   if (stage && ot) return `${stage} · ${ot}`;
   if (stage) return stage;
   return ot || fallback === undefined ? finalLabel(league, g.status_detail) : fallback;

@@ -4,6 +4,7 @@
 import { LEAGUE_LABEL, LEAGUE_SHORT, type League } from "./leagues";
 import type { CricketCareerStats } from "./queries";
 import { highScoreText, trunc2 } from "./cricketFormat";
+import { archiveScope } from "./cricketCoverage";
 
 const n = (v: number) => v.toLocaleString("en-US");
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -25,9 +26,10 @@ function bowlingLine(c: CricketCareerStats, full: boolean): string | null {
 /**
  * With a stored career: "Name League stats: 252 matches, 8,004 runs at 38.67 with 8 hundreds and 55 fifties, best 113,
  * for Team." A bowler leads with wickets (a batter's occasional wickets are left out); an all-rounder gets both.
- * Without one, the plain line the page always had.
+ * A league whose archive starts after the format did says so ("ODI stats since 2002: ..."): the totals are over the matches
+ * the site holds, so an unscoped figure would read as the whole career. Without a career, the plain line the page always had.
  */
-export function cricketPlayerDescription(league: League, name: string, team: string | null, career: CricketCareerStats | null): string {
+export function cricketPlayerDescription(league: League, name: string, team: string | null, career: CricketCareerStats | null, testStart?: number): string {
   if (!career || career.matches === 0) return `${name}${team ? ` (${team})` : ""} ${LEAGUE_LABEL[league]} career figures, match-by-match record and splits.`;
   const bowlerFirst = career.wickets * 25 > career.runs;
   // A batter's handful of wickets, or a bowler's handful of runs, is not a figure anyone searches for.
@@ -36,8 +38,9 @@ export function cricketPlayerDescription(league: League, name: string, team: str
     const bowl = bowlerFirst || career.wickets >= 10 || career.wickets * 25 >= career.runs ? bowlingLine(career, full) : null;
     return (bowlerFirst ? [bowl, bat] : [bat, bowl]).filter(Boolean) as string[];
   };
+  const scope = archiveScope(league, testStart);
   const lead = (leagueName: string, withTeam: boolean, full: boolean) =>
-    `${name} ${leagueName} stats: ${plural(career.matches, "match", "matches")}, ${parts(full).join(", ")}${withTeam && team ? `, for ${team}` : ""}.`;
+    `${name} ${leagueName} stats${scope ? ` ${scope}` : ""}: ${plural(career.matches, "match", "matches")}, ${parts(full).join(", ")}${withTeam && team ? `, for ${team}` : ""}.`;
   const candidates = [lead(LEAGUE_LABEL[league], true, true), lead(LEAGUE_SHORT[league], true, true), lead(LEAGUE_SHORT[league], false, true), lead(LEAGUE_SHORT[league], false, false)];
   const chosen = candidates.find((c) => c.length <= 160) ?? candidates[candidates.length - 1];
   const tail = " Match log and splits.";

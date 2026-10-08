@@ -410,7 +410,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
             title: "Head-to-head",
             links: supportsScoreAnalytics(league)
               ? [
-                  { href: h2hPath(league, game.home_slug, game.away_slug), label: matchupLabel(league, game), sub: "All-time record and every meeting" },
+                  { href: h2hPath(league, game.home_slug, game.away_slug), label: matchupLabel(league, game), sub: "Head-to-head record and every meeting" },
                   { href: `/${league}/compare?a=${game.home_slug}&b=${game.away_slug}`, label: "Compare the two teams", sub: "Season stats side by side" },
                 ]
               : [],
