@@ -13,10 +13,11 @@ import { LeagueSnapshot } from "@/components/LeagueSnapshot";
 import { getHomeData, type HomeSection } from "@/lib/homeData";
 import { listArticles } from "@/lib/beyondTheScoreline";
 import { absoluteUrl } from "@/lib/site";
-import { HomeBuilder } from "@/components/home/HomeBuilder";
+import { SportPicker } from "@/components/home/SportPicker";
 import { HomeBlocks } from "@/components/home/HomeBlocks";
 import { CollapsedBar } from "@/components/home/CollapsedBar";
 import { getEditionContext } from "@/lib/editionContext";
+import { sportLines } from "@/lib/sportPicks";
 
 // Title, description and share card come from the root layout. The canonical lives here and not
 // in the layout, so no page can inherit the home address by accident.
@@ -75,8 +76,8 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <section className="home-builder-hero band band-hero bleed -mt-6 py-9 sm:py-11" suppressHydrationWarning>
-        <HomeBuilder ctx={editionContext} />
+      <section className="home-builder-hero band band-deep band-hero bleed -mt-6 py-7 sm:py-11" suppressHydrationWarning>
+        <SportPicker ctx={editionContext} lines={sportLines({ liveCricket: home.liveCricket.length, liveTennis: home.liveTennis.length, sections: home.sections })} liveNow={home.liveGames.length + home.liveCricket.length + home.liveTennis.length} />
       </section>
       <CollapsedBar />
       <div className="home-skeleton" aria-hidden />
