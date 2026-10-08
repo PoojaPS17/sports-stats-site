@@ -12,7 +12,7 @@ export function TeamStatsComparison({ away, home, homeFirst = false }: { away: T
     homeValue: formatStat(stat.label, home.stats[i]?.value ?? "-"),
   }));
   if (rows.length === 0) return null;
-  const awayColor = "bg-[var(--accent-2)]";
+  const awayColor = "bg-[var(--sky)]";
   const homeColor = "bg-[var(--accent)]";
 
   return (

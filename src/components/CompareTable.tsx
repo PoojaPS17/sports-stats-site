@@ -19,7 +19,7 @@ export function CompareTable({
   neutral?: boolean;
 }) {
   const ca = colorA ?? "var(--accent)";
-  const cb = colorB ?? "var(--accent-2)";
+  const cb = colorB ?? "var(--sky)";
   return (
     <div className="flex flex-col gap-6">
       {groups.map((g) => (

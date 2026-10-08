@@ -327,7 +327,7 @@ test("TeamStatsComparison: football home team on the left, NBA/NFL visitors on t
   const us = renderToStaticMarkup(createElement(TeamStatsComparison, { away, home }));
   assert.ok(textOrder(us, ">Sunderland<", ">Manchester City<"));
   assert.ok(textOrder(us, ">4<", ">20<"));
-  assert.match(us, /<span class="h-full bg-\[var\(--accent-2\)\]" style="width:16\.6/);
+  assert.match(us, /<span class="h-full bg-\[var\(--sky\)\]" style="width:16\.6/);
 });
 
 test("TeamStatsExportCard: football lists the home team first in the legend, bars and context", () => {

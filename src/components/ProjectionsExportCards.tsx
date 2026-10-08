@@ -66,7 +66,7 @@ export function UpcomingProbabilityExportCard({ league, proj, title }: { league:
     <ExportShell header={<ExportTitle league={league} title={title} subtitle={`Model win probability for the next seven days. ${formatSeasonLabel(league, proj.season)} season.`} />} context={title}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {shown.map(({ game, homeWin, draw, awayWin }) => {
-          const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "#d97706", win: awayWin };
+          const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "#38b6e8", win: awayWin };
           const home = { name: game.home_name, abbr: game.home_abbr, logo: game.home_logo, color: game.home_color ?? CARD.accent, win: homeWin };
           // Football lists the home side first ("MCI v SUN"); the NBA and NFL the visitors first ("SUN at MCI").
           const homeFirst = scoreLineHomeFirst(league);

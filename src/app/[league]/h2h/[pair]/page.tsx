@@ -160,7 +160,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
               <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
                 <span className="h-full" style={{ width: `${pctA}%`, background: teamA.color ?? "var(--accent)" }} />
                 <span className="h-full bg-[var(--draw)]" style={{ width: `${pctD}%` }} />
-                <span className="h-full flex-1" style={{ background: teamB.color ?? "var(--accent-2)" }} />
+                <span className="h-full flex-1" style={{ background: teamB.color ?? "var(--sky)" }} />
               </div>
             </div>
           )}

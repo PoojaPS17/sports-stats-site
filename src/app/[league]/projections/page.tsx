@@ -82,7 +82,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
           </SectionHeader>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => {
-              const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "var(--accent-2)", win: awayWin };
+              const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "var(--sky)", win: awayWin };
               const home = { name: game.home_name, abbr: game.home_abbr, logo: game.home_logo, color: game.home_color ?? "var(--accent)", win: homeWin };
               // Football lists the home side first ("MCI v SUN"); the NBA and NFL the visitors first ("SUN at MCI").
               const homeFirst = scoreLineHomeFirst(league);
