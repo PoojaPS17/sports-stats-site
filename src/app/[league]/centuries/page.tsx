@@ -11,18 +11,25 @@ import { CenturiesExportCard } from "@/components/CenturiesExportCard";
 import { formatGameDate } from "@/lib/gameDay";
 import { inningsStrikeRate } from "@/lib/cricketFormat";
 import { UNRECORDED_CELL, UNRECORDED_LEGEND } from "@/lib/cricketRecorded";
+import { archiveScope } from "@/lib/cricketCoverage";
 import { testCenturiesDescription, testCenturiesIntro, testCenturiesSubtitle } from "@/lib/testArchiveCopy";
 
 // The table lists this many, newest first. A league with decades of history has thousands of centuries, and one
 // page of that is too heavy to read, render or share; the page says how many there are in all.
 const CENTURIES_ON_PAGE = 1000;
 
+// " since 2002" where the league's archive starts after the format did, so the list is not read as every century ever.
+const scopeOf = (league: Parameters<typeof archiveScope>[0]) => {
+  const scope = archiveScope(league);
+  return scope ? ` ${scope}` : "";
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ league: string }> }): Promise<Metadata> {
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
   if (league === "test") return pageMeta("Test Centuries", testCenturiesDescription(), "/test/centuries");
-  return pageMeta(`${label} Centuries`, `Every century scored in the ${label}, most recent first.`, `/${league}/centuries`);
+  return pageMeta(`${label} Centuries`, `Every century scored in the ${label}${scopeOf(league)}, most recent first.`, `/${league}/centuries`);
 }
 
 // A new century joins this list the moment a match is ingested.
@@ -43,7 +50,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
           {league === "test"
             ? testCenturiesIntro(count)
-            : `${count} centuries scored in the ${LEAGUE_LABEL[league]}, newest first.`}
+            : `${count} centuries scored in the ${LEAGUE_LABEL[league]}${scopeOf(league)}, newest first.`}
         </p>
       </div>
 
@@ -62,7 +69,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                 league={league}
                 centuries={centuries}
                 title={`${league === "test" ? "Test" : LEAGUE_LABEL[league]} centuries`}
-                subtitle={league === "test" ? testCenturiesSubtitle(count) : `${count} centuries scored in the ${LEAGUE_LABEL[league]}, newest first`}
+                subtitle={league === "test" ? testCenturiesSubtitle(count) : `${count} centuries scored in the ${LEAGUE_LABEL[league]}${scopeOf(league)}, newest first`}
               />
             }
           />

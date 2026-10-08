@@ -12,6 +12,14 @@ function figures(f: CricketOtherFormat): string {
 }
 
 // A cricketer has a page per competition (Tests, ODIs, T20Is, IPL...).
-export function CricketOtherFormats({ name, formats }: { name: string; formats: CricketOtherFormat[] }) {
-  return <OtherCompetitions name={name} heading="in other formats" items={formats.map((f) => ({ league: f.league, slug: f.slug, figures: figures(f) }))} />;
+// `note` says a format has no page because the archive does not reach back to his career (cricketCoverage.missingFormatNote).
+export function CricketOtherFormats({ name, formats, note = null }: { name: string; formats: CricketOtherFormat[]; note?: string | null }) {
+  const strip = <OtherCompetitions name={name} heading="in other formats" items={formats.map((f) => ({ league: f.league, slug: f.slug, figures: figures(f) }))} />;
+  if (!note) return strip;
+  return (
+    <div className="flex flex-col gap-2">
+      {strip}
+      <p className="text-xs text-[var(--text-muted)]">{note}</p>
+    </div>
+  );
 }

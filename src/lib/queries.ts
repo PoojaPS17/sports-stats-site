@@ -1030,6 +1030,24 @@ export async function getPlayerOtherFormats(league: League, playerEspnId: string
     .sort((a, b) => (order.get(a.league) ?? 0) - (order.get(b.league) ?? 0));
 }
 
+/**
+ * The calendar year of each cricket competition's first match on the site for one person (ESPN keeps one id across
+ * competitions). The site holds no debut dates, so this is what "may have played earlier" rules read.
+ */
+export async function getPlayerFirstStoredYears(playerEspnId: string): Promise<Partial<Record<League, number>>> {
+  const { rows } = await pool.query(
+    `select pgs.league, extract(year from min(g.date) at time zone 'UTC')::int as first_year
+     from player_game_stats pgs
+     join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+     where pgs.player_espn_id = $1 and pgs.league = any($2::text[])
+     group by pgs.league`,
+    [playerEspnId, CRICKET_LEAGUES]
+  );
+  const out: Partial<Record<League, number>> = {};
+  for (const r of rows) if (r.first_year != null) out[r.league as League] = Number(r.first_year);
+  return out;
+}
+
 export interface FootballOtherLeague { league: League; slug: string; apps: number; goals: number; assists: number }
 
 // The same footballer in the other competitions on record (ESPN keeps one id per person). Counts what the
