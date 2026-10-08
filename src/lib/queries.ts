@@ -18,6 +18,9 @@ import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 import { foldSql, likeTerm, searchTokens } from "./searchText";
 import { CRICKET_LEAGUES, SOCCER_LEAGUES } from "./leagues";
+import { withStoredNotOuts } from "./cricketNotOut";
+import { playerTeamIdSql } from "./playerTeamSql";
+import { canonicalTeamIdSql, isAliasTeamSql, teamIdsFor } from "./teamAliases";
 
 export type { League } from "./leagues";
 export { sortStandings } from "./standingsOrder";
@@ -103,12 +106,12 @@ export const GAME_SELECT = `
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
     g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.season_type, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
     g.local_date::text as local_date, g.end_date::text as end_date,
-    g.home_team_espn_id, g.away_team_espn_id,
+    ${canonicalTeamIdSql("g.league", "g.home_team_espn_id")} as home_team_espn_id, ${canonicalTeamIdSql("g.league", "g.away_team_espn_id")} as away_team_espn_id,
     ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
     ${TEAM_NAME_SQL("at")} as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
   from games g
-  join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
-  join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
+  join teams ht on ht.league = g.league and ht.espn_id = ${canonicalTeamIdSql("g.league", "g.home_team_espn_id")}
+  join teams at on at.league = g.league and at.espn_id = ${canonicalTeamIdSql("g.league", "g.away_team_espn_id")}
 `;
 
 // Only the single-game detail view needs odds/broadcast/weather context, so this has
@@ -142,7 +145,15 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
 export async function getGameDetails(league: League, espnId: string): Promise<GameDetails | null> {
   const { rows } = await pool.query(`select details from game_details where league = $1 and game_espn_id = $2`, [league, espnId]);
   // Reports are stored with ESPN's minute text; every reader gets it in display form (90+4', 46').
-  return rows[0]?.details ? presentDetails(rows[0].details) : null;
+  if (!rows[0]?.details) return null;
+  const details = presentDetails(rows[0].details);
+  if (!isCricketLeague(league) || !details.scorecard?.some((t) => t.battingRows.some((r) => !r.dismissal && r.stats.length >= 2))) return details;
+  // Cricsheet-sourced cards have no dismissal text, so "not out" is read from the stored per-player figures.
+  const { rows: stored } = await pool.query(
+    `select player_espn_id, stats->'batting' as batting, stats->'innings' as innings from player_game_stats where league = $1 and game_espn_id = $2 and stats->'batting' is not null`,
+    [league, espnId]
+  );
+  return { ...details, scorecard: withStoredNotOuts(details.scorecard, new Map(stored.map((r) => [r.player_espn_id as string, { batting: r.batting ?? undefined, innings: r.innings ?? undefined }]))) };
 }
 
 // Every game tagged with a playoff-stage round for a season, in chronological order —
@@ -419,7 +430,7 @@ export async function findPlayerSlugByLegacy(league: string, slug: string): Prom
 export async function getAllTeams(league: League): Promise<TeamRow[]> {
   const { rows } = await pool.query(
     // ESPN's "CLE/CHW" stand-in for a side still being decided is a label, not a club: no row in a team list.
-    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams t where league = $1 and not ${isPlaceholderTeamSql("t")} order by name`,
+    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams t where league = $1 and not ${isPlaceholderTeamSql("t")} and not ${isAliasTeamSql("t")} order by name`,
     [league]
   );
   return rows;
@@ -428,9 +439,9 @@ export async function getAllTeams(league: League): Promise<TeamRow[]> {
 export async function getTeamGamesBySeason(league: League, teamEspnId: string, season: number): Promise<GameRow[]> {
   const { rows } = await pool.query(
     `${GAME_SELECT}
-     where g.league = $1 and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2) and g.season_year = $3
+     where g.league = $1 and (g.home_team_espn_id = any($2::text[]) or g.away_team_espn_id = any($2::text[])) and g.season_year = $3
      order by g.date desc`,
-    [league, teamEspnId, season]
+    [league, teamIdsFor(league, teamEspnId), season]
   );
   return presentGames(rows);
 }
@@ -441,9 +452,9 @@ export async function getTeamGamesBySeason(league: League, teamEspnId: string, s
 export async function getTeamSeasons(league: League, teamEspnId: string): Promise<number[]> {
   const { rows } = await pool.query(
     `select distinct season_year from games
-     where league = $1 and (home_team_espn_id = $2 or away_team_espn_id = $2) and season_year is not null
+     where league = $1 and (home_team_espn_id = any($2::text[]) or away_team_espn_id = any($2::text[])) and season_year is not null
      order by season_year desc`,
-    [league, teamEspnId]
+    [league, teamIdsFor(league, teamEspnId)]
   );
   return rows.map((r) => r.season_year as number);
 }
@@ -472,14 +483,14 @@ export interface PlayerRow {
 
 export async function getPlayerBySlug(league: League, slug: string): Promise<PlayerRow | null> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
+    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, ${playerTeamIdSql("p")} as team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
             t.name as team_name, t.slug as team_slug, t.color as team_color,
             case when p.headshot_url is null then p.photo_credit end as photo_credit,
             case when p.headshot_url is null then p.photo_license end as photo_license,
             case when p.headshot_url is null then p.photo_source_url end as photo_source_url,
-            coalesce(p.team_espn_id is not null and (${ON_ROSTER_SQL}), false) as on_roster
+            coalesce(p.team_espn_id is not null and (${ON_ROSTER_SQL.replaceAll("p.team_espn_id", () => playerTeamIdSql("p"))}), false) as on_roster
      from players p
-     left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+     left join teams t on t.league = p.league and t.espn_id = ${playerTeamIdSql("p")}
      where p.league = $1 and p.slug = $2 and ${notPseudoAthleteSql()}`,
     [league, slug]
   );
@@ -497,10 +508,10 @@ export async function getPlayerSlugsByEspnIds(league: League, espnIds: string[])
 
 export async function getAllPlayers(league: League): Promise<PlayerRow[]> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.team_espn_id,
+    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, ${playerTeamIdSql("p")} as team_espn_id,
             t.name as team_name, t.slug as team_slug, t.color as team_color
      from players p
-     left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+     left join teams t on t.league = p.league and t.espn_id = ${playerTeamIdSql("p")}
      where p.league = $1 and ${notPseudoAthleteSql()}
      order by p.name`,
     [league]
@@ -757,9 +768,9 @@ export const ON_ROSTER_SQL = `(select max(roster_seen_at) from players r where r
 export async function getTeamRoster(league: League, teamEspnId: string): Promise<RosterPlayer[]> {
   const { rows } = await pool.query(
     `select p.espn_id, p.name, p.slug, p.position, p.jersey, p.height, p.weight, p.age, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.is_captain, p.is_wicketkeeper
-     from players p where p.league = $1 and p.team_espn_id = $2 and ${notPseudoAthleteSql()} and (${ON_ROSTER_SQL})
+     from players p where p.league = $1 and p.team_espn_id = any($2::text[]) and ${notPseudoAthleteSql()} and (${ON_ROSTER_SQL})
      order by p.is_captain desc nulls last, p.position, p.name`,
-    [league, teamEspnId]
+    [league, teamIdsFor(league, teamEspnId)]
   );
   return rows;
 }
@@ -1001,6 +1012,8 @@ export interface CricketCareerStats {
   hundreds: number;
   fifties: number;
   highestScore: number | null;
+  /** The highest score was not out ("254*"). When two innings tie on the score, one of them being unbeaten is enough. */
+  highestScoreNotOut: boolean;
   average: number | null;
   strikeRate: number | null;
   inningsBowled: number;
@@ -1108,6 +1121,9 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
        count(*) filter (where (inn->'batting'->>'runs')::int >= 100) as hundreds,
        count(*) filter (where (inn->'batting'->>'runs')::int >= 50 and (inn->'batting'->>'runs')::int < 100) as fifties,
        max((inn->'batting'->>'runs')::int) as highest_score,
+       (array_agg(coalesce((inn->'batting'->>'notOut')::boolean, false)
+          order by (inn->'batting'->>'runs')::int desc nulls last, coalesce((inn->'batting'->>'notOut')::boolean, false) desc)
+          filter (where inn->'batting' is not null))[1] as highest_score_not_out,
        count(*) filter (where inn->'bowling' is not null) as innings_bowled,
        coalesce(sum(floor((inn->'bowling'->>'overs')::numeric) * coalesce((inn->'bowling'->>'bpo')::int, 6) + round(((inn->'bowling'->>'overs')::numeric % 1) * 10)), 0) as balls_bowled,
        coalesce(sum((inn->'bowling'->>'conceded')::int), 0) as runs_conceded,
@@ -1142,6 +1158,7 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
     hundreds: Number(r.hundreds),
     fifties: Number(r.fifties),
     highestScore: r.highest_score === null ? null : Number(r.highest_score),
+    highestScoreNotOut: r.highest_score !== null && r.highest_score_not_out === true,
     average: dismissals > 0 ? runs / dismissals : null,
     // Only over the innings whose balls faced were recorded (`inningsWithBalls`); older scorecards have none, and
     // the page says "not recorded" or "over n of m innings" rather than show this beside a full runs total.
@@ -1373,7 +1390,7 @@ export async function search(query: string, limit = 20, options: { fold?: boolea
               ${rank("p.name")} as match_rank,
               case when p.league = any($${terms.length + 3}::text[]) then 'cricket:' || p.espn_id when p.league = any($${terms.length + 4}::text[]) then 'soccer:' || p.espn_id
                    else 'player:' || p.league || ':' || p.slug end as grp
-       from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+       from players p left join teams t on t.league = p.league and t.espn_id = ${playerTeamIdSql("p")}
        left join (${playersWithGamesSql(words("p2.name"))}) h on h.league = p.league and h.player_espn_id = p.espn_id
        where (${words("p.name")}) and ${notPseudoAthleteSql()}
        union all

@@ -3,6 +3,7 @@
 // characters, so the description is shortened from the least useful end rather than cut mid-figure.
 import { LEAGUE_LABEL, LEAGUE_SHORT, type League } from "./leagues";
 import type { CricketCareerStats } from "./queries";
+import { highScoreText, trunc2 } from "./cricketFormat";
 import { archiveScope } from "./cricketCoverage";
 
 const n = (v: number) => v.toLocaleString("en-US");
@@ -12,12 +13,12 @@ function battingLine(c: CricketCareerStats, full: boolean): string | null {
   if (c.runs <= 0 && c.inningsBatted === 0) return null;
   if (!full) return `${n(c.runs)} runs`;
   const milestones = [c.hundreds > 0 ? plural(c.hundreds, "hundred", "hundreds") : null, c.fifties > 0 ? plural(c.fifties, "fifty", "fifties") : null].filter(Boolean);
-  return `${n(c.runs)} runs${c.average != null ? ` at ${c.average.toFixed(2)}` : ""}${milestones.length ? ` with ${milestones.join(" and ")}` : ""}${c.highestScore != null ? `, best ${c.highestScore}` : ""}`;
+  return `${n(c.runs)} runs${c.average != null ? ` at ${trunc2(c.average)}` : ""}${milestones.length ? ` with ${milestones.join(" and ")}` : ""}${c.highestScore != null ? `, best ${highScoreText(c.highestScore, c.highestScoreNotOut)}` : ""}`;
 }
 
 function bowlingLine(c: CricketCareerStats, full: boolean): string | null {
   if (c.wickets <= 0) return null;
-  const average = c.wickets > 0 ? (c.runsConceded / c.wickets).toFixed(2) : null;
+  const average = c.wickets > 0 ? trunc2(c.runsConceded / c.wickets) : null;
   const hauls = full && c.fiveWicketHauls > 0 ? ` with ${plural(c.fiveWicketHauls, "five-wicket haul", "five-wicket hauls")}` : "";
   return `${n(c.wickets)} wickets${average ? ` at ${average}` : ""}${hauls}`;
 }

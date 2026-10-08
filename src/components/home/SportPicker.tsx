@@ -7,7 +7,7 @@ import { followsToBlocks, searchResultToBlock } from "@/lib/followBlocks";
 import { getFollows } from "@/lib/follow";
 import type { HomeBlock } from "@/lib/blockTypes";
 import { MAX_BLOCKS, newSetup, readSetup, SETUP_EVENT, writeDeclined, writeSetup } from "@/lib/homeSetup";
-import { blocksForSports, SPORT_PICK_LABEL, SPORT_PICKS, type SportPick } from "@/lib/sportPicks";
+import { blocksForSports, isSportPick, PICKED_EVENT, PICK_TOGGLE_EVENT, SPORT_PICK_LABEL, SPORT_PICKS, type SportPick } from "@/lib/sportPicks";
 import type { SearchResult } from "@/lib/queries";
 import type { SiteCounts } from "@/lib/siteCounts";
 import { buildLogMs, startSteps } from "@/lib/makeItYours";
@@ -127,6 +127,19 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
       window.clearTimeout(id);
     };
   }, [query]);
+
+  // The "Start here" cards further down the page toggle a sport here and read back which are picked.
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const sport = (e as CustomEvent<unknown>).detail;
+      if (typeof sport === "string" && isSportPick(sport)) setSports((list) => (list.includes(sport) ? list.filter((x) => x !== sport) : [...list, sport]));
+    };
+    window.addEventListener(PICK_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(PICK_TOGGLE_EVENT, onToggle);
+  }, []);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(PICKED_EVENT, { detail: sports }));
+  }, [sports]);
 
   const blocks = useMemo(() => blocksForSports(sports, edition, ctx, extra), [sports, edition, ctx, extra]);
   const chosen = new Set(extra.map((b) => b.id));

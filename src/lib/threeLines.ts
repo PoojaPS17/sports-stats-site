@@ -19,13 +19,15 @@ export const MAX_LINES = 3;
 /** A sport may fill a second line only once every other sport with a fact has one. */
 export const MAX_PER_SPORT = 2;
 
-export type FactKind = "win-streak" | "unbeaten" | "season-perfect" | "hundred" | "five-for";
+export type FactKind = "win-streak" | "unbeaten" | "season-perfect" | "hundred" | "five-for" | "hat-trick" | "forty-points" | "passing-yards";
 
 export interface LineFact {
   /** Unique per fact, e.g. "team:epl:12". */
   id: string;
   /** The sport family used for variety ("soccer", "cricket", "nba", ...), not the league. */
   sport: string;
+  /** The league key the fact is from ("cricket" for a series match); optional, set by the "Best of this week" readers. */
+  league?: string;
   kind: FactKind;
   /** The sentence shown. Contains `figure` verbatim. */
   text: string;
@@ -65,6 +67,12 @@ export function factWeight(kind: FactKind, n: number): number {
       return 45 + over(100, 0.25, 25);
     case "five-for":
       return 45 + over(5, 8, 25);
+    case "hat-trick":
+      return 44 + over(3, 10, 25);
+    case "forty-points":
+      return 44 + over(40, 1, 25);
+    case "passing-yards":
+      return 44 + over(400, 0.1, 25);
   }
 }
 

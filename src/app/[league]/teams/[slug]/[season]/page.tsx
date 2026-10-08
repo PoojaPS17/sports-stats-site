@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug, getTeamGamesBySeason, getTeamSeasons, formatSeasonLabel } from "@/lib/queries";
 import { fitTitle, pageMeta } from "@/lib/metadata";
 import { LEAGUE_SHORT } from "@/lib/leagues";
-import { teamNotFound } from "@/lib/legacySlug";
+import { aliasTeamRedirect, teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamSeasonGames } from "@/components/TeamSeasonGames";
 import { TeamHeader } from "@/components/TeamHeader";
@@ -45,6 +45,8 @@ export default async function TeamSeasonPage({
 
   const season = Number(seasonParam);
   if (!Number.isInteger(season)) notFound();
+
+  aliasTeamRedirect(league, slug, `/${season}`);
 
   const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug, `/${season}`));
 

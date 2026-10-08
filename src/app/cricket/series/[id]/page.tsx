@@ -23,6 +23,7 @@ import { ImageActions } from "@/components/ImageActions";
 import { SeriesMatchesExportCard } from "@/components/SeriesMatchesExportCard";
 import { SeriesCard, SeriesMatchList, formatSeriesDates } from "@/components/CricketSeries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
+import { seriesHubStandingsLink } from "@/lib/cricketSeriesHubLink";
 import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesEditions, getCricketSeriesMatches, getCricketSeriesSeasons, getLatestCricketEdition, SERIES_KIND_LABEL } from "@/lib/cricketSeries";
 import { overlayLiveCricket } from "@/lib/cricketLive";
 import { classifyCricketMatch } from "@/lib/cricketMatchStatus";
@@ -56,7 +57,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // The title names the points table only when the page shows one (the same fetch, cached, as the page's).
   const hasTable = s.league ? false : pointsTableShown(await fetchCricketSeriesStandings(s.espn_id), s);
   // The leaders name the snippet's players ("Most runs: ..."), and move as the series does; a competition with a hub has none here.
-  const leaders = s.league ? null : seriesLeadersClause(await getCricketSeriesStats(s.espn_id));
+  const leaderStats = s.league ? null : await getCricketSeriesStats(s.espn_id);
+  const leaders = [seriesLeadersClause(leaderStats, true), seriesLeadersClause(leaderStats)].filter((l): l is string => l !== null);
   return pageMeta(fitTitle(...cricketSeriesTitleCandidates(s, hasTable)), cricketSeriesDescription(s, hasTable, leaders), `/cricket/series/${s.espn_id}`, { image: { ...image, alt: `${s.name} on SportsDB` } });
 }
 
@@ -134,6 +136,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
   const started = live.length > 0 || results.length > 0;
   const overview = started ? null : cricketSeriesOverview({ teams: s.teams, formats: s.formats, startDate: s.start_date, endDate: s.end_date, matchCount: s.match_count, venues });
   const intro = [overview, soFar].filter(Boolean).join(" ");
+  const hubLink = seriesHubStandingsLink(s.league);
 
   return (
     <div className="flex flex-col gap-8">
@@ -150,6 +153,15 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
         )}
         <FollowButton item={{ kind: "series", league: s.league ?? "cricket", refId: s.espn_id, label: s.name, sublabel: "Cricket", href: `/cricket/series/${s.espn_id}` }} />
       </PageHeader>
+
+      {hubLink && (
+        <p className="card px-4 py-3 text-sm font-semibold" data-testid="series-hub-standings">
+          {hubLink.prefix}{" "}
+          <Link href={hubLink.href} className="underline underline-offset-2">
+            {hubLink.label} →
+          </Link>
+        </p>
+      )}
 
       {intro && <p className="card px-4 py-3 text-sm leading-relaxed">{intro}</p>}
 

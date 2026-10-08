@@ -6,6 +6,7 @@
 import type { CricketSeriesMatch, SeriesKind, SeriesSide } from "./cricketSeries";
 import { resolveTeamLogo } from "@/lib/teamLogos";
 import { baseSeriesId, seriesEdition, seriesTitle } from "./cricketSeriesKey";
+import { cricketSummaryPaths, fetchCricketSummaryVia, type CricketSummaryOptions } from "./cricketSummary";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
 /** The fetch window for anything that may be in play. */
@@ -132,5 +133,45 @@ export async function fetchCricketSummaryLive(espnId: string, seriesId = "8048",
     return data?.header?.competitions?.[0]?.competitors?.length ? data : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * A finished match's summary for a page that reads the toss, the Player of the Match and the series note from it.
+ * A single read of the IPL's id leaves those out on a slice of older matches (ESPN serves some only under their own
+ * series, and answers others with a 502 or a half-built body), and the page is then cached a day without them. So:
+ * the match's own series first, then the IPL's, each retried once; and when none gives a summary, one last read from
+ * its own address kept for the live window, which also shortens this render's cache to that window (a page lives as
+ * long as its shortest fetch), so a failed read is retried within seconds instead of frozen for a day. Null when
+ * ESPN gives nothing. The same two-step as the cricket match page's loadSummary.
+ */
+export async function fetchCricketSummaryResilient(
+  espnId: string,
+  seriesId: string | null | undefined,
+  opts: { revalidate?: number } & Pick<CricketSummaryOptions, "sleep" | "now"> = {}
+): Promise<any | null> {
+  const ids = cricketSummaryPaths(seriesId ? `cricket/${baseSeriesId(seriesId)}` : undefined).map((p) => p.replace(/^cricket\//, ""));
+  try {
+    return await fetchCricketSummaryVia(
+      async (id) => {
+        const body = await fetchCricketSummaryLive(espnId, id, { revalidate: opts.revalidate });
+        if (!body) throw new Error("no summary");
+        return body;
+      },
+      espnId,
+      ids,
+      {
+        retries: 1,
+        backoffMs: 250,
+        deadlineMs: 6000,
+        // A summary without the toss note is tried on the other path too; the first such summary is kept if neither has one (an abandoned match has no toss).
+        accept: (body) => Array.isArray(body?.notes) && body.notes.some((n: any) => n?.type === "toss"),
+        log: () => {},
+        sleep: opts.sleep,
+        now: opts.now,
+      }
+    );
+  } catch {
+    return fetchCricketSummaryLive(espnId, ids[0], { attempt: 2 });
   }
 }
