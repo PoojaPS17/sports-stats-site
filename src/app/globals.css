@@ -1341,6 +1341,12 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
+  /* Inside a half-width pair (from 1000px) the cards would be ~170px wide: stack them in one column. */
+  @media (min-width: 1000px) {
+    .home-duo .wl-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
   /* Best of this week: a rail of cards under sport chips, after the palettes artifact (.tabs, .mo, .fol). */
   .bw-chips {
     display: flex;
