@@ -1,7 +1,7 @@
 // Server side of the homepage blocks: one loader per type, each reading through the
 // existing query layer and shaping a small payload (lib/blockTypes.ts) that the client
 // draws. Null means "this entity is gone", which the client shows as an empty block.
-import type { BlockPayload, BlockType, BtsBlockData, F1DriversBlockData, FixtureLine, LiveBlockData, PlayerFormBlockData, StandingsBlockData, TeamNextBlockData } from "./blockTypes";
+import type { BlockPayload, BlockType, BtsBlockData, F1DriversBlockData, FixtureLine, LiveBlockData, PlayerFormBlockData, StandingsBlockData, TeamNextBlockData, TeamSummary } from "./blockTypes";
 import { getHomeData } from "./homeData";
 import {
   getCricketRecentInnings,
@@ -85,6 +85,29 @@ function fixtureFromGame(league: League, g: GameRow, teamEspnId: string): Fixtur
   };
 }
 
+async function teamSummary(league: League, teamEspnId: string, games: GameRow[]): Promise<TeamSummary> {
+  const rows = await getStandings(league);
+  const i = rows.findIndex((r) => r.team_espn_id === teamEspnId);
+  const row = i === -1 ? null : rows[i];
+  const record = usesRecordOrder(league);
+  const played = row ? row.wins + row.losses + (row.draws ?? 0) + (row.no_result ?? 0) : 0;
+  const diff = row && row.goals_for !== null && row.goals_against !== null ? row.goals_for - row.goals_against : null;
+  const form = games
+    .filter((g) => g.completed)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5)
+    .map((g) => fixtureFromGame(league, g, teamEspnId).result)
+    .filter((r): r is "W" | "L" | "D" => r !== null)
+    .reverse();
+  return {
+    leagueLabel: LEAGUE_LABEL[league],
+    position: row ? (row.rank ?? i + 1) : null,
+    figure: row ? (record ? `${row.wins}-${row.losses}` : `${row.points ?? 0} pts`) : null,
+    record: row ? `${played} played${diff !== null ? ` · ${diff > 0 ? "+" : ""}${diff} goal difference` : ""}` : null,
+    form,
+  };
+}
+
 async function loadTeamNext(league: League, slug: string): Promise<TeamNextBlockData | null> {
   const team = await getTeamBySlug(league, slug);
   if (!team) return null;
@@ -97,6 +120,7 @@ async function loadTeamNext(league: League, slug: string): Promise<TeamNextBlock
     .slice(0, NEXT);
   return {
     team: { name: teamDisplayName(team.name), href: `/${league}/teams/${team.slug}`, color: team.color },
+    summary: await teamSummary(league, team.espn_id, games),
     last: last ? fixtureFromGame(league, last, team.espn_id) : null,
     next: next.map((g) => fixtureFromGame(league, g, team.espn_id)),
   };

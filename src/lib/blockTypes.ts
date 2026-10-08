@@ -45,8 +45,24 @@ export interface FixtureLine {
   league: string;
 }
 
+/** Where a league team stands and how it has been playing: the same table row and results its team page shows. */
+export interface TeamSummary {
+  /** "Premier League". */
+  leagueLabel: string;
+  /** Rank in the table, null when the team is not in it. */
+  position: number | null;
+  /** "16 pts" in a points table, "5-0" in a record table; null when the team is not in the table. */
+  figure: string | null;
+  /** "7 played · +7 goal difference", or "5 played" where goals do not apply. */
+  record: string | null;
+  /** The last five finished games, oldest first. */
+  form: ("W" | "L" | "D")[];
+}
+
 export interface TeamNextBlockData {
   team: { name: string; href: string; color: string | null };
+  /** Absent for cricket sides, which have no league table of their own. */
+  summary?: TeamSummary | null;
   last: FixtureLine | null;
   next: FixtureLine[];
 }
