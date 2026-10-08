@@ -60,7 +60,7 @@ function facts(loaded: LoadedBlock[], o: HeroLineOptions): Fact[] {
   }
   for (const l of loaded) {
     const d = teamNext(l);
-    const m = d?.next.find((f) => !f.live && sameDay(f.date, o.now));
+    const m = d?.next.find((f) => !f.live && !f.tbd && sameDay(f.date, o.now));
     if (d && m) out.push({ text: `${m.home ? `${d.team.name} v ${m.opponent}` : `${m.opponent} v ${d.team.name}`} at ${o.formatTime(m.date)}.`, entity: d.team.name });
   }
   for (const l of loaded) {

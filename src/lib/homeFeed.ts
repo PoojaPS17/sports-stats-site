@@ -4,6 +4,7 @@ import { pool } from "./db";
 import { GAME_SELECT, type GameRow, type League } from "./queries";
 import { ALL_LEAGUES } from "./leagues";
 import { CALLED_OFF } from "./gameStatus";
+import { presentGames } from "./playoffSeriesData";
 import { displayF1Event, type F1EventRow } from "./f1";
 
 // Which competitions lead the upcoming list when fixtures fall on the same day.
@@ -33,7 +34,8 @@ export async function getLiveGames(): Promise<GameRow[]> {
      order by g.date`,
     [ALL_LEAGUES, CALLED_OFF.source]
   );
-  return rows;
+  // A game its series no longer needs never started, however long ago its slot passed.
+  return presentGames(rows);
 }
 
 type Ranked = GameRow & { table_rank: number | null };
@@ -62,7 +64,7 @@ export async function getUpcomingGames(limit = 6, perLeague = 2, withinDays = 7)
   );
   // A knockout stage or the top competitions lead; within a competition, the game
   // with the better-placed team; then the earlier start.
-  const games = (rows as Ranked[]).sort((a, b) => priority(a) - priority(b) || (a.table_rank ?? 99) - (b.table_rank ?? 99) || at(a) - at(b));
+  const games = (await presentGames(rows as Ranked[])).sort((a, b) => priority(a) - priority(b) || (a.table_rank ?? 99) - (b.table_rank ?? 99) || at(a) - at(b));
   const taken = new Map<League, number>();
   const out: GameRow[] = [];
   for (const g of games) {

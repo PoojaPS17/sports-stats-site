@@ -15,6 +15,8 @@ import { PERFORMANCE_CARD_LEAGUES } from "./performanceCardData";
 import { noStatLineGameSql } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { gameDayIso } from "./gameDay";
+import { dropNotNeeded } from "./playoffSeriesData";
+import { isPlaceholderTeamSql } from "./playoffSeries";
 import { listArticles } from "./beyondTheScoreline";
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -60,12 +62,13 @@ const entry = (path: string, changeFrequency: Entry["changeFrequency"], priority
 // uses, not the raw UTC date.
 async function scoresByDate(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
-    `select date, local_date::text as local_date, updated_at from games
+    `select league, espn_id, date, local_date::text as local_date, updated_at from games
      where league = $1 and date >= now() - interval '30 days' and date <= now() + interval '3 days'`,
     [league]
   );
   const days = new Map<string, Date | null>();
-  for (const { date, local_date, updated_at } of rows) {
+  // A day with nothing but games a decided series no longer needs is not a day the league played on.
+  for (const { date, local_date, updated_at } of await dropNotNeeded(rows)) {
     const iso = gameDayIso(date, league, local_date);
     const prev = days.get(iso);
     if (!days.has(iso) || (updated_at && (!prev || updated_at > prev))) days.set(iso, updated_at ?? prev ?? null);
@@ -120,7 +123,8 @@ async function core(): Promise<Entry[]> {
 }
 
 async function teams(league: League): Promise<Entry[]> {
-  const { rows } = await pool.query(`select slug from teams where league = $1 order by slug`, [league]);
+  // Not ESPN's "CLE/CHW" stand-in for a side still being decided: it is a label, not a club.
+  const { rows } = await pool.query(`select slug from teams where league = $1 and not ${isPlaceholderTeamSql("teams")} order by slug`, [league]);
   const out: Entry[] = [];
   for (const { slug } of rows) {
     out.push(entry(`/${league}/teams/${slug}`, "daily", 0.8), entry(`/${league}/teams/${slug}/about`, "monthly", 0.3));
@@ -130,7 +134,7 @@ async function teams(league: League): Promise<Entry[]> {
   const { rows: seasons } = await pool.query(
     `select distinct t.slug, g.season_year from games g
      join teams t on t.league = g.league and t.espn_id in (g.home_team_espn_id, g.away_team_espn_id)
-     where g.league = $1 and g.season_year is not null
+     where g.league = $1 and g.season_year is not null and not ${isPlaceholderTeamSql("t")}
      order by t.slug, g.season_year desc`,
     [league]
   );
@@ -282,12 +286,13 @@ async function players(league: League): Promise<Entry[]> {
 // team and matchweek pages without bloating the sitemap.
 async function games(league: League): Promise<Entry[]> {
   const { rows } = await pool.query(
-    `select espn_id, updated_at, completed from games
+    `select league, espn_id, updated_at, completed from games
      where league = $1 and season_year >= (select max(season_year) from games where league = $1) - 1
      order by date desc`,
     [league]
   );
-  return rows.map((g) => entry(`/${league}/games/${g.espn_id}`, g.completed ? "monthly" : "hourly", g.completed ? 0.4 : 0.6, g.updated_at));
+  // The page of a game that will not be played answers noindex, so it stays out of the sitemap.
+  return (await dropNotNeeded(rows)).map((g) => entry(`/${league}/games/${g.espn_id}`, g.completed ? "monthly" : "hourly", g.completed ? 0.4 : 0.6, g.updated_at));
 }
 
 async function weeks(league: League): Promise<Entry[]> {

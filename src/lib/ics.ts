@@ -10,6 +10,7 @@ import { f1WeekendDays } from "./f1Dates";
 import { isSoccer } from "./analytics";
 import { SITE_URL } from "./site";
 import { gameCalledOffLabel, isTimeTbd } from "./gameStatus";
+import { presentGames } from "./playoffSeriesData";
 import { gameDayIso } from "./gameDay";
 import { gameRoundLabel, overtimeFinal } from "./stage";
 import { scoreLineOrder } from "./cricketOrder";
@@ -159,7 +160,7 @@ function gameSummary(league: League, g: GameWithVenue, perspectiveTeamId?: strin
 export function gameEvent(league: League, g: GameWithVenue, perspectiveTeamId?: string): IcsEvent {
   // A fixture with no kickoff time yet (NFL week 18 is filed at a placeholder 05:00 UTC) is an all-day event on the
   // league's own calendar day: no clock time, and no end time computed from one.
-  const tbd = isTimeTbd(g);
+  const tbd = isTimeTbd(g, league);
   const start = tbd ? new Date(`${gameDayIso(g.date, league, g.local_date)}T00:00:00Z`) : new Date(g.date);
   const end = tbd ? undefined : new Date(start.getTime() + durationMinutes(league) * 60_000);
   const label = LEAGUE_LABEL[league];
@@ -229,12 +230,14 @@ export async function buildTeamFeed(league: League, slug: string): Promise<Feed 
   );
   const season = seasons[0]?.season as number | null;
   if (!season) return null;
-  const { rows: games } = await pool.query<GameWithVenue>(
+  const { rows: scheduled } = await pool.query<GameWithVenue>(
     `${GAME_WITH_VENUE_SELECT}
      where g.league = $1 and g.season_year = $2 and (g.home_team_espn_id = $3 or g.away_team_espn_id = $3)
      order by g.date asc`,
     [league, season, team.espn_id]
   );
+  // A swept series' "if necessary" games are not events anyone will attend: they leave the calendar.
+  const games = await presentGames(scheduled);
   const label = LEAGUE_LABEL[league];
   return {
     filename: `${slug}-${league}.ics`,
@@ -248,12 +251,13 @@ export async function buildTeamFeed(league: League, slug: string): Promise<Feed 
 
 /** Every league game from the last two weeks onward, so the feed stays a sane size. */
 export async function buildLeagueFeed(league: League): Promise<Feed | null> {
-  const { rows: games } = await pool.query<GameWithVenue>(
+  const { rows: scheduled } = await pool.query<GameWithVenue>(
     `${GAME_WITH_VENUE_SELECT}
      where g.league = $1 and g.date > now() - interval '14 days'
      order by g.date asc`,
     [league]
   );
+  const games = await presentGames(scheduled);
   const label = LEAGUE_LABEL[league];
   return {
     filename: `${league}-fixtures.ics`,
@@ -275,7 +279,7 @@ export async function buildFollowsFeed(items: Pick<FollowItem, "kind" | "league"
   const teamKeys = new Set(teams.map((t) => `${t.league}:${t.refId}`));
   const empty = { ics: buildIcs("My follows", "Fixtures and results for the teams and matches you follow on SportsDB.", []), filename: "my-follows.ics" };
   if (teams.length === 0 && games.length === 0) return empty;
-  const { rows } = await pool.query<GameWithVenue>(
+  const { rows: found } = await pool.query<GameWithVenue>(
     `${GAME_WITH_VENUE_SELECT}
      where g.date > now() - interval '14 days'
        and ((g.league, ht.slug) in (select * from unnest($1::text[], $2::text[]))
@@ -285,6 +289,7 @@ export async function buildFollowsFeed(items: Pick<FollowItem, "kind" | "league"
      limit $5`,
     [teams.map((t) => t.league), teams.map((t) => t.refId), games.map((g) => g.league), games.map((g) => g.refId), FOLLOWS_FEED_LIMIT]
   );
+  const rows = await presentGames(found);
   const events = rows
     .filter((g) => isLeague(g.league))
     .map((g) => {

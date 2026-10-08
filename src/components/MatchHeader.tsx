@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
+import { isPlaceholderName } from "@/lib/playoffSeries";
 import { StatusPill } from "./StatusPill";
 import { FollowButton } from "./FollowButton";
 import { LEAGUE_LABEL, type GameRow, type League } from "@/lib/queries";
@@ -32,15 +33,23 @@ function TeamLine({
   // for the rest ("44.1/50 ov, target 234", "all out") under the name: the whole string beside the name
   // squeezed the name out of the row at phone width.
   const parts = scoreDisplay ? splitScoreText(scoreDisplay) : null;
+  const inner = (
+    <>
+      <TeamLogo name={name} logoUrl={logo} color={color} size={40} priority />
+      <span className="min-w-0">
+        <span className={`block truncate text-lg ${completed && won ? "font-extrabold" : "font-semibold"}`}>{name}</span>
+        {completed && parts?.detail && <span className="block text-xs tabular-nums text-[var(--text-muted)]">{parts.detail}</span>}
+      </span>
+    </>
+  );
   return (
     <div className="flex items-center justify-between gap-3">
-      <Link href={href} className="flex min-w-0 items-center gap-3 hover:text-[var(--accent)]">
-        <TeamLogo name={name} logoUrl={logo} color={color} size={40} priority />
-        <span className="min-w-0">
-          <span className={`block truncate text-lg ${completed && won ? "font-extrabold" : "font-semibold"}`}>{name}</span>
-          {completed && parts?.detail && <span className="block text-xs tabular-nums text-[var(--text-muted)]">{parts.detail}</span>}
-        </span>
-      </Link>
+      {/* A "Winner of CLE-CHW" side is not a team yet: it has no page to link to. */}
+      {isPlaceholderName(name) ? <div className="flex min-w-0 items-center gap-3">{inner}</div> : (
+        <Link href={href} className="flex min-w-0 items-center gap-3 hover:text-[var(--accent)]">
+          {inner}
+        </Link>
+      )}
       {completed && (score !== null || scoreDisplay) && (
         <span className={`shrink-0 tabular-nums ${won ? "text-xl font-extrabold text-[var(--text)]" : "text-lg text-[var(--text-muted)]"}`}>
           {parts ? parts.main : score}

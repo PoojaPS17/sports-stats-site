@@ -1,6 +1,8 @@
 import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
 import { CALLED_OFF, isGameCalledOff } from "./gameStatus";
+import { dropNotNeeded, notNeededKeys, presentGames, settlePlaceholders } from "./playoffSeriesData";
+import { isPlaceholderTeamSql } from "./playoffSeries";
 import { dayTimeZone } from "./gameDay";
 import { isCricketLeague, isSoccerLeague } from "./leagues";
 import type { League } from "./leagues";
@@ -84,6 +86,14 @@ export interface GameRow {
   weather_temperature?: number | null;
 }
 
+/**
+ * A team's name as a game row prints it. ESPN stands in for a side still being decided with a "team" whose name and
+ * abbreviation are both "CLE/CHW"; it reads "Winner of CLE-CHW" here (and playoffSeries.placeholderName writes the
+ * same text), so no list shows a made-up club. Every other team keeps its name.
+ */
+export const TEAM_NAME_SQL = (alias: string) =>
+  `(case when ${isPlaceholderTeamSql(alias)} then 'Winner of ' || replace(${alias}.abbreviation, '/', '-') else ${alias}.name end)`;
+
 export const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
@@ -91,8 +101,8 @@ export const GAME_SELECT = `
     g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
     g.local_date::text as local_date, g.end_date::text as end_date,
     g.home_team_espn_id, g.away_team_espn_id,
-    ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
-    at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
+    ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
+    ${TEAM_NAME_SQL("at")} as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
   from games g
   join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
   join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
@@ -111,16 +121,17 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
        g.home_team_espn_id, g.away_team_espn_id,
        g.odds_details, g.odds_spread, g.odds_over_under, g.odds_provider,
        g.broadcast_network, g.weather_display, g.weather_temperature,
-       ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
+       ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
        ht.venue_name as home_venue_name, ht.venue_city as home_venue_city, ht.venue_state as home_venue_state, ht.venue_country as home_venue_country,
-       at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
+       ${TEAM_NAME_SQL("at")} as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color
      from games g
      join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
      join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
      where g.league = $1 and g.espn_id = $2`,
     [league, espnId]
   );
-  return rows[0] ?? null;
+  // A "CLE/CHW" side whose series has been decided is the team that won it.
+  return rows[0] ? ((await settlePlaceholders([rows[0] as GameRow]))[0] ?? null) : null;
 }
 
 // The stored match report (see lib/matchDetail.ts GameDetails), written by the scraper
@@ -162,7 +173,8 @@ export async function getGamesByDate(league: League, dateISO: string): Promise<G
      order by g.date asc`,
     [league, dateISO, dayTimeZone(league)]
   );
-  return rows;
+  // A game its series no longer needs (a swept series' "if necessary" games) is not on that day's schedule.
+  return presentGames(rows);
 }
 
 export async function getRecentAndUpcoming(league: League, daysBack = 2, daysForward = 5): Promise<GameRow[]> {
@@ -174,7 +186,7 @@ export async function getRecentAndUpcoming(league: League, daysBack = 2, daysFor
      order by g.date asc`,
     [league, daysBack, daysForward]
   );
-  return rows;
+  return presentGames(rows);
 }
 
 /**
@@ -185,12 +197,12 @@ export async function getRecentAndUpcoming(league: League, daysBack = 2, daysFor
  */
 export async function getNextFixtureDate(league: League, season?: number): Promise<string | null> {
   const { rows } = await pool.query(
-    `select date, completed, status_state, status_detail from games
+    `select espn_id, date, completed, status_state, status_detail from games
      where league = $1 and ($2::int is null or season_year = $2) and completed = false and date > now()
      order by date asc`,
     [league, season ?? null]
   );
-  const next = rows.find((g) => !isGameCalledOff(g));
+  const next = (await dropNotNeeded(rows.map((g) => ({ ...g, league })))).find((g) => !isGameCalledOff(g));
   return next ? new Date(next.date).toISOString() : null;
 }
 
@@ -220,13 +232,14 @@ export async function getFeaturedGames(league: League, limit = 3): Promise<GameR
   const { rows } = await pool.query(
     `${GAME_SELECT}
      where g.league = $1 and g.date > now() - interval '3 days' and g.date < now() + interval '10 days'
+       and not ((g.league || ':' || g.espn_id) = any($3::text[]))
      order by g.completed desc,
        case when g.completed then g.date end desc,
        case when not g.completed then g.date end asc
      limit $2`,
-    [league, limit]
+    [league, limit, await notNeededKeys()]
   );
-  return rows;
+  return settlePlaceholders(rows);
 }
 
 export interface StandingRow {
@@ -364,7 +377,8 @@ export async function findPlayerSlugByLegacy(league: string, slug: string): Prom
 
 export async function getAllTeams(league: League): Promise<TeamRow[]> {
   const { rows } = await pool.query(
-    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams where league = $1 order by name`,
+    // ESPN's "CLE/CHW" stand-in for a side still being decided is a label, not a club: no row in a team list.
+    `select espn_id, name, slug, abbreviation, logo_url, color, alternate_color from teams t where league = $1 and not ${isPlaceholderTeamSql("t")} order by name`,
     [league]
   );
   return rows;
@@ -377,7 +391,7 @@ export async function getTeamGamesBySeason(league: League, teamEspnId: string, s
      order by g.date desc`,
     [league, teamEspnId, season]
   );
-  return rows;
+  return presentGames(rows);
 }
 
 // Every season a team has at least one game in, most recent first — powers the
@@ -483,16 +497,17 @@ export async function getTickerGames(limit = 12): Promise<TickerGame[]> {
             g.status_detail,
             g.home_score, g.home_score_display, g.home_winner,
             g.away_score, g.away_score_display, g.away_winner,
-            ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr,
-            at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr
+            ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr,
+            ${TEAM_NAME_SQL("at")} as away_name, at.slug as away_slug, at.abbreviation as away_abbr
      from games g
      join teams ht on ht.league = g.league and ht.espn_id = g.home_team_espn_id
      join teams at on at.league = g.league and at.espn_id = g.away_team_espn_id
      where g.date > now() - interval '3 days' and g.date < now() + interval '10 days'
        and (g.completed or g.status_state = 'in' or coalesce(g.status_detail, '') !~* $2)
+       and not ((g.league || ':' || g.espn_id) = any($3::text[]))
      order by g.completed desc, case when g.completed then g.date end desc, g.date asc
      limit $1`,
-    [limit, CALLED_OFF.source]
+    [limit, CALLED_OFF.source, await notNeededKeys()]
   );
   return rows;
 }
@@ -839,8 +854,8 @@ export async function getTopGames(window: TopGamesWindow, filter: TopGamesFilter
             g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
             g.local_date::text as local_date, g.end_date::text as end_date,
             g.home_team_espn_id, g.away_team_espn_id,
-            ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
-            at.name as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color,
+            ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
+            ${TEAM_NAME_SQL("at")} as away_name, at.slug as away_slug, at.abbreviation as away_abbr, at.logo_url as away_logo, at.color as away_color,
             v.views
      from (
        select league, game_espn_id, count(*) as views

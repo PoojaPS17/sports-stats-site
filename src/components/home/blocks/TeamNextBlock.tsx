@@ -43,7 +43,7 @@ function Line({ f, team }: { f: FixtureLine; team: string }) {
         <span className="truncate font-semibold">{sides}</span>
       </span>
       <span className="shrink-0 text-[var(--text-muted)]">
-        {f.score ?? (f.live ? f.status : <LocalTime iso={f.date} format="datetime" />)}
+        {f.score ?? (f.live ? f.status : (f.tbd ?? <LocalTime iso={f.date} format="datetime" />))}
       </span>
     </Link>
   );

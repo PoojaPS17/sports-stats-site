@@ -43,6 +43,8 @@ export interface FixtureLine {
   live: boolean;
   status: string | null;
   league: string;
+  /** "Mon, Oct 12 · TBD" for a game whose start time the feed has not set; absent for every other game. */
+  tbd?: string;
 }
 
 /** Where a league team stands and how it has been playing: the same table row and results its team page shows. */

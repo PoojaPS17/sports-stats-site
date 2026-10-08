@@ -14,6 +14,7 @@ import {
   getTeamInjuries,
   formatSeasonLabel, hasStandings, isFirstClassCricket } from "@/lib/queries";
 import { fitTitle, pageMeta } from "@/lib/metadata";
+import { placeholderParts } from "@/lib/playoffSeries";
 import { LEAGUE_SHORT } from "@/lib/leagues";
 import { teamNotFound } from "@/lib/legacySlug";
 import { formatWinLossTie, lastResultDate, seasonResults, summarizeTeamSeason } from "@/lib/teamSummary";
@@ -52,6 +53,8 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!isLeague(league)) return {};
   const team = await getTeamBySlug(league, slug);
   if (!team) return {};
+  // ESPN's "CLE/CHW" stand-in for a side still being decided is no club: its page stays out of search results.
+  if (placeholderParts(team.abbreviation)) return pageMeta(`${team.name} ${LEAGUE_LABEL[league]}`, `${team.name}: the side still being decided in ${LEAGUE_LABEL[league]}.`, `/${league}/teams/${slug}`, { noindex: true });
   const label = LEAGUE_LABEL[league];
   // The competition is part of the title: the same side has a page in each one it plays
   // in (India in Tests, ODIs and T20Is; a club in its league and the Champions League).

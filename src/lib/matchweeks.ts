@@ -5,6 +5,7 @@
 //     team has played in
 //   - NFL: the official week number stored from the feed, then the playoff rounds
 //   - NBA: seven-day periods from opening night, then the playoff rounds
+import { presentGames } from "./playoffSeriesData";
 import { pool } from "./db";
 import { formatGameDate, gameDayIso } from "./gameDay";
 import { isRegularSeasonGame } from "./gameStage";
@@ -67,7 +68,8 @@ export function canonicalWeekIndexPath(league: League, season: number, seasons: 
 
 export async function getSeasonGames(league: League, season: number): Promise<GameRow[]> {
   const { rows } = await pool.query(`${GAME_SELECT} where g.league = $1 and g.season_year = $2 order by g.date asc, g.espn_id asc`, [league, season]);
-  return rows;
+  // Games a decided series no longer needs are not part of the round's schedule.
+  return presentGames(rows);
 }
 
 export async function getSeasonsWithGames(league: League): Promise<number[]> {
