@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cricketSideBlock, editionFor, type Edition, type EditionContext } from "@/lib/editions";
 import { followsToBlocks, searchResultToBlock } from "@/lib/followBlocks";
 import { getFollows } from "@/lib/follow";
@@ -8,6 +9,7 @@ import type { HomeBlock } from "@/lib/blockTypes";
 import { MAX_BLOCKS, newSetup, readSetup, SETUP_EVENT, writeDeclined, writeSetup } from "@/lib/homeSetup";
 import { blocksForSports, SPORT_PICK_LABEL, SPORT_PICKS, type SportPick } from "@/lib/sportPicks";
 import type { SearchResult } from "@/lib/queries";
+import type { SiteCounts } from "@/lib/siteCounts";
 
 // Line-drawn glyphs, one per tile, in the same 24-unit box.
 const GLYPH: Record<SportPick | "all" | "check", string> = {
@@ -33,7 +35,7 @@ export type SportLines = Record<SportPick, { live: number; text: string }>;
 // tray that shows the page forming as the visitor taps. One button writes the setup. A visitor who
 // already has a setup, or who chose "just show me everything", never sees it (the pre-paint script in
 // app/layout.tsx hides the section, and this component renders nothing once the stored setup exists).
-export function SportPicker({ ctx, lines, liveNow }: { ctx: EditionContext; lines: SportLines; liveNow: number }) {
+export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionContext; lines: SportLines; liveNow: number; counts: SiteCounts | null }) {
   const [hidden, setHidden] = useState(false);
   const [country, setCountry] = useState<string | null>(null);
   const [edition, setEdition] = useState<Edition>(editionFor(null));
@@ -42,6 +44,30 @@ export function SportPicker({ ctx, lines, liveNow }: { ctx: EditionContext; line
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<HomeBlock[]>([]);
   const [saveError, setSaveError] = useState(false);
+  const bandRef = useRef<HTMLDivElement>(null);
+  const [dock, setDock] = useState(false);
+  const [finalHost, setFinalHost] = useState<HTMLElement | null>(null);
+
+  // The closing call to action lives at the foot of the page (server-rendered empty slot) but shares this state.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFinalHost(document.getElementById("home-final-cta"));
+  }, []);
+
+  // The dock appears once the picker has scrolled off the top, so the way to build is never out of reach.
+  useEffect(() => {
+    const check = () => {
+      const el = bandRef.current;
+      if (el) setDock(el.getBoundingClientRect().bottom < 140);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => {
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, []);
 
   // A browser that already has a setup or declined does not see the picker; a later clear brings it back.
   useEffect(() => {
@@ -107,6 +133,24 @@ export function SportPicker({ ctx, lines, liveNow }: { ctx: EditionContext; line
     setSaveError(!writeSetup(newSetup(edition.key, country, blocks)));
   };
 
+  const toTop = () => bandRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  const buildOrPick = () => (blocks.length === 0 ? toTop() : build());
+  const sportPills = (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Sports">
+      {SPORT_PICKS.map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() => toggleSport(s)}
+          aria-pressed={sports.includes(s)}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-extrabold transition ${sports.includes(s) ? "border-[var(--volt)] bg-[var(--volt)] text-[var(--navy)]" : "border-[var(--band-deep-line)] bg-[color-mix(in_srgb,white_8%,transparent)] text-white"}`}
+        >
+          <Glyph name={s} className={`h-[15px] w-[15px] ${sports.includes(s) ? "text-[var(--navy)]" : "text-[var(--volt)]"}`} />
+          {SPORT_PICK_LABEL[s]}
+        </button>
+      ))}
+    </div>
+  );
   const sides = sports.includes("cricket") ? ctx.cricketSides.slice(0, 8) : [];
 
   const chip = (b: HomeBlock, key: string) => {
@@ -125,12 +169,20 @@ export function SportPicker({ ctx, lines, liveNow }: { ctx: EditionContext; line
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.25fr_1fr] lg:items-start lg:gap-12">
+    <>
+    <div ref={bandRef} className="grid gap-6 lg:grid-cols-[1.25fr_1fr] lg:items-start lg:gap-12">
       <div className="min-w-0">
         <p className="eyebrow eyebrow-quiet !text-[var(--band-deep-muted)]">{liveNow > 0 ? <>Right now · <span className="text-[var(--volt)]">{liveNow} in play</span></> : "Live scores, tables and stats"}</p>
         <h1 className="display mt-2.5 max-w-3xl text-[31px] sm:text-[44px] lg:text-[52px]">
           Live scores and stats, <span className="text-[var(--volt)]">built around what you follow.</span>
         </h1>
+        {counts && (
+          <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] font-bold text-[var(--band-deep-muted)] sm:text-[13px]" aria-label="What the site holds">
+            <span><b className="tabular-nums text-white">{counts.playerPages.toLocaleString("en-GB")}</b> player pages</span>
+            <span><b className="tabular-nums text-white">{counts.cricketScorecards.toLocaleString("en-GB")}</b> cricket scorecards</span>
+            <span>No sign-up</span>
+          </p>
+        )}
         <p className="mt-4 flex items-center gap-2.5 text-[15px] font-extrabold">
           <span className="rounded-full bg-[var(--volt)] px-2 py-0.5 text-[11px] tracking-[0.06em] text-[var(--navy)]">STEP 1 OF 2</span>
           What do you follow?
@@ -229,5 +281,42 @@ export function SportPicker({ ctx, lines, liveNow }: { ctx: EditionContext; line
         </div>
       </div>
     </div>
+
+    <div
+      role="region"
+      aria-label="Your page"
+      aria-hidden={!dock}
+      className={`fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-[920px] items-center gap-2.5 rounded-[18px] bg-[var(--navy-2)] py-2 pl-3.5 pr-2 text-white shadow-[0_18px_40px_-12px_rgba(0,0,0,0.55),0_0_0_1px_var(--band-deep-line)] transition duration-300 ${dock ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-6 opacity-0"}`}
+    >
+      <div className="min-w-0 flex-1">
+        <b className="block truncate text-[13.5px] font-extrabold">{sports.length ? `Your page: ${sports.map((s) => SPORT_PICK_LABEL[s]).join(", ")}${extra.length ? ` + ${extra.length} ${extra.length > 1 ? "teams" : "team"}` : ""}` : "Your page is two taps away"}</b>
+        <span className="block truncate text-[11.5px] font-semibold text-[var(--band-deep-muted)]">{sports.length ? `${blocks.length} blocks · saved on this device, no account` : "Pick a sport, or build it from the top"}</span>
+      </div>
+      <button type="button" tabIndex={dock ? 0 : -1} onClick={buildOrPick} className="h-10 shrink-0 rounded-[11px] bg-[var(--volt)] px-4 text-[13px] font-extrabold text-[var(--navy)]">
+        {sports.length ? "Build my page" : "Pick sports ↑"}
+      </button>
+    </div>
+
+    {finalHost &&
+      createPortal(
+        <section className="band band-deep bleed relative mt-0 overflow-hidden bg-[radial-gradient(600px_300px_at_100%_0%,rgba(198,241,53,0.16),transparent_60%),radial-gradient(500px_260px_at_0%_100%,rgba(20,112,175,0.35),transparent_60%)] py-9 sm:py-12">
+          <p className="eyebrow eyebrow-quiet !text-[var(--band-deep-muted)]">Two taps · no account · saved on this device</p>
+          <h2 className="display mt-2 max-w-3xl text-[28px] sm:text-[40px]">
+            Your sports, one page. <span className="text-[var(--volt)]">Built in ten seconds.</span>
+          </h2>
+          <div className="mt-4">{sportPills}</div>
+          <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            <button type="button" onClick={buildOrPick} className="h-12 rounded-xl bg-[var(--volt)] px-5 text-[15px] font-extrabold text-[var(--navy)]">
+              Build my page
+            </button>
+            <button type="button" onClick={toTop} className="h-10 rounded-xl border border-[var(--band-deep-line)] px-3.5 text-[13px] font-bold text-white">
+              Back to the picker ↑
+            </button>
+            <span className="text-[12px] font-semibold text-[var(--band-deep-muted)]">{sports.length ? `${blocks.length} blocks so far` : "Tap a sport above, then build."}</span>
+          </div>
+        </section>,
+        finalHost
+      )}
+    </>
   );
 }
