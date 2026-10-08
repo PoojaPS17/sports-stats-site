@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { TEST_ARCHIVE_START_YEAR } from "../src/lib/leagues";
 import { CricketCareer } from "../src/components/CricketCareer";
 import { splitFromQuery } from "../src/components/CricketSplitTabs";
 import type { CricketCareerStats, CricketSplitRow } from "../src/lib/queries";
@@ -143,7 +144,7 @@ test("each split panel carries its own row's figures", () => {
 // "every match on record" and may state only the years the data supports (for the ODI note: 2002 where the
 // archive starts, 2008 where the missing span ends, 2009 where ESPN's gap fill begins).
 const CRICKET_LEAGUES = ["test", "odi", "t20i", "wodi", "wt20i", "ipl", "bbl", "wpl", "wbbl", "cwc", "t20wc", "wcwc", "wt20wc"] as const;
-const SUPPORTED_YEARS: Record<string, string[]> = { test: ["2015"], odi: ["2002", "2008", "2009"], t20i: ["2005"], wodi: ["2009"], wt20i: ["2009"] };
+const SUPPORTED_YEARS: Record<string, string[]> = { test: [String(TEST_ARCHIVE_START_YEAR)], odi: ["2002", "2008", "2009"], t20i: ["2005"], wodi: ["2009"], wt20i: ["2009"] };
 const noteOf = (league: (typeof CRICKET_LEAGUES)[number]) => {
   const html = renderToStaticMarkup(createElement(CricketCareer, { league, career, splits }));
   const note = html.match(/<p class="-mt-2 mb-3[^>]*>([\s\S]*?)<\/p>/)?.[1];
@@ -175,6 +176,6 @@ test("each league type says what is missing", () => {
   assert.match(noteOf("t20i"), /small number of matches are missing/);
   assert.match(noteOf("wodi"), /earlier matches are not included/);
   assert.match(noteOf("wt20i"), /small number of later matches are missing/);
-  assert.match(noteOf("test"), /Tests before 2015 are not included/);
+  assert.match(noteOf("test"), new RegExp(`Tests before ${TEST_ARCHIVE_START_YEAR} are not included`));
   for (const league of ["ipl", "bbl", "wpl", "wbbl", "cwc", "t20wc", "wcwc", "wt20wc"] as const) assert.match(noteOf(league), /Matches without a scorecard on this site are not counted/, league);
 });

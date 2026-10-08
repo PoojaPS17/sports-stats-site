@@ -637,9 +637,11 @@ export const CRICKET_LEADER_CATEGORIES: { key: "runs" | "wickets" | "sixes"; lab
 
 export async function getCricketLeadersSeason(league: League): Promise<number | null> {
   const { rows } = await pool.query(
-    `select max(g.season_year) as season from player_game_stats s
-     join games g on g.league = s.league and g.espn_id = s.game_espn_id
-     where s.league = $1`,
+    // Newest season first, stopping at the first game that has figures (a primary-key lookup), instead of
+    // joining every row of the competition's table just to take a maximum.
+    `select g.season_year as season from games g
+     where g.league = $1 and exists (select 1 from player_game_stats s where s.league = g.league and s.game_espn_id = g.espn_id)
+     order by g.season_year desc nulls last limit 1`,
     [league]
   );
   return rows[0]?.season ?? null;
@@ -1009,7 +1011,7 @@ export async function getPlayerOtherLeagues(league: League, playerEspnId: string
 // backfill-cricket-player-stats.ts) rather than a maintained running total — always
 // correct, and re-running the backfill can never double-count. Only covers whichever
 // cricket competitions we've backfilled (IPL, Big Bash, World Cups, and every men's
-// ODI/T20I from Cricsheet plus ESPN, and men's Tests since 2015 from ESPN). Figures are per
+// ODI/T20I from Cricsheet plus ESPN, and men's Tests from TEST_ARCHIVE_START_YEAR (leagues.ts) from ESPN). Figures are per
 // competition: a player's Test, ODI and T20I careers are separate pages.
 export async function getPlayerCricketCareer(league: League, playerEspnId: string): Promise<CricketCareerStats | null> {
   if (!isCricketLeague(league)) return null;
@@ -1185,12 +1187,15 @@ export interface CenturyRow {
   venue: string | null;
   round: string | null;
   status_summary: string | null;
+  /** How many centuries the league holds in all, whatever the row limit. */
+  total: number;
 }
 
 // Every century (100+ runs in an innings) on record for one cricket competition,
 // computed fresh from the backfilled per-match batting figures — not a maintained
 // list, so it's always consistent with whatever games are actually in the database.
-export async function getCricketCenturies(league: League): Promise<CenturyRow[]> {
+// `limit` keeps the newest N (every row carries `total`, the count before the limit).
+export async function getCricketCenturies(league: League, limit: number | null = null): Promise<CenturyRow[]> {
   const { rows } = await pool.query(
     `select p.espn_id as player_espn_id, p.name as player_name, p.slug as player_slug, coalesce(p.headshot_url, p.photo_url) as headshot_url,
             t.name as team_name, t.slug as team_slug, t.logo_url as team_logo, t.color as team_color,
@@ -1200,7 +1205,8 @@ export async function getCricketCenturies(league: League): Promise<CenturyRow[]>
             (inn->'batting'->>'fours')::int as fours,
             (inn->'batting'->>'sixes')::int as sixes,
             coalesce((inn->'batting'->>'notOut')::boolean, false) as not_out,
-            g.date, g.local_date::text as local_date, g.venue, g.round, g.status_summary
+            g.date, g.local_date::text as local_date, g.venue, g.round, g.status_summary,
+            (count(*) over ())::int as total
      from player_game_stats pgs
      ${CRICKET_INNINGS}
      join players p on p.league = $1 and p.espn_id = pgs.player_espn_id
@@ -1209,8 +1215,9 @@ export async function getCricketCenturies(league: League): Promise<CenturyRow[]>
      join teams ot on ot.league = $1
        and ot.espn_id = (case when pgs.team_espn_id = g.home_team_espn_id then g.away_team_espn_id else g.home_team_espn_id end)
      where pgs.league = $1 and (inn->'batting'->>'runs')::int >= 100
-     order by g.date desc, runs desc`,
-    [league]
+     order by g.date desc, runs desc
+     limit $2`,
+    [league, limit]
   );
   return rows;
 }
