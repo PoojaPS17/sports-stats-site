@@ -233,6 +233,10 @@
   html {
     color-scheme: light;
     scroll-padding-top: calc(var(--header-h) + 1rem);
+    /* The header row (logo, search, theme, X, menu) needs 379px, so below that it ran past the
+       viewport and the page scrolled sideways (4px at 375, 19px at 360). `clip` on <body> alone
+       does not stop that; on the root it does, and unlike `hidden` it keeps sticky positioning. */
+    overflow-x: clip;
   }
 
   :root[data-theme="dark"] {
