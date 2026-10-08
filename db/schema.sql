@@ -327,6 +327,11 @@ alter table standings add column if not exists clinched text;
 -- Cricket: ESPN's `qualified` stat ("Y") on a team through to the playoffs or the next stage. Only the
 -- qualifiers carry it, so null means not known; filled by `npm run backfill:standings <league>`.
 alter table standings add column if not exists qualified boolean;
+-- NBA, NFL and MLB: ESPN's season type of the table (1 preseason / spring training, 2 regular season, 3 postseason), read from
+-- the table node (`standings.seasonType`). While it is 1 the records are exhibition games: the site labels the table
+-- Preseason and gives no positions or seeds (src/lib/standingsSeasons.ts). Null for every other league, whose feed says
+-- type 1 for an ordinary season, and for historical seasons backfilled by `npm run backfill:standings`.
+alter table standings add column if not exists season_type int;
 -- One row per stage table a team appears in (a T20 World Cup side has a group row and a Super
 -- Eights row), which is the conflict target scripts/lib/standings.ts upserts on. The table was
 -- created with a (league, season, team_espn_id) primary key; drop it and key on the conference too.

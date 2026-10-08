@@ -2,7 +2,8 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { ExportShell, ExportTitle, ExportGroup, ExportTable, type ExportCell, type ExportRow } from "./ExportShell";
 import { groupStandings } from "./StandingsTable";
-import { notStarted } from "@/lib/standingsOrder";
+import { hasPosition, isPreseasonTable, notStarted } from "@/lib/standingsOrder";
+import { PRESEASON_LABEL } from "@/lib/standingsSeasons";
 import { zonesFor } from "@/lib/standingsZones";
 import type { League, StandingRow } from "@/lib/queries";
 import { hasTies } from "@/lib/leagues";
@@ -67,15 +68,16 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
   const tables = sections.map(([name, rows]) => {
     const cricketTies = mode === "cricket" && hasCricketTies(rows);
     const list: ExportRow[] = rows.map((r, i) => {
-      const zone = zones && !r.unranked ? zones.zoneAt(rows, i) : null;
-      return { key: r.team_espn_id, rank: r.unranked ? "–" : i + 1, lead: logo(r.name, r.logo_url, r.color), name: qualifiers && r.qualified === true ? <>{teamDisplayName(r.name)} <span style={{ fontSize: 10, fontWeight: 800, color: CARD.accent }}>Q</span></> : teamDisplayName(r.name), cells: cellsFor(r, cricketTies), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
+      const zone = zones && hasPosition(r) ? zones.zoneAt(rows, i) : null;
+      return { key: r.team_espn_id, rank: hasPosition(r) ? i + 1 : "–", lead: logo(r.name, r.logo_url, r.color), name: qualifiers && r.qualified === true ? <>{teamDisplayName(r.name)} <span style={{ fontSize: 10, fontWeight: 800, color: CARD.accent }}>Q</span></> : teamDisplayName(r.name), cells: cellsFor(r, cricketTies), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
     });
     // No row cap: the image is the whole table (a 32-team NFL season, a 36-team league phase).
     const table = <ExportTable firstHeader="Team" headers={headersFor(rows)} rows={list} bare compact={mode === "soccer" && sections.length > 1} />;
-    return sections.length === 1 && name === "All Teams" && !notStarted(rows) ? (
+    const aside = notStarted(rows) ? "Season not started" : isPreseasonTable(rows) ? PRESEASON_LABEL : undefined;
+    return sections.length === 1 && name === "All Teams" && !aside ? (
       <div key={name} style={{ border: `1px solid ${CARD.border}`, borderRadius: 12, overflow: "hidden" }}>{table}</div>
     ) : (
-      <ExportGroup key={name} title={name} aside={notStarted(rows) ? "Season not started" : undefined}>{table}</ExportGroup>
+      <ExportGroup key={name} title={name} aside={aside}>{table}</ExportGroup>
     );
   });
 

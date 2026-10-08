@@ -38,13 +38,33 @@ export function espnQualified(value: string | undefined): boolean | null {
   return v === "Y" ? true : v === "N" ? false : null;
 }
 
+// The leagues whose games carry ESPN's season type (games.season_type: 1 preseason, 2 regular, 3 postseason). Only these
+// store it on a standings row too: a soccer or cricket table says type 1 for an ordinary season, which means nothing.
+const SEASON_TYPE_LEAGUES: League[] = ["nba", "nfl", "mlb"];
+
+// The season a table belongs to is the table's own `standings.season`, not the response's root `season.year`. The root
+// is ESPN's calendar year-to-be: once baseball's regular season is over it already says 2027 while every table still
+// carries 2026's final numbers, and filing those under 2027 invented a second, identical MLB season (found 2026-10-08).
+// A table with no season of its own falls back to the root.
+export function tableSeason(table: any): number | null {
+  const n = Number(table?.standings?.season);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+// The ESPN season type of a table, kept for the leagues above; null for everything else and when the feed sent none.
+export function tableSeasonType(league: League, table: any): number | null {
+  if (!SEASON_TYPE_LEAGUES.includes(league)) return null;
+  const n = Number(table?.standings?.seasonType);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
 function collectEntries(node: any, conference: string | null, out: any[], depth = 0) {
   if (node.standings?.entries) {
     // A group nested under a conference that is not itself a conference is a
     // division (NFL "AFC East"); entries directly on the conference have none.
     const division = conference && !node.isConference && node.name ? node.name : null;
     for (const entry of node.standings.entries) {
-      out.push({ entry, conference: tidyConference(conference ?? node.name ?? null), division });
+      out.push({ entry, conference: tidyConference(conference ?? node.name ?? null), division, table: node });
     }
   }
   // ESPN flags the NFL's AFC and NFC with `isConference`, but not baseball's American League and
@@ -63,11 +83,14 @@ function collectEntries(node: any, conference: string | null, out: any[], depth 
 // per stage table it appears in (a T20 World Cup side has a group row and a Super
 // Eights row), so the unique key includes the conference.
 export async function upsertStandingsResponse(league: League, data: any, seasonOverride?: number): Promise<number> {
-  const season = seasonOverride ?? data.season?.year ?? new Date().getFullYear();
+  const rootSeason = data.season?.year ?? new Date().getFullYear();
   const entries: any[] = [];
   collectEntries(data, null, entries);
 
-  for (const { entry, conference, division } of entries) {
+  for (const { entry, conference, division, table } of entries) {
+    const season = seasonOverride ?? tableSeason(table) ?? rootSeason;
+    // A historical backfill names its season itself and stores no type: the season is long over, whatever the feed's field says.
+    const seasonType = seasonOverride === undefined ? tableSeasonType(league, table) : null;
     const stats = entry.stats ?? [];
     // Football and the NFL send `ties`; a cricket table sends `matchesTied` (never both).
     const draws = statValue(stats, "ties", "matchesTied");
@@ -86,9 +109,9 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          league, season, team_espn_id, conference, wins, losses,
          win_percent, streak, playoff_seed, games_behind,
          draws, points, goals_for, goals_against, no_result, net_run_rate, division, rank,
-         zone, qualified, clinched, updated_at
+         zone, qualified, clinched, season_type, updated_at
        ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-         $19,$20,$21, now())
+         $19,$20,$21,$22, now())
        on conflict (league, season, team_espn_id, coalesce(conference, '')) do update set
          division = coalesce(excluded.division, standings.division),
          wins = excluded.wins, losses = excluded.losses,
@@ -99,9 +122,10 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
          no_result = excluded.no_result, net_run_rate = excluded.net_run_rate,
          rank = excluded.rank, zone = excluded.zone,
          qualified = excluded.qualified, clinched = excluded.clinched,
+         season_type = excluded.season_type,
          updated_at = now()
-     where (standings.division, standings.wins, standings.losses, standings.win_percent, standings.streak, standings.playoff_seed, standings.games_behind, standings.draws, standings.points, standings.goals_for, standings.goals_against, standings.no_result, standings.net_run_rate, standings.rank, standings.zone, standings.qualified, standings.clinched)
-       is distinct from (coalesce(excluded.division, standings.division), excluded.wins, excluded.losses, excluded.win_percent, excluded.streak, excluded.playoff_seed, excluded.games_behind, excluded.draws, excluded.points, excluded.goals_for, excluded.goals_against, excluded.no_result, excluded.net_run_rate, excluded.rank, excluded.zone, excluded.qualified, excluded.clinched)`,
+     where (standings.division, standings.wins, standings.losses, standings.win_percent, standings.streak, standings.playoff_seed, standings.games_behind, standings.draws, standings.points, standings.goals_for, standings.goals_against, standings.no_result, standings.net_run_rate, standings.rank, standings.zone, standings.qualified, standings.clinched, standings.season_type)
+       is distinct from (coalesce(excluded.division, standings.division), excluded.wins, excluded.losses, excluded.win_percent, excluded.streak, excluded.playoff_seed, excluded.games_behind, excluded.draws, excluded.points, excluded.goals_for, excluded.goals_against, excluded.no_result, excluded.net_run_rate, excluded.rank, excluded.zone, excluded.qualified, excluded.clinched, excluded.season_type)`,
       [
         league,
         season,
@@ -129,6 +153,7 @@ export async function upsertStandingsResponse(league: League, data: any, seasonO
         zone,
         qualified,
         clinched,
+        seasonType,
       ]
     );
   }
