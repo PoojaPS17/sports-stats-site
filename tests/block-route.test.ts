@@ -102,6 +102,48 @@ test("a team in a table nobody has played in yet has no position, so the card sh
   assert.equal(block.summary.record, null);
 });
 
+test("a team with no games played in a table where others have played is unranked, and the teams that have played keep their positions, ties included", async () => {
+  await q(
+    `insert into teams (league, espn_id, name, slug, abbreviation, color) values
+       ('nba','41','Atlanta Hawks','atlanta-hawks','ATL','e03a3e'), ('nba','42','Brooklyn Nets','brooklyn-nets','BKN','000000'),
+       ('nba','43','Chicago Bulls','chicago-bulls','CHI','ce1141'), ('nba','44','Dallas Mavericks','dallas-mavericks','DAL','00538c')`
+  );
+  // Hawks and Nets are level on 2-0 (a tie, broken by name), Bulls are 1-1, Mavericks have not played: in the table only by name.
+  await q(
+    `insert into standings (league, season, team_espn_id, conference, wins, losses, goals_for, goals_against, win_percent) values
+       ('nba', 2026, '41', 'Western Conference', 2, 0, null, null, 1), ('nba', 2026, '42', 'Western Conference', 2, 0, null, null, 1),
+       ('nba', 2026, '43', 'Western Conference', 1, 1, null, null, 0.5), ('nba', 2026, '44', 'Western Conference', 0, 0, null, null, 0)`
+  );
+  await q(
+    `insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, season_year, completed, status_state, home_score, away_score) values
+       ('nba','n1', now() + interval '2 days', 'Chicago Bulls v Dallas Mavericks', '43', '44', 2026, false, 'pre', 0, 0),
+       ('nba','n2', now() + interval '4 days', 'Dallas Mavericks v Atlanta Hawks', '44', '41', 2026, false, 'pre', 0, 0)`
+  );
+  const summary = async (slug: string) => (await (await call("team-next", `?league=nba&team=${slug}`)).json()).block.summary;
+  assert.deepEqual(await summary("dallas-mavericks"), { leagueLabel: "NBA · Western Conference", position: null, figure: null, record: null, form: [] });
+  assert.equal((await summary("atlanta-hawks")).position, 1);
+  assert.equal((await summary("brooklyn-nets")).position, 2);
+  assert.deepEqual(await summary("chicago-bulls"), { leagueLabel: "NBA · Western Conference", position: 3, figure: "1-1", record: "2 played", form: [] });
+});
+
+test("games not yet played show no score, even with the feed's placeholder 0-0, but a finished or live 0-0 keeps its score", async () => {
+  const mavs = (await (await call("team-next", "?league=nba&team=dallas-mavericks")).json()).block;
+  assert.deepEqual(mavs.next.map((f: { id: string; score: string | null }) => [f.id, f.score]), [["n1", null], ["n2", null]]);
+  // Earlier in this file: Ghost v Chelsea (g9) finished 0-0, a real draw.
+  const chelsea = (await (await call("team-next", "?league=epl&team=chelsea")).json()).block;
+  assert.deepEqual({ id: chelsea.last.id, score: chelsea.last.score, result: chelsea.last.result }, { id: "g9", score: "0-0", result: "D" });
+  // A placeholder 0-0 on an unplayed EPL game, and a live game that really is 0-0.
+  await q(`update games set home_score = 0, away_score = 0 where espn_id = 'g2'`);
+  await q(
+    `insert into games (league, espn_id, date, name, home_team_espn_id, away_team_espn_id, season_year, completed, status_state, status_detail, home_score, away_score) values
+       ('epl','d2', now() - interval '1 hour', 'Liverpool v Arsenal', '3', '1', 2026, false, 'in', '35''', 0, 0)`
+  );
+  const arsenal = (await (await call("team-next", "?league=epl&team=arsenal")).json()).block;
+  assert.equal(arsenal.next.find((f: { id: string }) => f.id === "g2").score, null);
+  const live = arsenal.next.find((f: { id: string }) => f.id === "d2");
+  assert.deepEqual({ score: live.score, live: live.live }, { score: "0-0", live: true });
+});
+
 test("a team that does not exist is a null block, not an error", async () => {
   const res = await call("team-next", "?league=epl&team=nobody");
   assert.equal(res.status, 200);
