@@ -5,7 +5,7 @@
 // line in its page header (heroClaims.ts teamClaims), a hundred or a five-wicket innings is a row of the
 // match's scorecard. A claim this file does not recognise is dropped, never reworded by guesswork.
 import { leagueNameWithArticle, type League } from "./leagues";
-import { factWeight, sportOf, type LineFact } from "./threeLines";
+import { factWeight, pickSportOf, sportOf, type FactFollow, type LineFact } from "./threeLines";
 import { teamDisplayName } from "./teamName";
 
 /**
@@ -25,13 +25,15 @@ export function gameScope(games: { stage?: string | null }[]): GameScope {
 }
 
 /** A team's header claims turned into lines. `lastPlayed` is when the run's latest result was played. */
-export function teamStreakFacts(args: { league: League; teamEspnId: string; teamName: string; teamSlug: string; claims: string[]; lastPlayed: Date | null; scope: GameScope }): LineFact[] {
+export function teamStreakFacts(args: { league: League; teamEspnId: string; teamName: string; teamSlug: string; teamColor?: string | null; claims: string[]; lastPlayed: Date | null; scope: GameScope }): LineFact[] {
   const { league, teamEspnId, claims, lastPlayed, scope } = args;
   if (!lastPlayed) return [];
   const name = teamDisplayName(args.teamName);
   const where = leagueNameWithArticle(league);
   const href = `/${league}/teams/${args.teamSlug}`;
-  const base = { sport: sportOf(league), league, href, at: lastPlayed.toISOString() };
+  const pick = pickSportOf(sportOf(league));
+  const follow: FactFollow | undefined = pick ? { sport: pick, block: { type: "team-next", params: { league, team: args.teamSlug }, label: `${name}: next three` } } : undefined;
+  const base = { sport: sportOf(league), league, href, at: lastPlayed.toISOString(), who: { name, color: args.teamColor ?? null }, ...(follow ? { follow } : {}) };
   const id = (kind: string) => `team:${league}:${teamEspnId}:${kind}`;
   const out: LineFact[] = [];
   for (const claim of claims) {
@@ -63,8 +65,12 @@ export interface CricketInningsRow {
   /** Distinguishes two innings of one player in one match (a Test). */
   inningsNo: number;
   playerId: string;
+  /** The player's page slug; absent for a series match, whose players have no page of their own. */
+  playerSlug?: string | null;
   playerName: string;
   teamName: string;
+  /** The team's ESPN colour (bare hex), when the row has one. */
+  teamColor?: string | null;
   opponentName: string;
   runs: number | null;
   ballsFaced: number | null;
@@ -84,7 +90,8 @@ export function cricketFacts(rows: CricketInningsRow[]): LineFact[] {
   const out: LineFact[] = [];
   for (const r of rows) {
     const href = r.league === "cricket" ? `/cricket/matches/${r.matchId}` : `/${r.league}/games/${r.matchId}`;
-    const base = { sport: "cricket", league: r.league, href, at: r.at.toISOString() };
+    const follow: FactFollow = { sport: "cricket", ...(r.playerSlug && r.league !== "cricket" ? { block: { type: "player-form" as const, params: { league: r.league, player: r.playerSlug }, label: `${r.playerName}: last five` } } : {}) };
+    const base = { sport: "cricket", league: r.league, href, at: r.at.toISOString(), follow, who: { name: teamDisplayName(r.teamName), color: r.teamColor ?? null } };
     const who = `${r.playerName}`;
     const side = `${teamDisplayName(r.teamName)} against ${teamDisplayName(r.opponentName)}`;
     if (r.runs !== null && r.runs >= HUNDRED) {

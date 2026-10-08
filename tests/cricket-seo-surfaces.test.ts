@@ -8,7 +8,6 @@ import { parseCricketSeriesStandings } from "../src/lib/cricketSeriesStandings";
 import { CricketPlayingXi } from "../src/components/CricketPlayingXi";
 import { CricketPointsTable } from "../src/components/CricketPointsTable";
 import { CricketMatchInfo } from "../src/components/CricketMatchInfo";
-import { HomeCricket } from "../src/components/HomeCricket";
 import { SeriesMatchRow } from "../src/components/CricketSeries";
 import { SeriesMatchesExportCard } from "../src/components/SeriesMatchesExportCard";
 
@@ -75,23 +74,6 @@ test("CricketMatchInfo: series, stage, format, venue, umpires and the result, as
   assert.doesNotMatch(html, /Player of the Match/);
 });
 
-test("HomeCricket: the domestic and women's series in progress are linked from the homepage block", () => {
-  const html = renderToStaticMarkup(
-    createElement(HomeCricket, {
-      live: 0,
-      next: [],
-      otherSeries: [
-        { espn_id: "1554058", name: "CSA Women Pro50 Series 2026/27", live: true },
-        { espn_id: "1553000", name: "President's Trophy 2026-27", live: false },
-      ],
-    })
-  );
-  assert.match(html, /Also in progress/);
-  assert.match(html, /href="\/cricket\/series\/1554058"[^>]*>[^<]*CSA Women Pro50 Series 2026\/27/);
-  assert.match(html, /href="\/cricket\/series\/1553000"/);
-  assert.doesNotMatch(renderToStaticMarkup(createElement(HomeCricket, { live: 0, next: [], otherSeries: [] })), /Also in progress/);
-});
-
 test("the cricket match page titles, names and sections come from the helpers", () => {
   const page = read("src/lib/cricketMatchPage.tsx");
   assert.match(page, /cricketMatchTitleCandidates/);
@@ -124,13 +106,6 @@ test("the series hub shows other competitions in progress in the open, with the 
   assert.ok(open > 0, "otherInProgress rendered");
   assert.ok(open < details, "in-progress list comes before the details toggle");
   assert.match(hub, /otherRest/);
-});
-
-test("the homepage reads the other series in progress at the fixtures tier", () => {
-  const data = read("src/lib/homeData.ts");
-  assert.match(data, /getCricketSeriesInProgressOther\(/);
-  assert.match(data, /otherSeries: /);
-  assert.match(read("src/app/page.tsx"), /otherSeries=\{home\.otherSeries\}/);
 });
 
 test("series cards, rows, the export card and the series header print formats in a reader's words, never the raw class card", () => {

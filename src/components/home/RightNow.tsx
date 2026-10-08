@@ -6,6 +6,10 @@ import { LocalTime } from "@/components/LocalTime";
 import { teamHex } from "@/lib/teamColor";
 import { getRightNow } from "@/lib/rightNowData";
 import { needLine, type RightNowSide, type RightNowView } from "@/lib/rightNow";
+import { getHomeData } from "@/lib/homeData";
+import { ComingUpList, hasComingUp, LiveNowList, liveCountOf } from "@/components/HomeLive";
+import { LiveRefresh } from "@/components/LiveRefresh";
+import { HomeTabs } from "./HomeTabs";
 
 // Module 2 of the first visit: the one match worth a stranger's attention this second, picked by a stated
 // rule (see rightNow.ts), with a truthful "Next up" or "Latest result" when nothing is in play. A server
@@ -23,7 +27,7 @@ const DESCRIPTION: Record<string, string> = {
 function Side({ side, showScore }: { side: RightNowSide; showScore: boolean }) {
   return (
     <div className={`rn-side${side.dim ? " is-dim" : ""}`}>
-      <TeamLogo name={side.name} logoUrl={side.logo} color={side.color} size={30} />
+      <TeamLogo name={side.name} logoUrl={side.logo} color={side.color} size={34} />
       <div className="rn-nm">
         <b>{side.name}</b>
         {showScore && side.detail && <span>{side.detail}</span>}
@@ -37,11 +41,63 @@ function ballClass(symbol: string): string {
   return symbol === "4" ? "b4" : symbol === "6" ? "b6" : symbol === "W" ? "bw" : "";
 }
 
+/** The match story chart: both innings, the chasing or second innings in sky, the first as a dashed pace line. */
+function Worm({ view }: { view: RightNowView }) {
+  const { worm } = view;
+  if (!worm) return null;
+  const label = worm.lines.map((l) => l.team).filter(Boolean).join(" against ");
+  return (
+    <>
+      <div className="rn-wormbox">
+        <svg className="rn-worm" viewBox={worm.viewBox} preserveAspectRatio="none" role="img" aria-label={`Runs by over${label ? `: ${label}` : ""}`}>
+          {worm.lines.map((l) => (
+            <polyline key={l.period} points={l.points} stroke={l.chasing ? "var(--sky)" : "var(--text-muted)"} strokeWidth={l.chasing ? 3.5 : 2} strokeDasharray={l.chasing ? undefined : "4 4"} />
+          ))}
+        </svg>
+        {worm.dot && <span className="rn-wormdot" style={{ left: `${worm.dot.left}%`, top: `${worm.dot.top}%` }} aria-hidden />}
+      </div>
+      <div className="rn-legend">
+        {worm.lines.map((l) => (
+          <span key={l.period}>
+            <i className={l.chasing ? undefined : "is-pace"} />
+            {l.chasing ? l.team : `${l.team} pace`}
+          </span>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** A finished game's win-probability line, the game page's own stored data. */
+function Prob({ view }: { view: RightNowView }) {
+  const { prob } = view;
+  if (!prob) return null;
+  return (
+    <>
+      <div className="rn-wormbox">
+        <svg className="rn-worm" viewBox={prob.viewBox} preserveAspectRatio="none" role="img" aria-label={`${prob.homeName} win probability through the game, ending at ${prob.endPct} per cent`}>
+          <line x1="0" x2="320" y1="50" y2="50" stroke="var(--text-muted)" strokeWidth="1" strokeDasharray="4 4" />
+          <polyline points={prob.points} stroke="var(--sky)" strokeWidth="3.5" />
+        </svg>
+      </div>
+      <div className="rn-legend">
+        <span>
+          <i />
+          {prob.homeName} win probability, ending {prob.endPct}%
+        </span>
+        <span>
+          <i className="is-pace" />
+          Level at 50%
+        </span>
+      </div>
+    </>
+  );
+}
+
 function Chase({ view }: { view: RightNowView }) {
-  const { pick, worm, lastBalls, overNumber } = view;
+  const { pick, lastBalls, overNumber } = view;
   const c = pick.chase!;
   const chaser = pick.sides[pick.chasingIndex ?? 1];
-  const setter = pick.sides[pick.chasingIndex === 0 ? 1 : 0];
   return (
     <>
       <div className="rn-chase">
@@ -74,28 +130,7 @@ function Chase({ view }: { view: RightNowView }) {
           )}
         </div>
       </div>
-      {worm && (
-        <>
-          <div className="rn-wormbox">
-            <svg className="rn-worm" viewBox={worm.viewBox} preserveAspectRatio="none" role="img" aria-label={`Runs by over: ${setter.name} against ${chaser.name}`}>
-              {worm.lines.map((l) => (
-                <polyline key={l.period} points={l.points} stroke={l.chasing ? "var(--sig)" : "var(--text-faint)"} strokeWidth={l.chasing ? 3.5 : 2.5} strokeDasharray={l.chasing ? undefined : "4 4"} />
-              ))}
-            </svg>
-            {worm.dot && <span className="rn-wormdot" style={{ left: `${worm.dot.left}%`, top: `${worm.dot.top}%` }} aria-hidden />}
-          </div>
-          <div className="rn-legend">
-            <span>
-              <i style={{ background: "var(--sig)" }} />
-              {chaser.name}, chasing
-            </span>
-            <span>
-              <i style={{ background: "var(--text-faint)" }} />
-              {setter.name}
-            </span>
-          </div>
-        </>
-      )}
+      <Worm view={view} />
       {lastBalls && lastBalls.length > 0 && (
         <div className="rn-balls" aria-label={`Latest over${overNumber ? `, over ${overNumber}` : ""}: ${lastBalls.join(" ")}`}>
           <span>Latest over</span>
@@ -111,18 +146,31 @@ function Chase({ view }: { view: RightNowView }) {
 }
 
 export async function RightNow() {
-  return <RightNowCard view={await getRightNow()} />;
+  const [view, home] = await Promise.all([getRightNow(), getHomeData()]);
+  const live = liveCountOf(home);
+  const tabs = (
+    <>
+      <LiveRefresh active={live > 0} />
+      <HomeTabs
+        initial={live > 0 ? "live" : "coming"}
+        liveCount={live}
+        live={live > 0 ? <LiveNowList data={home} narrow /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">Nothing in play right now.</p>}
+        coming={hasComingUp(home) ? <ComingUpList data={home} narrow /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">No fixtures listed for the coming week yet.</p>}
+      />
+    </>
+  );
+  return <RightNowCard view={view} tabs={tabs} />;
 }
 
 /** The card for a chosen view; split from the loader so a test can render any state. */
-export function RightNowCard({ view }: { view: RightNowView }) {
+export function RightNowCard({ view, tabs }: { view: RightNowView; tabs?: React.ReactNode }) {
   const { pick } = view;
   const live = pick.mode === "live";
 
   if (pick.mode === "none") {
     return (
       <section aria-label="Right now">
-        <SectionHeader description={DESCRIPTION.none} action={{ label: "All scores", href: "#live" }}>
+        <SectionHeader plain description={DESCRIPTION.none} action={{ label: "All scores", href: "/scores" }}>
           Right now
         </SectionHeader>
         <div className="card px-4 py-4 text-sm text-[var(--text-muted)]">
@@ -132,6 +180,7 @@ export function RightNowCard({ view }: { view: RightNowView }) {
             <Link href="/cricket/series" className="hover:underline">Cricket series</Link>
           </p>
         </div>
+        {tabs}
       </section>
     );
   }
@@ -153,7 +202,7 @@ export function RightNowCard({ view }: { view: RightNowView }) {
 
   return (
     <section aria-label="Right now">
-      <SectionHeader description={DESCRIPTION[pick.mode]} action={{ label: "All scores", href: "#live" }}>
+      <SectionHeader plain description={DESCRIPTION[pick.mode]} action={{ label: "All scores", href: "/scores" }}>
         Right now
       </SectionHeader>
       <article className="card rn" style={style}>
@@ -169,12 +218,17 @@ export function RightNowCard({ view }: { view: RightNowView }) {
         {pick.chase ? (
           <Chase view={view} />
         ) : (
-          pick.line && <p className="rn-line">{pick.line}</p>
+          <>
+            {pick.line && <p className="rn-line">{pick.line}</p>}
+            <Worm view={view} />
+            <Prob view={view} />
+          </>
         )}
         <Link href={pick.href} className="rn-go" aria-label={pick.chase ? `${linkLabel}: ${needLine(pick.chase)}` : undefined}>
           {linkLabel} →
         </Link>
       </article>
+      {tabs}
     </section>
   );
 }

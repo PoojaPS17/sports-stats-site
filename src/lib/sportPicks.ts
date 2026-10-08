@@ -3,7 +3,7 @@
 import type { HomeBlock } from "./blockTypes";
 import { btsBlock, cricketSideBlock, f1Block, liveBlock, seriesStandingsBlock, standingsBlock, type Edition, type EditionContext } from "./editions";
 import { MAX_BLOCKS } from "./homeSetup";
-import { SOCCER_LEAGUES, type League } from "./leagues";
+import { CRICKET_LEAGUES, SOCCER_LEAGUES, type League } from "./leagues";
 
 export const SPORT_PICKS = ["cricket", "football", "nfl", "nba", "mlb", "tennis", "f1"] as const;
 export type SportPick = (typeof SPORT_PICKS)[number];
@@ -67,13 +67,50 @@ export interface SportLineInput {
   liveCricket: number;
   liveTennis: number;
   sections: { league: League; liveCount: number }[];
+  /** Every league game in play, whichever block shows it. Preferred over `sections`, which cover only the four headline leagues. */
+  liveGames?: { league: League }[];
+  /** The next stored fixture per league (ISO), null where the league has none left to play. A league missing from the map is unknown. */
+  nextFixtures?: Partial<Record<League, string | null>>;
+  /** Headline cricket fixtures still to come, tennis matches still to play (the earliest one that has not started is used), and the F1 weekend within the week. */
+  nextCricket?: (string | null)[];
+  nextTennis?: (string | null)[];
+  nextF1?: { start: string; end: string | null } | null;
+  /** The clock; tests pass their own. Only elapsed time is used, never a calendar day, so the line reads the same in every timezone. */
+  now?: Date;
 }
 
-/** The small line under each tile: how many are live now when anything is, otherwise what the sport covers. */
+const HOUR = 3_600_000;
+
+/** "Next game in 5 hours" / "in 3 days": elapsed time from now, so no weekday or timezone is involved. Null for a date that has passed. */
+export function untilLabel(iso: string | null | undefined, now: Date, noun: string): string | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - now.getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const hours = Math.floor(ms / HOUR);
+  if (hours < 1) return `${noun} within the hour`;
+  if (hours < 24) return `${noun} in ${hours} ${hours === 1 ? "hour" : "hours"}`;
+  const days = Math.round(hours / 24);
+  return `${noun} in ${days} ${days === 1 ? "day" : "days"}`;
+}
+
+const earliest = (dates: (string | null | undefined)[], now: Date): string | null => {
+  const future = dates.filter((d): d is string => !!d && new Date(d).getTime() > now.getTime()).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  return future[0] ?? null;
+};
+
+/**
+ * The small line under each tile. How many are live now when anything is; otherwise a status the data backs (the next
+ * fixture, "Between seasons" for a sport whose leagues have nothing left to play); otherwise what the sport covers.
+ * Nothing here is estimated: a sport we know nothing about keeps its description.
+ */
 export function sportLines(input: SportLineInput): Record<SportPick, { live: number; text: string }> {
-  const inLeagues = (leagues: readonly League[]) => input.sections.filter((s) => leagues.includes(s.league)).reduce((n, s) => n + s.liveCount, 0);
+  const now = input.now ?? new Date();
+  const inLeagues = (leagues: readonly League[]) =>
+    input.liveGames
+      ? input.liveGames.filter((g) => leagues.includes(g.league)).length
+      : input.sections.filter((s) => leagues.includes(s.league)).reduce((n, s) => n + s.liveCount, 0);
   const live: Record<SportPick, number> = {
-    cricket: input.liveCricket,
+    cricket: input.liveCricket + inLeagues(CRICKET_LEAGUES),
     football: inLeagues(SOCCER_LEAGUES),
     nfl: inLeagues(["nfl"]),
     nba: inLeagues(["nba"]),
@@ -90,5 +127,35 @@ export function sportLines(input: SportLineInput): Record<SportPick, { live: num
     tennis: "Live matches, draws",
     f1: "Standings, race calendar",
   };
-  return Object.fromEntries(SPORT_PICKS.map((s) => [s, { live: live[s], text: live[s] > 0 ? `${live[s]} live now` : idle[s] }])) as Record<SportPick, { live: number; text: string }>;
+  /** Next fixture across a sport's leagues; "Between seasons" only when every league was looked up and has nothing left. */
+  const leagueStatus = (leagues: readonly League[]): string | null => {
+    const map = input.nextFixtures;
+    if (!map) return null;
+    const next = untilLabel(earliest(leagues.map((l) => map[l]), now), now, "Next game");
+    if (next) return next;
+    return leagues.every((l) => map[l] === null) ? "Between seasons" : null;
+  };
+  const status: Record<SportPick, string | null> = {
+    cricket: untilLabel(earliest(input.nextCricket ?? [], now), now, "Next match"),
+    football: leagueStatus(SOCCER_LEAGUES),
+    nfl: leagueStatus(["nfl"]),
+    nba: leagueStatus(["nba"]),
+    mlb: leagueStatus(["mlb"]),
+    tennis: untilLabel(earliest(input.nextTennis ?? [], now), now, "Next match"),
+    f1: input.nextF1
+      ? new Date(input.nextF1.start).getTime() <= now.getTime() && (!input.nextF1.end || new Date(input.nextF1.end).getTime() >= now.getTime())
+        ? "Race weekend now"
+        : untilLabel(input.nextF1.start, now, "Next race")
+      : null,
+  };
+  return Object.fromEntries(SPORT_PICKS.map((s) => [s, { live: live[s], text: live[s] > 0 ? `${live[s]} live now` : (status[s] ?? idle[s]) }])) as Record<SportPick, { live: number; text: string }>;
 }
+
+/** Rows in the picker tray: filled blocks first, dashed placeholders after them up to this many. */
+export const TRAY_ROWS = 3;
+export const trayPlaceholders = (blockCount: number): number => Math.max(0, TRAY_ROWS - blockCount);
+
+/** The follow event a card elsewhere on the page sends the picker: a sport, optionally with the team or player to add. */
+export const PICK_FOLLOW_EVENT = "sportsdb:pick-follow";
+/** The picker announces the block ids it holds beyond sports (teams, players), so a card can show itself as followed. */
+export const PICKED_BLOCKS_EVENT = "sportsdb:picked-blocks";

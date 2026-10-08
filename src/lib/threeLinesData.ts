@@ -53,10 +53,10 @@ export async function readTeamStreakFacts(hours: number = FRESH_HOURS): Promise<
       const games = rows.filter((r) => r.home_team_espn_id === team || r.away_team_espn_id === team);
       const sample = games[0];
       if (!sample) continue;
-      const mine = sample.home_team_espn_id === team ? { name: sample.home_name, slug: sample.home_slug } : { name: sample.away_name, slug: sample.away_slug };
+      const mine = sample.home_team_espn_id === team ? { name: sample.home_name, slug: sample.home_slug, color: sample.home_color } : { name: sample.away_name, slug: sample.away_slug, color: sample.away_color };
       const lastPlayed = lastResultDate(games, team);
       const claims = teamClaims(seasonResults(games, team), { soccer: isSoccer, lastPlayed });
-      facts.push(...teamStreakFacts({ league: g.league, teamEspnId: team, teamName: mine.name, teamSlug: mine.slug, claims, lastPlayed, scope: gameScope(games) }));
+      facts.push(...teamStreakFacts({ league: g.league, teamEspnId: team, teamName: mine.name, teamSlug: mine.slug, teamColor: mine.color, claims, lastPlayed, scope: gameScope(games) }));
     }
   }
   return facts;
@@ -71,8 +71,10 @@ interface RawInnings {
   match_id: string;
   innings_no: string | number;
   player_id: string;
+  player_slug?: string | null;
   player_name: string;
   team_name: string;
+  team_color?: string | null;
   opponent_name: string;
   runs: number | null;
   balls: number | null;
@@ -87,8 +89,10 @@ const toRow = (r: RawInnings): CricketInningsRow => ({
   matchId: r.match_id,
   inningsNo: Number(r.innings_no),
   playerId: r.player_id,
+  playerSlug: r.player_slug ?? null,
   playerName: r.player_name,
   teamName: r.team_name,
+  teamColor: r.team_color ?? null,
   opponentName: r.opponent_name,
   runs: r.runs,
   ballsFaced: r.balls,
@@ -102,8 +106,8 @@ const toRow = (r: RawInnings): CricketInningsRow => ({
 export async function readCricketRows(hours: number = FRESH_HOURS, limit = 30): Promise<CricketInningsRow[]> {
   const [archived, series] = await Promise.all([
     pool.query<RawInnings>(
-      `select g.league, g.espn_id as match_id, inn.n as innings_no, pgs.player_espn_id as player_id, p.name as player_name,
-              t.name as team_name, ot.name as opponent_name,
+      `select g.league, g.espn_id as match_id, inn.n as innings_no, pgs.player_espn_id as player_id, p.slug as player_slug, p.name as player_name,
+              t.name as team_name, t.color as team_color, ot.name as opponent_name,
               (inn.j->'batting'->>'runs')::int as runs, (inn.j->'batting'->>'ballsFaced')::int as balls,
               (inn.j->'batting'->>'notOut')::boolean as not_out,
               (inn.j->'bowling'->>'wickets')::int as wickets, (inn.j->'bowling'->>'conceded')::int as conceded,

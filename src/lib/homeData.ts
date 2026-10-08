@@ -1,11 +1,9 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
-import { LEAGUES, type League, getRecentAndUpcoming, getFeaturedGames, getNews, getMostRecentPlayedSeason, getNextFixtureDate, type GameRow, type NewsArticle } from "@/lib/queries";
+import { SOCCER_LEAGUES } from "@/lib/leagues";
+import { LEAGUES, type League, getRecentAndUpcoming, getFeaturedGames, getNextFixtureDate, type GameRow } from "@/lib/queries";
 import { getLiveGames, getUpcomingGames, getNextF1Event } from "@/lib/homeFeed";
-import { getOffseasonRecap } from "@/lib/offseason";
-import { snapshotFromRecap, type LeagueSnapshotData } from "@/lib/leagueSnapshot";
-import { byPriority, getCricketSeriesInProgressOther, getLiveCricketMatches, getUpcomingCricketMatches, type CricketSeriesMatch } from "@/lib/cricketSeries";
-import type { HomeOtherSeries } from "@/components/HomeCricket";
+import { byPriority, getLiveCricketMatches, getUpcomingCricketMatches, type CricketSeriesMatch } from "@/lib/cricketSeries";
 import { getTennisDay, type TennisMatch } from "@/lib/tennis";
 import { easternDay } from "@/lib/tennisFeed";
 import { overlayLiveGames } from "@/lib/gamesLive";
@@ -25,8 +23,7 @@ import type { F1EventRow } from "@/lib/f1";
 //   ESPN in-play overlays (scores, states)  10 s     the only thing that moves by the second
 //   Which stored matches are live / today   30 s     the scrapers land every 15 minutes
 //   Fixtures, results, section lists        60 s     same; a minute's lag on a fixture list is invisible
-//   News                                    15 min   the news scraper runs at most every 15 minutes
-//   Next F1 round, last played season        1 h     calendar facts that change a few times a year
+//   Next F1 round                            1 h     a calendar fact that changes a few times a year
 const TIER = { LIVE_LIST: 30, FIXTURES: 60, NEWS: 900, SEASON: 3600 } as const;
 
 // Leagues with a homepage block of their own; cricket has one block for the whole sport.
@@ -45,7 +42,7 @@ const readTennisDay = unstable_cache(async (day: string) => getTennisDay(day), [
 
 const readFixtures = unstable_cache(
   async () => {
-    const [upcoming, cricketUpcoming, featured, sections, otherSeries] = await Promise.all([
+    const [upcoming, cricketUpcoming, featured, sections] = await Promise.all([
       getUpcomingGames(6, 2),
       // A busy week (multiple concurrent bilateral tours plus a tournament like the
       // Asian Games) regularly schedules 30+ featured internationals in 7 days; a
@@ -55,53 +52,25 @@ const readFixtures = unstable_cache(
       getUpcomingCricketMatches(60, 7, true),
       Promise.all([...LEAGUES, "ucl" as const].map((l) => getFeaturedGames(l, 3))).then((x) => x.flat()),
       Promise.all(SECTION_LEAGUES.map(async (league) => ({ league, games: (await getRecentAndUpcoming(league, 2, 5)).slice(0, 8) }))),
-      // Domestic, women's and youth series in progress, for the Cricket block's "Also in progress" line.
-      getCricketSeriesInProgressOther(6),
     ]);
-    return { upcoming, cricketUpcoming, featured, sections, otherSeries };
+    return { upcoming, cricketUpcoming, featured, sections };
   },
   ["home-fixtures"],
   { revalidate: TIER.FIXTURES }
 );
 
-// The top of each league's table and its first leaders board, for the homepage league
-// blocks. Same tier as the fixtures: a table moves only when a game ends.
-const readSnapshots = unstable_cache(
-  async () =>
-    Object.fromEntries(
-      await Promise.all(
-        SECTION_LEAGUES.map(async (league) => {
-          const recap = await getOffseasonRecap(league).catch(() => null);
-          return [league, recap ? snapshotFromRecap(recap, { tableRows: 5, boards: 1, leaderRows: 3 }) : null] as const;
-        })
-      )
-    ) as Partial<Record<League, LeagueSnapshotData | null>>,
-  ["home-snapshots"],
-  { revalidate: TIER.FIXTURES }
+// The next stored fixture for every league behind a sport tile in the picker (all football competitions, NFL, NBA,
+// MLB), for the tile's status line. Cricket, tennis and F1 read their own lists above. A short tier: the line says
+// "in 5 hours", and a fixture moved or added should not take an hour to show.
+const NEXT_FIXTURE_LEAGUES: League[] = [...SOCCER_LEAGUES, "nfl", "nba", "mlb"];
+const readNextFixtures = unstable_cache(
+  async () => Object.fromEntries(await Promise.all(NEXT_FIXTURE_LEAGUES.map(async (l) => [l, await getNextFixtureDate(l)] as const))) as Partial<Record<League, string | null>>,
+  ["home-next-fixtures"],
+  { revalidate: 300 }
 );
 
-const readNews = unstable_cache(
-  async () =>
-    (await Promise.all(LEAGUES.map((l) => getNews(l, 4))))
-      .flat()
-      .sort((a, b) => (b.published ? new Date(b.published).getTime() : 0) - (a.published ? new Date(a.published).getTime() : 0))
-      .slice(0, 8),
-  ["home-news"],
-  { revalidate: TIER.NEWS }
-);
-
-const readSeasonFacts = unstable_cache(
-  async () => {
-    const [f1, seasons, resumes] = await Promise.all([
-      getNextF1Event(7),
-      Promise.all(SECTION_LEAGUES.map(async (l) => [l, await getMostRecentPlayedSeason(l)] as const)),
-      Promise.all(SECTION_LEAGUES.map(async (l) => [l, await getNextFixtureDate(l)] as const)),
-    ]);
-    return { f1, lastSeason: Object.fromEntries(seasons) as Partial<Record<League, number | null>>, resumesOn: Object.fromEntries(resumes) as Partial<Record<League, string | null>> };
-  },
-  ["home-season-facts"],
-  { revalidate: TIER.SEASON }
-);
+// The next F1 round: the Coming up tab and the Formula 1 tile read it on every render.
+const readF1 = unstable_cache(async () => getNextF1Event(7), ["home-next-f1"], { revalidate: TIER.SEASON });
 
 // Only headline cricket (the featured competitions and official internationals, see
 // cricketFeatured.ts) reaches the homepage; the stored lists are already filtered,
@@ -138,8 +107,6 @@ export interface HomeSection {
   liveCount: number;
   /** Games in the section's window before de-duplication: zero means between seasons. */
   windowCount: number;
-  /** Top five of the table and the leading players, or null when the league has no season data. */
-  snapshot: LeagueSnapshotData | null;
 }
 
 export interface HomeData {
@@ -155,28 +122,27 @@ export interface HomeData {
   /** The rest of the week's cricket, for the Cricket block. */
   moreCricket: CricketSeriesMatch[];
   /** Series outside headline cricket with play in progress, linked from the Cricket block. */
-  otherSeries: HomeOtherSeries[];
   nextTennis: TennisMatch[];
   f1: F1EventRow | null;
   featured: GameRow[];
   /** League blocks with something on, most active first. */
   sections: HomeSection[];
   /** Leagues with nothing on this week: on a break (`resumesOn` is the next kickoff) or between seasons (null), with the last season played. */
-  offSeason: { league: League; lastSeason: number | null; resumesOn: string | null }[];
-  news: NewsArticle[];
+  /** Next stored fixture per league behind a picker tile; null where none is left, absent where the read failed. */
+  nextFixtures: Partial<Record<League, string | null>>;
 }
 
 const HOURS = 3600 * 1000;
 
+/** Everything the first-visit page draws: what is in play, what is coming, the finished games the "Right now" card can fall back on, and the next-fixture lines of the sport tiles. */
 export const getHomeData = cache(async (): Promise<HomeData> => {
   const today = easternDay(new Date().toISOString());
-  const [liveLists, tennisRows, fixtures, news, facts, snapshots] = await Promise.all([
+  const [liveLists, tennisRows, fixtures, f1, nextFixtures] = await Promise.all([
     readLiveLists(),
     readTennisDay(today),
     readFixtures(),
-    readNews(),
-    readSeasonFacts(),
-    readSnapshots(),
+    readF1(),
+    readNextFixtures().catch(() => ({}) as Partial<Record<League, string | null>>),
   ]);
 
   // One ESPN pass for every league game that could be in play, whichever block shows it.
@@ -214,16 +180,14 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
 
   const now = Date.now();
   const sections: HomeSection[] = [];
-  const offSeason: HomeData["offSeason"] = [];
   for (const s of fixtures.sections) {
     const games = refresh(s.games);
     if (games.length === 0) {
-      offSeason.push({ league: s.league, lastSeason: facts.lastSeason[s.league] ?? null, resumesOn: facts.resumesOn[s.league] ?? null });
       continue;
     }
     const liveCount = games.filter((g) => g.status_state === "in").length;
     const rest = games.filter((g) => !shownGameIds.has(`${g.league}-${g.espn_id}`)).slice(0, 4);
-    sections.push({ league: s.league, games: rest, liveCount, windowCount: games.length, snapshot: snapshots[s.league] ?? null });
+    sections.push({ league: s.league, games: rest, liveCount, windowCount: games.length });
   }
   // Most active first: anything in play, then whoever plays soonest.
   const soonest = (s: HomeSection) => {
@@ -244,12 +208,10 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
     upcomingGames,
     nextCricket,
     moreCricket,
-    otherSeries: fixtures.otherSeries.map((s) => ({ espn_id: s.espn_id, name: s.name, live: s.live_count > 0 })),
     nextTennis,
-    f1: facts.f1,
+    f1,
     featured: refresh(fixtures.featured),
     sections,
-    offSeason,
-    news,
+    nextFixtures,
   };
 });

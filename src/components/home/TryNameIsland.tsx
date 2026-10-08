@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Crest } from "./Crest";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { addBlock, isSetup, newSetup, readSetup, writeSetup } from "@/lib/homeSetup";
@@ -38,20 +39,11 @@ export function resultLabels(results: SearchResult[]): string[] {
   });
 }
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .slice(-2)
-    .join("")
-    .toUpperCase();
-
 function Bars({ card }: { card: TryCard }) {
   const max = Math.max(1, ...card.bars.map((b) => b.value));
   const last = card.bars.length - 1;
   return (
-    <ul className="mt-5 flex h-[84px] items-end gap-1.5" aria-label={`${card.barsCaption ?? "Recent games"}, oldest first`}>
+    <ul className="relative mb-3 mt-2 flex h-[84px] items-end gap-1.5 border-b-2 border-[var(--border)] pt-1.5" aria-label={`${card.barsCaption ?? "Recent games"}, oldest first`}>
       {card.bars.map((b, i) => (
         <li key={`${b.href}-${i}`} className="relative flex h-full min-w-0 flex-1 items-end">
           <Link
@@ -60,7 +52,7 @@ function Bars({ card }: { card: TryCard }) {
             title={`${b.label} ${b.title}`}
             aria-label={`${b.label} ${b.title}`}
             style={{ height: `${Math.max(4, (b.value / max) * 100)}%` }}
-            className={`relative block w-full rounded-t-md rounded-b-[3px] ${i === last ? "bg-[var(--sig)]" : "bg-[var(--sig)] opacity-40"}`}
+            className={`relative block min-h-1 w-full rounded-t-[7px] rounded-b-[3px] ${i === last ? "bg-[var(--sky)]" : "bg-[var(--tint-2)]"}`}
           >
             {i === last && <span className="absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 whitespace-nowrap text-[10.5px] font-extrabold text-[var(--text)]">{b.label}</span>}
           </Link>
@@ -72,64 +64,60 @@ function Bars({ card }: { card: TryCard }) {
 
 function CardView({ card, followed, onFollow }: { card: TryCard; followed: boolean; onFollow: () => void }) {
   return (
-    <article className="overflow-hidden rounded-[20px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-pop)]" data-testid="try-card" data-league={card.league} data-slug={card.slug}>
-      <div className="relative flex items-center gap-3 overflow-hidden bg-[var(--band-deep)] px-4 py-3.5 text-[var(--band-deep-text)]" style={{ borderLeft: `5px solid ${card.teamColor ? `#${card.teamColor}` : "var(--volt)"}` }}>
-        <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15 text-[13px] font-extrabold tracking-wide">
-          {initials(card.name)}
-        </span>
+    <article className="rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-[18px] shadow-[var(--shadow-card)]" data-testid="try-card" data-league={card.league} data-slug={card.slug}>
+      <div className="flex items-center gap-3">
+        <Crest name={card.name} color={card.teamColor} size={46} />
         <div className="min-w-0">
-          <h3 className="truncate text-[19px] font-extrabold tracking-tight">{card.name}</h3>
-          <p className="truncate text-xs font-semibold text-[var(--band-deep-muted)]">{[card.role, card.team, card.leagueLabel].filter(Boolean).join(" · ")}</p>
+          <h3 className="truncate text-[18px] font-extrabold tracking-[-0.02em]">{card.name}</h3>
+          <p className="truncate text-[12.5px] font-semibold text-[var(--text-muted)]">{[card.role, card.team, card.leagueLabel].filter(Boolean).join(" · ")}</p>
         </div>
-        <span className="ml-auto shrink-0 rounded-full bg-[var(--volt)] px-2.5 py-1 text-[11px] font-extrabold text-[var(--navy)]">{card.leagueShort}</span>
+        <span className="ml-auto shrink-0 rounded-full bg-[var(--sky-tint)] px-2.5 py-1 text-[11.5px] font-extrabold text-[var(--sky-ink)]">{card.leagueShort}</span>
       </div>
 
       {card.stats.length > 0 && (
-        <div className="grid grid-cols-3 border-b border-[var(--border)]">
-          {card.stats.map((s, i) => (
-            <div key={s.label} className={`min-w-0 px-3 py-2.5 ${i > 0 ? "border-l border-[var(--border)]" : ""}`}>
-              <b className="block whitespace-nowrap text-[23px] font-extrabold leading-[1.05] tracking-tight tabular-nums">{s.value}</b>
-              <span className="text-[10px] font-extrabold uppercase leading-tight tracking-wider text-[var(--text-muted)]">{s.label}</span>
+        <div className="my-3.5 grid grid-cols-3 gap-2">
+          {card.stats.map((s) => (
+            <div key={s.label} className="min-w-0 rounded-[14px] bg-[var(--bg)] px-3 py-2.5">
+              <b className="block whitespace-nowrap text-[20px] font-extrabold tracking-[-0.03em] tabular-nums">{s.value}</b>
+              <span className="text-[11.5px] font-semibold text-[var(--text-muted)]">{s.label}</span>
             </div>
           ))}
         </div>
       )}
 
-      <div className="px-4 pb-4 pt-3">
-        {card.statsCaption && card.stats.length > 0 && <p className="text-[11px] font-semibold text-[var(--text-muted)]">{card.statsCaption}</p>}
-        {card.bars.length > 0 && (
-          <>
-            <p className="mt-3 text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">{card.barsCaption}</p>
-            <Bars card={card} />
-          </>
+      {card.statsCaption && card.stats.length > 0 && <p className="text-[11.5px] font-semibold text-[var(--text-muted)]">{card.statsCaption}</p>}
+      {card.bars.length > 0 && (
+        <>
+          <p className="mt-2 text-xs font-bold text-[var(--text-muted)]">{card.barsCaption}</p>
+          <Bars card={card} />
+        </>
+      )}
+      {card.insight && (
+        <p className="rounded-[14px] bg-[var(--surface-muted)] px-3.5 py-3 text-[14.5px] leading-[1.5]">
+          {card.insight.lead}
+          {card.insight.strong && <b className="font-extrabold">{card.insight.strong}</b>}
+          {card.insight.tail}
+        </p>
+      )}
+      {card.small && <p className="text-[13px] text-[var(--text-muted)]">No game-by-game figures for {card.name} in {card.leagueLabel} on this site yet. The player page has what we hold.</p>}
+      <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+        <Link href={card.href} className="inline-flex items-center rounded-xl bg-[var(--sig)] px-4 py-[9px] text-[13.5px] font-extrabold text-[var(--sig-on)] shadow-[0_8px_18px_-8px_var(--sig)]">
+          Full profile →
+        </Link>
+        {card.block && (
+          <button
+            type="button"
+            onClick={onFollow}
+            aria-pressed={followed}
+            className={`inline-flex items-center rounded-full px-[13px] py-[7px] text-[12.5px] font-extrabold ${
+              followed ? "bg-[var(--win-tint)] text-[var(--win)] shadow-[inset_0_0_0_1.5px_var(--win)]" : "bg-[var(--surface)] text-[var(--sig-ink)] shadow-[inset_0_0_0_1.5px_var(--sig)] hover:bg-[var(--surface-muted)]"
+            }`}
+          >
+            {followed ? "✓ On your page" : `+ Follow ${card.name}`}
+          </button>
         )}
-        {card.insight && (
-          <p className="mt-3 rounded-xl bg-[var(--sig-soft)] px-3 py-2.5 text-[13px] font-semibold leading-snug text-[var(--text)]">
-            {card.insight.lead}
-            {card.insight.strong && <b className="text-[var(--sig-ink)]">{card.insight.strong}</b>}
-            {card.insight.tail}
-          </p>
-        )}
-        {card.small && <p className="text-[13px] text-[var(--text-muted)]">No game-by-game figures for {card.name} in {card.leagueLabel} on this site yet. The player page has what we hold.</p>}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Link href={card.href} className="inline-flex h-10 items-center rounded-[11px] bg-[var(--sig)] px-3.5 text-[13px] font-extrabold text-[var(--sig-on)]">
-            Full profile →
-          </Link>
-          {card.block && (
-            <button
-              type="button"
-              onClick={onFollow}
-              aria-pressed={followed}
-              className={`inline-flex h-10 items-center rounded-[11px] border-[1.5px] px-3.5 text-[13px] font-extrabold transition-colors ${
-                followed ? "border-[var(--win)] bg-[var(--win)] text-[var(--on-result)]" : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--sig-ink)]"
-              }`}
-            >
-              {followed ? "✓ On your page" : `+ Follow ${card.name}`}
-            </button>
-          )}
-        </div>
-        {card.note && <span className="mt-2.5 block text-[11px] font-semibold text-[var(--text-faint)]">{card.note}</span>}
       </div>
+      {card.note && <span className="mt-2.5 block text-[11.5px] leading-snug text-[var(--text-muted)]">{card.note}</span>}
     </article>
   );
 }
@@ -231,7 +219,7 @@ export function TryNameIsland({ initial, chips }: { initial: TryCard | null; chi
   const isFollowed = !!card?.block && followed.has(card.block.id);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+    <div className="grid gap-4">
       <div className="min-w-0">
         <label className="flex h-[52px] items-center gap-2.5 rounded-2xl border-[1.5px] border-[var(--border)] bg-[var(--surface)] px-3.5 shadow-[var(--shadow-card)] focus-within:border-[var(--sig)] focus-within:shadow-[0_0_0_4px_color-mix(in_srgb,var(--sig)_20%,transparent)]">
           <svg aria-hidden viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">

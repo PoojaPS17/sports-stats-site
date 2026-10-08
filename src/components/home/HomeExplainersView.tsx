@@ -5,6 +5,9 @@ import { cricketArchiveLine, HOW_NOTE, HOW_STEPS, showcaseTiles, trustItems, typ
 import type { NewestResult } from "@/lib/homeExplainersData";
 import { ScrollToPicker, StartHere } from "./StartHere";
 import type { SportLines } from "./SportPicker";
+import { Glyph } from "./Glyph";
+
+const TRUST_ICON = { computed: "shield", fresh: "clock", signup: "device", sources: "source" } as const;
 
 // Modules 8 to 11 of the first-visit page: what the site does (showcase), how a page gets built, why to trust the
 // numbers, and a ladder for visitors who will not pick. Server components, the same HTML for everyone and refreshed with
@@ -71,7 +74,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
   return (
     <>
       <section className="home-firstvisit" data-module="showcase" aria-labelledby="hx-showcase">
-        <SectionHeader description="Things a plain scores app does not give you">
+        <SectionHeader plain description="Things a plain scores app does not give you">
           <span id="hx-showcase">Built from every result we store</span>
         </SectionHeader>
         <div className="hx-show">
@@ -87,7 +90,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
       </section>
 
       <section className="home-firstvisit" data-module="how-it-works" aria-labelledby="hx-how">
-        <SectionHeader description="Three steps, no account">
+        <SectionHeader plain description="Three steps, no account">
           <span id="hx-how">How it works</span>
         </SectionHeader>
         <div className="hx-how">
@@ -108,12 +111,15 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
       </section>
 
       <section className="home-firstvisit" data-module="trust" aria-labelledby="hx-trust">
-        <SectionHeader>
+        <SectionHeader plain>
           <span id="hx-trust">Where the numbers come from</span>
         </SectionHeader>
         <div className="hx-trust">
           {trustItems().map((t) => (
-            <div key={t.id} className="card hx-tr">
+            <div key={t.id} className="hx-tr">
+              <span className="pk-ib">
+                <Glyph name={TRUST_ICON[t.id]} />
+              </span>
               <h3>{t.title}</h3>
               <p>{t.text}</p>
               {t.id === "fresh" && newest && (
@@ -129,7 +135,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
       </section>
 
       <section className="home-firstvisit" data-module="start-here" aria-labelledby="hx-start">
-        <SectionHeader description="Not ready to pick? The best pages in every sport.">
+        <SectionHeader plain description="Not ready to pick? The best pages in every sport.">
           <span id="hx-start">Start here</span>
         </SectionHeader>
         <StartHere lines={lines} />

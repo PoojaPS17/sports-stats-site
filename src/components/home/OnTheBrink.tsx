@@ -20,28 +20,36 @@ export function OnTheBrinkView({ items }: { items: BrinkItem[] }) {
   if (items.length === 0) return null;
   return (
     <section className="home-firstvisit" data-module="on-the-brink" aria-labelledby="home-on-the-brink">
-      <SectionHeader description="Season milestones, from results stored on this site. Each name links to the player's page.">
+      <SectionHeader plain description="Season milestones, from results stored on this site. Each name links to the player's page.">
         <span id="home-on-the-brink">On the brink</span>
       </SectionHeader>
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {items.map((i) => (
-          <li key={`${i.league}:${i.playerId}:${i.stat}`} className="card relative overflow-hidden">
-            <span aria-hidden className="absolute inset-y-0 left-0 w-1.5 bg-[var(--accent-2)]" />
-            <Link href={`/${i.league}/players/${i.slug}`} className="grid grid-cols-[3.25rem_1fr] items-center gap-3 py-3.5 pl-5 pr-4 hover:bg-[var(--sig-soft)]">
-              <span className="text-center leading-none">
-                <span className="block text-[32px] font-extrabold tracking-tight text-[var(--text)]">{i.gap}</span>
-                <span className="mt-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">to {i.target.toLocaleString("en-US")}</span>
-              </span>
-              <span className="min-w-0">
-                <span className="block break-words text-[15px] font-extrabold text-[var(--text)]">
-                  {i.name}
-                  {i.teamName && <span className="font-semibold text-[var(--text-muted)]"> · {i.teamName}</span>}
+      <ul className="card fcard">
+        {items.map((i) => {
+          const pct = Math.min(100, Math.max(0, (i.value / i.target) * 100));
+          return (
+            <li key={`${i.league}:${i.playerId}:${i.stat}`} className="rw">
+              <Link href={`/${i.league}/players/${i.slug}`} className="rw-link">
+                <span className="rw-t">
+                  <b>
+                    {i.name}
+                    {i.teamName && <span> · {i.teamName}</span>}
+                  </b>
+                  <span className="rw-to">
+                    {i.gap.toLocaleString("en-US")}
+                    <small>to go</small>
+                  </span>
                 </span>
-                <span className="mt-0.5 block text-[13px] leading-snug text-[var(--text-muted)]">{brinkSentence(i, scopeOf(i))}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
+                <span className="rw-s">
+                  {i.value.toLocaleString("en-US")} {i.unit} → {i.target.toLocaleString("en-US")}
+                </span>
+                <span className="rw-bar" role="img" aria-label={`${Math.round(pct)}% of the way to ${i.target.toLocaleString("en-US")} ${i.unit}`}>
+                  <i style={{ width: `${pct.toFixed(1)}%` }} />
+                </span>
+                <span className="rw-s">{brinkSentence(i, scopeOf(i))}</span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

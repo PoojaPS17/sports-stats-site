@@ -34,38 +34,35 @@ export function Ticker() {
   const { items, updatedAt } = data;
 
   return (
-    <div className="band-deep border-b border-[var(--band-deep-line)]">
-      <div className="container-x flex h-[52px] items-stretch gap-0 px-0">
+    <div className="home-strip">
+      <div className="container-x flex h-10 items-stretch gap-0 px-0">
         <div className="strip-scroll flex min-w-0 flex-1 items-stretch overflow-x-auto" role="region" aria-label="Latest scores">
           {items.map((chip, i) => (
             <Link key={`${chip.href}-${i}`} href={chip.href} className="strip-chip">
-              <span className="strip-chip-top">
-                <span>{chip.league}</span>
-                <span className={chip.live ? "strip-live" : undefined}>
-                  {chip.live && (
-                    <>
-                      <span className="live-dot" aria-hidden />
-                      <span className="sr-only">Live: </span>
-                    </>
-                  )}
-                  {chip.status}
-                </span>
-              </span>
-              {(chip.sides ?? []).map((s) => (
-                <span key={s.name} className={`strip-chip-side ${s.won ? "strip-won" : ""}`}>
-                  <span className="truncate">{s.name}</span>
-                  {s.score !== null && <span className="tabular-nums">{s.score}</span>}
+              <span className="strip-lg">{chip.league}</span>
+              {chip.live && (
+                <>
+                  <span className="live-dot" aria-hidden />
+                  <span className="sr-only">Live: </span>
+                </>
+              )}
+              {(chip.sides ?? []).map((s, k) => (
+                <span key={s.name} className={`strip-side ${s.won ? "strip-won" : ""}`}>
+                  {k > 0 && <span className="strip-v"> v </span>}
+                  {s.name}
+                  {s.score !== null && <span className="tabular-nums"> {s.score}</span>}
                 </span>
               ))}
+              <span className={chip.live ? "strip-live" : "strip-st"}>{chip.status}</span>
             </Link>
           ))}
           {items.length === 0 && <span className="strip-chip strip-chip-empty" aria-hidden />}
         </div>
-        <Link href="/top-games" className="hidden shrink-0 items-center px-4 text-xs font-bold text-[var(--sig)] sm:flex">
+        <Link href="/scores" className="strip-all hidden shrink-0 items-center px-4 text-xs font-bold sm:flex">
           All scores →
         </Link>
         {updatedAt && (
-          <span className="hidden shrink-0 items-center pr-4 text-[11px] text-[var(--mast-muted)] lg:flex">
+          <span className="hidden shrink-0 items-center pr-4 text-[11px] text-[var(--text-muted)] lg:flex">
             <LastUpdated iso={updatedAt} />
           </span>
         )}
