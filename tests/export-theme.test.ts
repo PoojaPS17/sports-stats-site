@@ -28,8 +28,8 @@ test("the card body mirrors the site's light tokens and the band is the fixed br
   assert.equal(CARD.accent, t["sig-ink"]);
   assert.equal(CARD.accentSoft, t["sig-soft"]);
   // The footer band is the fixed brand pair, not the theme's band, so a paper light theme
-  // still ends every card on navy with a Volt mark.
-  assert.equal(CARD.sig, t.volt);
+  // still ends every card on navy with the logo's own lit block (--logo-lit).
+  assert.equal(CARD.sig, t["logo-lit"]);
   assert.equal(CARD.mast, t.navy);
   assert.equal(CARD.mastText, "#eef1f7");
   assert.equal(CARD.mastMuted, "#9aa5bd");
@@ -43,7 +43,7 @@ test("the display face is Plus Jakarta Sans through the page's font variable", (
 
 test("the footer is the navy band with the lit block, the wordmark and the domain", () => {
   const html = renderToStaticMarkup(createElement(ExportFooter, { context: "Test card" }));
-  assert.match(html, /background:#0b1324/);
+  assert.match(html, /background:#0f2745/);
   assert.equal((html.match(/<rect /g) ?? []).length, 4);
   assert.match(html, /x="21" y="7" width="12" height="12" rx="3" fill="#c6f135"/);
   assert.match(html, /Sports<span style="color:#c6f135">DB<\/span>/);

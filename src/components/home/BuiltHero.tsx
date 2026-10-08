@@ -13,13 +13,13 @@ export function BuiltHero({ setup, headline, sub, liveCount, colours, onEdit }: 
   return (
     <section
       style={glow}
-      className="band band-deep bleed relative -mt-6 overflow-hidden bg-[radial-gradient(520px_320px_at_105%_-10%,color-mix(in_srgb,var(--tc)_75%,transparent),transparent_65%),radial-gradient(420px_260px_at_-10%_120%,color-mix(in_srgb,var(--tc2)_55%,transparent),transparent_60%)] py-8 sm:py-10"
+      className="band band-deep bleed relative -mt-6 overflow-hidden bg-[radial-gradient(520px_320px_at_105%_-10%,color-mix(in_srgb,var(--tc)_30%,transparent),transparent_65%),radial-gradient(420px_260px_at_-10%_120%,color-mix(in_srgb,var(--tc2)_22%,transparent),transparent_60%)] py-8 sm:py-10"
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-3">
           <p className="eyebrow eyebrow-quiet flex flex-wrap items-center gap-2 !text-[var(--band-deep-muted)]">
             {liveCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--pill-live-bg)] px-2 py-0.5 text-[10.5px] text-white">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--pill-live-bg)] px-2 py-0.5 text-[10.5px] text-[var(--pill-live-text)]">
                 <span className="live-dot bg-white" aria-hidden />
                 {liveCount} live
               </span>

@@ -18,8 +18,8 @@ test("a pale colour is darkened until white text reads at 4.5:1, and keeps its h
 });
 
 test("no colour, or a bad one, gives the brand blue", () => {
-  assert.equal(colourForWhiteText(null), "#1470af");
-  assert.equal(colourForWhiteText("not-a-colour"), "#1470af");
+  assert.equal(colourForWhiteText(null), "#2563d9");
+  assert.equal(colourForWhiteText("not-a-colour"), "#2563d9");
 });
 
 import { CARD_TEXT_OPACITY, whiteContrastAt } from "../src/lib/teamColor";

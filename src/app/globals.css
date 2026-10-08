@@ -1,63 +1,91 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Design tokens
-   Light theme (white, ink and the store blue) is the default; the dark theme (near-black and Volt)
-   lives in the two blocks below (system preference, then the explicit data-theme toggle,
-   which always wins).
+   Design tokens: Palette B, Navy and Sports Blue.
+   Colour roles (one job each):
+     Navy        typography, and the deep bands (scores strip, footer, hero)
+     Sports Blue interaction: buttons, links, focus, selected
+     Sky Blue    visual energy: shapes, glows, charts, icon tints; on navy it may carry text,
+                 on white it never does (--sky-ink is the text version)
+     Coral       LIVE only          Green  winning / success          Orange  featured moments only
+   The fills (--live-fill, --win-fill, --feat) are for dots, bars and backgrounds that carry NAVY
+   text; the text versions are the darker inks (--live, --win, --feat-ink) because white on a
+   fill fails contrast.
+   Light is the default; the dark counterpart lives in the two blocks below (system preference,
+   then the explicit data-theme toggle, which always wins). Token NAMES are unchanged from the
+   previous identity so every component and in-flight page keeps working.
 --------------------------------------------------------------------------- */
 :root {
-  --bg: #fafaf7;
+  --bg: #f7fafc;
   --surface: #ffffff;
-  --surface-muted: #eaf2fa;
-  --surface-hover: #f3f7fb;
-  --border: #b8d4ec;
-  --border-strong: #8fb8dc;
-  --text: #060640;
-  --text-muted: #4a4a72;
-  --text-faint: #646488;
+  --surface-muted: #eef5fc;
+  --surface-hover: #f1f7fc;
+  --border: #dde8f2;
+  --border-strong: #b3c7db;
+  --ctl: #7b8fa7; /* unselected control edges: 3:1 on white and on the page background */
+  --text: #102a43;
+  --text-muted: #4a6178;
+  --text-faint: #52697f;
 
-  /* The brand pair, fixed in both themes: Volt on navy is what the icons, share images,
-     downloadable cards' footer and the neutral article tile are drawn in. */
-  --volt: #c6f135;
-  --navy: #0b1324;
-  --navy-2: #121c33;
+  /* The brand pair. --volt kept its name but is now Sky Blue: it is what the share images,
+     downloadable cards and the navy hero draw their accent in. --navy is the deep navy.
+     (The SPORTSDB mark itself keeps its own lit-block colour: see --logo-lit below.) */
+  --sky: #38b6e8;
+  --sky-ink: #0b6fa0;
+  --sky-tint: #e3f4fc;
+  --volt: var(--sky);
+  --navy: #0f2745;
+  --navy-2: #16345a;
+  --logo-lit: #c6f135;
 
-  /* The signature colour per theme: the store blue on white in the light theme, Volt in
-     the dark theme. Components use --sig for the accent and --sig-on for text placed on it. */
-  --sig: #1470af;
-  --sig-ink: #1470af;
-  --sig-soft: #eaf2fa;
+  /* Interaction colour per theme: Sports Blue on white. Components use --sig for the accent and
+     --sig-on for text placed on it. */
+  --sig: #2563d9;
+  --sig-ink: #2563d9;
+  --sig-soft: #eaf2fc;
   --sig-on: #ffffff;
 
-  /* The bands: masthead, hero, article header. White in the light theme, near-black in the
-     dark one, so the two themes read as different materials. */
+  /* The bands: masthead, hero, article header. White in the light theme, navy in the dark one. */
   --mast: #ffffff;
-  --mast-2: #eaf2fa;
-  --mast-text: #060640;
-  --mast-muted: #4a4a72;
-  --mast-line: rgba(6, 6, 64, 0.12);
-  --hero-wash: 10%;
+  --mast-2: #eef5fc;
+  --mast-text: #102a43;
+  --mast-muted: #4a6178;
+  --mast-line: rgba(16, 42, 67, 0.12);
+  --hero-wash: 14%;
 
-  /* The deep band: the scores strip and the footer. Deep navy with white text in the light
-     theme (the one dark element on the page), a raised surface in the dark theme. */
-  --band-deep: #0d2b57;
+  /* The deep band: the scores strip and the footer. Navy with white text in the light theme (the
+     one dark element on the page), a raised navy surface in the dark theme. */
+  --band-deep: #0f2745;
   --band-deep-text: #ffffff;
-  --band-deep-muted: #a9c4e4;
-  --band-deep-link: #9cc7ea;
+  --band-deep-muted: #cfe3f5;
+  --band-deep-link: var(--sky);
   --band-deep-line: rgba(255, 255, 255, 0.14);
 
   /* Legacy names, kept so every existing component inherits the identity. */
   --accent: var(--sig-ink);
-  --accent-hover: #0f5688;
+  --accent-hover: #1e55be;
   --accent-soft: var(--sig-soft);
   --accent-foreground: var(--sig-on);
-  --accent-2: #d97706;
+  --accent-2: #f5a623;
 
-  --win: #006717;
-  --loss: #ba0329;
+  /* Results. --win and --live are the TEXT-SAFE inks (white text on them also passes); the
+     brighter fills are --win-fill and --live-fill. --loss and --draw are data colours. */
+  --win: #1b7a43;
+  --win-fill: #43b96f;
+  --win-tint: #e7f7ee;
+  /* Losses are neutral grey so red and coral mean LIVE only. --loss is the text/fill ink; chips use --loss-tint with --loss text.
+     --draw stays the mid slate (solid chip, white text); --draw-fill is its lighter bar fill, so a loss bar and a draw bar differ. */
+  --loss: #4a6178;
+  --loss-tint: #eef2f7;
+  --draw-fill: #a7b6c8;
   --draw: #64748b;
-  --live: #ff3b5c;
+  --live: #b42318;
+  --live-fill: #ff5c5c;
+  --live-tint: #ffecec;
+  --feat: #f5a623;
+  --feat-ink: #8a5200;
+  --feat-tint: #fff4dd;
+  --on-result: #ffffff;
 
   --zone-1: #2563eb;
   --zone-2: #d97706;
@@ -68,23 +96,24 @@
   --header-text: var(--mast-text);
   --header-text-muted: var(--mast-muted);
   --header-border: var(--border);
-  --header-hover-bg: rgba(6, 6, 64, 0.06);
+  --header-hover-bg: rgba(16, 42, 67, 0.06);
 
-  --pill-live-bg: #e11d48; /* deeper than --live so 0.68rem white text clears AA */
-  --pill-live-text: #ffffff;
-  --pill-final-bg: #e6edf5;
-  --pill-final-text: #4a4a72;
+  --pill-live-bg: var(--live-fill); /* navy text on the coral fill; white on it would fail */
+  --pill-live-text: #102a43;
+  --pill-final-bg: #e6eef6;
+  --pill-final-text: #4a6178;
   --pill-upcoming-bg: var(--sig-soft);
   --pill-upcoming-text: var(--sig-ink);
-  --pill-feature-bg: #dcfce7;
-  --pill-feature-text: #166534;
+  --pill-feature-bg: var(--feat-tint);
+  --pill-feature-text: var(--feat-ink);
 
   --nba-accent: #ea580c;
   --nfl-accent: #1d5c3a;
   --mlb-accent: #bf0d3e;
 
-  --shadow-card: 0 1px 2px rgba(0, 23, 67, 0.06), 0 8px 24px -12px rgba(0, 23, 67, 0.16);
-  --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
+  --shadow-card: 0 1px 2px rgba(15, 39, 69, 0.05), 0 8px 24px -12px rgba(15, 39, 69, 0.16), 0 24px 48px -32px rgba(37, 99, 217, 0.22);
+  --shadow-pop: 0 2px 4px rgba(15, 39, 69, 0.05), 0 18px 40px -16px rgba(15, 39, 69, 0.24), 0 40px 80px -48px rgba(37, 99, 217, 0.35);
+  --radius-card: 1rem;
 
   --font-display: var(--font-jakarta);
   --header-h: 3.75rem;
@@ -111,9 +140,224 @@
   --font-display: var(--font-display);
 }
 
+/* Dark counterpart of Palette B (the mock is light only; this is a considered extension):
+   navy surfaces, Sports Blue lifted to a lighter blue so it clears 4.5:1 as text, Sky as the accent. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #07090f;
+    --bg: #0a1830;
+    --surface: #102542;
+    --surface-muted: #16335a;
+    --surface-hover: #1b3c66;
+    --border: #25446d;
+    --border-strong: #3b6190;
+    --ctl: #6a88ae;
+    --text: #eaf2fb;
+    --text-muted: #a9bed6;
+    --text-faint: #8ca5c2;
+
+    --sky-ink: #6ccbf2;
+    --sky-tint: #14375a;
+
+    --sig: #6ea8ff;
+    --sig-ink: var(--sig);
+    --sig-soft: #17345f;
+    --sig-on: #0b1b33;
+
+    --mast: #0a1830;
+    --mast-2: #102542;
+    --mast-text: #eaf2fb;
+    --mast-muted: #a9bed6;
+    --mast-line: rgba(255, 255, 255, 0.1);
+    --hero-wash: 20%;
+
+    --band-deep: #0e2240;
+    --band-deep-text: #eaf2fb;
+    --band-deep-muted: #afc4da;
+    --band-deep-link: #6ccbf2;
+    --band-deep-line: rgba(255, 255, 255, 0.1);
+
+    --accent: var(--sig);
+    --accent-hover: #93bfff;
+    --accent-soft: var(--sig-soft);
+    --accent-foreground: var(--sig-on);
+
+    --win: #52c97f;
+    --win-tint: #123a2a;
+    --loss: #a9bed6;
+    --loss-tint: #1b3355;
+    --draw-fill: #4f6684;
+    --draw: #94a3b8;
+    --live: #ff7a7a;
+    --live-tint: #4a1f2a;
+    --feat-ink: #ffc766;
+    --feat-tint: #3a2a0b;
+    --on-result: #0b1b33;
+
+    --zone-1: #6ea0ff;
+    --zone-2: #f59e0b;
+    --zone-3: #f87171;
+    --zone-4: #2dd4bf;
+
+    --header-border: #25446d;
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
+
+    --pill-final-bg: #1b3355;
+    --pill-final-text: #b4c6dc;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+    --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0a1830;
+  --surface: #102542;
+  --surface-muted: #16335a;
+  --surface-hover: #1b3c66;
+  --border: #25446d;
+  --border-strong: #3b6190;
+  --ctl: #6a88ae;
+  --text: #eaf2fb;
+  --text-muted: #a9bed6;
+  --text-faint: #8ca5c2;
+
+  --sky-ink: #6ccbf2;
+  --sky-tint: #14375a;
+
+  --sig: #6ea8ff;
+  --sig-ink: var(--sig);
+  --sig-soft: #17345f;
+  --sig-on: #0b1b33;
+
+  --mast: #0a1830;
+  --mast-2: #102542;
+  --mast-text: #eaf2fb;
+  --mast-muted: #a9bed6;
+  --mast-line: rgba(255, 255, 255, 0.1);
+  --hero-wash: 20%;
+
+  --band-deep: #0e2240;
+  --band-deep-text: #eaf2fb;
+  --band-deep-muted: #afc4da;
+  --band-deep-link: #6ccbf2;
+  --band-deep-line: rgba(255, 255, 255, 0.1);
+
+  --accent: var(--sig);
+  --accent-hover: #93bfff;
+  --accent-soft: var(--sig-soft);
+  --accent-foreground: var(--sig-on);
+
+  --win: #52c97f;
+  --win-tint: #123a2a;
+  --loss: #a9bed6;
+  --loss-tint: #1b3355;
+  --draw-fill: #4f6684;
+  --draw: #94a3b8;
+  --live: #ff7a7a;
+  --live-tint: #4a1f2a;
+  --feat-ink: #ffc766;
+  --feat-tint: #3a2a0b;
+  --on-result: #0b1b33;
+
+  --zone-1: #6ea0ff;
+  --zone-2: #f59e0b;
+  --zone-3: #f87171;
+  --zone-4: #2dd4bf;
+
+  --header-border: #25446d;
+  --header-hover-bg: rgba(255, 255, 255, 0.07);
+
+  --pill-final-bg: #1b3355;
+  --pill-final-text: #b4c6dc;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+   The brand lock: the SPORTSDB logo and the header bar are not part of the palette change.
+   They keep exactly the colours they had before Palette B (white bar and store-blue lit block /
+   "DB" in the light theme, near-black bar and lime lit block in the dark theme), in both
+   themes. Done with token overrides scoped to the header and the footer lockup, so Logo.tsx
+   and Nav.tsx stay untouched.
+--------------------------------------------------------------------------- */
+@layer base {
+  header.sticky {
+    --mast: #ffffff;
+    --mast-text: #060640;
+    --mast-muted: #4a4a72;
+    --mast-line: rgba(6, 6, 64, 0.12);
+    --header-bg: #ffffff;
+    --header-text: #060640;
+    --header-text-muted: #4a4a72;
+    --header-border: #b8d4ec;
+    --header-hover-bg: rgba(6, 6, 64, 0.06);
+    --sig: #1470af;
+    --sig-ink: #1470af;
+    --surface: #ffffff;
+    --surface-muted: #eaf2fa;
+    --surface-hover: #f3f7fb;
+    --border: #b8d4ec;
+    --border-strong: #8fb8dc;
+    --text: #060640;
+    --text-muted: #4a4a72;
+    --text-faint: #646488;
+    --accent: #1470af;
+    --accent-soft: #eaf2fa;
+    --accent-hover: #0f5688;
+    --shadow-card: 0 1px 2px rgba(0, 23, 67, 0.06), 0 8px 24px -12px rgba(0, 23, 67, 0.16);
+    --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
+  }
+
+  footer.band-deep a[href="/"] {
+    --sig: #9cc7ea;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) header.sticky {
+      --mast: #07090f;
+      --mast-text: #eef1f7;
+      --mast-muted: #9aa5bd;
+      --mast-line: rgba(255, 255, 255, 0.08);
+      --header-bg: #07090f;
+      --header-text: #eef1f7;
+      --header-text-muted: #9aa5bd;
+      --header-border: #1f2738;
+      --header-hover-bg: rgba(255, 255, 255, 0.07);
+      --sig: var(--logo-lit);
+      --sig-ink: var(--logo-lit);
+      --surface: #0f1420;
+      --surface-muted: #161c2b;
+      --surface-hover: #1a2132;
+      --border: #1f2738;
+      --border-strong: #2e3850;
+      --text: #e9edf6;
+      --text-muted: #9aa6bf;
+      --text-faint: #6b7890;
+      --accent: var(--logo-lit);
+      --accent-soft: #23301a;
+      --accent-hover: #d8f766;
+      --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+      --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+    :root:not([data-theme="light"]) footer.band-deep a[href="/"] {
+      --sig: var(--logo-lit);
+      --mast-text: #eef1f7;
+    }
+  }
+
+  :root[data-theme="dark"] header.sticky {
+    --mast: #07090f;
+    --mast-text: #eef1f7;
+    --mast-muted: #9aa5bd;
+    --mast-line: rgba(255, 255, 255, 0.08);
+    --header-bg: #07090f;
+    --header-text: #eef1f7;
+    --header-text-muted: #9aa5bd;
+    --header-border: #1f2738;
+    --header-hover-bg: rgba(255, 255, 255, 0.07);
+    --sig: var(--logo-lit);
+    --sig-ink: var(--logo-lit);
     --surface: #0f1420;
     --surface-muted: #161c2b;
     --surface-hover: #1a2132;
@@ -122,107 +366,26 @@
     --text: #e9edf6;
     --text-muted: #9aa6bf;
     --text-faint: #6b7890;
-
-    --sig: var(--volt);
-    --sig-ink: var(--sig);
-    --sig-soft: #23301a;
-    --sig-on: #0b1324;
-
-    --mast: #07090f;
-    --mast-2: #0f1420;
-    --mast-text: #eef1f7;
-    --mast-muted: #9aa5bd;
-    --mast-line: rgba(255, 255, 255, 0.08);
-    --hero-wash: 18%;
-
-    --band-deep: #0f1420;
-    --band-deep-text: #eef1f7;
-    --band-deep-muted: #9aa5bd;
-    --band-deep-link: var(--sig);
-    --band-deep-line: rgba(255, 255, 255, 0.08);
-
-    --accent: var(--sig);
+    --accent: var(--logo-lit);
+    --accent-soft: #23301a;
     --accent-hover: #d8f766;
-    --accent-soft: var(--sig-soft);
-    --accent-foreground: var(--sig-on);
-    --accent-2: #f59e0b;
-
-    --win: #4ade80;
-    --loss: #f87171;
-    --draw: #94a3b8;
-
-    --zone-1: #6ea0ff;
-    --zone-2: #f59e0b;
-    --zone-3: #f87171;
-    --zone-4: #2dd4bf;
-
-    --header-border: #1f2738;
-    --header-hover-bg: rgba(255, 255, 255, 0.07);
-
-    --pill-final-bg: #1b2740;
-    --pill-final-text: #9aa7bd;
-    --pill-feature-bg: #0f2f22;
-    --pill-feature-text: #4ade80;
-
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
     --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
+
+  :root[data-theme="dark"] footer.band-deep a[href="/"] {
+    --sig: var(--logo-lit);
+    --mast-text: #eef1f7;
+  }
 }
 
-:root[data-theme="dark"] {
-  --bg: #07090f;
-  --surface: #0f1420;
-  --surface-muted: #161c2b;
-  --surface-hover: #1a2132;
-  --border: #1f2738;
-  --border-strong: #2e3850;
-  --text: #e9edf6;
-  --text-muted: #9aa6bf;
-  --text-faint: #6b7890;
-
-  --sig: var(--volt);
-  --sig-ink: var(--sig);
-  --sig-soft: #23301a;
-  --sig-on: #0b1324;
-
-  --mast: #07090f;
-  --mast-2: #0f1420;
-  --mast-text: #eef1f7;
-  --mast-muted: #9aa5bd;
-  --mast-line: rgba(255, 255, 255, 0.08);
-  --hero-wash: 18%;
-
-  --band-deep: #0f1420;
-  --band-deep-text: #eef1f7;
-  --band-deep-muted: #9aa5bd;
-  --band-deep-link: var(--sig);
-  --band-deep-line: rgba(255, 255, 255, 0.08);
-
-  --accent: var(--sig);
-  --accent-hover: #d8f766;
-  --accent-soft: var(--sig-soft);
-  --accent-foreground: var(--sig-on);
-  --accent-2: #f59e0b;
-
-  --win: #4ade80;
-  --loss: #f87171;
-  --draw: #94a3b8;
-
-  --zone-1: #6ea0ff;
-  --zone-2: #f59e0b;
-  --zone-3: #f87171;
-  --zone-4: #2dd4bf;
-
-  --header-border: #1f2738;
-  --header-hover-bg: rgba(255, 255, 255, 0.07);
-
-  --pill-final-bg: #1b2740;
-  --pill-final-text: #9aa7bd;
-  --pill-feature-bg: #0f2f22;
-  --pill-feature-text: #4ade80;
-
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
-  --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+/* Unselected form controls on light surfaces draw their edge at 3:1 (--ctl). Navy bands and the
+   header keep their own control styling. In the utilities layer so it competes with the border
+   utilities on specificity (this selector is the more specific) instead of sitting outside every layer. */
+@layer utilities {
+  main :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea):not(.band-deep *) {
+    border-color: var(--ctl);
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -355,10 +518,28 @@
     --mast-muted: var(--band-deep-muted);
     --mast-line: var(--band-deep-line);
     --header-hover-bg: rgba(255, 255, 255, 0.07);
+    /* Coral reads as text on navy; the ink version is for light surfaces. */
+    --live: var(--live-fill);
+    --win: var(--win-fill);
   }
 
+  /* Sports Blue is 2.8:1 on navy, so focus on a navy band is drawn in white. */
+  .band-deep :focus-visible {
+    outline-color: #ffffff;
+  }
+
+  /* A Sky button on navy carries a white ring so its edge clears 3:1. */
+  .band-deep button[class*="bg-[var(--volt)]"] {
+    box-shadow: 0 0 0 2px #ffffff;
+  }
+
+  /* Eyebrows are typography, not interaction: muted ink on a light band, Sky on a navy one. */
   .band .eyebrow:not(.eyebrow-quiet) {
-    color: var(--sig);
+    color: var(--mast-muted);
+  }
+
+  .band-deep .eyebrow:not(.eyebrow-quiet) {
+    color: var(--band-deep-link);
   }
 
   .eyebrow-quiet {
@@ -375,7 +556,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sig) var(--hero-wash), transparent), transparent 70%);
+    background: radial-gradient(60% 90% at 90% 10%, color-mix(in srgb, var(--sky) var(--hero-wash), transparent), transparent 70%);
     pointer-events: none;
   }
 
@@ -417,8 +598,13 @@
   .player-grid > a {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 0.75rem;
+    border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
+  }
+
+  /* A row in the thousands-long players index keeps the tighter corner. */
+  .player-grid > a {
+    border-radius: 0.75rem;
   }
 
   a.card,
@@ -457,7 +643,7 @@
   }
 
   .match-live {
-    box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--live) 45%, transparent);
+    box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, var(--live-fill) 55%, transparent);
   }
 
   .score-display {
@@ -639,7 +825,7 @@
     width: 0.4rem;
     height: 0.4rem;
     border-radius: 9999px;
-    background: var(--live);
+    background: var(--live-fill);
     animation: pulse-dot 1.4s ease-in-out infinite;
   }
 
@@ -657,7 +843,7 @@
     border-radius: 0.35rem;
     font-size: 0.68rem;
     font-weight: 800;
-    color: #fff;
+    color: var(--on-result);
   }
 
   .result-w {
@@ -665,7 +851,9 @@
   }
 
   .result-l {
-    background: var(--loss);
+    background: var(--loss-tint);
+    color: var(--loss);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--loss) 35%, transparent);
   }
 
   .result-d {

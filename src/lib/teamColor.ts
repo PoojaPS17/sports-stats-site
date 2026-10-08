@@ -37,7 +37,7 @@ export const CARD_TEXT_OPACITY = 0.85;
 /** The team colour, darkened step by step until white text drawn at `opacity` on it reads at 4.5:1. A colour that already does is
  * returned as it is, so a pale yellow or light blue club still gets a card its white text can be read on. The card's small lines are
  * set at less than full white, so it asks for CARD_TEXT_OPACITY: the guarantee then holds for its faintest line, and so for the rest. */
-export function colourForWhiteText(color: string | null | undefined, fallback = "#1470af", opacity = 1): string {
+export function colourForWhiteText(color: string | null | undefined, fallback = "#2563d9", opacity = 1): string {
   let hex = teamHex(color, fallback);
   for (let i = 0; i < 30 && whiteContrastAt(hex, opacity) < 4.5; i++) {
     const rgb = [1, 3, 5].map((k) => Math.round(parseInt(hex.slice(k, k + 2), 16) * 0.92));

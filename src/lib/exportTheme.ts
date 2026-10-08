@@ -4,26 +4,27 @@
 // regardless of the viewer's site theme, so it can't inherit --text/--surface,
 // which flip to dark values under prefers-color-scheme. The body mirrors the
 // site's light-mode tokens (globals.css :root, off-white and blue ink) so the card
-// still reads as "this site"; the footer band is the fixed brand pair (--navy,
-// --volt) that the icons and share images use, whatever the theme.
+// still reads as "this site"; the footer band is the deep navy (--navy) carrying the
+// logo lockup in its own lit colour (--logo-lit), whatever the theme.
 // tests/export-theme.test.ts checks the two stay in step.
 export const CARD = {
-  bg: "#fafaf7",
+  bg: "#f7fafc",
   surface: "#ffffff",
-  border: "#b8d4ec",
-  text: "#060640",
-  textMuted: "#4a4a72",
-  textFaint: "#646488",
-  /** The light theme's signature ink (--sig-ink). Volt itself only goes on navy. */
-  accent: "#1470af",
-  accentSoft: "#eaf2fa",
+  border: "#dde8f2",
+  text: "#102a43",
+  textMuted: "#4a6178",
+  textFaint: "#52697f",
+  /** The light theme's signature ink (--sig-ink), Sports Blue. */
+  accent: "#2563d9",
+  accentSoft: "#eaf2fc",
+  /** The lit block and "DB" of the SPORTSDB logo lockup in the footer (--logo-lit). The brand mark keeps its own colour. */
   sig: "#c6f135",
   /** The navy band (--navy) and its text, for the footer every card ends with. */
-  mast: "#0b1324",
+  mast: "#0f2745",
   mastText: "#eef1f7",
   mastMuted: "#9aa5bd",
-  win: "#006717",
-  loss: "#ba0329",
+  win: "#1b7a43",
+  loss: "#4a6178",
 } as const;
 
 // One face for everything, Plus Jakarta Sans. The cards are captured inside the page,

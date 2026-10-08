@@ -11,7 +11,7 @@ const FALLBACK = ["var(--sig)", "var(--text-muted)"];
 
 function Disc({ symbol, extra, wicket }: { symbol: string; extra: string | null; wicket: boolean }) {
   const tone = wicket
-    ? "bg-[var(--loss)] text-white"
+    ? "bg-[var(--loss)] text-[var(--on-result)]"
     : symbol === "6"
       ? "bg-[var(--text)] text-[var(--surface)]"
       : symbol === "4"

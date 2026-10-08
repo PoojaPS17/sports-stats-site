@@ -23,7 +23,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const team = isLeague(league) ? await getTeamBySlug(league, slug) : null;
   const name = team?.name ?? "SportsDB";
   const label = isLeague(league) ? LEAGUE_LABEL[league] : "";
-  const color = team?.color ? `#${team.color.replace(/^#/, "")}` : "#c6f135";
+  const color = team?.color ? `#${team.color.replace(/^#/, "")}` : "#38b6e8";
   // A stored logo_url can be a dead path (cricket sides most often, but any league's could
   // rot) that this route re-checks rather than trusting, since @vercel/og crashes fetching
   // a 404 server-side. resolveTeamLogo applies cricket's curated substitutes first; verifyLogoUrl
@@ -41,7 +41,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           alignItems: "center",
           gap: 56,
           padding: 72,
-          background: "linear-gradient(135deg, #0b1324 0%, #121c33 100%)",
+          background: "linear-gradient(135deg, #0f2745 0%, #16345a 100%)",
           color: "#eef1f7",
           fontFamily: "sans-serif",
           borderLeft: `28px solid ${color}`,

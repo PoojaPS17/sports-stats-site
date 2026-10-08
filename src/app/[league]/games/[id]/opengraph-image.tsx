@@ -40,7 +40,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const { league, id } = await params;
   const game = isLeague(league) ? await getGameByEspnId(league, id) : null;
   if (!game) {
-    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
+    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0f2745", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
   }
   const off = gameCalledOffLabel(game);
   const played = !off && game.completed && game.home_score != null && game.away_score != null;
@@ -81,7 +81,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 56,
-          background: "linear-gradient(135deg, #0b1324 0%, #121c33 100%)",
+          background: "linear-gradient(135deg, #0f2745 0%, #16345a 100%)",
           color: "#eef1f7",
           fontFamily: "sans-serif",
         }}

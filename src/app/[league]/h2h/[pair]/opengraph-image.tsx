@@ -33,7 +33,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const count = h2h.unknown > 0 ? `${recordedMeetings} of ${h2h.meetings} meetings with a result` : `${h2h.meetings} meetings`;
   const detail = `${count} in ${LEAGUE_LABEL[league]} · ${h2h.teamA.name} ${h2h.winsA} wins, ${h2h.teamB.name} ${h2h.winsB}${isCricketLeague(league) && other ? `, ${other}` : ""}`;
   const meter = rivalryMeter(h2h, (t) => teamDisplayName(t.name));
-  const colorA = h2h.teamA.color ? `#${h2h.teamA.color.replace(/^#/, "")}` : "#c6f135";
+  const colorA = h2h.teamA.color ? `#${h2h.teamA.color.replace(/^#/, "")}` : "#38b6e8";
   const colorB = h2h.teamB.color ? `#${h2h.teamB.color.replace(/^#/, "")}` : "#f59e0b";
   const short = (t: typeof h2h.teamA) => t.abbreviation ?? teamDisplayName(t.name).slice(0, 3).toUpperCase();
   const pill = (r: "A" | "B" | "D" | "T" | "N") => ({ text: r === "A" ? short(h2h.teamA) : r === "B" ? short(h2h.teamB) : r === "T" ? "TIE" : r === "N" ? "NR" : "D", border: r === "A" ? colorA : r === "B" ? colorB : "#6b7690" });

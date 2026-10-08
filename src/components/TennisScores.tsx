@@ -236,7 +236,7 @@ export function TennisDayStrip({ day, daysWithPlay, basePath = "/tennis/scores" 
       {days.map((d) => {
         const active = d === day;
         return (
-          <Link key={d} href={`${basePath}/${d}`} className={`nav-pill shrink-0 ${active ? "nav-pill-active" : has.has(d) ? "" : "opacity-60"}`}>
+          <Link key={d} href={`${basePath}/${d}`} className={`nav-pill shrink-0 ${active ? "nav-pill-active" : has.has(d) ? "" : "font-normal text-[var(--text-faint)]"}`}>
             <span className="text-[10px] font-semibold uppercase">{new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })}</span>{" "}
             <span className="tabular-nums">{formatDayLabel(d, "short").replace(/^\w+,\s*/, "")}</span>
           </Link>

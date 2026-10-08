@@ -234,7 +234,7 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
                 <Glyph name={s} className={`h-[30px] w-[30px] ${on ? "text-[var(--navy)]" : "text-[var(--volt)]"}`} />
                 <span>
                   <span className="mt-2.5 block text-[17px] font-extrabold tracking-[-0.01em]">{SPORT_PICK_LABEL[s]}</span>
-                  <span className={`flex items-center gap-1.5 text-[11.5px] font-semibold ${on ? "text-[#334012]" : "text-[var(--band-deep-muted)]"}`}>
+                  <span className={`flex items-center gap-1.5 text-[11.5px] font-semibold ${on ? "text-[var(--navy)]" : "text-[var(--band-deep-muted)]"}`}>
                     {line.live > 0 && <span className="h-1.5 w-1.5 rounded-full bg-[var(--live)]" aria-hidden />}
                     {line.text}
                   </span>
@@ -342,7 +342,7 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
 
     {finalHost &&
       createPortal(
-        <section className="band band-deep bleed relative mt-0 overflow-hidden bg-[radial-gradient(600px_300px_at_100%_0%,rgba(198,241,53,0.16),transparent_60%),radial-gradient(500px_260px_at_0%_100%,rgba(20,112,175,0.35),transparent_60%)] py-9 sm:py-12">
+        <section className="band band-deep bleed relative mt-0 overflow-hidden bg-[radial-gradient(600px_300px_at_100%_0%,rgba(56,182,232,0.18),transparent_60%),radial-gradient(500px_260px_at_0%_100%,rgba(37,99,217,0.35),transparent_60%)] py-9 sm:py-12">
           <p className="eyebrow eyebrow-quiet !text-[var(--band-deep-muted)]">Two taps · no account · saved on this device</p>
           <h2 className="display mt-2 max-w-3xl text-[28px] sm:text-[40px]">
             Your sports, one page. <span className="text-[var(--volt)]">Built in ten seconds.</span>
