@@ -6,10 +6,11 @@ import type { League } from "@/lib/queries";
 import { scoreLineHomeFirst } from "@/lib/gamePage";
 import { formatGameDate } from "@/lib/gameDay";
 import { rivalryMeter, streakText } from "@/lib/rivalry";
+import { meetingResult, tallyMeetings } from "@/lib/h2hOutcome";
 import { ImageActions } from "./ImageActions";
 import { HeadToHeadExportCard } from "./HeadToHeadExportCard";
 
-// Compact all-time record shown on a match page, linking to the full head-to-head
+// Compact head-to-head record shown on a match page, linking to the full head-to-head
 // history. `excludeGameId` keeps a completed match from counting itself in "previous
 // meetings". `preGame` is set on a game still to be played: it adds how close the rivalry is, the last
 // meeting and a one-tap share image of the record.
@@ -34,18 +35,8 @@ export async function HeadToHeadStrip({
   const games = (excludeGameId ? h2h.games.filter((g) => g.espn_id !== excludeGameId) : h2h.games).filter(isCountedMeeting);
   if (games.length === 0) return null;
 
-  // Recount without the excluded game.
-  let winsA = 0;
-  let winsB = 0;
-  let draws = 0;
-  for (const g of games) {
-    const aIsHome = g.home_team_espn_id === h2h.teamA.espn_id;
-    const gf = aIsHome ? g.home_score! : g.away_score!;
-    const ga = aIsHome ? g.away_score! : g.home_score!;
-    if (gf > ga) winsA++;
-    else if (gf < ga) winsB++;
-    else draws++;
-  }
+  // Recount without the excluded game, by the same result rule as the head-to-head page.
+  const { winsA, winsB, draws } = tallyMeetings(league, games, h2h.teamA.espn_id);
   const total = games.length;
   const soccer = isSoccer(league);
   const last = games.slice(0, 5);
@@ -76,10 +67,8 @@ export async function HeadToHeadStrip({
       </span>
       <span className="ml-auto flex items-center gap-1" aria-label="Last five meetings">
         {last.map((g) => {
-          const aIsHome = g.home_team_espn_id === h2h.teamA.espn_id;
-          const gf = aIsHome ? g.home_score! : g.away_score!;
-          const ga = aIsHome ? g.away_score! : g.home_score!;
-          const r = gf > ga ? "W" : gf < ga ? "L" : "D";
+          const res = meetingResult(league, g, h2h.teamA.espn_id);
+          const r = res === "A" ? "W" : res === "B" ? "L" : "D";
           return (
             <span key={g.espn_id} className={`result-badge result-${r.toLowerCase()}`} title={scoreLineHomeFirst(league) ? `${teamDisplayName(g.home_name)} ${g.home_score} - ${g.away_score} ${teamDisplayName(g.away_name)}` : `${teamDisplayName(g.away_name)} ${g.away_score} - ${g.home_score} ${teamDisplayName(g.home_name)}`}>
               {r === "W" ? (h2h.teamA.abbreviation ?? "A").slice(0, 3) : r === "L" ? (h2h.teamB.abbreviation ?? "B").slice(0, 3) : "D"}

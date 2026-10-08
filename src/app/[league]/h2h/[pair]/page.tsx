@@ -5,8 +5,10 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, formatSeasonLabel, type GameRow } from "@/lib/queries";
 import { getHeadToHead, isSoccer } from "@/lib/analytics";
 import { fitTitle, pageMeta } from "@/lib/metadata";
-import { LEAGUE_SHORT } from "@/lib/leagues";
-import { h2hDescription, h2hPath } from "@/lib/h2h";
+import { isCricketLeague, isFirstClassCricket, LEAGUE_SHORT } from "@/lib/leagues";
+import { h2hDescription, h2hOtherResults, h2hPath } from "@/lib/h2h";
+import { recordedResultNote } from "@/lib/h2hOutcome";
+import { testsSinceStartOf } from "@/lib/testArchiveCopy";
 import { AdSlot } from "@/components/AdSlot";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { GameCard } from "@/components/GameCard";
@@ -46,7 +48,6 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   if (!slugs) return {};
   const h2h = await getHeadToHead(league, slugs[0], slugs[1]);
   if (!h2h) return {};
-  const record = `${h2h.winsA}-${h2h.draws}-${h2h.winsB}`;
   // Two clubs can meet in more than one competition (a domestic league and the
   // Champions League), which would otherwise give two pages the same bare title.
   return pageMeta(
@@ -56,7 +57,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
       `${h2h.teamA.name} vs ${h2h.teamB.name} (${LEAGUE_SHORT[league]})`,
       `${h2h.teamA.name} vs ${h2h.teamB.name} Head-to-Head`
     ),
-    h2hDescription(h2h.teamA.name, h2h.teamB.name, LEAGUE_LABEL[league], h2h.meetings, record),
+    h2hDescription(h2h.teamA.name, h2h.teamB.name, LEAGUE_LABEL[league], h2h, h2h.firstSeason),
     h2hPath(league, slugs[0], slugs[1]),
     // No counted meeting: the page still renders for visitors, but has nothing to index. The h2h sitemap
     // lists a pair only if it has one (countedMeetingSql), so the two rules stay in step.
@@ -89,9 +90,14 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
 
   const soccer = isSoccer(league);
   const scoreWord = soccer ? "Goals" : "Points";
-  const total = h2h.meetings || 1;
+  const cricket = isCricketLeague(league);
+  // The bar spans the meetings with a recorded result: wins either side, and the middle for draws, ties and no results.
+  const recorded = h2h.meetings - h2h.unknown;
+  const total = recorded || 1;
   const pctA = (h2h.winsA / total) * 100;
-  const pctD = (h2h.draws / total) * 100;
+  const pctD = ((recorded - h2h.winsA - h2h.winsB) / total) * 100;
+  const otherResults = h2hOtherResults(h2h);
+  const resultsNote = recordedResultNote(h2h);
   const { teamA, teamB } = h2h;
   const [rivalsA, rivalsB] = await Promise.all([getMostFacedOpponents(league, teamA.espn_id, 12), getMostFacedOpponents(league, teamB.espn_id, 12)]);
   const rivalLinks = (team: typeof teamA, other: typeof teamA, rivals: typeof rivalsA) =>
@@ -114,6 +120,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
         </h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           {h2h.meetings} {LEAGUE_LABEL[league]} {h2h.meetings === 1 ? "meeting" : "meetings"} on record
+          {isFirstClassCricket(league) && <> {testsSinceStartOf()}</>}
           {meter.label && <> · <strong className="font-semibold text-[var(--text)]">{meter.label}</strong></>}
         </p>
       </div>
@@ -141,6 +148,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
               </span>
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Wins</span>
               {soccer && <span className="mt-1 text-xs text-[var(--text-muted)]">{h2h.draws} draws</span>}
+              {cricket && otherResults && <span className="mt-1 text-xs text-[var(--text-muted)]">{otherResults}</span>}
             </div>
             <Link href={`/${league}/teams/${teamB.slug}`} className="flex flex-col items-center gap-2 text-center hover:text-[var(--accent)]">
               <TeamLogo name={teamDisplayName(teamB.name)} logoUrl={teamB.logo_url} color={teamB.color} size={64} priority />
@@ -158,10 +166,21 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
           )}
           <div className="grid grid-cols-2 divide-x divide-[var(--border)] border-t border-[var(--border)] sm:grid-cols-4">
             <Stat label="Meetings" value={h2h.meetings} sub={h2h.firstSeason ? `since ${formatSeasonLabel(league, h2h.firstSeason)}` : undefined} />
-            <Stat label={`${scoreWord} for ${teamA.abbreviation ?? teamDisplayName(teamA.name)}`} value={h2h.goalsA} sub={h2h.meetings ? `${(h2h.goalsA / total).toFixed(1)} per game` : undefined} />
-            <Stat label={`${scoreWord} for ${teamB.abbreviation ?? teamDisplayName(teamB.name)}`} value={h2h.goalsB} sub={h2h.meetings ? `${(h2h.goalsB / total).toFixed(1)} per game` : undefined} />
+            {cricket ? (
+              // A cricket score on file is a side's first innings (Tests) or one match total, so there are no goals-for style totals: the other results stand in.
+              <>
+                <Stat label={isFirstClassCricket(league) ? "Drawn" : "Tied"} value={isFirstClassCricket(league) ? h2h.draws : h2h.ties} />
+                <Stat label={isFirstClassCricket(league) ? "Tied" : "No result"} value={isFirstClassCricket(league) ? h2h.ties : h2h.noResults} />
+              </>
+            ) : (
+              <>
+                <Stat label={`${scoreWord} for ${teamA.abbreviation ?? teamDisplayName(teamA.name)}`} value={h2h.goalsA} sub={h2h.meetings ? `${(h2h.goalsA / h2h.meetings).toFixed(1)} per game` : undefined} />
+                <Stat label={`${scoreWord} for ${teamB.abbreviation ?? teamDisplayName(teamB.name)}`} value={h2h.goalsB} sub={h2h.meetings ? `${(h2h.goalsB / h2h.meetings).toFixed(1)} per game` : undefined} />
+              </>
+            )}
             <Stat label="Current run" value={h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—"} sub={streakLine ?? undefined} />
           </div>
+          {resultsNote && <p className="border-t border-[var(--border)] px-4 py-2 text-xs text-[var(--text-muted)]">{resultsNote}</p>}
         </section>
       </div>
 
