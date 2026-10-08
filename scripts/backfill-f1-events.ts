@@ -20,9 +20,8 @@
 // The total is logged at the end; a failed status/laps request is counted, listed and makes the run exit non-zero.
 import { pool } from "./lib/db";
 import { fetchF1SeasonEventRefs, fetchByRef as fetchEspnRef } from "./lib/f1";
-import { uniqueSlugFor } from "./lib/players";
 import { saveBackfilledSession } from "./lib/f1-session";
-import { addF1DidNotStartRows, f1CompetitorDetail, f1SessionHasStatuses, isPracticeOnlyCompetitor, loadKnownF1Details, saveF1CompetitorResult } from "./lib/f1-competitor";
+import { saveCoreSessionResults } from "./lib/f1-core-event";
 
 const YEARS_BACK = 10;
 const CONCURRENCY = 6;
@@ -59,15 +58,6 @@ async function resolveCircuit(ref: string | undefined) {
   return info;
 }
 
-async function upsertDriver(id: string, name: string) {
-  const slug = await uniqueSlugFor("f1", id, name);
-  await pool.query(
-    `insert into players (league, espn_id, name, slug) values ('f1', $1, $2, $3)
-     on conflict (league, espn_id) do update set name = excluded.name`,
-    [id, name, slug]
-  );
-}
-
 async function backfillEvent(eventRef: string, seasonYear: number): Promise<number> {
   const event = await fetchByRef<any>(eventRef);
   const circuit = await resolveCircuit(event.circuit?.["$ref"]);
@@ -95,23 +85,12 @@ async function backfillEvent(eventRef: string, seasonYear: number): Promise<numb
 
     // A race or sprint driver's status (retired, disqualified, ...) and laps completed are only bare refs in the event
     // resource: one request for his status, and one more for his laps when he did not finish. Drivers already stored with
-    // both are not asked about again, so a run that was cut off is finished by running it again.
-    const sessionType: string | undefined = comp.type?.abbreviation;
-    const known = f1SessionHasStatuses(sessionType) ? await loadKnownF1Details(pool, comp.id) : undefined;
-    for (const c of comp.competitors ?? []) {
-      const athleteRef = c.athlete?.["$ref"];
-      if (!c.id || !athleteRef) continue;
-      if (f1SessionHasStatuses(sessionType) && isPracticeOnlyCompetitor(c)) {
-        await saveF1CompetitorResult(pool, comp.id, sessionType, c, { status: null, laps: null }); // removes a stored practice-only row
-        continue;
-      }
-      const name = await resolveDriverName(athleteRef, c.id);
-      if (!name) continue;
-      await upsertDriver(c.id, name);
-      const detail = f1SessionHasStatuses(sessionType) ? await f1CompetitorDetail(c, fetchByRef, known?.get(c.id), (ref) => lookupsFailed.push(ref)) : { status: null, laps: null };
-      if (await saveF1CompetitorResult(pool, comp.id, sessionType, c, detail)) resultCount++;
-    }
-    if (sessionType === "Race") await addF1DidNotStartRows(pool, event.id, comp.id);
+    // both are not asked about again, so a run that was cut off is finished by running it again (f1-core-event.ts).
+    resultCount += await saveCoreSessionResults(pool, event.id, comp, {
+      fetchRef: fetchByRef,
+      resolveName: resolveDriverName,
+      onLookupFailure: (ref) => lookupsFailed.push(ref),
+    });
   }
   return resultCount;
 }

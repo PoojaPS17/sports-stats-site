@@ -41,6 +41,12 @@ export function fetchF1SeasonEventRefs(seasonYear: number) {
   return getJson<{ items?: { $ref: string }[] }>(`${CORE_BASE}/seasons/${seasonYear}/types/2/events?limit=40&lang=en&region=us`);
 }
 
+// One whole weekend from the core API: every session, each competitor with his team and car number inline and his status and
+// statistics (laps completed) as refs. The scoreboard carries none of these (scripts/lib/f1-refresh.ts).
+export function fetchF1Event(eventId: string) {
+  return getJson<any>(`${CORE_BASE}/events/${encodeURIComponent(eventId)}?lang=en&region=us`);
+}
+
 export function fetchByRef<T = any>(ref: string): Promise<T> {
   return getJson<T>(ref);
 }
