@@ -24,7 +24,7 @@ export const CARD = {
   mastText: "#eef1f7",
   mastMuted: "#9aa5bd",
   win: "#1b7a43",
-  loss: "#ba0329",
+  loss: "#4a6178",
 } as const;
 
 // One face for everything, Plus Jakarta Sans. The cards are captured inside the page,

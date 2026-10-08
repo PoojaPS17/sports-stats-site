@@ -6,11 +6,11 @@ import { scoreLineHomeFirst } from "@/lib/gamePage";
 
 const BADGE: Record<TimelineEventType, { text: string; cls: string }> = {
   goal: { text: "Goal", cls: "bg-[var(--win)] text-[var(--on-result)]" },
-  "own-goal": { text: "Own goal", cls: "bg-[var(--loss)] text-[var(--on-result)]" },
+  "own-goal": { text: "Own goal", cls: "bg-[var(--loss-tint)] text-[var(--loss)]" },
   penalty: { text: "Penalty", cls: "bg-[var(--win)] text-[var(--on-result)]" },
   "penalty-missed": { text: "Pen. missed", cls: "bg-[var(--surface-muted)] text-[var(--text-muted)]" },
   yellow: { text: "Yellow", cls: "bg-[var(--zone-2)] text-[#102a43]" },
-  red: { text: "Red", cls: "bg-[var(--loss)] text-[var(--on-result)]" },
+  red: { text: "Red", cls: "bg-[var(--loss-tint)] text-[var(--loss)]" },
   sub: { text: "Sub", cls: "bg-[var(--surface-muted)] text-[var(--text-muted)]" },
   shootout: { text: "Shootout", cls: "bg-[var(--accent)] text-[var(--accent-foreground)]" },
   score: { text: "Score", cls: "bg-[var(--accent)] text-[var(--accent-foreground)]" },

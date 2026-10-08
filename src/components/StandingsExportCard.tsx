@@ -106,13 +106,14 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
   );
 }
 
-const FORM_COLOR = { W: CARD.win, L: CARD.loss, D: CARD.textFaint } as const;
+const FORM_COLOR = { W: CARD.win, L: "#eef2f7", D: "#64748b" } as const;
+const FORM_INK = { W: "#fff", L: CARD.loss, D: "#fff" } as const;
 
 function FormStrip({ form }: { form: ("W" | "D" | "L")[] }) {
   return (
     <span style={{ display: "inline-flex", gap: 3 }}>
       {form.map((f, i) => (
-        <span key={i} style={{ display: "inline-flex", width: 18, height: 18, alignItems: "center", justifyContent: "center", borderRadius: 4, background: FORM_COLOR[f], color: "#fff", fontSize: 10, fontWeight: 800 }}>
+        <span key={i} style={{ display: "inline-flex", width: 18, height: 18, alignItems: "center", justifyContent: "center", borderRadius: 4, background: FORM_COLOR[f], color: FORM_INK[f], fontSize: 10, fontWeight: 800 }}>
           {f}
         </span>
       ))}

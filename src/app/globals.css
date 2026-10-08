@@ -73,7 +73,11 @@
   --win: #1b7a43;
   --win-fill: #43b96f;
   --win-tint: #e7f7ee;
-  --loss: #ba0329;
+  /* Losses are neutral grey so red and coral mean LIVE only. --loss is the text/fill ink; chips use --loss-tint with --loss text.
+     --draw stays the mid slate (solid chip, white text); --draw-fill is its lighter bar fill, so a loss bar and a draw bar differ. */
+  --loss: #4a6178;
+  --loss-tint: #eef2f7;
+  --draw-fill: #a7b6c8;
   --draw: #64748b;
   --live: #b42318;
   --live-fill: #ff5c5c;
@@ -179,7 +183,9 @@
 
     --win: #52c97f;
     --win-tint: #123a2a;
-    --loss: #f87171;
+    --loss: #a9bed6;
+    --loss-tint: #1b3355;
+    --draw-fill: #4f6684;
     --draw: #94a3b8;
     --live: #ff7a7a;
     --live-tint: #4a1f2a;
@@ -243,7 +249,9 @@
 
   --win: #52c97f;
   --win-tint: #123a2a;
-  --loss: #f87171;
+  --loss: #a9bed6;
+  --loss-tint: #1b3355;
+  --draw-fill: #4f6684;
   --draw: #94a3b8;
   --live: #ff7a7a;
   --live-tint: #4a1f2a;
@@ -843,7 +851,9 @@
   }
 
   .result-l {
-    background: var(--loss);
+    background: var(--loss-tint);
+    color: var(--loss);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--loss) 35%, transparent);
   }
 
   .result-d {

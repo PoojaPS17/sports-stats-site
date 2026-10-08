@@ -60,3 +60,11 @@ test("no lime survives as an accent: --volt resolves to Sky, and only the logo l
   assert.doesNotMatch(stripped, /c6f135/i);
   assert.doesNotMatch(stripped, /198,\s*241,\s*53/);
 });
+
+test("a loss is neutral grey, so red and coral mean LIVE only", () => {
+  assert.match(rootBlock, /--loss:\s*#4a6178/i);
+  assert.match(rootBlock, /--loss-tint:\s*#eef2f7/i);
+  assert.match(rootBlock, /--live:\s*#b42318/i);
+  assert.doesNotMatch(css, /--loss:\s*#(ba0329|f87171)/i);
+  assert.match(css, /\.result-l\s*\{[^}]*var\(--loss-tint\)/);
+});
