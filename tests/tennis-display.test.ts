@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { tennisMatchCaption, tennisMatchStatus, setCell } from "../src/lib/tennisDisplay";
@@ -6,6 +6,10 @@ import { TennisMatchLine } from "../src/components/TennisScores";
 import { MatchBox } from "../src/components/TennisTournamentExportCards";
 import type { TennisMatch, TennisSet } from "../src/lib/tennis";
 import { parseTennisEvent } from "../src/lib/tennisFeed";
+
+// The fixtures are dated around the days the feed was sampled; the clock is set there so a match still to come is ahead of
+// "now" (a match still "pre" 30 hours after its start reads "No result", see NO_RESULT_AFTER_HOURS).
+mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-09-20T12:00:00Z") });
 
 // What ESPN's tennis listing (site.web.api.espn.com/apis/v2/scoreboard/header?sport=tennis&dates=YYYYMMDD) sends, seen
 // 2026-08-24 to 2026-09-20: a finished match is state "post" / completed true / detail "Final"; a retirement is

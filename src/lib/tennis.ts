@@ -3,6 +3,7 @@ import type { Tour } from "./tennisTours";
 import type { CompetitionType } from "./tennisCompetitions";
 import { easternDateSql, TENNIS_ZONE } from "./tennisDates";
 import { rankingAsOf } from "./tennisRankings";
+import { withoutUnplayedSets } from "./tennisDisplay";
 
 export type { Tour } from "./tennisTours";
 export { TOURS, TOUR_LABEL, isTour } from "./tennisTours";
@@ -113,9 +114,55 @@ const SIDE_SQL = (side: "side1" | "side2", player: "player1_espn_id" | "player2_
 const OCCUPIES_COURT_SQL = `not (coalesce(o.status_detail, '') ~* '\\mTBD\\M|postpon|cancel'
                                  or (not o.completed and coalesce(o.status_detail, '') ~* 'suspend|abandon'))`;
 
+// What counts as a singles match in a player's record, head-to-head and rivals (SQL, on alias `m`).
+//  - the singles draws, plus a row with no draw type (the early Slam backfill stored singles only);
+//  - a team-event singles rubber, told from a doubles rubber by both sides being one player. ESPN files every rubber
+//    of Davis Cup (ids 810, 862, 928, 968...), ATP Cup (827-838, 878) and Billie Jean King Cup (863, 929, 967) under
+//    competition_type 'team-cup', and every United Cup (918) rubber under 'mixed-doubles', so both types are read this
+//    way. The tours count those in a player's record;
+//  - but not the Laver Cup (id 840, also typed 'team-cup'): an exhibition that neither the ATP, the WTA nor Wikipedia
+//    counts. Excluded by tournament id, and by name when a row has no usable id. No other exhibition was typed
+//    team-cup in the feed samples 2021-2025.
+const singlesSql = (a: string) => `(${a}.competition_type is null or ${a}.competition_type like '%singles'
+       or (${a}.competition_type in ('team-cup', 'mixed-doubles') and ${a}.side1 is not null
+           and jsonb_array_length(${a}.side1 -> 'ids') = 1 and jsonb_array_length(${a}.side2 -> 'ids') = 1
+           and coalesce(${a}.tournament_espn_id, '') !~ '^840-' and ${a}.tournament_name !~* '^laver cup'))`;
+const SINGLES_SQL = singlesSql("m");
+
+// A singles match ESPN filed twice. The 2016-2022 backfills stored the same match under two ids: once from the daily
+// feed (with its round and court) and once from the tournament feed (round "event", no court), or under both the
+// event's two ids (Davis Cup / ATP Cup, whose qualifying and finals have two ESPN event ids), or from two crawls of the
+// same Australian Open day. A player's record, head-to-head, rivals and every match list would count both. Production
+// 2026-10-08: 1,943 such groups (2,044 extra rows), 1,356 of them dated 2022; none from 2023 on. Sinner 2022 read 60-19
+// against 46-16 once counted once.
+// A duplicate is another SINGLES row of the same tour, the same US Eastern day and the same two players. Two players
+// meet at most once a day, in any draw, so the key is safe; in the 1,943 production groups the winner agrees in all but
+// three (a retirement stored from opposite sides). Of the copies the one kept is the one with a real round (not
+// "event"), then the lowest id: the ranking is total, so exactly one row of every group survives.
+// Doubles and rows without a day are never duplicates here (their sides are not comparable by the first player alone).
+const NOT_DUPLICATE_SQL = (a: string) => `not (${singlesSql(a)} and ${a}.day is not null and exists (
+  select 1 from tennis_matches d
+  where d.tour = ${a}.tour and d.day = ${a}.day and d.espn_id <> ${a}.espn_id
+    and least(d.player1_espn_id, d.player2_espn_id) = least(${a}.player1_espn_id, ${a}.player2_espn_id)
+    and greatest(d.player1_espn_id, d.player2_espn_id) = greatest(${a}.player1_espn_id, ${a}.player2_espn_id)
+    and ${singlesSql("d")}
+    and ((coalesce(d.round, '') = 'event'), length(d.espn_id), d.espn_id) < ((coalesce(${a}.round, '') = 'event'), length(${a}.espn_id), ${a}.espn_id)))`;
+
+// What a list shows: not a second copy of a match, and not a bye (the reconcile step marks a slot ESPN's resource calls a
+// bye, a qualifier drawn against no one, "Bye": it was never a match).
+const LISTED_SQL = (a: string) => `${NOT_DUPLICATE_SQL(a)} and coalesce(${a}.status_detail, '') <> 'Bye'`;
+
+// The round as shown. ESPN's raw "event" (4,597 rows from the 2016-2022 tournament-feed backfill: it is the name of the
+// feed, not a round) is no label, and neither is the Laver Cup's "Final" on every one of its rubbers over three days (a
+// Davis Cup or Billie Jean King Cup "Final" is a real tie round and stays). Everything that needs the real value (titles,
+// champions, the duplicate rule) reads m.round, not this.
+const ROUND_SQL = `case when lower(m.round) = 'event' then null
+                        when lower(m.round) = 'final' and (m.tournament_espn_id ~ '^840-' or m.tournament_name ~* '^laver cup') then null
+                        else m.round end`;
+
 const MATCH_SELECT = `
   select m.espn_id, m.tour, m.tournament_espn_id, m.tournament_name, t.location as tournament_location, coalesce(t.major, false) as major,
-         m.competition_type, m.round, m.round_number, m.court,
+         m.competition_type, ${ROUND_SQL} as round, m.round_number, m.court,
          to_char(m.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date, to_char(m.day, 'YYYY-MM-DD') as day,
          m.completed, m.status_state, m.status_detail,
          case when m.winner_espn_id is null then null
@@ -140,8 +187,8 @@ const MATCH_ORDER = `
 
 /** Every match ESPN files under one calendar day (US Eastern), all tours. */
 export async function getTennisDay(day: string, tour?: Tour): Promise<TennisMatch[]> {
-  const { rows } = await pool.query(`${MATCH_SELECT} where m.day = $1::date and ($2::text is null or m.tour = $2) ${MATCH_ORDER}`, [day, tour ?? null]);
-  return rows;
+  const { rows } = await pool.query(`${MATCH_SELECT} where m.day = $1::date and ($2::text is null or m.tour = $2) and ${LISTED_SQL("m")} ${MATCH_ORDER}`, [day, tour ?? null]);
+  return rows.map(withoutUnplayedSets);
 }
 
 /** Days around `day` that have any match on file, for the day strip. */
@@ -162,7 +209,7 @@ export async function getLatestTennisDay(): Promise<string | null> {
 
 export async function getTennisMatch(espnId: string): Promise<TennisMatch | null> {
   const { rows } = await pool.query(`${MATCH_SELECT} where m.espn_id = $1 limit 1`, [espnId]);
-  return rows[0] ?? null;
+  return rows[0] ? withoutUnplayedSets(rows[0]) : null;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -199,8 +246,8 @@ const TOURNAMENT_SELECT = `
   select t.espn_id, t.tour, t.tournament_id, t.season, t.name, t.location, t.major,
          ${easternDateSql("t.start_date")} as start_date,
          ${easternDateSql("t.end_date")} as end_date,
-         (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id)::int as match_count,
-         (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id and m.completed)::int as completed_count,
+         (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id and ${LISTED_SQL("m")})::int as match_count,
+         (select count(*) from tennis_matches m where m.tournament_espn_id = t.espn_id and m.completed and ${LISTED_SQL("m")})::int as completed_count,
          coalesce((
            select jsonb_agg(jsonb_build_object(
                     'competition_type', f.competition_type,
@@ -213,7 +260,7 @@ const TOURNAMENT_SELECT = `
                         case when m.winner_espn_id = m.player1_espn_id then m.side1 else m.side2 end as w
                  from tennis_matches m
                  where m.tournament_espn_id = t.espn_id and m.completed and m.winner_espn_id is not null
-                   and m.side1 is not null and lower(m.round) = 'final'
+                   and m.side1 is not null and lower(m.round) = 'final' and ${NOT_DUPLICATE_SQL("m")}
                    -- a team event (Davis Cup, United Cup...) has no per-draw champion: its Final tie is several rubbers,
                    -- and the tie's mixed-doubles rubber has two-player sides, so the event is recognised as a whole
                    and not exists (select 1 from tennis_matches x where x.tournament_espn_id = t.espn_id and ${TEAM_RUBBER_SQL("x")})) f
@@ -242,8 +289,8 @@ export async function getTennisTournamentEditions(tournamentId: string): Promise
 }
 
 export async function getTennisTournamentMatches(espnId: string): Promise<TennisMatch[]> {
-  const { rows } = await pool.query(`${MATCH_SELECT} where m.tournament_espn_id = $1 ${MATCH_ORDER}`, [espnId]);
-  return rows;
+  const { rows } = await pool.query(`${MATCH_SELECT} where m.tournament_espn_id = $1 and ${LISTED_SQL("m")} ${MATCH_ORDER}`, [espnId]);
+  return rows.map(withoutUnplayedSets);
 }
 
 /** Tournaments in play on a day, or starting within the next week of it. */
@@ -282,25 +329,13 @@ export async function getTennisPlayerMatches(tour: Tour, playerEspnId: string, l
   const { rows } = await pool.query(
     `${MATCH_SELECT}
      where m.tour = $1 and (m.player1_espn_id = $2 or m.player2_espn_id = $2 or m.side1 -> 'ids' ? $2 or m.side2 -> 'ids' ? $2)
+       and ${LISTED_SQL("m")}
      order by m.date desc limit $3`,
     [tour, playerEspnId, limit]
   );
-  return rows;
+  return rows.map(withoutUnplayedSets);
 }
 
-// What counts as a singles match in a player's record, head-to-head and rivals (SQL, on alias `m`).
-//  - the singles draws, plus a row with no draw type (the early Slam backfill stored singles only);
-//  - a team-event singles rubber, told from a doubles rubber by both sides being one player. ESPN files every rubber
-//    of Davis Cup (ids 810, 862, 928, 968...), ATP Cup (827-838, 878) and Billie Jean King Cup (863, 929, 967) under
-//    competition_type 'team-cup', and every United Cup (918) rubber under 'mixed-doubles', so both types are read this
-//    way. The tours count those in a player's record;
-//  - but not the Laver Cup (id 840, also typed 'team-cup'): an exhibition that neither the ATP, the WTA nor Wikipedia
-//    counts. Excluded by tournament id, and by name when a row has no usable id. No other exhibition was typed
-//    team-cup in the feed samples 2021-2025.
-const SINGLES_SQL = `(m.competition_type is null or m.competition_type like '%singles'
-       or (m.competition_type in ('team-cup', 'mixed-doubles') and m.side1 is not null
-           and jsonb_array_length(m.side1 -> 'ids') = 1 and jsonb_array_length(m.side2 -> 'ids') = 1
-           and coalesce(m.tournament_espn_id, '') !~ '^840-' and m.tournament_name !~* '^laver cup'))`;
 // A walkover is not a match played: neither player's win nor loss (ESPN's detail is "Walkover"; a retirement, which
 // has a score and a result, is played and counts).
 const PLAYED_SQL = `coalesce(m.status_detail, '') not ilike 'walkover'`;
@@ -324,7 +359,7 @@ export async function getTennisPlayerSeasonRecords(tour: Tour, playerEspnId: str
             count(*) filter (where m.winner_espn_id = $2 and lower(m.round) = 'final' and not ${TEAM_RUBBER_SQL("m")})::int as titles
      from tennis_matches m
      where m.tour = $1 and m.completed and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
-       and ${SINGLES_SQL}
+       and ${SINGLES_SQL} and ${NOT_DUPLICATE_SQL("m")}
      group by 1 having count(*) filter (where ${PLAYED_SQL}) > 0 order by 1 desc`,
     [tour, playerEspnId]
   );
@@ -350,12 +385,12 @@ export async function getTennisPlayerRanking(tour: Tour, playerEspnId: string): 
 export async function getTennisHeadToHead(tour: Tour, playerAEspnId: string, playerBEspnId: string): Promise<TennisMatch[]> {
   const { rows } = await pool.query(
     `${MATCH_SELECT}
-     where m.tour = $1 and ${SINGLES_SQL} and ${PLAYED_SQL}
+     where m.tour = $1 and ${SINGLES_SQL} and ${PLAYED_SQL} and ${NOT_DUPLICATE_SQL("m")}
        and ((m.player1_espn_id = $2 and m.player2_espn_id = $3) or (m.player1_espn_id = $3 and m.player2_espn_id = $2))
      order by m.date desc`,
     [tour, playerAEspnId, playerBEspnId]
   );
-  return rows;
+  return rows.map(withoutUnplayedSets);
 }
 
 /** The player's most frequent singles opponents on file, for head-to-head links. */
@@ -366,9 +401,37 @@ export async function getTennisPlayerRivals(tour: Tour, playerEspnId: string, li
      join players p on p.league = m.tour and p.espn_id = case when m.player1_espn_id = $2 then m.player2_espn_id else m.player1_espn_id end
      -- a match with no winner (postponed or cancelled, which the scraper can store as completed) is not one played
      where m.tour = $1 and m.completed and m.winner_espn_id is not null and (m.player1_espn_id = $2 or m.player2_espn_id = $2)
-       and ${SINGLES_SQL} and ${PLAYED_SQL}
+       and ${SINGLES_SQL} and ${PLAYED_SQL} and ${NOT_DUPLICATE_SQL("m")}
      group by 1, 2, 3 order by matches desc, wins desc limit $3`,
     [tour, playerEspnId, limit]
   );
   return rows;
+}
+
+/**
+ * SQL (a boolean, on a `players` alias) for a person filed under the other tour: an ATP row for someone who has played
+ * women's draws and no men's, or a WTA row for the reverse. ESPN files team-event rubbers (United Cup, Billie Jean King
+ * Cup, Laver Cup...) under the ATP league, so every woman who played one got an ATP `players` row whose page then showed
+ * her team-event matches as "ATP" (Elena Rybakina read 12-4 on /tennis/atp, a United Cup record; 454 women on
+ * 2026-10-08, every one with a WTA row of her own). Evidence is the draw type of matches on file: someone with both
+ * kinds (14 ids) or neither (team events and mixed doubles only) is left where she is.
+ */
+export const OTHER_TOUR_PLAYER_SQL = (p: string) => `(case
+  when ${p}.league = 'atp' then
+    exists (select 1 from tennis_matches w where w.tour = 'wta' and w.competition_type like 'womens%' and (w.player1_espn_id = ${p}.espn_id or w.player2_espn_id = ${p}.espn_id))
+    and not exists (select 1 from tennis_matches x where x.tour = 'atp' and x.competition_type like 'mens%' and (x.player1_espn_id = ${p}.espn_id or x.player2_espn_id = ${p}.espn_id))
+  when ${p}.league = 'wta' then
+    exists (select 1 from tennis_matches w where w.tour = 'atp' and w.competition_type like 'mens%' and (w.player1_espn_id = ${p}.espn_id or w.player2_espn_id = ${p}.espn_id))
+    and not exists (select 1 from tennis_matches x where x.tour = 'wta' and x.competition_type like 'womens%' and (x.player1_espn_id = ${p}.espn_id or x.player2_espn_id = ${p}.espn_id))
+  else false end)`;
+
+/** Where a person filed under the wrong tour really belongs: the other tour's page for the same ESPN id, when it exists. */
+export async function getTennisHomePlayer(tour: Tour, playerEspnId: string): Promise<{ tour: Tour; slug: string } | null> {
+  const { rows } = await pool.query(
+    `select h.league as tour, h.slug from players p
+     join players h on h.espn_id = p.espn_id and h.league = case p.league when 'atp' then 'wta' else 'atp' end
+     where p.league = $1 and p.espn_id = $2 and ${OTHER_TOUR_PLAYER_SQL("p")}`,
+    [tour, playerEspnId]
+  );
+  return rows[0] ?? null;
 }
