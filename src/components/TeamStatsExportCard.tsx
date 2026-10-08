@@ -7,7 +7,7 @@ import type { GameRow, League } from "@/lib/queries";
 import { CARD } from "@/lib/exportTheme";
 import { scoreLineHomeFirst } from "@/lib/gamePage";
 
-const AWAY_COLOR = "#d97706";
+const AWAY_COLOR = "#38b6e8";
 
 // The downloadable version of TeamStatsComparison: the same stat-by-stat split bars,
 // under the scoreline, on the fixed light card so it reads the same shared into a

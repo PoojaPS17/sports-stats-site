@@ -7,8 +7,8 @@ import { CARD } from "@/lib/exportTheme";
 
 const STATUS_TONE = (status: string) => {
   const s = status.toLowerCase();
-  if (s.includes("out") || s.includes("reserve") || s.includes("suspen")) return { bg: "#fee2e2", fg: "#b91c1c" };
-  if (s.includes("doubt")) return { bg: "#fef3c7", fg: "#b45309" };
+  if (s.includes("out") || s.includes("reserve") || s.includes("suspen")) return { bg: "#dceaf8", fg: CARD.text };
+  if (s.includes("doubt")) return { bg: "#eef2f7", fg: CARD.loss };
   return { bg: CARD.bg, fg: CARD.textMuted };
 };
 

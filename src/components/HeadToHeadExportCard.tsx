@@ -37,7 +37,7 @@ export function HeadToHeadExportCard({ league, h2h, title, streakText, nextLine 
     { label: "Current run", value: h2h.streak && h2h.streak.length > 1 ? h2h.streak.length : "—", sub: streakText ?? undefined },
   ];
   const meter = rivalryMeter(h2h, (t) => teamDisplayName(t.name));
-  const pill = (r: "A" | "B" | "D" | "T" | "N") => ({ text: r === "A" ? tag(teamA) : r === "B" ? tag(teamB) : r === "T" ? "TIE" : r === "N" ? "NR" : "D", border: r === "A" ? teamA.color ?? CARD.accent : r === "B" ? teamB.color ?? "#d97706" : CARD.textFaint });
+  const pill = (r: "A" | "B" | "D" | "T" | "N") => ({ text: r === "A" ? tag(teamA) : r === "B" ? tag(teamB) : r === "T" ? "TIE" : r === "N" ? "NR" : "D", border: r === "A" ? teamA.color ?? CARD.accent : r === "B" ? teamB.color ?? "#38b6e8" : CARD.textFaint });
   const side = (t: typeof teamA) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}>
       <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo_url} color={t.color} size={64} />
@@ -64,7 +64,7 @@ export function HeadToHeadExportCard({ league, h2h, title, streakText, nextLine 
         <div style={{ display: "flex", height: 8, overflow: "hidden", borderRadius: 999, background: CARD.border, margin: "12px 0" }}>
           <span style={{ width: `${(h2h.winsA / total) * 100}%`, background: teamA.color ?? CARD.accent }} />
           <span style={{ width: `${((recorded - h2h.winsA - h2h.winsB) / total) * 100}%`, background: CARD.textFaint }} />
-          <span style={{ flex: 1, background: teamB.color ?? "#d97706" }} />
+          <span style={{ flex: 1, background: teamB.color ?? "#38b6e8" }} />
         </div>
       )}
       {(meter.label || meter.last5.length > 0) && (

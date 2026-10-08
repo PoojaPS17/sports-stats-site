@@ -28,7 +28,7 @@ export const ART_GRADIENT: Record<ArtPalette, string> = {
   nfl: "linear-gradient(120deg, #013369, #d50a0a 100%)",
   nba: "linear-gradient(120deg, #c9082a, #17408b 100%)",
   mlb: "linear-gradient(120deg, #bf0d3e, #041e42 100%)",
-  tennis: "linear-gradient(120deg, #c8f135, #1f6f3a 100%)",
+  tennis: "linear-gradient(120deg, #38b6e8, #2563d9 100%)",
   neutral: "linear-gradient(120deg, #16345a, #0f2745 90%)",
 };
 

@@ -36,7 +36,7 @@ function pct(p: number): string {
 
 function Prob({ p, negative = false }: { p: number; negative?: boolean }) {
   const strength = Math.min(1, p);
-  const bg = negative ? `rgba(220, 38, 38, ${0.05 + strength * 0.35})` : `rgba(29, 78, 216, ${0.05 + strength * 0.35})`;
+  const bg = negative ? `rgba(74, 97, 120, ${0.05 + strength * 0.35})` : `rgba(37, 99, 217, ${0.05 + strength * 0.35})`;
   return (
     <td className="px-2 py-2 text-right tabular-nums">
       <span className={`inline-block min-w-[3.5rem] rounded-md px-1.5 py-0.5 text-center text-sm ${p >= 0.5 ? "font-bold" : "font-medium"}`} style={{ background: p > 0 ? bg : "transparent" }}>
@@ -82,7 +82,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
           </SectionHeader>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {proj.upcoming.map(({ game, homeWin, draw, awayWin }) => {
-              const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "var(--accent-2)", win: awayWin };
+              const away = { name: game.away_name, abbr: game.away_abbr, logo: game.away_logo, color: game.away_color ?? "var(--sky)", win: awayWin };
               const home = { name: game.home_name, abbr: game.home_abbr, logo: game.home_logo, color: game.home_color ?? "var(--accent)", win: homeWin };
               // Football lists the home side first ("MCI v SUN"); the NBA and NFL the visitors first ("SUN at MCI").
               const homeFirst = scoreLineHomeFirst(league);

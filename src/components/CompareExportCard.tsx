@@ -9,7 +9,7 @@ export type CompareSide = { name: string; logoUrl: string | null; color: string 
 // Two fixed colours rather than the entrants' own: rival teams often share one (two red
 // clubs), and a shared picture has to say which bar is whose.
 const COLOR_A = CARD.accent;
-const COLOR_B = "#d97706";
+const COLOR_B = "#38b6e8";
 
 function SideHeader({ side, align, color }: { side: CompareSide; align: "left" | "right"; color: string }) {
   const row = align === "left" ? "row" : "row-reverse";
