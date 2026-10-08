@@ -96,7 +96,7 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
     <>
       {editing ? (
         <section className="band bleed -mt-6 py-8">
-          <HomeBuilder ctx={ctx} mode="edit" initial={setup} onClose={() => setEditing(false)} />
+          <HomeBuilder ctx={ctx} initial={setup} onClose={() => setEditing(false)} />
         </section>
       ) : (
         <BuiltHero setup={setup} headline={line.headline} sub={line.sub} liveCount={line.liveCount} onEdit={() => setEditing(true)} />
