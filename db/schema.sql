@@ -206,6 +206,9 @@ create table if not exists player_game_stats (
   updated_at timestamptz not null default now(),
   primary key (league, game_espn_id, player_espn_id)
 );
+-- A player's career, splits and recent innings read their own rows of one competition; the primary key leads
+-- with the game, so without this each of those reads scanned the competition's whole table.
+create index if not exists player_game_stats_player_idx on player_game_stats (league, player_espn_id);
 
 create table if not exists player_season_stats (
   league text not null,

@@ -378,3 +378,33 @@ test("reconcile names a match it keeps skipping more than three days after it en
   assert.deepEqual(result.overdue, ["wt20i/21"]);
   assert.match(importer.reconcileSummaryLine(result, 40), /WARNING 1 match\(es\).*: wt20i\/21$/);
 });
+
+/** The same two XIs, dated `date`; `swap` puts the home XI on the away side so the same players change team. */
+function summaryOn(id: string, date: string, opts: { swap?: boolean; rename?: string } = {}) {
+  const home = opts.swap ? AWAY : HOME;
+  const away = opts.swap ? HOME : AWAY;
+  const s = summary({ id, home, away });
+  s.header.competitions[0].date = date;
+  if (opts.rename) for (const r of s.rosters) for (const p of r.roster) if (p.athlete.id === "h1") p.athlete.displayName = opts.rename;
+  return s;
+}
+const playerRow = async (id: string) => (await db.pool.query(`select name, team_espn_id from players where league = 'test' and espn_id = $1`, [id])).rows[0];
+
+test("a history sweep that loads an older match after a newer one leaves the player on the newer side and name", async () => {
+  stubEspn({ "301": summaryOn("301", "2026-08-26T09:00Z"), "302": summaryOn("302", "2010-06-01T09:00Z", { swap: true, rename: "Ann Old Spelling" }) });
+  const found = (id: string, date: string) => ({ id, league: "test" as const, seriesId: "1", date, name: "Alpha v Bravo" });
+  await importer.writeMatch(found("301", "2026-08-26T09:00:00Z"), false);
+  await importer.writeMatch(found("302", "2010-06-01T09:00:00Z"), false);
+  assert.deepEqual(await playerRow("h1"), { name: "Ann Alpha", team_espn_id: "10" });
+  assert.equal((await db.pool.query(`select count(*)::int as n from games where league = 'test'`)).rows[0].n, 2);
+  assert.equal((await rowsOf("test", "302")).length, 4, "the older match still gets its own figures");
+});
+
+test("loading oldest first still ends on the newest side and name", async () => {
+  stubEspn({ "301": summaryOn("301", "2026-08-26T09:00Z"), "302": summaryOn("302", "2010-06-01T09:00Z", { swap: true, rename: "Ann Old Spelling" }) });
+  const found = (id: string, date: string) => ({ id, league: "test" as const, seriesId: "1", date, name: "Alpha v Bravo" });
+  await importer.writeMatch(found("302", "2010-06-01T09:00:00Z"), false);
+  assert.deepEqual(await playerRow("h1"), { name: "Ann Old Spelling", team_espn_id: "20" });
+  await importer.writeMatch(found("301", "2026-08-26T09:00:00Z"), false);
+  assert.deepEqual(await playerRow("h1"), { name: "Ann Alpha", team_espn_id: "10" });
+});

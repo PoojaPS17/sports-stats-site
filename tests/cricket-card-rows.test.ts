@@ -109,6 +109,9 @@ test("splits, leaders and centuries read an empty row as a match with nothing in
   assert.deepEqual(runs.map((r) => [r.name, r.value]), [["p9", 104]], "a player with nothing but empty rows is not on the board");
   const centuries = await queries.getCricketCenturies("t20i");
   assert.deepEqual(centuries.map((c) => [c.player_name, c.runs]), [["p9", 104]]);
+  assert.deepEqual(centuries.map((c) => c.total), [1], "every row carries the league's total");
+  assert.deepEqual((await queries.getCricketCenturies("t20i", 1)).map((c) => [c.runs, c.total]), [[104, 1]], "a limit keeps the newest and still reports the total");
+  assert.equal(await queries.getCricketLeadersSeason("t20i"), 2025, "the leaders season is the newest one with figures");
 });
 
 /* ------------------------------------------------------------------------ */

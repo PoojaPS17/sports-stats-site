@@ -41,7 +41,10 @@ export const WOMENS_CRICKET: League[] = ["wpl", "wbbl", "wcwc", "wt20wc", "wodi"
 // Bilateral internationals come from Cricsheet's archive (scripts/import-cricsheet.ts)
 // and ESPN's daily listing (scripts/import-cricket-espn.ts) rather than a competition
 // feed: completed matches with full scorecards, but no fixtures, standings or news,
-// and nothing live. Tests are ESPN's alone; the archive starts in 2015 like the rest of the site.
+// and nothing live. Tests are ESPN's alone; the archive starts at TEST_ARCHIVE_START_YEAR.
+// The first calendar year of men's Test matches held on the site. Every line of copy that says where the Test
+// archive starts reads this, so loading earlier years is one change here and cannot leave a stale "since 2015".
+export const TEST_ARCHIVE_START_YEAR = 2015;
 export const INTERNATIONAL_CRICKET: League[] = ["test", "odi", "t20i", "wodi", "wt20i"];
 
 // A first-class match: two innings a side, no overs limit, and a draw is a result.

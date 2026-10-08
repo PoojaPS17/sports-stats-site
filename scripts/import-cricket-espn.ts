@@ -352,7 +352,10 @@ export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
      select $1, r.id, r.team, r.name, r.slug, r.headshot, r.position, r.sighting
      from unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::timestamptz[]) as r(id, team, name, slug, headshot, position, sighting)
      on conflict (league, espn_id) do update set
-       name = excluded.name, team_espn_id = excluded.team_espn_id,
+       -- A match older than the latest one on file (a history sweep run after newer matches were loaded) must not
+       -- move the player back to an old side or old spelling: name and team follow the most recent sighting.
+       name = case when excluded.roster_seen_at is null or players.roster_seen_at is null or excluded.roster_seen_at >= players.roster_seen_at then excluded.name else players.name end,
+       team_espn_id = case when excluded.roster_seen_at is null or players.roster_seen_at is null or excluded.roster_seen_at >= players.roster_seen_at then excluded.team_espn_id else players.team_espn_id end,
        headshot_url = coalesce(excluded.headshot_url, players.headshot_url),
        position = coalesce(excluded.position, players.position),
        roster_seen_at = greatest(players.roster_seen_at, excluded.roster_seen_at)`,
