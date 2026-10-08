@@ -16,6 +16,7 @@ import { absoluteUrl } from "@/lib/site";
 import { SportPicker } from "@/components/home/SportPicker";
 import { HomeBlocks } from "@/components/home/HomeBlocks";
 import { CollapsedBar } from "@/components/home/CollapsedBar";
+import { RightNow } from "@/components/home/RightNow";
 import { getEditionContext } from "@/lib/editionContext";
 import { sportLines } from "@/lib/sportPicks";
 import { getSiteCounts } from "@/lib/siteCounts";
@@ -81,6 +82,9 @@ export default async function HomePage() {
         <SportPicker ctx={editionContext} lines={sportLines({ liveCricket: home.liveCricket.length, liveTennis: home.liveTennis.length, sections: home.sections })} liveNow={home.liveGames.length + home.liveCricket.length + home.liveTennis.length} counts={counts} />
       </section>
       <CollapsedBar />
+      <div className="home-firstvisit">
+        <RightNow />
+      </div>
       <div className="home-skeleton" aria-hidden />
       <HomeBlocks ctx={editionContext} />
       <h2 className="home-else display text-[28px] text-[var(--text)]">Everything else is still here</h2>
