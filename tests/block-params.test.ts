@@ -36,6 +36,8 @@ test("standings needs a league that has a table", () => {
 
 test("series-standings takes a cricket series id", () => {
   assert.deepEqual(validateBlockParams("series-standings", { series: "8048-2026" }), { ok: true, params: { series: "8048-2026" } });
+  assert.deepEqual(validateBlockParams("series-standings", { series: "21284-2026-27" }), { ok: true, params: { series: "21284-2026-27" } });
+  assert.equal(validateBlockParams("series-standings", { series: "1-2-3-4" }).ok, false);
   assert.equal(validateBlockParams("series-standings", { series: "ipl" }).ok, false);
 });
 
