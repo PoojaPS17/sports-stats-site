@@ -21,7 +21,8 @@ export type ParamCheck = { ok: true; params: Record<string, string> } | { ok: fa
 
 const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
 const SIDE_ID = /^[0-9]{1,12}$/;
-const SERIES_ID = /^[0-9]{1,12}(-[0-9]{1,12})?$/;
+// An ESPN series id: the number, then the season, which spans two years for a season such as 2026-27 ("21284-2026-27").
+const SERIES_ID = /^[0-9]{1,12}(-[0-9]{1,12}){0,2}$/;
 
 const ok = (params: Record<string, string>): ParamCheck => ({ ok: true, params });
 const fail = (error: string): ParamCheck => ({ ok: false, error });
