@@ -46,7 +46,7 @@ test("trunc2 handles a negative rate toward zero and any number of digits", () =
 });
 
 const career = (over: Partial<CricketCareerStats> = {}): CricketCareerStats => ({
-  matches: 100, inningsBatted: 90, runs: 2609, ballsFaced: 3000, inningsWithBalls: 90, notOuts: 31, hundreds: 3, fifties: 10, highestScore: 140,
+  matches: 100, inningsBatted: 90, runs: 2609, ballsFaced: 3000, inningsWithBalls: 90, notOuts: 31, hundreds: 3, fifties: 10, highestScore: 140, highestScoreNotOut: false,
   average: 2609 / 44, strikeRate: (2609 / 2921) * 100, inningsBowled: 60, overs: 400.2, runsConceded: 1466, wickets: 400, economy: 3.6667, fiveWicketHauls: 5, catches: 20,
   ...over,
 });

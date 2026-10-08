@@ -18,6 +18,8 @@ import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 import { foldSql, likeTerm, searchTokens } from "./searchText";
 import { CRICKET_LEAGUES, SOCCER_LEAGUES } from "./leagues";
+import { withStoredNotOuts } from "./cricketNotOut";
+import { playerTeamIdSql } from "./playerTeamSql";
 
 export type { League } from "./leagues";
 export { sortStandings } from "./standingsOrder";
@@ -142,7 +144,15 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
 export async function getGameDetails(league: League, espnId: string): Promise<GameDetails | null> {
   const { rows } = await pool.query(`select details from game_details where league = $1 and game_espn_id = $2`, [league, espnId]);
   // Reports are stored with ESPN's minute text; every reader gets it in display form (90+4', 46').
-  return rows[0]?.details ? presentDetails(rows[0].details) : null;
+  if (!rows[0]?.details) return null;
+  const details = presentDetails(rows[0].details);
+  if (!isCricketLeague(league) || !details.scorecard?.some((t) => t.battingRows.some((r) => !r.dismissal && r.stats.length >= 2))) return details;
+  // Cricsheet-sourced cards have no dismissal text, so "not out" is read from the stored per-player figures.
+  const { rows: stored } = await pool.query(
+    `select player_espn_id, stats->'batting' as batting, stats->'innings' as innings from player_game_stats where league = $1 and game_espn_id = $2 and stats->'batting' is not null`,
+    [league, espnId]
+  );
+  return { ...details, scorecard: withStoredNotOuts(details.scorecard, new Map(stored.map((r) => [r.player_espn_id as string, { batting: r.batting ?? undefined, innings: r.innings ?? undefined }]))) };
 }
 
 // Every game tagged with a playoff-stage round for a season, in chronological order —
@@ -472,14 +482,14 @@ export interface PlayerRow {
 
 export async function getPlayerBySlug(league: League, slug: string): Promise<PlayerRow | null> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
+    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, ${playerTeamIdSql("p")} as team_espn_id, p.position, p.jersey, p.age, p.height, p.weight,
             t.name as team_name, t.slug as team_slug, t.color as team_color,
             case when p.headshot_url is null then p.photo_credit end as photo_credit,
             case when p.headshot_url is null then p.photo_license end as photo_license,
             case when p.headshot_url is null then p.photo_source_url end as photo_source_url,
-            coalesce(p.team_espn_id is not null and (${ON_ROSTER_SQL}), false) as on_roster
+            coalesce(p.team_espn_id is not null and (${ON_ROSTER_SQL.replaceAll("p.team_espn_id", () => playerTeamIdSql("p"))}), false) as on_roster
      from players p
-     left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+     left join teams t on t.league = p.league and t.espn_id = ${playerTeamIdSql("p")}
      where p.league = $1 and p.slug = $2 and ${notPseudoAthleteSql()}`,
     [league, slug]
   );
@@ -497,10 +507,10 @@ export async function getPlayerSlugsByEspnIds(league: League, espnIds: string[])
 
 export async function getAllPlayers(league: League): Promise<PlayerRow[]> {
   const { rows } = await pool.query(
-    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, p.team_espn_id,
+    `select p.espn_id, p.name, p.slug, coalesce(p.headshot_url, p.photo_url) as headshot_url, ${playerTeamIdSql("p")} as team_espn_id,
             t.name as team_name, t.slug as team_slug, t.color as team_color
      from players p
-     left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+     left join teams t on t.league = p.league and t.espn_id = ${playerTeamIdSql("p")}
      where p.league = $1 and ${notPseudoAthleteSql()}
      order by p.name`,
     [league]
@@ -1001,6 +1011,8 @@ export interface CricketCareerStats {
   hundreds: number;
   fifties: number;
   highestScore: number | null;
+  /** The highest score was not out ("254*"). When two innings tie on the score, one of them being unbeaten is enough. */
+  highestScoreNotOut: boolean;
   average: number | null;
   strikeRate: number | null;
   inningsBowled: number;
@@ -1108,6 +1120,9 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
        count(*) filter (where (inn->'batting'->>'runs')::int >= 100) as hundreds,
        count(*) filter (where (inn->'batting'->>'runs')::int >= 50 and (inn->'batting'->>'runs')::int < 100) as fifties,
        max((inn->'batting'->>'runs')::int) as highest_score,
+       (array_agg(coalesce((inn->'batting'->>'notOut')::boolean, false)
+          order by (inn->'batting'->>'runs')::int desc nulls last, coalesce((inn->'batting'->>'notOut')::boolean, false) desc)
+          filter (where inn->'batting' is not null))[1] as highest_score_not_out,
        count(*) filter (where inn->'bowling' is not null) as innings_bowled,
        coalesce(sum(floor((inn->'bowling'->>'overs')::numeric) * coalesce((inn->'bowling'->>'bpo')::int, 6) + round(((inn->'bowling'->>'overs')::numeric % 1) * 10)), 0) as balls_bowled,
        coalesce(sum((inn->'bowling'->>'conceded')::int), 0) as runs_conceded,
@@ -1142,6 +1157,7 @@ export async function getPlayerCricketCareer(league: League, playerEspnId: strin
     hundreds: Number(r.hundreds),
     fifties: Number(r.fifties),
     highestScore: r.highest_score === null ? null : Number(r.highest_score),
+    highestScoreNotOut: r.highest_score !== null && r.highest_score_not_out === true,
     average: dismissals > 0 ? runs / dismissals : null,
     // Only over the innings whose balls faced were recorded (`inningsWithBalls`); older scorecards have none, and
     // the page says "not recorded" or "over n of m innings" rather than show this beside a full runs total.
@@ -1373,7 +1389,7 @@ export async function search(query: string, limit = 20, options: { fold?: boolea
               ${rank("p.name")} as match_rank,
               case when p.league = any($${terms.length + 3}::text[]) then 'cricket:' || p.espn_id when p.league = any($${terms.length + 4}::text[]) then 'soccer:' || p.espn_id
                    else 'player:' || p.league || ':' || p.slug end as grp
-       from players p left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
+       from players p left join teams t on t.league = p.league and t.espn_id = ${playerTeamIdSql("p")}
        left join (${playersWithGamesSql(words("p2.name"))}) h on h.league = p.league and h.player_espn_id = p.espn_id
        where (${words("p.name")}) and ${notPseudoAthleteSql()}
        union all
