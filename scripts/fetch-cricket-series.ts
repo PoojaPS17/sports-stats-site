@@ -9,9 +9,15 @@
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --days 10 --ahead 90
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --since 2024-01-01 # backfill
 //
+//   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --league-days test --since 1877-01-01 --until 1999-12-31
+//
+// `--league-days <league>` reads only the days on which a stored match of that league started inside --since/--until
+// (the pre-2000 Tests: one request per Test start date, not one per calendar day of a century).
+//
 // A recurring tournament (BBL, WBBL, IPL, ...) keeps one ESPN league id for every season, so its matches are filed
 // per edition, `<league id>-<season>` ("8044-2025-26"), see src/lib/cricketSeriesKey.ts; a bilateral tour keeps its own id.
 import { pool } from "./lib/db";
+import { distinctDays, parseLeagueDays } from "./lib/cricket-series-days";
 import { ingestDay, storeMatches, storeSeries, type SeriesMap } from "./lib/cricket-series-ingest";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
@@ -53,7 +59,12 @@ function parseArgs() {
     console.error("usage: fetch-cricket-series.ts [--days N] [--ahead M] | [--since YYYY-MM-DD [--until YYYY-MM-DD]]");
     process.exit(1);
   }
-  return { since, until };
+  const leagueDays = parseLeagueDays(args);
+  if (leagueDays && typeof leagueDays === "object") {
+    console.error(leagueDays.error);
+    process.exit(1);
+  }
+  return { since, until, leagueDays: leagueDays as string | null };
 }
 
 function ymd(d: Date): string {
@@ -65,13 +76,19 @@ function ymd(d: Date): string {
 /* ------------------------------------------------------------------------ */
 
 async function main() {
-  const { since, until } = parseArgs();
-  console.log(`[fetch-cricket-series] ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}`);
+  const { since, until, leagueDays } = parseArgs();
+  console.log(`[fetch-cricket-series] ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}${leagueDays ? ` (days of stored ${leagueDays} matches)` : ""}`);
   const seriesMeta: SeriesMap = new Map();
   let days = 0;
   let matches = 0;
 
-  for (let d = new Date(since); d <= until; d = new Date(d.getTime() + 86_400_000)) {
+  let dates: Date[] = [];
+  if (leagueDays) {
+    const { rows } = await pool.query(`select date from games where league = $1 and date >= $2 and date < $3::timestamptz + interval '1 day'`, [leagueDays, since, until]);
+    dates = distinctDays(rows.map((r) => r.date));
+  } else for (let d = new Date(since); d <= until; d = new Date(d.getTime() + 86_400_000)) dates.push(d);
+
+  for (const d of dates) {
     days++;
     let data: any;
     try {

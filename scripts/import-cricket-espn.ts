@@ -20,6 +20,13 @@
 // Default window is the last 21 days (the weekly Cricsheet lag plus slack), which the
 // daily scrape runs; `--since` sweeps history.
 //
+//   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --ids 62387-63862 [--league test] [--force] [--workers 2] [--delay 400] [--attempts 8] [--dry-run]
+//
+// `--ids` loads a block of ESPN event ids oldest first with no header-feed discovery (for history the
+// daily feed cannot be swept, e.g. the pre-2000 Tests). It is resumable: ids already in games are skipped
+// unless `--force`; ESPN is read gently (2 workers, 400 ms apart, up to 8 attempts with backoff) and ids that
+// fail are re-run in up to three further passes. The daily job never passes `--ids`.
+//
 //   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --reconcile [--league wt20i] [--cap N]
 //
 // `--reconcile` is the un-windowed safety net the daily scrape also runs: every finished
@@ -37,6 +44,7 @@ import { storeCricketDates } from "./lib/games";
 import { extractGameDetails } from "../src/lib/matchDetail";
 import { fetchCricketSummaryVia } from "../src/lib/cricketSummary";
 import { isScorecardOverdue, overdueWarning } from "./lib/cricket-player-rows";
+import { idsToFetch, parseIdModeArgs, retriesForAttempts, type IdRangeArgs } from "./lib/cricket-id-range";
 
 export type IntlLeague = "test" | "odi" | "t20i" | "wodi" | "wt20i";
 export const INTL_LEAGUES: IntlLeague[] = ["test", "odi", "t20i", "wodi", "wt20i"];
@@ -207,12 +215,13 @@ function abbreviationOf(team: any): string {
 // id from the header feed occasionally returns a copy with no competitors.
 const FALLBACK_SERIES = "8048";
 
-export async function writeMatch(f: Found, dryRun: boolean): Promise<boolean> {
+export async function writeMatch(f: Found, dryRun: boolean, summaryOptions: { retries?: number; backoffMs?: number } = {}): Promise<boolean> {
   // ESPN's 502 error body ({"code":2502,...}) parses as JSON, so a bare getJson reads it as a
   // summary with no competitors and the match is skipped as if ESPN had nothing. The shared
   // read rejects it, retries, and tries the IPL id then the series id (lib/cricketSummary.ts).
   const summary = await fetchCricketSummaryVia((path) => getJson(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${f.id}`, 1), f.id, [...new Set([`cricket/${FALLBACK_SERIES}`, `cricket/${f.seriesId}`])], {
     accept: (s) => Boolean(s?.header?.competitions?.[0]?.competitors?.length),
+    ...summaryOptions,
   });
   const comp = summary?.header?.competitions?.[0];
   const home = comp?.competitors?.find((c: any) => c.homeAway === "home");
@@ -503,7 +512,61 @@ async function reconcileMain() {
   process.exit(result.failed.length > 0 ? 1 : 0);
 }
 
+/* ------------------------------------------------------------------------ */
+/* Id-range mode                                                             */
+/* ------------------------------------------------------------------------ */
+
+async function idRangeMain(a: IdRangeArgs) {
+  console.log(`[import-cricket-espn] ids ${a.from}-${a.to} as ${a.league}${a.force ? " (force)" : ""}${a.dryRun ? " (dry run)" : ""}, ${a.workers} worker(s), ${a.delayMs} ms, ${a.attempts} attempts`);
+  const { rows: stored } = await pool.query(`select espn_id from games where league = $1 and espn_id = any($2::text[])`, [
+    a.league,
+    Array.from({ length: a.to - a.from + 1 }, (_, i) => String(a.from + i)),
+  ]);
+  let queue = idsToFetch(a.from, a.to, stored.map((r) => r.espn_id), a.force);
+  console.log(`[import-cricket-espn] ${a.to - a.from + 1 - queue.length} already stored, ${queue.length} to fetch`);
+  const summaryOptions = { retries: retriesForAttempts(a.attempts), backoffMs: 500 };
+  let written = 0;
+  const skipped: string[] = [];
+  let failed: string[] = [];
+  const started = Date.now();
+  for (let pass = 1; pass <= 4 && queue.length > 0; pass++) {
+    if (pass > 1) console.log(`[import-cricket-espn] pass ${pass}: re-running ${queue.length} failed id(s)`);
+    const todo = [...queue];
+    failed = [];
+    let cursor = 0;
+    let done = 0;
+    const work = async () => {
+      while (cursor < todo.length) {
+        const id = todo[cursor++];
+        try {
+          // Date, name and series are read from the summary itself; the IPL path serves any cricket event.
+          if (await writeMatch({ id, league: a.league, seriesId: FALLBACK_SERIES, date: "", name: `event ${id}` }, a.dryRun, summaryOptions)) written++;
+          else if (!skipped.includes(id)) skipped.push(id);
+        } catch (err) {
+          failed.push(id);
+          console.error(`[import-cricket-espn] ${a.league} ${id} failed: ${err instanceof Error ? err.message : err}`);
+        }
+        if (++done % 50 === 0) console.log(`[import-cricket-espn] ${done}/${todo.length} this pass, ${written} written, ${failed.length} failed, ${Math.round((Date.now() - started) / 60000)} min`);
+        await sleep(a.delayMs);
+      }
+    };
+    await Promise.all(Array.from({ length: a.workers }, work));
+    queue = failed.sort((x, y) => Number(x) - Number(y));
+  }
+  console.log(`[import-cricket-espn] ids done: ${written} written, ${skipped.length} skipped by writeMatch${skipped.length ? ` (${skipped.join(", ")})` : ""}, ${failed.length} failed${failed.length ? ` (${failed.join(", ")})` : ""}, ${Math.round((Date.now() - started) / 1000)} s`);
+  await pool.end();
+  process.exit(failed.length > 0 ? 1 : 0);
+}
+
 async function main() {
+  const idArgs = parseIdModeArgs(process.argv.slice(2));
+  if (idArgs) {
+    if ("error" in idArgs) {
+      console.error(`[import-cricket-espn] ${idArgs.error}\nusage: import-cricket-espn.ts --ids FROM-TO [--league test] [--force] [--workers N] [--delay MS] [--attempts N] [--dry-run]`);
+      process.exit(2);
+    }
+    return idRangeMain(idArgs);
+  }
   if (process.argv.includes("--reconcile")) return reconcileMain();
   const { since, until, league, step, dryRun } = parseArgs();
   console.log(`[import-cricket-espn] ${league ?? "odi+t20i"} ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}${dryRun ? " (dry run)" : ""}`);
