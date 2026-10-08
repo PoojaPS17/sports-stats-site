@@ -18,6 +18,10 @@ export const SPORT_PICK_LABEL: Record<SportPick, string> = {
   f1: "F1",
 };
 
+/** Window events that link the picker band to the "Start here" cards further down: a card asks the picker to toggle a sport, the picker announces which are picked. */
+export const PICK_TOGGLE_EVENT = "sportsdb:pick-toggle";
+export const PICKED_EVENT = "sportsdb:picked";
+
 export function isSportPick(value: string): value is SportPick {
   return (SPORT_PICKS as readonly string[]).includes(value);
 }
