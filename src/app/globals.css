@@ -22,7 +22,7 @@
   --surface-hover: #f1f7fc;
   --border: #dde8f2;
   --border-strong: #b3c7db;
-  --ctl: #8396ae; /* unselected control edges: 3:1 on white */
+  --ctl: #7b8fa7; /* unselected control edges: 3:1 on white and on the page background */
   --text: #102a43;
   --text-muted: #4a6178;
   --text-faint: #52697f;
@@ -146,6 +146,7 @@
     --surface-hover: #1b3c66;
     --border: #25446d;
     --border-strong: #3b6190;
+    --ctl: #6a88ae;
     --text: #eaf2fb;
     --text-muted: #a9bed6;
     --text-faint: #8ca5c2;
@@ -209,6 +210,7 @@
   --surface-hover: #1b3c66;
   --border: #25446d;
   --border-strong: #3b6190;
+  --ctl: #6a88ae;
   --text: #eaf2fb;
   --text-muted: #a9bed6;
   --text-faint: #8ca5c2;
@@ -321,6 +323,12 @@ footer.band-deep a[href="/"] {
 
 :root[data-theme="dark"] footer.band-deep a[href="/"] {
   --sig: var(--logo-lit);
+}
+
+/* Unselected form controls on light surfaces draw their edge at 3:1 (--ctl). Navy bands and the
+   header keep their own control styling. Unlayered on purpose: it must beat the border utilities. */
+main :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea):not(.band-deep *) {
+  border-color: var(--ctl);
 }
 
 /* ---------------------------------------------------------------------------
@@ -451,6 +459,10 @@ footer.band-deep a[href="/"] {
     --header-hover-bg: rgba(255, 255, 255, 0.07);
     /* Coral reads as text on navy; the ink version is for light surfaces. */
     --live: var(--live-fill);
+    --win: var(--win-fill);
+    /* Helpers that colour themselves with the page's muted text (LastUpdated, labels) must read on navy. */
+    --text-muted: var(--band-deep-muted);
+    --text-faint: var(--band-deep-muted);
   }
 
   /* Sports Blue is 2.8:1 on navy, so focus on a navy band is drawn in white. */

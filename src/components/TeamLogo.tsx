@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { colourForWhiteText } from "@/lib/teamColor";
 
 // "Delhi Capitals Women" (or an abbreviation-style "Delhi Capitals-W") reads as DC, not CW: the
 // women's-team suffix carries no identity.
@@ -59,9 +60,10 @@ export function TeamLogo({
     );
   }
 
+  // The disc carries white initials, so its colour is the team colour darkened until white reads at 4.5:1 (brand blue when there is none).
   return (
     <div
-      style={{ width: size, height: size, background: color ?? "var(--surface-muted)" }}
+      style={{ width: size, height: size, background: colourForWhiteText(color) }}
       className="flex shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold text-white"
     >
       {initials(name)}

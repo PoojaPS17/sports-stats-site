@@ -19,7 +19,7 @@ export function BuiltHero({ setup, headline, sub, liveCount, colours, onEdit }: 
         <div className="flex flex-col gap-3">
           <p className="eyebrow eyebrow-quiet flex flex-wrap items-center gap-2 !text-[var(--band-deep-muted)]">
             {liveCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--pill-live-bg)] px-2 py-0.5 text-[10.5px] text-white">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--pill-live-bg)] px-2 py-0.5 text-[10.5px] text-[var(--pill-live-text)]">
                 <span className="live-dot bg-white" aria-hidden />
                 {liveCount} live
               </span>
