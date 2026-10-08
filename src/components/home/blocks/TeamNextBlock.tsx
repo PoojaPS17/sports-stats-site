@@ -9,7 +9,7 @@ import { CARD_TEXT_OPACITY, colourForWhiteText } from "@/lib/teamColor";
 // table position and figure, the last five results, and what the visitor would see on the team page.
 function SummaryCard({ name, color, s }: { name: string; color: string | null; s: TeamSummary }) {
   const style = { "--tc": colourForWhiteText(color, undefined, CARD_TEXT_OPACITY) } as CSSProperties;
-  if (s.position === null && s.form.length === 0) return null;
+  if (s.position === null && s.form.length === 0 && !s.record) return null;
   return (
     <div style={style} className="rounded-2xl bg-[linear-gradient(150deg,var(--tc),color-mix(in_srgb,var(--tc)_72%,#000))] p-4 text-white">
       <p className="text-[12px] font-semibold opacity-85">{name} · {s.leagueLabel}</p>
@@ -41,6 +41,7 @@ function Line({ f, team }: { f: FixtureLine; team: string }) {
         {f.result && <span className={`result-badge result-${f.result.toLowerCase()}`}>{f.result}</span>}
         {f.live && <span className="live-dot" />}
         <span className="truncate font-semibold">{sides}</span>
+        {f.preseason && <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-faint)]">Preseason</span>}
       </span>
       <span className="shrink-0 text-[var(--text-muted)]">
         {f.score ?? (f.live ? f.status : (f.tbd ?? <LocalTime iso={f.date} format="datetime" />))}

@@ -70,7 +70,8 @@ function facts(loaded: LoadedBlock[], o: HeroLineOptions): Fact[] {
   for (const l of loaded) {
     const d = standings(l);
     const [first, second] = d?.rows ?? [];
-    if (!d || !first) continue;
+    // Nobody leads a preseason table: its exhibition records seed no one.
+    if (!d || !first || d.preseason) continue;
     if (d.record) out.push({ text: `${first.name} lead the ${d.label} at ${first.figure}.`, entity: first.name });
     else {
       const gap = second ? Number(first.figure) - Number(second.figure) : NaN;

@@ -45,13 +45,15 @@ export interface FixtureLine {
   league: string;
   /** "Mon, Oct 12 · TBD" for a game whose start time the feed has not set; absent for every other game. */
   tbd?: string;
+  /** True for a preseason game (exhibition: the card tags it, since the same list holds the regular season). Absent otherwise. */
+  preseason?: boolean;
 }
 
 /** Where a league team stands and how it has been playing: the same table row and results its team page shows. */
 export interface TeamSummary {
   /** "Premier League". */
   leagueLabel: string;
-  /** Rank in the table, null when the team is not in it. */
+  /** Rank in the table, null when the team is not in it or the table is a preseason one (exhibition records seed nobody). */
   position: number | null;
   /** "16 pts" in a points table, "5-0" in a record table; null when the team is not in the table. */
   figure: string | null;
@@ -59,6 +61,8 @@ export interface TeamSummary {
   record: string | null;
   /** The last five finished games, oldest first. */
   form: ("W" | "L" | "D")[];
+  /** True while the table is a preseason one: `record` then reads "Preseason record 1-0" and there is no position. */
+  preseason?: boolean;
 }
 
 export interface TeamNextBlockData {
@@ -70,7 +74,8 @@ export interface TeamNextBlockData {
 }
 
 export interface StandingsLine {
-  position: number;
+  /** Null in a preseason table. */
+  position: number | null;
   name: string;
   href: string;
   played: number;
@@ -88,6 +93,8 @@ export interface StandingsBlockData {
   rows: StandingsLine[];
   /** True for the NFL and NBA, where `figure` is a record and the leader is "ahead at 5-1". */
   record: boolean;
+  /** True for a preseason table: the rows carry no positions and the block says Preseason. */
+  preseason?: boolean;
 }
 
 export interface PlayerFormBlockData {

@@ -148,6 +148,7 @@ export default async function TeamPage({
                   size={22}
                 />
                 <span className="truncate">{nextIsHome ? teamDisplayName(next.away_name) : teamDisplayName(next.home_name)}</span>
+                {next.season_type === 1 && <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[var(--text-faint)]">Preseason</span>}
                 <Kickoff league={league} game={next} format="datetime" className="shrink-0 text-xs font-medium text-[var(--text-muted)]" />
               </span>
             </Link>

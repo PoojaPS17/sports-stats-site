@@ -540,6 +540,22 @@ export function f1DistanceZone(laps: number | null | undefined, winnerLaps: numb
 }
 
 /**
+ * Drivers who did not start a 2026 race, by ESPN event id. ESPN calls them STATUS_RETIRED with 0 laps, exactly as it calls a driver
+ * who crashed on lap 1, so the data cannot tell the two apart and a rule over it would be wrong (2026 Monaco and Dutch: Verstappen,
+ * 0 laps, f1.com prints DNF; Belgium: Russell, same). Each entry below is a driver f1.com's race result page for that race prints as
+ * DNS, and is applied only to a driver ESPN has retired with no laps; the race is otherwise ordered by the rule, not by a table.
+ */
+export const F1_DID_NOT_START_DRIVERS: Record<string, string[]> = {
+  "600057427": ["5752", "4396"], // 2026 Australia (f1.com round 1): Piastri, Hülkenberg
+  "600057428": ["5752", "5579", "5835", "5592"], // 2026 China (round 2): Piastri, Norris, Bortoleto, Albon
+  "600057433": ["5855"], // 2026 Canada (round 6): Lindblad
+};
+
+function isConfirmedDidNotStart(eventId: string | null, driverId: string, status: string | null | undefined, zone: F1DistanceZone): boolean {
+  return Boolean(eventId && status === "STATUS_RETIRED" && zone === "below" && F1_DID_NOT_START_DRIVERS[eventId]?.includes(driverId));
+}
+
+/**
  * The label a stored status gives, outside the table. DSQ and DNS follow the status; Ret and NC need the driver to be clearly
  * under the classification line (`zone`), so a driver ESPN calls retired who was classified reads his number.
  */
@@ -556,6 +572,7 @@ export function f1StatusLabel(status: string | null | undefined, zone: F1Distanc
 export function f1ResultLabel(eventId: string | null, driverId: string, status: string | null | undefined, zone: F1DistanceZone = "unknown"): F1ResultLabel | null {
   const override = eventId ? F1_RACE_OVERRIDES[eventId] : undefined;
   if (override && override.order.includes(driverId)) return override.labels[driverId] ?? null;
+  if (isConfirmedDidNotStart(eventId, driverId, status, zone)) return "DNS";
   return f1StatusLabel(status, zone);
 }
 
@@ -571,7 +588,7 @@ export function f1ResultFor(eventId: string | null, driverId: string, position: 
     if (override.labels[driverId]) return { label: override.labels[driverId], position: null };
     return { label: null, position: 1 + override.order.slice(0, at).filter((id) => !override.labels[id]).length };
   }
-  const label = f1StatusLabel(status, zone);
+  const label = isConfirmedDidNotStart(eventId, driverId, status, zone) ? "DNS" : f1StatusLabel(status, zone);
   return { label, position: label ? null : position };
 }
 

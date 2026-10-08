@@ -52,6 +52,19 @@ export function fetchTournamentEventCompetitions(tour: Tour, tournamentId: strin
   );
 }
 
+// One match by its own resource: the competition, its status and each competitor's set scores. Unlike the daily
+// listing it does not depend on which day's window the match fell in, so it can finish a match the listing left "pre".
+export async function fetchTennisCompetition(tour: Tour, tournamentId: string, competitionId: string) {
+  const competition = await getJson<any>(`${CORE_BASE}/leagues/${tour}/events/${tournamentId}/competitions/${competitionId}?lang=en&region=us`);
+  const status = competition.status?.["$ref"] ? await getJson<any>(String(competition.status["$ref"]).replace(/^http:/, "https:")) : null;
+  const linescores: Record<string, any> = {};
+  for (const c of competition.competitors ?? []) {
+    const ref = c.linescores?.["$ref"];
+    if (ref) linescores[String(c.id)] = await getJson<any>(String(ref).replace(/^http:/, "https:"));
+  }
+  return { competition, status, linescores };
+}
+
 export function fetchByRef<T = any>(ref: string): Promise<T> {
   return getJson<T>(ref);
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { pageMeta } from "@/lib/metadata";
 import { JsonLd } from "@/components/JsonLd";
@@ -15,6 +15,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { displayCountry } from "@/lib/tennisCountry";
 import {
   isTour,
+  getTennisHomePlayer,
   getTennisPlayerBySlug,
   getTennisPlayerMatches,
   getTennisPlayerRanking,
@@ -65,6 +66,11 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
   if (!isTour(tour)) notFound();
 
   const player = (await getTennisPlayerBySlug(tour, slug)) ?? (await playerNotFound(tour, slug, (s) => `/tennis/${tour}/players/${s}`));
+
+  // A woman filed under the ATP league because she played a team event (or a man under the WTA): her page is the other
+  // tour's, so send visitors and search engines there for good.
+  const home = await getTennisHomePlayer(tour, player.espn_id);
+  if (home) permanentRedirect(`/tennis/${home.tour}/players/${home.slug}`);
 
   const [matches, ranking, records, rivals] = await Promise.all([
     getTennisPlayerMatches(tour, player.espn_id),

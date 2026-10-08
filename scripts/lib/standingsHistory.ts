@@ -1,3 +1,4 @@
+import { currentStandingsSeasonSql } from "../../src/lib/standingsSeasons";
 import type { Pool } from "pg";
 
 /**
@@ -14,7 +15,7 @@ export async function snapshotStandings(pool: Pool): Promise<number> {
      select s.league, s.season, s.team_espn_id, coalesce(s.conference, ''), (now() at time zone 'utc')::date,
             s.rank, s.playoff_seed, s.wins, s.losses, s.draws, s.points, s.win_percent, s.games_behind
      from standings s
-     where s.season = (select max(season) from standings where league = s.league)
+     where s.season = ${currentStandingsSeasonSql("s.league")}
      on conflict (league, season, team_espn_id, conference, snapshot_date) do update set
        rank = excluded.rank, playoff_seed = excluded.playoff_seed, wins = excluded.wins,
        losses = excluded.losses, draws = excluded.draws, points = excluded.points,

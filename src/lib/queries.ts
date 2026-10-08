@@ -13,6 +13,7 @@ import { fetchEspnSeasons, fetchPlayerLog, fetchReportedGames } from "./playerLo
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { seriesHasPlaySql } from "./cricketSeriesKey";
 import { sortStandings } from "./standingsOrder";
+import { PRESEASON_TYPE, classifySeasons, lastPlayedSeason, visibleSeasons, type SeasonFact, type SeasonStatus } from "./standingsSeasons";
 import type { EspnSeasons } from "./espnSeason";
 import type { PlayerLogRow, ReportedGames } from "./playerProfile";
 import { foldSql, likeTerm, searchTokens } from "./searchText";
@@ -41,6 +42,8 @@ export interface GameRow {
   round: string | null;
   /** The stored classification (games.stage): regular, playoffs, playin, excluded or other. Absent on rows from a query that does not select it. */
   stage?: GameStage | null;
+  /** ESPN's season type (NBA/NFL/MLB): 1 preseason, 2 regular season, 3 postseason, 5 play-in. Absent on rows from a query that does not select it. */
+  season_type?: number | null;
   /** ESPN's competition abbreviation (NBA/NFL only): STD, ALLSTAR, CC for the NBA Cup final, playoff rounds. Absent on rows from a query that does not select it. */
   competition_type?: string | null;
   /** The event note ESPN gives the game (games.note): the NBA Cup's group play and semifinals are named only here. Absent on rows from a query that does not select it. */
@@ -98,7 +101,7 @@ export const GAME_SELECT = `
   select
     g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
     g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-    g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
+    g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.season_type, g.competition_type, g.note, g.neutral_site, g.completed, g.week, g.first_seen_date,
     g.local_date::text as local_date, g.end_date::text as end_date,
     g.home_team_espn_id, g.away_team_espn_id,
     ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
@@ -116,7 +119,7 @@ export async function getGameByEspnId(league: League, espnId: string): Promise<G
     `select
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.neutral_site, g.completed,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.season_type, g.competition_type, g.note, g.neutral_site, g.completed,
        g.local_date::text as local_date, g.end_date::text as end_date,
        g.home_team_espn_id, g.away_team_espn_id,
        g.odds_details, g.odds_spread, g.odds_over_under, g.odds_provider,
@@ -277,6 +280,8 @@ export interface StandingRow {
   qualified?: boolean | null;
   /** Set by sortStandings on every row of a table nobody has played in yet: it has no order, so no positions are shown. */
   unranked?: boolean;
+  /** Set on every row of a preseason table (exhibition records, see standingsSeasons.ts): ordered by record, but with no positions, seeds or zones. */
+  preseason?: boolean;
 }
 
 const STANDING_SELECT = `
@@ -292,47 +297,83 @@ const STANDING_SELECT = `
 // NFL and NBA, the later stage of a two-stage tournament first.
 const STANDING_ROW_ORDER = `order by s.conference nulls last, t.name`;
 
-// The `standings` table now holds every backfilled historical season too, so this
-// must pin to the most recent one rather than returning every season's rows mixed
-// together.
-export async function getStandings(league: League): Promise<StandingRow[]> {
-  const { rows } = await pool.query(
-    `${STANDING_SELECT}
-     where s.league = $1 and s.season = (select max(season) from standings where league = $1)
-     ${STANDING_ROW_ORDER}`,
-    [league]
-  );
-  return sortStandings(league, rows);
+/**
+ * Every standings season of a league, newest first, with what the games say about it (see standingsSeasons.ts for
+ * the rules): `preseason` for a table of exhibition records, `phantom` for a season that only repeats the last one.
+ */
+export async function getStandingsSeasonStatuses(league: League): Promise<SeasonStatus[]> {
+  const [{ rows }, { rows: through }] = await Promise.all([
+    pool.query(
+      `select s.season,
+              coalesce(sum(s.wins + s.losses + coalesce(s.draws, 0)), 0)::int as played,
+              coalesce(bool_or(s.season_type = ${PRESEASON_TYPE}), false) as flagged_preseason,
+              bool_and(s.season_type is null) as untyped,
+              exists (select 1 from games g where g.league = $1 and g.season_year = s.season and g.completed and g.season_type = ${PRESEASON_TYPE}) as has_preseason_games,
+              exists (select 1 from games g where g.league = $1 and g.season_year = s.season and g.completed and g.stage <> 'excluded') as has_real_games
+       from standings s where s.league = $1 group by s.season`,
+      [league]
+    ),
+    // The newest season with a completed game that counts (not a preseason, All-Star or Cup-final game).
+    pool.query(`select max(season_year) as season from games where league = $1 and completed and stage <> 'excluded'`, [league]),
+  ]);
+  const facts: SeasonFact[] = rows.map((r) => ({
+    season: r.season,
+    played: r.played,
+    flaggedPreseason: r.flagged_preseason,
+    untyped: r.untyped,
+    hasPreseasonGames: r.has_preseason_games,
+    hasRealGames: r.has_real_games,
+  }));
+  return classifySeasons(league, facts, through[0]?.season ?? null);
 }
 
-export async function getStandingsBySeason(league: League, season: number): Promise<StandingRow[]> {
+async function standingsRows(league: League, season: number, preseason: boolean): Promise<StandingRow[]> {
   const { rows } = await pool.query(
     `${STANDING_SELECT} where s.league = $1 and s.season = $2 ${STANDING_ROW_ORDER}`,
     [league, season]
   );
-  return sortStandings(league, rows);
+  return sortStandings(league, preseason ? rows.map((r) => ({ ...r, preseason: true })) : rows);
+}
+
+// The `standings` table holds every backfilled historical season too, so this pins to the
+// current one: the newest season that is not a phantom (a preseason table counts: it is labelled, see
+// StandingRow.preseason).
+export async function getStandings(league: League): Promise<StandingRow[]> {
+  const [current] = visibleSeasons(await getStandingsSeasonStatuses(league));
+  return current ? standingsRows(league, current.season, current.preseason) : [];
+}
+
+export async function getStandingsBySeason(league: League, season: number): Promise<StandingRow[]> {
+  const status = (await getStandingsSeasonStatuses(league)).find((s) => s.season === season);
+  return standingsRows(league, season, status?.preseason ?? false);
 }
 
 // Every season with a standings table on file, most recent first — powers the
-// year-toggle tabs on the standings page.
+// year-toggle tabs on the standings page. A phantom season (a repeat of the last one) is not listed.
 export async function getStandingsSeasons(league: League): Promise<number[]> {
-  const { rows } = await pool.query(`select distinct season from standings where league = $1 order by season desc`, [league]);
-  return rows.map((r) => r.season as number);
+  return visibleSeasons(await getStandingsSeasonStatuses(league)).map((s) => s.season);
 }
 
 // The most recent season that's actually been played, as opposed to getStandingsSeasons()'s
 // most recent season *on file* — a standings row for the upcoming season already
 // exists (every team 0-0) well before it starts, so "most recent on file" points at an
 // empty table during preseason. Used for "nothing scheduled right now, see the last
-// real season" style empty states, where an all-zero table would be a non-answer.
+// real season" style empty states, where an all-zero table would be a non-answer. A preseason
+// table (exhibition records) and a phantom season are not a season played.
 export async function getMostRecentPlayedSeason(league: League): Promise<number | null> {
+  return lastPlayedSeason(await getStandingsSeasonStatuses(league));
+}
+
+/**
+ * The day (UTC instant) of a season's first regular-season game, for the preseason note ("the regular season starts
+ * Oct 20"); null when no regular-season game is on file yet.
+ */
+export async function getFirstRegularGame(league: League, season: number): Promise<{ date: string; local_date: string | null } | null> {
   const { rows } = await pool.query(
-    `select season from standings where league = $1
-     group by season having sum(wins + losses + coalesce(draws, 0)) > 0
-     order by season desc limit 1`,
-    [league]
+    `select date, local_date::text as local_date from games where league = $1 and season_year = $2 and stage = 'regular' order by date limit 1`,
+    [league, season]
   );
-  return rows[0]?.season ?? null;
+  return rows[0] ?? null;
 }
 
 export interface TeamRow {
@@ -851,7 +892,7 @@ export async function getTopGames(window: TopGamesWindow, filter: TopGamesFilter
   const { rows } = await pool.query(
     `select g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
             g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-            g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
+            g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.season_type, g.competition_type, g.note, g.completed,
             g.local_date::text as local_date, g.end_date::text as end_date,
             g.home_team_espn_id, g.away_team_espn_id,
             ${TEAM_NAME_SQL("ht")} as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,

@@ -12,6 +12,7 @@ import { f1EventDescription, f1EventStatus } from "@/lib/f1Status";
 import { f1SessionLabel, sortF1Sessions } from "@/lib/f1Sessions";
 import { f1FormatDate, f1RaceInstant } from "@/lib/f1Dates";
 import { f1LabelKey } from "@/lib/f1RaceOrder";
+import { LocalTime } from "@/components/LocalTime";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -33,7 +34,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const description = f1EventDescription(event, year, where);
   // ownImage: the opengraph-image route beside this page draws the weekend its own card; without
   // the flag pageMeta would replace it with the site-wide one, as it did for all 241 weekends.
-  return pageMeta(`${event.name} ${year}: Results`, description, `/f1/events/${event.espn_id}`, { ownImage: true });
+  // A cancelled weekend says so in its title: 2026 has two "Bahrain Grand Prix" pages (April, cancelled; October, held at Sepang).
+  const calledOff = f1EventStatus(event).kind === "called-off" ? ` (${(f1EventStatus(event).label ?? "cancelled").toLowerCase()})` : "";
+  return pageMeta(`${event.name} ${year}${calledOff}: Results`, description, `/f1/events/${event.espn_id}`, { ownImage: true });
 }
 
 export default async function F1EventPage({ params }: { params: Promise<{ id: string }> }) {
@@ -81,6 +84,9 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
           return (
             <section key={first.session_espn_id}>
               <SectionHeader
+                // The session's own start (each session has its own date, not the Race's), with its zone named: UTC in the server's
+                // first paint, the visitor's own zone once the page is loaded.
+                description={first.session_date ? <LocalTime iso={new Date(first.session_date).toISOString()} format="datetime" showZone serverTimeZone="UTC" /> : undefined}
                 tools={
                   first.completed && (
                     <ImageActions

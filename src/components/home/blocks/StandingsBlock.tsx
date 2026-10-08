@@ -4,6 +4,7 @@ import type { StandingsBlockData } from "@/lib/blockTypes";
 export function StandingsBlock({ data }: { data: StandingsBlockData }) {
   return (
     <div>
+      {data.preseason && <p className="eyebrow mb-1 text-[var(--text-faint)]">Preseason records, not ranked</p>}
       <table className="w-full text-sm">
         <thead>
           <tr className="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-faint)]">
@@ -20,7 +21,7 @@ export function StandingsBlock({ data }: { data: StandingsBlockData }) {
               <td className="py-1.5 pr-1 text-[var(--text-muted)]">
                 <span className="flex items-center gap-1.5">
                   <span className={`zone-marker ${r.zone ?? ""}`} aria-hidden />
-                  {r.position}
+                  {r.position ?? "–"}
                 </span>
               </td>
               <td className="py-1.5"><Link href={r.href} className="font-semibold hover:text-[var(--sig-ink)]">{r.name}</Link></td>

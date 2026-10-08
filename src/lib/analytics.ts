@@ -6,7 +6,7 @@ import { pool } from "./db";
 import { hasTies, isCricketLeague, isUsSport, SOCCER_LEAGUES, type League } from "./leagues";
 import type { GameStage } from "./gameStage";
 import { CALLED_OFF, isCalledOff } from "./gameStatus";
-import type { GameRow } from "./queries";
+import { getStandingsSeasonStatuses, type GameRow } from "./queries";
 import { leagueWideRank } from "./standingsOrder";
 
 /* ------------------------------------------------------------------------ */
@@ -89,9 +89,11 @@ export async function getTeamMap(league: League): Promise<Map<string, TeamRef>> 
   return new Map(rows.map((r) => [r.espn_id as string, r as TeamRef]));
 }
 
+// A game that says nothing about strength (preseason, All-Star, the NBA Cup final: stage 'excluded') does not start a
+// season: the NBA's preseason games would otherwise make the new season "current" with no regular-season game played.
 export async function getCurrentSeason(league: League): Promise<number | null> {
   const { rows } = await pool.query(
-    `select max(season_year) as season from games where league = $1 and completed = true`,
+    `select max(season_year) as season from games where league = $1 and completed = true and stage <> 'excluded'`,
     [league]
   );
   return rows[0]?.season ?? null;
@@ -439,7 +441,7 @@ export async function getHeadToHead(league: League, slugA: string, slugB: string
     `select
        g.league, g.espn_id, g.date, g.name, g.short_name, g.home_score, g.away_score,
        g.home_score_display, g.away_score_display, g.home_winner, g.away_winner, g.season_year,
-       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.competition_type, g.note, g.completed,
+       g.status_state, g.status_detail, g.status_summary, g.round, g.stage, g.season_type, g.competition_type, g.note, g.completed,
        g.local_date::text as local_date, g.end_date::text as end_date,
        g.home_team_espn_id, g.away_team_espn_id,
        ht.name as home_name, ht.slug as home_slug, ht.abbreviation as home_abbr, ht.logo_url as home_logo, ht.color as home_color,
@@ -568,6 +570,8 @@ export async function getTeamHistory(league: League, teamEspnId: string): Promis
      from standings where league = $1`,
     [league]
   );
+  // A season that only repeats the last one (a phantom) or is a preseason table holds no finish: it counts as not played.
+  const notAFinish = new Set((await getStandingsSeasonStatuses(league)).filter((s) => s.phantom || s.preseason).map((s) => s.season));
   const seasonGames = new Map<number, number>();
   const partitions = new Map<string, typeof rows>();
   for (const r of rows) {
@@ -598,7 +602,7 @@ export async function getTeamHistory(league: League, teamEspnId: string): Promis
         goals_against: r.goals_against,
         win_percent: r.win_percent,
         conference: r.conference,
-        played: (seasonGames.get(r.season) ?? 0) > 0,
+        played: (seasonGames.get(r.season) ?? 0) > 0 && !notAFinish.has(r.season),
       };
     });
 }

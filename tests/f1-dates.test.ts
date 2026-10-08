@@ -85,6 +85,6 @@ test("the home card shows the race's weekday, date and time, not the practice da
   const html = renderToStaticMarkup(createElement(HomeLive.F1Card, { ev: row({ espn_id: "sep", name: "Azerbaijan Grand Prix", date: "2026-09-24T08:30:00Z", end_date: "2026-09-26T11:00:00Z", season_year: 2026, circuit_name: "Baku City Circuit", circuit_city: "Baku" }) }));
   assert.match(html, /dateTime="2026-09-26T11:00:00.000Z"/);
   assert.match(html, /Sat, Sep 26/);
-  assert.match(html, /11:00 AM/);
+  assert.match(html, /11:00 AM UTC/, "the first paint names its zone");
   assert.doesNotMatch(html, /Sep 24/);
 });

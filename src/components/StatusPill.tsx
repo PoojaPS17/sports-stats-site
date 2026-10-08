@@ -12,6 +12,7 @@ export function StatusPill({
   round: rawRound,
   stage,
   competitionType,
+  seasonType,
   note,
   league,
   kickoff = "date",
@@ -27,6 +28,8 @@ export function StatusPill({
   /** games.stage and games.competition_type: a play-in game and the NBA Cup final get their own label where a round would show. */
   stage?: string | null;
   competitionType?: string | null;
+  /** games.season_type: 1 marks a preseason game, which says so where a round would show. */
+  seasonType?: number | null;
   /** games.note: what says a regular-season game belongs to the NBA Cup. */
   note?: string | null;
   /** Names the finished word ("Final", "FT", "Result"), the zone of the fixture date in the server render (see LocalTime) and the clock style. */
@@ -36,7 +39,7 @@ export function StatusPill({
   /** A game in play: put its clock ("Q3 4:12", "67'") after the stage label. False where the card already prints the clock beside the pill. */
   clock?: boolean;
 }) {
-  const stageFields = { round: rawRound ?? null, stage, competition_type: competitionType, note };
+  const stageFields = { round: rawRound ?? null, stage, competition_type: competitionType, season_type: seasonType, note };
   const round = gameRoundLabel(stageFields);
   if (statusState === "in") {
     return (

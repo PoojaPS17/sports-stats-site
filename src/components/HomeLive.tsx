@@ -8,16 +8,16 @@ import { LocalTime } from "@/components/LocalTime";
 import type { HomeData } from "@/lib/homeData";
 import type { F1EventRow } from "@/lib/f1";
 import { f1RaceInstant } from "@/lib/f1Dates";
-import { f1CircuitTimeZone } from "@/lib/f1Circuits";
 
-// Dated by the Race (weekday, date and time in the visitor's zone), not the practice day the weekend opens on.
+// Dated by the Race (weekday, date and time in the visitor's zone), not the practice day the weekend opens on. The time always names its zone:
+// the server's first paint is UTC and says so (a circuit-local clock with no zone beside it read as the visitor's own), the visitor's own zone follows.
 export function F1Card({ ev }: { ev: F1EventRow }) {
   const where = [ev.circuit_name, ev.circuit_city ?? ev.circuit_country].filter(Boolean).join(", ");
   return (
     <Link href={`/f1/events/${ev.espn_id}`} className="card block px-4 py-3">
       <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
         <span className="pill pill-upcoming">Formula 1 · race weekend</span>
-        <LocalTime iso={f1RaceInstant(ev).toISOString()} format="datetime" serverTimeZone={f1CircuitTimeZone(ev.circuit_name, ev.espn_id)} className="font-medium text-[var(--text-muted)]" />
+        <LocalTime iso={f1RaceInstant(ev).toISOString()} format="datetime" showZone serverTimeZone="UTC" className="font-medium text-[var(--text-muted)]" />
       </div>
       <p className="text-[15px] font-semibold">{ev.name}</p>
       {where && <p className="mt-0.5 text-xs text-[var(--text-muted)]">{where}</p>}

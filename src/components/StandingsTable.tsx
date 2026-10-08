@@ -5,7 +5,8 @@ import { isCricketLeague, isSoccerLeague, isCupCompetition, LEAGUE_LABEL, format
 import { hasTies } from "@/lib/leagues";
 import { cricketPlayed, hasCricketTies, qualifierLegend, showQualifiers } from "@/lib/cricketStandings";
 import type { StandingRow, League } from "@/lib/queries";
-import { notStarted } from "@/lib/standingsOrder";
+import { hasPosition, isPreseasonTable, notStarted } from "@/lib/standingsOrder";
+import { PRESEASON_LABEL } from "@/lib/standingsSeasons";
 import { clinchLabel, zonesFor } from "@/lib/standingsZones";
 
 function StreakCell({ streak }: { streak: string | null }) {
@@ -94,7 +95,11 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
           <section key={conference} className="card overflow-hidden">
             <h2 className="table-head flex items-baseline justify-between gap-3 border-b border-[var(--border)] px-4 py-2.5">
               <span>{conference}</span>
-              {notStarted(rows) && <span className="text-xs font-semibold normal-case tracking-normal text-[var(--text-muted)]">Season not started</span>}
+              {notStarted(rows) ? (
+                <span className="text-xs font-semibold normal-case tracking-normal text-[var(--text-muted)]">Season not started</span>
+              ) : (
+                isPreseasonTable(rows) && <span className="text-xs font-semibold normal-case tracking-normal text-[var(--text-muted)]">{PRESEASON_LABEL}</span>
+              )}
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[440px] border-collapse text-sm">
@@ -134,7 +139,7 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
                 </thead>
                 <tbody>
                   {rows.map((r, i) => {
-                    const position = r.unranked ? null : i + 1;
+                    const position = hasPosition(r) ? i + 1 : null;
                     const zone = zones && position !== null ? zones.zoneAt(rows, i) : null;
                     const gd = r.goals_for != null && r.goals_against != null ? r.goals_for - r.goals_against : null;
                     return (

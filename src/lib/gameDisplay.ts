@@ -12,7 +12,7 @@ import { scoreLineHomeFirst, scoreLineSides } from "./gamePage";
 import type { League } from "./leagues";
 
 type StatusFields = Pick<GameRow, "completed" | "status_state" | "status_detail">;
-type StageFields = Pick<GameRow, "round" | "stage" | "competition_type" | "note">;
+type StageFields = Pick<GameRow, "round" | "stage" | "competition_type" | "note"> & { season_type?: number | null };
 
 /** A game still to be played: not finished, not in play, and not called off. */
 export const isUpcomingGame = (g: StatusFields): boolean => !g.completed && g.status_state !== "in" && !isGameCalledOff(g);
@@ -50,8 +50,9 @@ export function groupByKickoff<T extends StatusFields & Pick<GameRow, "date">>(g
  * NFL and NBA), and the kickoff is read in that same zone so the two agree rather than showing a UTC
  * time under an Eastern date. The wording is unchanged: only the zone the two are read in moved.
  */
-export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRow, "date" | "local_date">): string {
-  const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" }, g.local_date);
+export function scheduleRowHeading(league: League, g: StatusFields & Pick<GameRow, "date" | "local_date"> & { season_type?: number | null }): string {
+  // An exhibition game says so: the same list holds the regular season.
+  const when = formatGameDate(g.date, league, { weekday: "short", month: "short", day: "numeric" }, g.local_date) + (g.season_type === 1 ? " · Preseason" : "");
   const off = gameCalledOffLabel(g);
   if (off) return `${when} · ${off}`;
   if (isUpcomingGame(g)) {
