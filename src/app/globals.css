@@ -24,6 +24,7 @@
   --surface-hover: #f1f7fc;
   --border: #dde8f2;
   --border-strong: #b3c7db;
+  --border-block: color-mix(in srgb, var(--border-strong) 80%, var(--border)); /* the outline of a home block: one step darker than --border */
   --ctl: #7b8fa7; /* unselected control edges: 3:1 on white and on the page background */
   --text: #102a43;
   --text-muted: #4a6178;
@@ -154,6 +155,7 @@
     --surface-hover: #1b3c66;
     --border: #25446d;
     --border-strong: #3b6190;
+    --border-block: color-mix(in srgb, var(--border-strong) 50%, var(--border));
     --ctl: #6a88ae;
     --text: #eaf2fb;
     --text-muted: #a9bed6;
@@ -222,6 +224,7 @@
   --surface-hover: #1b3c66;
   --border: #25446d;
   --border-strong: #3b6190;
+  --border-block: color-mix(in srgb, var(--border-strong) 50%, var(--border));
   --ctl: #6a88ae;
   --text: #eaf2fb;
   --text-muted: #a9bed6;
@@ -627,6 +630,17 @@
     transform: translateY(-2px);
   }
 
+  /* The home page and /scores: block outlines one step darker than the site-wide .card edge. :where() keeps the
+     specificity at a plain .card, so a card's own hover rule below still wins. */
+  :where(.home-outline, .scores-page) .card {
+    border-color: var(--border-block);
+  }
+
+  :where(.home-outline, .scores-page) a.card:hover,
+  :where(.home-outline, .scores-page) .card-link:hover {
+    border-color: var(--sig-ink);
+  }
+
   /* A match card: a two-tone team-colour stripe down the left edge, scores in the display face. */
   .match {
     position: relative;
@@ -912,7 +926,7 @@
   .home-strip {
     background: var(--surface-muted);
     color: var(--text);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-block);
   }
   .strip-scroll {
     scrollbar-width: none;

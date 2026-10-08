@@ -64,7 +64,7 @@ function Bars({ card }: { card: TryCard }) {
 
 function CardView({ card, followed, onFollow }: { card: TryCard; followed: boolean; onFollow: () => void }) {
   return (
-    <article className="rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-[18px] shadow-[var(--shadow-card)]" data-testid="try-card" data-league={card.league} data-slug={card.slug}>
+    <article className="rounded-[20px] border border-[var(--border-block)] bg-[var(--surface)] p-[18px] shadow-[var(--shadow-card)]" data-testid="try-card" data-league={card.league} data-slug={card.slug}>
       <div className="flex items-center gap-3">
         <Crest name={card.name} color={card.teamColor} size={46} />
         <div className="min-w-0">
