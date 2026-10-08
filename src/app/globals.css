@@ -846,7 +846,9 @@
   display: none;
 }
 :root[data-home="built"] .home-builder-hero,
-:root[data-home="collapsed"] .home-builder-hero {
+:root[data-home="collapsed"] .home-builder-hero,
+:root[data-home="built"] .home-firstvisit,
+:root[data-home="collapsed"] .home-firstvisit {
   display: none;
 }
 :root[data-home="built"] .home-skeleton {
