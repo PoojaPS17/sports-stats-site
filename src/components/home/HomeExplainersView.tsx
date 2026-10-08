@@ -71,7 +71,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
   return (
     <>
       <section className="home-firstvisit" data-module="showcase" aria-labelledby="hx-showcase">
-        <SectionHeader description="Things a plain scores app does not give you">
+        <SectionHeader plain description="Things a plain scores app does not give you">
           <span id="hx-showcase">Built from every result we store</span>
         </SectionHeader>
         <div className="hx-show">
@@ -87,7 +87,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
       </section>
 
       <section className="home-firstvisit" data-module="how-it-works" aria-labelledby="hx-how">
-        <SectionHeader description="Three steps, no account">
+        <SectionHeader plain description="Three steps, no account">
           <span id="hx-how">How it works</span>
         </SectionHeader>
         <div className="hx-how">
@@ -108,7 +108,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
       </section>
 
       <section className="home-firstvisit" data-module="trust" aria-labelledby="hx-trust">
-        <SectionHeader>
+        <SectionHeader plain>
           <span id="hx-trust">Where the numbers come from</span>
         </SectionHeader>
         <div className="hx-trust">
@@ -129,7 +129,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
       </section>
 
       <section className="home-firstvisit" data-module="start-here" aria-labelledby="hx-start">
-        <SectionHeader description="Not ready to pick? The best pages in every sport.">
+        <SectionHeader plain description="Not ready to pick? The best pages in every sport.">
           <span id="hx-start">Start here</span>
         </SectionHeader>
         <StartHere lines={lines} />

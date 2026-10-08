@@ -21,6 +21,19 @@ export const MAX_PER_SPORT = 2;
 
 export type FactKind = "win-streak" | "unbeaten" | "season-perfect" | "hundred" | "five-for" | "hat-trick" | "forty-points" | "passing-yards";
 
+/** What a "+ Follow" on a card adds to the visitor's pick state: the sport, and the team or player when the stored row names one. */
+export interface FactFollow {
+  /** A picker sport id: cricket, football, nfl, nba, mlb. */
+  sport: string;
+  block?: { type: "team-next" | "player-form"; params: Record<string, string>; label: string };
+}
+
+/** The picker sport a sport family belongs to ("soccer" is football), or null for a sport the picker does not offer. */
+export function pickSportOf(family: string): string | null {
+  const map: Record<string, string> = { soccer: "football", cricket: "cricket", nfl: "nfl", nba: "nba", mlb: "mlb" };
+  return map[family] ?? null;
+}
+
 export interface LineFact {
   /** Unique per fact, e.g. "team:epl:12". */
   id: string;
@@ -39,6 +52,8 @@ export interface LineFact {
   at: string;
   /** How notable it is, higher first. Comparable across kinds (see factWeight). */
   weight: number;
+  /** What following this fact adds to the visitor's page; absent where the sport is not in the picker. */
+  follow?: FactFollow;
 }
 
 /** The sport family of a league key: all football competitions are one sport, all cricket competitions another. */

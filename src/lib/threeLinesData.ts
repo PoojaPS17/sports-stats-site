@@ -71,6 +71,7 @@ interface RawInnings {
   match_id: string;
   innings_no: string | number;
   player_id: string;
+  player_slug?: string | null;
   player_name: string;
   team_name: string;
   opponent_name: string;
@@ -87,6 +88,7 @@ const toRow = (r: RawInnings): CricketInningsRow => ({
   matchId: r.match_id,
   inningsNo: Number(r.innings_no),
   playerId: r.player_id,
+  playerSlug: r.player_slug ?? null,
   playerName: r.player_name,
   teamName: r.team_name,
   opponentName: r.opponent_name,
@@ -102,7 +104,7 @@ const toRow = (r: RawInnings): CricketInningsRow => ({
 export async function readCricketRows(hours: number = FRESH_HOURS, limit = 30): Promise<CricketInningsRow[]> {
   const [archived, series] = await Promise.all([
     pool.query<RawInnings>(
-      `select g.league, g.espn_id as match_id, inn.n as innings_no, pgs.player_espn_id as player_id, p.name as player_name,
+      `select g.league, g.espn_id as match_id, inn.n as innings_no, pgs.player_espn_id as player_id, p.slug as player_slug, p.name as player_name,
               t.name as team_name, ot.name as opponent_name,
               (inn.j->'batting'->>'runs')::int as runs, (inn.j->'batting'->>'ballsFaced')::int as balls,
               (inn.j->'batting'->>'notOut')::boolean as not_out,

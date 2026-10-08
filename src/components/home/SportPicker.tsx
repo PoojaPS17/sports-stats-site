@@ -7,7 +7,7 @@ import { followsToBlocks, searchResultToBlock } from "@/lib/followBlocks";
 import { getFollows } from "@/lib/follow";
 import type { HomeBlock } from "@/lib/blockTypes";
 import { MAX_BLOCKS, newSetup, readSetup, SETUP_EVENT, writeDeclined, writeSetup } from "@/lib/homeSetup";
-import { blocksForSports, isSportPick, PICKED_EVENT, PICK_TOGGLE_EVENT, SPORT_PICK_LABEL, SPORT_PICKS, type SportPick } from "@/lib/sportPicks";
+import { blocksForSports, isSportPick, PICKED_BLOCKS_EVENT, PICKED_EVENT, PICK_FOLLOW_EVENT, PICK_TOGGLE_EVENT, SPORT_PICK_LABEL, SPORT_PICKS, trayPlaceholders, type SportPick } from "@/lib/sportPicks";
 import type { SearchResult } from "@/lib/queries";
 import type { SiteCounts } from "@/lib/siteCounts";
 import { buildLogMs, startSteps } from "@/lib/makeItYours";
@@ -53,6 +53,16 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
   }, []);
   const bandRef = useRef<HTMLDivElement>(null);
   const [dock, setDock] = useState(false);
+  const dockRef = useRef<HTMLDivElement>(null);
+  // A short bump on the dock whenever a pick is added from elsewhere on the page (a Start-here card, a Follow).
+  const pulse = () => {
+    const el = dockRef.current;
+    if (!el) return;
+    el.classList.remove("sp-bump");
+    void el.offsetWidth;
+    el.classList.add("sp-bump");
+  };
+  const extraRef = useRef<HomeBlock[]>([]);
   const [finalHost, setFinalHost] = useState<HTMLElement | null>(null);
 
   // The closing call to action lives at the foot of the page (server-rendered empty slot) but shares this state.
@@ -132,14 +142,43 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
   useEffect(() => {
     const onToggle = (e: Event) => {
       const sport = (e as CustomEvent<unknown>).detail;
-      if (typeof sport === "string" && isSportPick(sport)) setSports((list) => (list.includes(sport) ? list.filter((x) => x !== sport) : [...list, sport]));
+      if (typeof sport === "string" && isSportPick(sport)) {
+        setSports((list) => (list.includes(sport) ? list.filter((x) => x !== sport) : [...list, sport]));
+        pulse();
+      }
+    };
+    // "+ Follow" on a card: the sport, and the team or player when the card names one. A second tap on a followed team or
+    // player takes it off again (the sport stays); a sport-only card toggles the sport.
+    const onFollow = (e: Event) => {
+      const d = (e as CustomEvent<{ sport?: unknown; block?: HomeBlock | null }>).detail;
+      if (!d || typeof d.sport !== "string" || !isSportPick(d.sport)) return;
+      const sport = d.sport;
+      const block = d.block && typeof d.block.id === "string" && typeof d.block.label === "string" ? d.block : null;
+      if (!block) {
+        setSports((list) => (list.includes(sport) ? list.filter((x) => x !== sport) : [...list, sport]));
+      } else if (extraRef.current.some((x) => x.id === block.id)) {
+        setExtra((list) => list.filter((x) => x.id !== block.id));
+      } else {
+        if (extraRef.current.length >= MAX_BLOCKS - 2) return;
+        setExtra((list) => (list.length >= MAX_BLOCKS - 2 || list.some((x) => x.id === block.id) ? list : [...list, block]));
+        setSports((list) => (list.includes(sport) ? list : [...list, sport]));
+      }
+      pulse();
     };
     window.addEventListener(PICK_TOGGLE_EVENT, onToggle);
-    return () => window.removeEventListener(PICK_TOGGLE_EVENT, onToggle);
+    window.addEventListener(PICK_FOLLOW_EVENT, onFollow);
+    return () => {
+      window.removeEventListener(PICK_TOGGLE_EVENT, onToggle);
+      window.removeEventListener(PICK_FOLLOW_EVENT, onFollow);
+    };
   }, []);
   useEffect(() => {
     window.dispatchEvent(new CustomEvent(PICKED_EVENT, { detail: sports }));
   }, [sports]);
+  useEffect(() => {
+    extraRef.current = extra;
+    window.dispatchEvent(new CustomEvent(PICKED_BLOCKS_EVENT, { detail: extra.map((b) => b.id) }));
+  }, [extra]);
 
   const blocks = useMemo(() => blocksForSports(sports, edition, ctx, extra), [sports, edition, ctx, extra]);
   const chosen = new Set(extra.map((b) => b.id));
@@ -297,21 +336,32 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
                 <i />
               </div>
             </div>
-          ) : blocks.length === 0 ? (
-            <ul className="grid gap-1.5" aria-label="Your page so far">
-              <li className="flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--border)] px-2.5 py-2 text-[12.5px] font-bold text-[var(--text-faint)]">Tap a sport and watch this fill</li>
-              <li className="hidden items-center gap-2.5 rounded-xl border border-dashed border-[var(--border)] px-2.5 py-2 text-[12.5px] font-bold text-[var(--text-faint)] lg:flex">Your next block</li>
-            </ul>
           ) : (
-            <ol className="grid gap-1.5" aria-label="Your page so far">
-              {blocks.map((b, i) => (
-                <li key={b.id} className={`items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] font-bold ${i < 2 ? "flex" : "hidden lg:flex"}`}>
-                  <span className="w-4 text-[var(--text-faint)]">{i + 1}</span>
-                  <span className="min-w-0 flex-1 truncate">{b.label}</span>
-                </li>
-              ))}
-              {blocks.length > 2 && <li className="px-1 text-[12px] font-semibold text-[var(--text-muted)] lg:hidden">+ {blocks.length - 2} more</li>}
-            </ol>
+            <>
+              <p className="sp-head">
+                Your page, <em>in one line.</em>
+              </p>
+              {blocks.length > 0 && (
+                <ol className="grid gap-1.5" aria-label="Your page so far">
+                  {blocks.map((b, i) => (
+                    <li key={b.id} className={`items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] font-bold ${i < 2 ? "flex" : "hidden lg:flex"}`}>
+                      <span className="w-4 text-[var(--text-faint)]">{i + 1}</span>
+                      <span className="min-w-0 flex-1 truncate">{b.label}</span>
+                    </li>
+                  ))}
+                  {blocks.length > 2 && <li className="px-1 text-[12px] font-semibold text-[var(--text-muted)] lg:hidden">+ {blocks.length - 2} more</li>}
+                </ol>
+              )}
+              {trayPlaceholders(blocks.length) > 0 && (
+                <ul className={`grid gap-1.5 ${blocks.length > 0 ? "mt-1.5" : ""}`} aria-label={blocks.length === 0 ? "Your page so far" : undefined} data-testid="tray-placeholders">
+                  {Array.from({ length: trayPlaceholders(blocks.length) }, (_, i) => (
+                    <li key={i} className="flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--border)] px-2.5 py-2 text-[12.5px] font-bold text-[var(--text-faint)]">
+                      {blocks.length === 0 && i === 0 ? "Tap a sport and watch this fill" : "Your next block"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
           <div className="mt-2.5 flex items-center gap-2.5">
             <button type="button" onClick={build} disabled={blocks.length === 0 || building !== null} className="h-12 shrink-0 rounded-xl bg-[var(--volt)] px-5 text-[15px] font-extrabold text-[var(--navy)] shadow-[inset_0_0_0_1.5px_var(--navy)] disabled:opacity-45">
@@ -326,13 +376,14 @@ export function SportPicker({ ctx, lines, liveNow, counts }: { ctx: EditionConte
     </div>
 
     <div
+      ref={dockRef}
       role="region"
       aria-label="Your page"
       aria-hidden={!dock}
       className={`fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-[920px] items-center gap-2.5 rounded-[18px] bg-[var(--navy-2)] py-2 pl-3.5 pr-2 text-white shadow-[0_18px_40px_-12px_rgba(0,0,0,0.55),0_0_0_1px_var(--band-deep-line)] transition duration-300 ${dock ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-6 opacity-0"}`}
     >
       <div className="min-w-0 flex-1">
-        <b className="block truncate text-[13.5px] font-extrabold">{sports.length ? `Your page: ${sports.map((s) => SPORT_PICK_LABEL[s]).join(", ")}${extra.length ? ` + ${extra.length} ${extra.length > 1 ? "teams" : "team"}` : ""}` : "Your page is two taps away"}</b>
+        <b className="block truncate text-[13.5px] font-extrabold">{sports.length ? `Your page: ${sports.map((s) => SPORT_PICK_LABEL[s]).join(", ")}${extra.length ? ` + ${extra.length} ${extra.length > 1 ? "follows" : "follow"}` : ""}` : "Your page is two taps away"}</b>
         <span className="block truncate text-[11.5px] font-semibold text-[var(--band-deep-muted)]">{sports.length ? `${blocks.length} blocks · saved on this device, no account` : "Pick a sport, or build it from the top"}</span>
       </div>
       <button type="button" tabIndex={dock ? 0 : -1} onClick={buildOrPick} className="h-10 shrink-0 rounded-[11px] bg-[var(--volt)] px-4 text-[13px] font-extrabold text-[var(--navy)]">

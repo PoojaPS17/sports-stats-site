@@ -1,3 +1,4 @@
+import { SectionHeader } from "@/components/SectionHeader";
 import Link from "next/link";
 import { getThreeLines } from "@/lib/threeLinesData";
 import type { LineFact } from "@/lib/threeLines";
@@ -24,11 +25,10 @@ export async function TodayInThreeLines() {
   if (lines.length === 0) return null;
   return (
     <section className="home-firstvisit" aria-labelledby="home-three-lines">
-      <h2 id="home-three-lines" className="text-[21px] font-extrabold leading-tight tracking-tight text-[var(--text)]">
-        Today in three lines
-        <small className="mt-0.5 block text-xs font-bold tracking-normal text-[var(--text-muted)]">From results stored in the last two days. Each line links to the page with the figure.</small>
-      </h2>
-      <ol className="card mt-3 divide-y divide-[var(--border)] overflow-hidden">
+      <SectionHeader plain description="From results stored in the last two days. Each line links to the page with the figure.">
+        <span id="home-three-lines">Today in three lines</span>
+      </SectionHeader>
+      <ol className="card divide-y divide-[var(--border)] overflow-hidden">
         {lines.map((fact, i) => (
           <li key={fact.id}>
             <Link href={fact.href} className="grid grid-cols-[28px_1fr] items-baseline gap-2.5 px-4 py-3 text-sm font-semibold text-[var(--text)] hover:bg-[var(--sig-soft)]">

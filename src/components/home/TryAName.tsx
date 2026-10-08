@@ -10,7 +10,7 @@ export async function TryAName() {
   const defaults = await getTryDefaults();
   return (
     <section className="home-firstvisit" data-module="try-a-name">
-      <SectionHeader description="Any player. What the site holds on them, in one tap.">Try a name</SectionHeader>
+      <SectionHeader plain description="Any player. What the site holds on them, in one tap.">Try a name</SectionHeader>
       <TryNameIsland initial={defaults?.card ?? null} chips={defaults?.suggestions.chips ?? []} />
     </section>
   );

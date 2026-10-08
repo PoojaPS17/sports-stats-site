@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { SOCCER_LEAGUES } from "@/lib/leagues";
 import { LEAGUES, type League, getRecentAndUpcoming, getFeaturedGames, getNews, getMostRecentPlayedSeason, getNextFixtureDate, type GameRow, type NewsArticle } from "@/lib/queries";
 import { getLiveGames, getUpcomingGames, getNextF1Event } from "@/lib/homeFeed";
 import { getOffseasonRecap } from "@/lib/offseason";
@@ -78,6 +79,16 @@ const readSnapshots = unstable_cache(
     ) as Partial<Record<League, LeagueSnapshotData | null>>,
   ["home-snapshots"],
   { revalidate: TIER.FIXTURES }
+);
+
+// The next stored fixture for every league behind a sport tile in the picker (all football competitions, NFL, NBA,
+// MLB), for the tile's status line. Cricket, tennis and F1 read their own lists above. A short tier: the line says
+// "in 5 hours", and a fixture moved or added should not take an hour to show.
+const NEXT_FIXTURE_LEAGUES: League[] = [...SOCCER_LEAGUES, "nfl", "nba", "mlb"];
+const readNextFixtures = unstable_cache(
+  async () => Object.fromEntries(await Promise.all(NEXT_FIXTURE_LEAGUES.map(async (l) => [l, await getNextFixtureDate(l)] as const))) as Partial<Record<League, string | null>>,
+  ["home-next-fixtures"],
+  { revalidate: 300 }
 );
 
 const readNews = unstable_cache(
@@ -164,19 +175,22 @@ export interface HomeData {
   /** Leagues with nothing on this week: on a break (`resumesOn` is the next kickoff) or between seasons (null), with the last season played. */
   offSeason: { league: League; lastSeason: number | null; resumesOn: string | null }[];
   news: NewsArticle[];
+  /** Next stored fixture per league behind a picker tile; null where none is left, absent where the read failed. */
+  nextFixtures: Partial<Record<League, string | null>>;
 }
 
 const HOURS = 3600 * 1000;
 
 export const getHomeData = cache(async (): Promise<HomeData> => {
   const today = easternDay(new Date().toISOString());
-  const [liveLists, tennisRows, fixtures, news, facts, snapshots] = await Promise.all([
+  const [liveLists, tennisRows, fixtures, news, facts, snapshots, nextFixtures] = await Promise.all([
     readLiveLists(),
     readTennisDay(today),
     readFixtures(),
     readNews(),
     readSeasonFacts(),
     readSnapshots(),
+    readNextFixtures().catch(() => ({}) as Partial<Record<League, string | null>>),
   ]);
 
   // One ESPN pass for every league game that could be in play, whichever block shows it.
@@ -251,5 +265,6 @@ export const getHomeData = cache(async (): Promise<HomeData> => {
     sections,
     offSeason,
     news,
+    nextFixtures,
   };
 });

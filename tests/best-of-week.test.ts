@@ -1,7 +1,7 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { startTestDb, type TestDb } from "./helpers/testDb";
-import { ageLabel, competitionLabel, playerGameFacts, selectBest, BALLS_NOT_RECORDED, type BestFact, type PlayerGameRow } from "../src/lib/bestOfWeek";
+import { ageLabel, bestChips, chipKey, chipShows, competitionLabel, playerGameFacts, selectBest, BALLS_NOT_RECORDED, type BestFact, type PlayerGameRow } from "../src/lib/bestOfWeek";
 
 // "Best of this week" against a real database: which stored results clear their bar inside the seven days, what the
 // sentence says, where it links, and how a hundred with no recorded balls is marked. Expectations are hand-computed
@@ -84,6 +84,11 @@ test("only results that clear their bar inside the seven days, worded and linked
   assert.equal(by("A. Rahman").note, BALLS_NOT_RECORDED, "a hundred with no balls faced says so");
   assert.equal(by("Sam Strike").note, undefined);
   assert.equal(by("Sam Strike").league, "epl");
+  // What + Follow adds: the player where the row has a page, always the sport.
+  assert.deepEqual(by("Sam Strike").follow, { sport: "football", block: { type: "player-form", params: { league: "epl", player: "sam-strike" }, label: "Sam Strike: last five" } });
+  assert.deepEqual(by("A. Rahman").follow, { sport: "cricket", block: { type: "player-form", params: { league: "odi", player: "a-rahman" }, label: "A. Rahman: last five" } });
+  assert.equal(by("Ace Scorer").follow?.sport, "nba");
+  assert.equal(by("Big Arm").follow?.block?.params.player, "big-arm");
 });
 
 test("the cards: all four, one per sport, strongest first, each text holds its figure", async () => {
@@ -121,4 +126,19 @@ test("age labels are elapsed time", () => {
 test("an empty database gives no cards", async () => {
   for (const t of ["player_game_stats", "games"]) await q(`delete from ${t}`);
   assert.deepEqual(selectBest(await readBestFacts(), new Date()) as BestFact[], []);
+});
+
+test("sport chips: All first, then only the sports that have a card, in the picker's order; a chip shows its own cards", () => {
+  const facts = [{ sport: "nba" }, { sport: "soccer" }, { sport: "cricket" }, { sport: "soccer" }];
+  assert.deepEqual(bestChips(facts), [
+    { key: "all", label: "All" },
+    { key: "cricket", label: "Cricket" },
+    { key: "football", label: "Football" },
+    { key: "nba", label: "NBA" },
+  ]);
+  assert.deepEqual(bestChips([{ sport: "nhl" }]).map((c) => c.key), ["all", "nhl"]);
+  assert.equal(chipKey({ sport: "soccer" }), "football");
+  assert.ok(chipShows({ sport: "soccer" }, "all"));
+  assert.ok(chipShows({ sport: "soccer" }, "football"));
+  assert.ok(!chipShows({ sport: "soccer" }, "nba"));
 });

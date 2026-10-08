@@ -231,7 +231,7 @@ export function TryNameIsland({ initial, chips }: { initial: TryCard | null; chi
   const isFollowed = !!card?.block && followed.has(card.block.id);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+    <div className="grid gap-4">
       <div className="min-w-0">
         <label className="flex h-[52px] items-center gap-2.5 rounded-2xl border-[1.5px] border-[var(--border)] bg-[var(--surface)] px-3.5 shadow-[var(--shadow-card)] focus-within:border-[var(--sig)] focus-within:shadow-[0_0_0_4px_color-mix(in_srgb,var(--sig)_20%,transparent)]">
           <svg aria-hidden viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">

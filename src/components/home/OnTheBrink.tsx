@@ -20,7 +20,7 @@ export function OnTheBrinkView({ items }: { items: BrinkItem[] }) {
   if (items.length === 0) return null;
   return (
     <section className="home-firstvisit" data-module="on-the-brink" aria-labelledby="home-on-the-brink">
-      <SectionHeader description="Season milestones, from results stored on this site. Each name links to the player's page.">
+      <SectionHeader plain description="Season milestones, from results stored on this site. Each name links to the player's page.">
         <span id="home-on-the-brink">On the brink</span>
       </SectionHeader>
       <ul className="grid gap-3 sm:grid-cols-2">

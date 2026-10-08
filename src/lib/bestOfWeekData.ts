@@ -33,7 +33,7 @@ export async function readPlayerGameRows(hours: number = WEEK_HOURS): Promise<Pl
   const perSource = await Promise.all(
     SOURCES.map(async (src) => {
       const { rows } = await pool.query(
-        `select g.league, g.espn_id as game_id, p.espn_id as player_id, p.name as player_name, t.name as team_name, ot.name as opponent_name,
+        `select g.league, g.espn_id as game_id, p.espn_id as player_id, p.slug as player_slug, p.name as player_name, t.name as team_name, ot.name as opponent_name,
                 ${src.figure} as value, g.date as at
          from games g
          join player_game_stats pgs on pgs.league = g.league and pgs.game_espn_id = g.espn_id
@@ -53,6 +53,7 @@ export async function readPlayerGameRows(hours: number = WEEK_HOURS): Promise<Pl
           league: r.league,
           gameId: r.game_id,
           playerId: r.player_id,
+          playerSlug: r.player_slug ?? null,
           playerName: r.player_name,
           teamName: r.team_name,
           opponentName: r.opponent_name,

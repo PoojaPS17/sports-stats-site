@@ -249,5 +249,5 @@ test("the card source: one section, nothing hidden from the HTML, no hard-coded 
   const src = readFileSync(new URL("../src/components/home/RightNow.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(src, /display:\s*none|className="[^"]*\bhidden\b/);
   const page = readFileSync(new URL("../src/app/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /<div className="home-firstvisit">\s*<RightNow \/>/);
+  assert.match(page, /<div className="home-firstvisit home-mods">[\s\S]*?<div className="home-col">\s*<RightNow \/>/);
 });

@@ -1,3 +1,4 @@
+import { SectionHeader } from "@/components/SectionHeader";
 import Link from "next/link";
 import { getWhoLeads } from "@/lib/whoLeadsData";
 import type { LeaderEntry } from "@/lib/whoLeads";
@@ -33,11 +34,10 @@ export async function WhoLeads() {
   if (leagues.length === 0) return null;
   return (
     <section className="home-firstvisit" data-module="who-leads" aria-labelledby="home-who-leads">
-      <h2 id="home-who-leads" className="text-[21px] font-extrabold leading-tight tracking-tight text-[var(--text)]">
-        Who leads
-        <small className="mt-0.5 block text-xs font-bold tracking-normal text-[var(--text-muted)]">Top of the leader boards in each competition now in season. Totals are from results stored on this site.</small>
-      </h2>
-      <div className="wl-grid mt-3">
+      <SectionHeader plain description="Top of the leader boards in each competition now in season. Totals are from results stored on this site.">
+        <span id="home-who-leads">Who leads</span>
+      </SectionHeader>
+      <div className="wl-grid">
         {leagues.map((l) => (
           <article key={l.league} className="wl-card card">
             <header className="wl-head">

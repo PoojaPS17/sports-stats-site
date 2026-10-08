@@ -73,7 +73,17 @@ function LeagueBlock({ section }: { section: HomeSection }) {
 export default async function HomePage() {
   const [home, editionContext, counts] = await Promise.all([getHomeData(), getEditionContext(), getSiteCounts()]);
   const beyondTheScorelineArticles = listArticles().slice(0, 3);
-  const lines = sportLines({ liveCricket: home.liveCricket.length, liveTennis: home.liveTennis.length, sections: home.sections });
+  const iso = (d: string | Date | null | undefined) => (d ? new Date(d).toISOString() : null);
+  const lines = sportLines({
+    liveCricket: home.liveCricket.length,
+    liveTennis: home.liveTennis.length,
+    sections: home.sections,
+    liveGames: home.liveGames,
+    nextFixtures: home.nextFixtures,
+    nextCricket: [...home.nextCricket, ...home.moreCricket].map((m) => m.date),
+    nextTennis: home.nextTennis.map((m) => m.date),
+    nextF1: home.f1 ? { start: iso(home.f1.race_date ?? home.f1.date)!, end: iso(home.f1.end_date) } : null,
+  });
 
   // League blocks most active first; the cricket block ranks by its own live count
   // (a full day of internationals outranks a league with nothing on). Leagues
@@ -89,18 +99,38 @@ export default async function HomePage() {
         <SportPicker ctx={editionContext} lines={lines} liveNow={home.liveGames.length + home.liveCricket.length + home.liveTennis.length} counts={counts} />
       </section>
       <CollapsedBar />
-      <div className="home-firstvisit">
-        <RightNow />
+      <div className="home-firstvisit home-mods">
+        <div className="home-duo home-duo-wide">
+          <div className="home-col">
+            <RightNow />
+            <TodayInThreeLines />
+          </div>
+          <TryAName />
+        </div>
+        <BestOfWeek />
+        <div className="home-duo">
+          <WhoLeads />
+          <OnTheBrink />
+        </div>
+        <HomeExplainers lines={lines} />
+        {beyondTheScorelineArticles.length > 0 && (
+          <section data-module="from-the-desk" aria-labelledby="home-from-the-desk">
+            <SectionHeader plain action={{ label: "Beyond the Scoreline", href: "/beyond-the-scoreline" }}>
+              <span id="home-from-the-desk">From the desk</span>
+            </SectionHeader>
+            <div className="grid gap-3 sm:grid-cols-2 min-[1000px]:grid-cols-3">
+              {beyondTheScorelineArticles.map((a) => (
+                <StoryCard key={a.slug} article={a} variant="row" />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
       <div className="home-skeleton" aria-hidden />
-      <TodayInThreeLines />
-      <TryAName />
-      <BestOfWeek />
-      <WhoLeads />
-      <OnTheBrink />
-      <HomeExplainers lines={lines} />
       <HomeBlocks ctx={editionContext} />
+      <div id="home-final-cta" className="empty:hidden" />
       <h2 className="home-else display text-[28px] text-[var(--text)]">Everything else is still here</h2>
+      <h2 className="home-scores-h text-[24px] font-extrabold leading-[1.1] tracking-[-0.03em] text-[var(--text)] min-[1000px]:text-[30px]">Scores, tables and leaders</h2>
 
       <HomeLive data={home} />
 
@@ -140,7 +170,7 @@ export default async function HomePage() {
         {(home.news.length > 0 || beyondTheScorelineArticles.length > 0) && (
           <div className="lg:col-span-1 flex flex-col gap-10">
             {beyondTheScorelineArticles.length > 0 && (
-              <aside>
+              <aside className="home-desk-lower">
                 <SectionHeader action={{ label: "All articles", href: "/beyond-the-scoreline" }}>Beyond the Scoreline</SectionHeader>
                 <div className="flex flex-col gap-2">
                   {beyondTheScorelineArticles.map((a) => (
@@ -174,7 +204,6 @@ export default async function HomePage() {
           </div>
         )}
       </div>
-      <div id="home-final-cta" className="-mb-12 empty:hidden" />
     </div>
   );
 }
