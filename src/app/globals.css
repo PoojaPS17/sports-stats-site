@@ -864,3 +864,8 @@
 :root[data-home="collapsed"] .home-collapsed-bar {
   display: flex;
 }
+/* First-visit modules (Today in three lines and its siblings) are for a visitor with no saved setup. */
+:root[data-home="built"] .home-firstvisit,
+:root[data-home="collapsed"] .home-firstvisit {
+  display: none;
+}
