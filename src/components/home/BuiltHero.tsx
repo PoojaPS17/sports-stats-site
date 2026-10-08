@@ -18,21 +18,20 @@ export function BuiltHero({ setup, headline, sub, liveCount, colours, onEdit }: 
     >
       <span className="home-decor-glow" aria-hidden />
       <HeroDecor variant="built" />
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-3">
-          <p className="eyebrow flex flex-wrap items-center gap-2">
-            {liveCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--pill-live-bg)] px-2 py-0.5 text-[10.5px] text-[var(--pill-live-text)]">
-                <span className="live-dot bg-white" aria-hidden />
-                {liveCount} live
-              </span>
-            )}
-            Your homepage · {today} · {setup.blocks.length} blocks
-          </p>
-          <h1 className="display max-w-4xl text-[30px] text-[var(--text)] sm:text-[40px] lg:text-[50px]">{headline}</h1>
-          {sub && <p className="max-w-2xl text-[15px] font-semibold text-[var(--text-muted)] sm:text-[16px]">{sub}</p>}
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div className="bhero-body flex flex-col gap-3">
+        <p className="eyebrow flex flex-wrap items-center gap-2">
+          {liveCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--pill-live-bg)] px-2 py-0.5 text-[10.5px] text-[var(--pill-live-text)]">
+              <span className="live-dot bg-white" aria-hidden />
+              {liveCount} live
+            </span>
+          )}
+          Your homepage · {today} · {setup.blocks.length} blocks
+        </p>
+        <h1 className="display max-w-4xl text-[30px] text-[var(--text)] sm:text-[40px] lg:text-[50px]">{headline}</h1>
+        {sub && <p className="max-w-2xl text-[15px] font-semibold text-[var(--text-muted)] sm:text-[16px]">{sub}</p>}
+        {/* Actions sit directly under the sub-line, left-aligned with the text, and wrap on a narrow screen. */}
+        <div className="bhero-actions">
           {liveCount > 0 && (
             <a href="#block-live" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[var(--sig)] px-3.5 text-[13px] font-extrabold text-[var(--sig-on)]">
               <span className="live-dot bg-[var(--sig-on)]" aria-hidden />Jump to live ({liveCount})
