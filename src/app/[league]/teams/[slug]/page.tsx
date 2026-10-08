@@ -16,7 +16,7 @@ import {
 import { fitTitle, pageMeta } from "@/lib/metadata";
 import { placeholderParts } from "@/lib/playoffSeries";
 import { LEAGUE_SHORT } from "@/lib/leagues";
-import { teamNotFound } from "@/lib/legacySlug";
+import { aliasTeamRedirect, teamNotFound } from "@/lib/legacySlug";
 import { formatWinLossTie, lastResultDate, seasonResults, summarizeTeamSeason } from "@/lib/teamSummary";
 import { teamClaims } from "@/lib/heroClaims";
 import { AdSlot } from "@/components/AdSlot";
@@ -75,6 +75,8 @@ export default async function TeamPage({
 }) {
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
+
+  aliasTeamRedirect(league, slug, "");
 
   const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug));
 

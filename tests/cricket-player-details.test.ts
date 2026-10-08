@@ -98,7 +98,7 @@ test("the meta description cuts an average the way the grid does (Statsguru), no
 /* --------------------------- the team a page names ------------------------- */
 
 async function seedXi() {
-  await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('t20i', '40', 'Afghanistan', 'afghanistan'), ('t20i', 'cs-icc-world-xi', 'ICC World XI', 'icc-world-xi'), ('t20i', 'cs-swaziland', 'Swaziland', 'swaziland'), ('t20i', '7', 'Pakistan', 'pakistan')`);
+  await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('t20i', '40', 'Afghanistan', 'afghanistan'), ('t20i', 'cs-icc-world-xi', 'ICC World XI', 'icc-world-xi'), ('t20i', 'cs-swaziland', 'Swaziland', 'swaziland'), ('t20i', '300710', 'Eswatini', 'eswatini'), ('t20i', '7', 'Pakistan', 'pakistan')`);
   await db.pool.query(`insert into players (league, espn_id, team_espn_id, name, slug, roster_seen_at) values
     ('t20i', 'rashid', 'cs-icc-world-xi', 'Rashid Khan', 'rashid-khan', now()),
     ('t20i', 'only-xi', 'cs-icc-world-xi', 'Only Xi', 'only-xi', now()),
@@ -125,7 +125,7 @@ test("a player whose last roster row is a one-off XI is shown with his most rece
 test("everyone else keeps the stored team: a national side, a small nation, and a player who only ever played for the XI", async () => {
   await seedXi();
   assert.equal((await queries.getPlayerBySlug("t20i", "shahid-afridi"))?.team_name, "Pakistan");
-  assert.equal((await queries.getPlayerBySlug("t20i", "eswatini-man"))?.team_name, "Swaziland");
+  assert.equal((await queries.getPlayerBySlug("t20i", "eswatini-man"))?.team_name, "Eswatini");
   assert.equal((await queries.getPlayerBySlug("t20i", "only-xi"))?.team_name, "ICC World XI");
 });
 
