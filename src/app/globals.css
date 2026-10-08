@@ -273,39 +273,72 @@
    themes. Done with token overrides scoped to the header and the footer lockup, so Logo.tsx
    and Nav.tsx stay untouched.
 --------------------------------------------------------------------------- */
-header.sticky {
-  --mast: #ffffff;
-  --mast-text: #060640;
-  --mast-muted: #4a4a72;
-  --mast-line: rgba(6, 6, 64, 0.12);
-  --header-bg: #ffffff;
-  --header-text: #060640;
-  --header-text-muted: #4a4a72;
-  --header-border: #b8d4ec;
-  --header-hover-bg: rgba(6, 6, 64, 0.06);
-  --sig: #1470af;
-  --sig-ink: #1470af;
-  --surface: #ffffff;
-  --surface-muted: #eaf2fa;
-  --surface-hover: #f3f7fb;
-  --border: #b8d4ec;
-  --border-strong: #8fb8dc;
-  --text: #060640;
-  --text-muted: #4a4a72;
-  --text-faint: #646488;
-  --accent: #1470af;
-  --accent-soft: #eaf2fa;
-  --accent-hover: #0f5688;
-  --shadow-card: 0 1px 2px rgba(0, 23, 67, 0.06), 0 8px 24px -12px rgba(0, 23, 67, 0.16);
-  --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
-}
+@layer base {
+  header.sticky {
+    --mast: #ffffff;
+    --mast-text: #060640;
+    --mast-muted: #4a4a72;
+    --mast-line: rgba(6, 6, 64, 0.12);
+    --header-bg: #ffffff;
+    --header-text: #060640;
+    --header-text-muted: #4a4a72;
+    --header-border: #b8d4ec;
+    --header-hover-bg: rgba(6, 6, 64, 0.06);
+    --sig: #1470af;
+    --sig-ink: #1470af;
+    --surface: #ffffff;
+    --surface-muted: #eaf2fa;
+    --surface-hover: #f3f7fb;
+    --border: #b8d4ec;
+    --border-strong: #8fb8dc;
+    --text: #060640;
+    --text-muted: #4a4a72;
+    --text-faint: #646488;
+    --accent: #1470af;
+    --accent-soft: #eaf2fa;
+    --accent-hover: #0f5688;
+    --shadow-card: 0 1px 2px rgba(0, 23, 67, 0.06), 0 8px 24px -12px rgba(0, 23, 67, 0.16);
+    --shadow-pop: 0 14px 30px -14px rgba(11, 19, 36, 0.35), 0 2px 6px rgba(11, 19, 36, 0.08);
+  }
 
-footer.band-deep a[href="/"] {
-  --sig: #9cc7ea;
-}
+  footer.band-deep a[href="/"] {
+    --sig: #9cc7ea;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) header.sticky {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) header.sticky {
+      --mast: #07090f;
+      --mast-text: #eef1f7;
+      --mast-muted: #9aa5bd;
+      --mast-line: rgba(255, 255, 255, 0.08);
+      --header-bg: #07090f;
+      --header-text: #eef1f7;
+      --header-text-muted: #9aa5bd;
+      --header-border: #1f2738;
+      --header-hover-bg: rgba(255, 255, 255, 0.07);
+      --sig: var(--logo-lit);
+      --sig-ink: var(--logo-lit);
+      --surface: #0f1420;
+      --surface-muted: #161c2b;
+      --surface-hover: #1a2132;
+      --border: #1f2738;
+      --border-strong: #2e3850;
+      --text: #e9edf6;
+      --text-muted: #9aa6bf;
+      --text-faint: #6b7890;
+      --accent: var(--logo-lit);
+      --accent-soft: #23301a;
+      --accent-hover: #d8f766;
+      --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+      --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+    :root:not([data-theme="light"]) footer.band-deep a[href="/"] {
+      --sig: var(--logo-lit);
+      --mast-text: #eef1f7;
+    }
+  }
+
+  :root[data-theme="dark"] header.sticky {
     --mast: #07090f;
     --mast-text: #eef1f7;
     --mast-muted: #9aa5bd;
@@ -325,54 +358,26 @@ footer.band-deep a[href="/"] {
     --text: #e9edf6;
     --text-muted: #9aa6bf;
     --text-faint: #6b7890;
-    --accent: #c6f135;
+    --accent: var(--logo-lit);
     --accent-soft: #23301a;
     --accent-hover: #d8f766;
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
     --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
   }
-  :root:not([data-theme="light"]) footer.band-deep a[href="/"] {
+
+  :root[data-theme="dark"] footer.band-deep a[href="/"] {
     --sig: var(--logo-lit);
     --mast-text: #eef1f7;
   }
 }
 
-:root[data-theme="dark"] header.sticky {
-  --mast: #07090f;
-  --mast-text: #eef1f7;
-  --mast-muted: #9aa5bd;
-  --mast-line: rgba(255, 255, 255, 0.08);
-  --header-bg: #07090f;
-  --header-text: #eef1f7;
-  --header-text-muted: #9aa5bd;
-  --header-border: #1f2738;
-  --header-hover-bg: rgba(255, 255, 255, 0.07);
-  --sig: var(--logo-lit);
-  --sig-ink: var(--logo-lit);
-  --surface: #0f1420;
-  --surface-muted: #161c2b;
-  --surface-hover: #1a2132;
-  --border: #1f2738;
-  --border-strong: #2e3850;
-  --text: #e9edf6;
-  --text-muted: #9aa6bf;
-  --text-faint: #6b7890;
-  --accent: #c6f135;
-  --accent-soft: #23301a;
-  --accent-hover: #d8f766;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.7);
-  --shadow-pop: 0 14px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
-}
-
-:root[data-theme="dark"] footer.band-deep a[href="/"] {
-  --sig: var(--logo-lit);
-  --mast-text: #eef1f7;
-}
-
 /* Unselected form controls on light surfaces draw their edge at 3:1 (--ctl). Navy bands and the
-   header keep their own control styling. Unlayered on purpose: it must beat the border utilities. */
-main :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea):not(.band-deep *) {
-  border-color: var(--ctl);
+   header keep their own control styling. In the utilities layer so it competes with the border
+   utilities on specificity (this selector is the more specific) instead of sitting outside every layer. */
+@layer utilities {
+  main :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea):not(.band-deep *) {
+    border-color: var(--ctl);
+  }
 }
 
 /* ---------------------------------------------------------------------------
