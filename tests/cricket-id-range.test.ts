@@ -68,4 +68,9 @@ test("--league-days reads one request per distinct start day, ascending, at noon
   assert.ok(bad && typeof bad === "object");
   const days = distinctDays([new Date("1877-03-15T00:00:00Z"), "1877-03-15T23:30:00Z", "1999-12-26T04:00:00Z", "1912-06-10T10:00:00Z", "not a date"]);
   assert.deepEqual(days.map((d) => d.toISOString()), ["1877-03-15T12:00:00.000Z", "1912-06-10T12:00:00.000Z", "1999-12-26T12:00:00.000Z"]);
+  // The second pass (--unfiled) also reads the next day: a New Zealand Test stored at 18:30 UTC is listed under the next UTC day.
+  assert.deepEqual(
+    distinctDays(["1930-01-23T18:30:00Z", "1930-01-24T05:00:00Z"], true).map((d) => d.toISOString().slice(0, 10)),
+    ["1930-01-23", "1930-01-24", "1930-01-25"]
+  );
 });

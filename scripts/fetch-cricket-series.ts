@@ -12,7 +12,9 @@
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --league-days test --since 1877-01-01 --until 1999-12-31
 //
 // `--league-days <league>` reads only the days on which a stored match of that league started inside --since/--until
-// (the pre-2000 Tests: one request per Test start date, not one per calendar day of a century).
+// (the pre-2000 Tests: one request per Test start date, not one per calendar day of a century). Add `--unfiled` for a
+// second pass over the matches the first one left without a series row (it reads their day and the day after: ESPN files
+// a match under its local day, which for a New Zealand Test stored at 18:30 UTC is the next UTC day).
 //
 // A recurring tournament (BBL, WBBL, IPL, ...) keeps one ESPN league id for every season, so its matches are filed
 // per edition, `<league id>-<season>` ("8044-2025-26"), see src/lib/cricketSeriesKey.ts; a bilateral tour keeps its own id.
@@ -84,8 +86,14 @@ async function main() {
 
   let dates: Date[] = [];
   if (leagueDays) {
-    const { rows } = await pool.query(`select date from games where league = $1 and date >= $2 and date < $3::timestamptz + interval '1 day'`, [leagueDays, since, until]);
-    dates = distinctDays(rows.map((r) => r.date));
+    // --unfiled: only matches the listing has not filed yet (no cricket_series_matches row), read on their day and the next.
+    const unfiled = process.argv.includes("--unfiled");
+    const { rows } = await pool.query(
+      `select g.date from games g where g.league = $1 and g.date >= $2 and g.date < $3::timestamptz + interval '1 day'
+         ${unfiled ? "and not exists (select 1 from cricket_series_matches m where m.espn_id = g.espn_id)" : ""}`,
+      [leagueDays, since, until]
+    );
+    dates = distinctDays(rows.map((r) => r.date), unfiled);
   } else for (let d = new Date(since); d <= until; d = new Date(d.getTime() + 86_400_000)) dates.push(d);
 
   for (const d of dates) {
