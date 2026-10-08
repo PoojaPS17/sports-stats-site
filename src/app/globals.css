@@ -1135,3 +1135,176 @@
     }
   }
 }
+
+@layer components {
+  /* Build log in the picker tray and the "Make it yours" strip (src/components/home/SportPicker.tsx, MakeItYours.tsx). */
+  .sp-log ul {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .sp-log li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 12.5px;
+    font-weight: 700;
+    animation: sp-tick 0.35s both;
+    animation-delay: calc(var(--i) * 170ms);
+  }
+  .sp-log li i {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: var(--win);
+    color: var(--surface);
+    font-size: 11px;
+    font-style: normal;
+  }
+  .sp-log-bar {
+    height: 6px;
+    margin-top: 0.7rem;
+    border-radius: 4px;
+    background: var(--surface-muted);
+    overflow: hidden;
+  }
+  .sp-log-bar i {
+    display: block;
+    height: 100%;
+    background: var(--sig);
+    animation: sp-fill var(--t) linear both;
+  }
+  @keyframes sp-tick {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes sp-fill {
+    from {
+      width: 0;
+    }
+    to {
+      width: 100%;
+    }
+  }
+  .miy {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem;
+  }
+  .miy-hd {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .miy-hd b {
+    display: block;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .miy-hd span {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .miy-x {
+    align-self: flex-start;
+    width: 2rem;
+    height: 2rem;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--text-faint);
+  }
+  .miy-prog {
+    height: 8px;
+    margin-top: 0.6rem;
+    border-radius: 5px;
+    background: var(--surface-muted);
+    overflow: hidden;
+  }
+  .miy-prog i {
+    display: block;
+    height: 100%;
+    background: var(--sig);
+    transition: width 0.5s;
+  }
+  .miy-steps {
+    display: grid;
+    gap: 0.5rem;
+  }
+  @media (min-width: 768px) {
+    .miy-steps {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .miy-st {
+    display: flex;
+    gap: 0.65rem;
+    padding: 0.7rem 0.8rem;
+    min-width: 0;
+    border: 1.5px solid var(--border);
+    border-radius: 0.9rem;
+    background: var(--surface);
+  }
+  .miy-st.is-done {
+    border-color: var(--win);
+  }
+  .miy-st > div {
+    display: grid;
+    gap: 0.3rem;
+    justify-items: start;
+    min-width: 0;
+  }
+  .miy-st b {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .miy-st span:not(.miy-c) {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .miy-c {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid var(--border-strong);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--surface);
+  }
+  .is-done > .miy-c {
+    border-color: var(--win);
+    background: var(--win);
+  }
+  .miy-link {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--sig-ink);
+  }
+  .miy-link:hover {
+    text-decoration: underline;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sp-log li,
+    .sp-log-bar i {
+      animation: none;
+    }
+    .miy-prog i {
+      transition: none;
+    }
+  }
+}

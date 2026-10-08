@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 // "Add to calendar" menu for a fixture feed. `path` is the site-relative feed path
 // (/calendar/epl/arsenal). Subscribing keeps the calendar in sync; downloading is a
 // one-off snapshot.
-export function CalendarButton({ path, label = "Add to calendar" }: { path: string; label?: string }) {
+export function CalendarButton({ path, label = "Add to calendar", onUse }: { path: string; label?: string; /** Called when a subscribe, download or copy item is used. */ onUse?: () => void }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
@@ -73,6 +73,9 @@ export function CalendarButton({ path, label = "Add to calendar" }: { path: stri
         <div
           id={menuId}
           role="menu"
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest('[role="menuitem"]')) onUse?.();
+          }}
           className="absolute right-0 top-full z-30 mt-1 w-72 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-pop)]"
         >
           <p className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-faint)]">Subscribe (stays up to date)</p>

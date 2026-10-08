@@ -9,6 +9,7 @@ import { BlockFrame } from "./BlockFrame";
 import { BlockPalette } from "./BlockPalette";
 import { BuiltHero } from "./BuiltHero";
 import { HomeBuilder } from "./HomeBuilder";
+import { MakeItYours } from "./MakeItYours";
 import { MomentsMissed } from "./MomentsMissed";
 import { renderBlock } from "./blocks";
 import { useBlocksData } from "./useBlocksData";
@@ -102,6 +103,8 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
       ) : (
         <BuiltHero setup={setup} headline={line.headline} sub={line.sub} liveCount={line.liveCount} colours={heroTeamColours(loaded)} onEdit={() => setEditing(true)} />
       )}
+
+      {!editing && <MakeItYours setup={setup} onEdit={() => setEditing(true)} />}
 
       {!editing && <MomentsMissed blocks={blocks} />}
 
