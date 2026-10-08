@@ -170,7 +170,7 @@ export function RightNowCard({ view, tabs }: { view: RightNowView; tabs?: React.
   if (pick.mode === "none") {
     return (
       <section aria-label="Right now">
-        <SectionHeader plain description={DESCRIPTION.none} action={{ label: "All scores", href: "#live" }}>
+        <SectionHeader plain description={DESCRIPTION.none} action={{ label: "All scores", href: "/scores" }}>
           Right now
         </SectionHeader>
         <div className="card px-4 py-4 text-sm text-[var(--text-muted)]">
@@ -202,7 +202,7 @@ export function RightNowCard({ view, tabs }: { view: RightNowView; tabs?: React.
 
   return (
     <section aria-label="Right now">
-      <SectionHeader plain description={DESCRIPTION[pick.mode]} action={{ label: "All scores", href: "#live" }}>
+      <SectionHeader plain description={DESCRIPTION[pick.mode]} action={{ label: "All scores", href: "/scores" }}>
         Right now
       </SectionHeader>
       <article className="card rn" style={style}>

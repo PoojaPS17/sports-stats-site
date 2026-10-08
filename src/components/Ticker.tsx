@@ -58,7 +58,7 @@ export function Ticker() {
           ))}
           {items.length === 0 && <span className="strip-chip strip-chip-empty" aria-hidden />}
         </div>
-        <Link href="/top-games" className="strip-all hidden shrink-0 items-center px-4 text-xs font-bold sm:flex">
+        <Link href="/scores" className="strip-all hidden shrink-0 items-center px-4 text-xs font-bold sm:flex">
           All scores →
         </Link>
         {updatedAt && (

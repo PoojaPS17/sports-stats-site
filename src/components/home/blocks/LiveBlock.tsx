@@ -6,7 +6,7 @@ import type { LiveBlockData } from "@/lib/blockTypes";
 
 export function LiveBlock({ data }: { data: LiveBlockData }) {
   if (data.games.length + data.cricket.length + data.tennis.length === 0) {
-    return <p className="text-sm text-[var(--text-muted)]">Nothing in play right now. <Link href="#live" className="font-semibold text-[var(--sig-ink)]">Next fixtures below.</Link></p>;
+    return <p className="text-sm text-[var(--text-muted)]">Nothing in play right now. <Link href="/scores" className="font-semibold text-[var(--sig-ink)]">Next fixtures.</Link></p>;
   }
   return (
     <div className="flex flex-col gap-3">

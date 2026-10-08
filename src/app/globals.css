@@ -2998,3 +2998,41 @@
     }
   }
 }
+
+@layer components {
+  /* /scores: league filter chips under the page heading. */
+  .scores-filter {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .scores-filter::-webkit-scrollbar {
+    display: none;
+  }
+  .scores-chip {
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .scores-chip:hover {
+    border-color: var(--sig-ink);
+    color: var(--sig-ink);
+  }
+  .scores-chip[data-active="true"] {
+    border-color: var(--sig-ink);
+    background: var(--sig-ink);
+    color: var(--surface);
+  }
+  [data-scores-block][hidden] {
+    display: none;
+  }
+}
