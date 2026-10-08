@@ -68,8 +68,10 @@ export function cricketSeriesCardModel(s: SeriesCardFields, stats: CricketSeries
   const facts: CardFact[] = [];
   // ESPN publishes a table before the first ball, every side on 0 from 0: a top row nobody has played for says nothing.
   if (leader && leader.played > 0) facts.push({ label: "Leads the table", value: `${leader.team} · ${leader.points} pts, ${leader.played} played` });
-  if (stats?.batting[0]) facts.push({ label: "Most runs", value: `${stats.batting[0].name} · ${stats.batting[0].runs}` });
-  if (stats?.bowling[0]) facts.push({ label: "Most wickets", value: `${stats.bowling[0].name} · ${stats.bowling[0].wickets}` });
+  // A tour's leaders count its internationals only (warm-ups are left out), and the card says so.
+  const scope = stats?.officialOnly ? " (internationals)" : "";
+  if (stats?.batting[0]) facts.push({ label: `Most runs${scope}`, value: `${stats.batting[0].name} · ${stats.batting[0].runs}` });
+  if (stats?.bowling[0]) facts.push({ label: `Most wickets${scope}`, value: `${stats.bowling[0].name} · ${stats.bowling[0].wickets}` });
   const count = facts.length < FACT_ROWS ? matchCountFact(s) : null;
   if (count) facts.push(count);
   return { eyebrow: seriesEyebrow(s.kind, s.formats), title: s.name, dates: formatSeriesDates(s.start_date, s.end_date), facts };

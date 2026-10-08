@@ -35,7 +35,11 @@ export function CricketSeriesLeaders({ stats, teams }: { stats: CricketSeriesSta
 
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader description={`Most runs and most wickets across the ${stats.matches} completed match${stats.matches === 1 ? "" : "es"} with a stored scorecard`}>Series stats</SectionHeader>
+      <SectionHeader description={
+          stats.officialOnly
+            ? `Most runs and most wickets across the ${stats.matches} completed international match${stats.matches === 1 ? "" : "es"} of the series; warm-up matches are not counted`
+            : `Most runs and most wickets across the ${stats.matches} completed match${stats.matches === 1 ? "" : "es"} with a stored scorecard`
+        }>Series stats</SectionHeader>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {stats.batting.length > 0 && (
           <div className="card overflow-hidden">
