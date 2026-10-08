@@ -21,6 +21,7 @@ import { TodayInThreeLines } from "@/components/home/TodayInThreeLines";
 import { getEditionContext } from "@/lib/editionContext";
 import { sportLines } from "@/lib/sportPicks";
 import { getSiteCounts } from "@/lib/siteCounts";
+import { TryAName } from "@/components/home/TryAName";
 
 // Title, description and share card come from the root layout. The canonical lives here and not
 // in the layout, so no page can inherit the home address by accident.
@@ -88,6 +89,7 @@ export default async function HomePage() {
       </div>
       <div className="home-skeleton" aria-hidden />
       <TodayInThreeLines />
+      <TryAName />
       <HomeBlocks ctx={editionContext} />
       <h2 className="home-else display text-[28px] text-[var(--text)]">Everything else is still here</h2>
 
