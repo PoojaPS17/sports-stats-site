@@ -39,6 +39,8 @@ export function CompareExportCard({
   groups,
   nameA,
   nameB,
+  neutral = false,
+  notice = null,
 }: {
   league: League;
   title: string;
@@ -48,11 +50,16 @@ export function CompareExportCard({
   groups: MetricGroup[];
   nameA: string;
   nameB: string;
+  /** No better figure is marked and no bars are drawn (a comparison of partial careers). */
+  neutral?: boolean;
+  /** A coverage warning shown above the table. */
+  notice?: string | null;
 }) {
   const ca = COLOR_A;
   const cb = COLOR_B;
   return (
     <ExportShell header={<ExportTitle league={league} title={title} subtitle={subtitle} />} context={title}>
+      {notice && <div style={{ marginBottom: 10, padding: "8px 12px", borderRadius: 8, border: `1px solid ${CARD.border}`, fontSize: 12, fontWeight: 600, color: CARD.text }}>{notice}</div>}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <SideHeader side={a} align="left" color={ca} />
         <SideHeader side={b} align="right" color={cb} />
@@ -63,8 +70,8 @@ export function CompareExportCard({
             {g.note && <div style={{ padding: "6px 12px", fontSize: 12, color: CARD.textFaint, borderTop: `1px solid ${CARD.border}` }}>{g.note}</div>}
             {g.metrics.map((m) => {
               const both = m.a != null && m.b != null;
-              const aBetter = both && m.a !== m.b && (m.lowerIsBetter ? m.a! < m.b! : m.a! > m.b!);
-              const bBetter = both && m.a !== m.b && !aBetter;
+              const aBetter = !neutral && both && m.a !== m.b && (m.lowerIsBetter ? m.a! < m.b! : m.a! > m.b!);
+              const bBetter = !neutral && both && m.a !== m.b && !aBetter;
               const total = both ? Math.abs(m.a!) + Math.abs(m.b!) : 0;
               const pctA = total > 0 ? (Math.abs(m.a!) / total) * 100 : 50;
               return (
@@ -74,7 +81,7 @@ export function CompareExportCard({
                     <span style={{ fontSize: 12, color: CARD.textMuted, textAlign: "center" }}>{m.label}</span>
                     <span style={{ fontWeight: bBetter ? 800 : 500, color: bBetter ? CARD.text : CARD.textMuted }}>{m.bText}</span>
                   </div>
-                  {!m.noBar && both && total > 0 && (
+                  {!neutral && !m.noBar && both && total > 0 && (
                     <div style={{ display: "flex", height: 6, overflow: "hidden", borderRadius: 999, background: CARD.border, marginTop: 6 }}>
                       <span style={{ width: `${pctA}%`, background: ca, opacity: aBetter || !bBetter ? 1 : 0.45 }} />
                       <span style={{ flex: 1, background: cb, opacity: bBetter || !aBetter ? 1 : 0.45 }} />

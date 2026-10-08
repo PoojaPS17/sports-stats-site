@@ -8,12 +8,15 @@ export function CompareTable({
   colorB,
   nameA,
   nameB,
+  neutral = false,
 }: {
   groups: MetricGroup[];
   colorA: string | null;
   colorB: string | null;
   nameA: string;
   nameB: string;
+  /** No better figure is marked and no bars are drawn (a comparison of partial careers). */
+  neutral?: boolean;
 }) {
   const ca = colorA ?? "var(--accent)";
   const cb = colorB ?? "var(--accent-2)";
@@ -32,8 +35,8 @@ export function CompareTable({
           <ul className="divide-y divide-[var(--border)]">
             {g.metrics.map((m) => {
               const both = m.a != null && m.b != null;
-              const aBetter = both && m.a !== m.b && (m.lowerIsBetter ? m.a! < m.b! : m.a! > m.b!);
-              const bBetter = both && m.a !== m.b && !aBetter;
+              const aBetter = !neutral && both && m.a !== m.b && (m.lowerIsBetter ? m.a! < m.b! : m.a! > m.b!);
+              const bBetter = !neutral && both && m.a !== m.b && !aBetter;
               const total = both ? Math.abs(m.a!) + Math.abs(m.b!) : 0;
               const pctA = total > 0 ? (Math.abs(m.a!) / total) * 100 : 50;
               return (
@@ -43,7 +46,7 @@ export function CompareTable({
                     <span className="text-center text-xs text-[var(--text-muted)]">{m.label}</span>
                     <span className={`text-right tabular-nums ${bBetter ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>{m.bText}</span>
                   </div>
-                  {!m.noBar && both && total > 0 && (
+                  {!neutral && !m.noBar && both && total > 0 && (
                     <div className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
                       <span className="h-full" style={{ width: `${pctA}%`, background: ca, opacity: aBetter || !bBetter ? 1 : 0.45 }} />
                       <span className="h-full flex-1" style={{ background: cb, opacity: bBetter || !aBetter ? 1 : 0.45 }} />

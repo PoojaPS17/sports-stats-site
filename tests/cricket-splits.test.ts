@@ -173,7 +173,7 @@ test("the career note states only the years the data supports, and no other year
 });
 
 test("each league type says what is missing", () => {
-  assert.match(noteOf("odi"), /Some ODIs from 2002 to 2008 and a few later ones are missing/);
+  assert.match(noteOf("odi"), /Coverage begins in 2002 and is incomplete until 2009: many ODIs from 2002 to 2008 and a few later ones are missing/);
   assert.match(noteOf("t20i"), /small number of matches are missing/);
   assert.match(noteOf("wodi"), /earlier matches are not included/);
   assert.match(noteOf("wt20i"), /small number of later matches are missing/);

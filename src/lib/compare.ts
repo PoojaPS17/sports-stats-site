@@ -20,7 +20,9 @@ import {
   type HeadToHead,
   type TeamRef,
 } from "./analytics";
-import { getPlayerCricketCareer, getStandings, type CricketCareerStats } from "./queries";
+import { getPlayerCricketCareer, getPlayerFirstStoredYears, getStandings, type CricketCareerStats } from "./queries";
+import { archiveColumnLabel, careerMayBeIncomplete, compareCoverageLine, comparePartialWarning } from "./cricketCoverage";
+import { cricketCareerNote } from "./cricketCareerNote";
 import { leagueWideRank, usesRecordOrder } from "./standingsOrder";
 
 /* ------------------------------------------------------------------------ */
@@ -228,11 +230,37 @@ export interface PlayerCompareSide {
   gamesLogged: number;
 }
 
+/** What a cricket comparison tells the reader about the matches behind the totals (the archive may start after the players did). */
+export interface CompareCoverage {
+  /** Under each name: for example "Tests since <year>". Null where the league's archive leaves nothing out. */
+  label: string | null;
+  /** The sentence saying which matches the totals count. */
+  line: string | null;
+  /** Set when either player may have played before the archive begins: the totals are not a fair measure, so nothing is marked better. */
+  warning: string | null;
+  partialA: boolean;
+  partialB: boolean;
+}
+
 export interface PlayerComparison {
   league: League;
   a: PlayerCompareSide;
   b: PlayerCompareSide;
   groups: MetricGroup[];
+  coverage?: CompareCoverage;
+}
+
+/** Pure part of the coverage notice, given each player's first stored match year (null: none). */
+export function compareCoverage(league: League, nameA: string, nameB: string, firstYearA: number | null, firstYearB: number | null, testStart?: number): CompareCoverage {
+  const partialA = careerMayBeIncomplete(league, firstYearA, testStart);
+  const partialB = careerMayBeIncomplete(league, firstYearB, testStart);
+  return {
+    label: archiveColumnLabel(league, testStart),
+    line: compareCoverageLine(league, testStart),
+    warning: comparePartialWarning(league, [partialA ? nameA : null, partialB ? nameB : null].filter((x): x is string => x !== null), testStart),
+    partialA,
+    partialB,
+  };
 }
 
 // Stats where a smaller number is the better one. Matched against the label ESPN
@@ -310,12 +338,13 @@ function strikeRateMetric(a: CricketCareerStats | null, b: CricketCareerStats | 
   return { ...m, aText: side(a, m.aText), bText: side(b, m.bText) };
 }
 
-export function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | null): MetricGroup[] {
+export function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | null, league?: League): MetricGroup[] {
   const g = (k: keyof CricketCareerStats) => [a?.[k] ?? null, b?.[k] ?? null] as [number | null, number | null];
   return [
     {
-      title: "Career on record",
-      note: "Every match in the competitions we track. International and other domestic cricket is not included.",
+      title: "Career on this site",
+      // The league's own coverage note when it is known; the generic line is the fallback for a caller with no league.
+      note: league ? cricketCareerNote(league) : "Every match on this site in this competition. Other competitions and formats are not included.",
       metrics: [metric("Matches", ...g("matches"), { noBar: true }), metric("Catches & stumpings", ...g("catches"))],
     },
     {
@@ -351,12 +380,18 @@ export async function getPlayerComparison(league: League, slugA: string, slugB: 
   const [gamesA, gamesB] = await Promise.all([countGameLog(league, pa.espn_id), countGameLog(league, pb.espn_id)]);
 
   if (isCricketLeague(league)) {
-    const [ca, cb] = await Promise.all([getPlayerCricketCareer(league, pa.espn_id), getPlayerCricketCareer(league, pb.espn_id)]);
+    const [ca, cb, ya, yb] = await Promise.all([
+      getPlayerCricketCareer(league, pa.espn_id),
+      getPlayerCricketCareer(league, pb.espn_id),
+      getPlayerFirstStoredYears(pa.espn_id),
+      getPlayerFirstStoredYears(pb.espn_id),
+    ]);
     return {
       league,
       a: { player: pa, season: null, gamesLogged: gamesA },
       b: { player: pb, season: null, gamesLogged: gamesB },
-      groups: cricketGroups(ca, cb),
+      groups: cricketGroups(ca, cb, league),
+      coverage: compareCoverage(league, pa.name, pb.name, ya[league] ?? null, yb[league] ?? null),
     };
   }
 
