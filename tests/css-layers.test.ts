@@ -106,3 +106,14 @@ test("the root clips sideways overflow, because the header row is wider than a 3
   // it has to be on <html>. `clip`, not `hidden`, so the sticky header keeps working.
   assert.match(css, /@layer base\s*\{\s*html\s*\{[^}]*overflow-x:\s*clip/);
 });
+
+test("the header row trims its gaps and buttons below 400px and 340px so the menu button stays on screen", () => {
+  // The row needs 379px at full spacing; at 360px the menu button sat 19px past the edge.
+  const nav = readFileSync(join(root, "src/components/Nav.tsx"), "utf8");
+  assert.match(nav, /container-x flex[^"]*max-\[400px\]:gap-0\.5[^"]*max-\[340px\]:gap-0\b/, "header row gap shrinks");
+  assert.match(nav, /max-\[400px\]:mr-0\b/, "logo margin shrinks");
+  for (const file of ["Nav.tsx", "ThemeToggle.tsx", "MobileMenu.tsx"]) {
+    const src = readFileSync(join(root, "src/components", file), "utf8");
+    assert.match(src, /max-\[340px\]:w-\[1\.875rem\]|max-\[340px\]:px-\[0\.4375rem\]/, `${file} header buttons narrow at 320px`);
+  }
+});
