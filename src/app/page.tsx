@@ -24,6 +24,7 @@ import { getSiteCounts } from "@/lib/siteCounts";
 import { TryAName } from "@/components/home/TryAName";
 import { BestOfWeek } from "@/components/home/BestOfWeek";
 import { WhoLeads } from "@/components/home/WhoLeads";
+import { OnTheBrink } from "@/components/home/OnTheBrink";
 import { HomeExplainers } from "@/components/home/HomeExplainers";
 
 // Title, description and share card come from the root layout. The canonical lives here and not
@@ -96,6 +97,7 @@ export default async function HomePage() {
       <TryAName />
       <BestOfWeek />
       <WhoLeads />
+      <OnTheBrink />
       <HomeExplainers lines={lines} />
       <HomeBlocks ctx={editionContext} />
       <h2 className="home-else display text-[28px] text-[var(--text)]">Everything else is still here</h2>

@@ -19,6 +19,7 @@ import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { gameDayIso } from "./gameDay";
 import { dropNotNeeded } from "./playoffSeriesData";
 import { isPlaceholderTeamSql } from "./playoffSeries";
+import { isAliasTeamSql } from "./teamAliases";
 import { listArticles } from "./beyondTheScoreline";
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -126,7 +127,7 @@ async function core(): Promise<Entry[]> {
 
 async function teams(league: League): Promise<Entry[]> {
   // Not ESPN's "CLE/CHW" stand-in for a side still being decided: it is a label, not a club.
-  const { rows } = await pool.query(`select slug from teams where league = $1 and not ${isPlaceholderTeamSql("teams")} order by slug`, [league]);
+  const { rows } = await pool.query(`select slug from teams where league = $1 and not ${isPlaceholderTeamSql("teams")} and not ${isAliasTeamSql("teams")} order by slug`, [league]);
   const out: Entry[] = [];
   for (const { slug } of rows) {
     out.push(entry(`/${league}/teams/${slug}`, "daily", 0.8), entry(`/${league}/teams/${slug}/about`, "monthly", 0.3));

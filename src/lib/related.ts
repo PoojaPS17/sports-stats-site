@@ -9,6 +9,7 @@ import { isPlaceholderTeamSql } from "./playoffSeries";
 import { isSoccerLeague, type League } from "./leagues";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { ON_ROSTER_SQL } from "./queries";
+import { teamIdsFor } from "./teamAliases";
 
 export interface RelatedLink {
   href: string;
@@ -151,10 +152,10 @@ export async function getTeamTopPlayers(league: League, teamEspnId: string, seas
      left join teams t on t.league = p.league and t.espn_id = p.team_espn_id
      join player_season_stats ps on ps.league = p.league and ps.player_espn_id = p.espn_id
        and ps.season = coalesce($3::int, (select max(season) from player_season_stats where league = p.league))
-     where p.league = $1 and ps.team_espn_id = $2 and ${notPseudoAthleteSql()} and ${metricSql(league)} > 0
+     where p.league = $1 and ps.team_espn_id = any($2::text[]) and ${notPseudoAthleteSql()} and ${metricSql(league)} > 0
      order by ${metricSql(league)} desc, p.name
      limit $4`,
-    [league, teamEspnId, season, limit]
+    [league, teamIdsFor(league, teamEspnId), season, limit]
   );
   return rows.map((r) => toLink(league, r, false));
 }
@@ -176,12 +177,12 @@ export async function getMostFacedOpponents(league: League, teamEspnId: string, 
   const { rows } = await pool.query(
     `select t.espn_id, t.slug, t.name, t.logo_url, count(*)::int as games
      from games g
-     join teams t on t.league = g.league and t.espn_id = case when g.home_team_espn_id = $2 then g.away_team_espn_id else g.home_team_espn_id end
-     where g.league = $1 and ${countedMeetingSql("g")} and (g.home_team_espn_id = $2 or g.away_team_espn_id = $2)
+     join teams t on t.league = g.league and t.espn_id = case when g.home_team_espn_id = any($2::text[]) then g.away_team_espn_id else g.home_team_espn_id end
+     where g.league = $1 and ${countedMeetingSql("g")} and (g.home_team_espn_id = any($2::text[]) or g.away_team_espn_id = any($2::text[]))
      group by t.espn_id, t.slug, t.name, t.logo_url
      order by games desc, t.name
      limit $3`,
-    [league, teamEspnId, limit]
+    [league, teamIdsFor(league, teamEspnId), limit]
   );
   return rows;
 }
