@@ -3,12 +3,12 @@ import { LocalTime } from "@/components/LocalTime";
 import type { CSSProperties } from "react";
 import type { FixtureLine, TeamNextBlockData, TeamSummary } from "@/lib/blockTypes";
 import { ordinal } from "@/lib/ordinal";
-import { colourForWhiteText } from "@/lib/teamColor";
+import { CARD_TEXT_OPACITY, colourForWhiteText } from "@/lib/teamColor";
 
 // The team's card: its own colour behind white text (darkened only as far as white needs to read), the
 // table position and figure, the last five results, and what the visitor would see on the team page.
 function SummaryCard({ name, color, s }: { name: string; color: string | null; s: TeamSummary }) {
-  const style = { "--tc": colourForWhiteText(color) } as CSSProperties;
+  const style = { "--tc": colourForWhiteText(color, undefined, CARD_TEXT_OPACITY) } as CSSProperties;
   if (s.position === null && s.form.length === 0) return null;
   return (
     <div style={style} className="rounded-2xl bg-[linear-gradient(150deg,var(--tc),color-mix(in_srgb,var(--tc)_72%,#000))] p-4 text-white">
@@ -23,7 +23,7 @@ function SummaryCard({ name, color, s }: { name: string; color: string | null; s
       {s.form.length > 0 && (
         <div className="mt-3 flex gap-1" role="img" aria-label={`Last ${s.form.length}, oldest first: ${s.form.join(" ")}`}>
           {s.form.map((r, i) => (
-            <span key={i} className={`flex h-[21px] w-[21px] items-center justify-center rounded-md text-[10.5px] font-extrabold text-white shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)] ${r === "W" ? "bg-[#16a34a]" : r === "L" ? "bg-[#dc2626]" : "bg-[#64748b]"}`}>
+            <span key={i} className={`flex h-[21px] w-[21px] items-center justify-center rounded-md text-[10.5px] font-extrabold text-white shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)] ${r === "W" ? "bg-[#15803d]" : r === "L" ? "bg-[#dc2626]" : "bg-[#64748b]"}`}>
               {r}
             </span>
           ))}

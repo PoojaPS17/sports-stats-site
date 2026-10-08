@@ -81,7 +81,8 @@ function fixtureFromGame(league: League, g: GameRow, teamEspnId: string): Fixtur
     opponent: teamDisplayName(home ? g.away_name : g.home_name),
     home,
     href: `/${league}/games/${g.espn_id}`,
-    score: mine !== null && theirs !== null ? `${mine}-${theirs}` : null,
+    // The feed files a placeholder 0-0 on games not yet played: a score belongs only to a game that is over or in play.
+    score: (g.completed || g.status_state === "in") && mine !== null && theirs !== null ? `${mine}-${theirs}` : null,
     result: played ? (mine! > theirs! ? "W" : mine! < theirs! ? "L" : "D") : null,
     live: g.status_state === "in",
     status: g.status_state === "in" ? g.status_detail : null,
@@ -105,9 +106,10 @@ async function teamSummary(league: League, teamEspnId: string, games: GameRow[])
   const i = table.rows.findIndex((r) => r.team_espn_id === teamEspnId);
   const row = i === -1 ? null : table.rows[i];
   // A table nobody has played in is listed by name: no position to report yet.
-  const ranked = row !== null && !row.unranked;
   const record = usesRecordOrder(league);
   const played = row ? row.wins + row.losses + (row.draws ?? 0) + (row.no_result ?? 0) : 0;
+  // A team that has not played yet sits in the table only by its name's tie-break, so it has no position either.
+  const ranked = row !== null && !row.unranked && played > 0;
   const diff = row && row.goals_for !== null && row.goals_against !== null ? row.goals_for - row.goals_against : null;
   const form = games
     .filter((g) => g.completed)
@@ -153,7 +155,7 @@ function fixtureFromCricket(m: CricketSeriesMatch, sideId: string): FixtureLine 
     opponent: theirs?.name ?? "TBC",
     home,
     href: m.scorecard_league ? `/${m.scorecard_league}/games/${m.espn_id}` : `/cricket/series/${m.series_espn_id}`,
-    score: mine?.score ?? null,
+    score: (m.status_state ?? "pre") === "pre" ? null : (mine?.score ?? null),
     result: m.status_state === "post" ? (mine?.winner ? "W" : theirs?.winner ? "L" : "D") : null,
     live: m.status_state === "in",
     status: m.status_state === "in" ? m.status_summary : null,
