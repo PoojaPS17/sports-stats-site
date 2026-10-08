@@ -13,12 +13,15 @@ test("the light :root block defines the signature, masthead and display-font tok
   for (const token of ["--sig:", "--sig-ink:", "--sig-soft:", "--sig-on:", "--mast:", "--mast-2:", "--mast-text:", "--mast-muted:", "--font-display:"]) {
     assert.match(rootBlock, new RegExp(token.replace(/[-]/g, "\\-")), token);
   }
-  assert.match(rootBlock, /--volt:\s*#c6f135/i, "Volt is kept as a fixed token");
-  assert.match(rootBlock, /--sig:\s*#1470af/i, "the light theme's signature colour is the store blue");
-  assert.match(rootBlock, /--sig-ink:\s*#1470af/i);
+  assert.match(rootBlock, /--volt:\s*var\(--sky\)/i, "--volt keeps its name and is now Sky Blue");
+  assert.match(rootBlock, /--sky:\s*#38b6e8/i);
+  assert.match(rootBlock, /--navy:\s*#0f2745/i);
+  assert.match(rootBlock, /--logo-lit:\s*#c6f135/i, "the logo keeps its own lit colour");
+  assert.match(rootBlock, /--sig:\s*#2563d9/i, "the light theme's interaction colour is Sports Blue");
+  assert.match(rootBlock, /--sig-ink:\s*#2563d9/i);
   assert.match(rootBlock, /--sig-on:\s*#ffffff/i);
   assert.match(rootBlock, /--mast:\s*#ffffff/i, "light bands are white");
-  assert.match(rootBlock, /--band-deep:\s*#0d2b57/i, "the scores strip and footer sit on the deep navy band");
+  assert.match(rootBlock, /--band-deep:\s*#0f2745/i, "the scores strip and footer sit on the deep navy band");
 });
 
 test("--accent is remapped to the signature ink so existing components inherit it", () => {
@@ -27,11 +30,11 @@ test("--accent is remapped to the signature ink so existing components inherit i
   assert.match(rootBlock, /--header-bg:\s*var\(--mast\)/);
 });
 
-test("the dark theme makes Volt the signature colour and the ink, in both the media block and the explicit toggle", () => {
+test("the dark theme lifts Sports Blue to be the signature colour and ink, in both the media block and the explicit toggle", () => {
   for (const [label, re] of [
-    ["signature", /--sig:\s*var\(--volt\)/g],
+    ["signature", /--sig:\s*#6ea8ff/g],
     ["ink", /--sig-ink:\s*var\(--sig\)/g],
-    ["masthead", /--mast:\s*#07090f/g],
+    ["masthead", /--mast:\s*#0a1830/g],
   ] as const) {
     const n = (css.match(re) ?? []).length;
     assert.ok(n >= 2, `expected the dark ${label} remap twice (media + data-theme), found ${n}`);
@@ -44,4 +47,16 @@ test("Plus Jakarta Sans is loaded in the root layout and serves as both the body
   assert.match(css, /--font-display:\s*var\(--font-jakarta\)/);
   assert.match(css, /--font-sans:\s*var\(--font-jakarta\)/);
   assert.doesNotMatch(layout, /Barlow_Condensed|Geist\(/);
+});
+
+test("the SPORTSDB logo and header keep their pre-Palette-B colours in both themes (brand lock)", () => {
+  assert.match(css, /header\.sticky\s*\{[^}]*--sig:\s*#1470af/, "light header: store-blue lit block and DB");
+  assert.match(css, /header\.sticky\s*\{[^}]*--mast:\s*#07090f[^}]*--sig:\s*var\(--logo-lit\)/, "dark header: near-black bar, lime lit block");
+  assert.match(css, /footer\.band-deep a\[href="\/"\]\s*\{\s*--sig:\s*#9cc7ea/, "light footer lockup unchanged");
+});
+
+test("no lime survives as an accent: --volt resolves to Sky, and only the logo lockup keeps #c6f135", () => {
+  const stripped = css.replace(/--logo-lit:\s*#c6f135;/, "");
+  assert.doesNotMatch(stripped, /c6f135/i);
+  assert.doesNotMatch(stripped, /198,\s*241,\s*53/);
 });

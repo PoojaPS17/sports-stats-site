@@ -81,7 +81,7 @@ export function chartCardElement({ kicker, title, note, format, columns, headed 
   const rowFont = portrait ? (showSecondary ? 28 : 26) : 24;
   const rowGap = showSecondary ? 14 : 10;
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: portrait ? "56px 60px 0" : "40px 56px 0", background: "linear-gradient(135deg, #0b1324 0%, #121c33 100%)", color: "#eef1f7", fontFamily: "sans-serif" }}>
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: portrait ? "56px 60px 0" : "40px 56px 0", background: "linear-gradient(135deg, #0f2745 0%, #16345a 100%)", color: "#eef1f7", fontFamily: "sans-serif" }}>
       <div style={{ display: "flex", flexDirection: "column", height: frame.top - (portrait ? 56 : 40) }}>
         <div style={{ fontSize: portrait ? 28 : 24, color: "#9aa5bd", textTransform: "uppercase", letterSpacing: 4 }}>{kicker}</div>
         <div style={{ fontSize: portrait ? 68 : 52, fontWeight: 800, letterSpacing: -2, lineHeight: 1.1 }}>{title}</div>
@@ -91,9 +91,9 @@ export function chartCardElement({ kicker, title, note, format, columns, headed 
           <div key={ci} style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
             {sections.map((s) => (
               <div key={s.title} style={{ display: "flex", flexDirection: "column" }}>
-                {headed && <div style={{ display: "flex", alignItems: "center", height: frame.head, fontSize: portrait ? 24 : 20, fontWeight: 700, color: "#c6f135", textTransform: "uppercase", letterSpacing: 2 }}>{s.title}</div>}
+                {headed && <div style={{ display: "flex", alignItems: "center", height: frame.head, fontSize: portrait ? 24 : 20, fontWeight: 700, color: "#38b6e8", textTransform: "uppercase", letterSpacing: 2 }}>{s.title}</div>}
                 {s.rows.map((r) => (
-                  <div key={r.position + r.name} style={{ display: "flex", alignItems: "center", height: frame.row, gap: rowGap, borderTop: "1px solid #24314f", fontSize: rowFont }}>
+                  <div key={r.position + r.name} style={{ display: "flex", alignItems: "center", height: frame.row, gap: rowGap, borderTop: "1px solid #2a4a78", fontSize: rowFont }}>
                     <div style={{ display: "flex", width: showSecondary ? 34 : 30, color: "#9aa5bd", fontWeight: 700 }}>{r.position}</div>
                     {r.dot && <div style={{ display: "flex", width: 14, height: 14, borderRadius: 7, background: r.dot, border: "1px solid #3a4a6b" }} />}
                     <div style={{ display: "flex", flex: 1, minWidth: 0, fontWeight: 700, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{r.name}</div>

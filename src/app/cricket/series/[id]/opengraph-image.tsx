@@ -22,7 +22,7 @@ export function generateStaticParams() {
 // A season archive is a calendar year; the page beside this one reads the same ids the same way.
 const SEASON_RE = /^(19|20)\d{2}$/;
 
-const BG = "linear-gradient(135deg, #0b1324 0%, #121c33 100%)";
+const BG = "linear-gradient(135deg, #0f2745 0%, #16345a 100%)";
 
 /** The card as the page's data says it should read, or null for an id that is no series or season. */
 async function model(id: string): Promise<SeriesCardModel | null> {
@@ -54,14 +54,14 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const { id } = await params;
   const card = await model(id);
   if (!card) {
-    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
+    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0f2745", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
   }
 
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 56, background: BG, color: "#eef1f7", fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, textTransform: "uppercase", letterSpacing: 3 }}>
-          <span style={{ color: "#c6f135", fontWeight: 700 }}>{card.eyebrow}</span>
+          <span style={{ color: "#38b6e8", fontWeight: 700 }}>{card.eyebrow}</span>
           {card.dates && <span style={{ color: "#9aa5bd" }}>{card.dates}</span>}
         </div>
 

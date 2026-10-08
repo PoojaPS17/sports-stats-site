@@ -78,7 +78,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <section className="home-builder-hero band band-deep bleed relative -mt-6 overflow-hidden bg-[radial-gradient(600px_300px_at_100%_0%,rgba(198,241,53,0.16),transparent_60%),radial-gradient(500px_260px_at_0%_100%,rgba(20,112,175,0.35),transparent_60%)] py-7 sm:py-11" suppressHydrationWarning>
+      <section className="home-builder-hero band band-deep bleed relative -mt-6 overflow-hidden bg-[radial-gradient(600px_300px_at_100%_0%,rgba(56,182,232,0.18),transparent_60%),radial-gradient(500px_260px_at_0%_100%,rgba(37,99,217,0.35),transparent_60%)] py-7 sm:py-11" suppressHydrationWarning>
         <SportPicker ctx={editionContext} lines={sportLines({ liveCricket: home.liveCricket.length, liveTennis: home.liveTennis.length, sections: home.sections })} liveNow={home.liveGames.length + home.liveCricket.length + home.liveTennis.length} counts={counts} />
       </section>
       <CollapsedBar />

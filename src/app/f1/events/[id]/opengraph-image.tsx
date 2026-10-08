@@ -16,7 +16,7 @@ export function generateStaticParams() {
   return [];
 }
 
-const BG = "linear-gradient(135deg, #0b1324 0%, #121c33 100%)";
+const BG = "linear-gradient(135deg, #0f2745 0%, #16345a 100%)";
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
@@ -53,7 +53,7 @@ const PLACE_COLOR = ["#f0c14b", "#c6ced9", "#cd8a52"];
 function PodiumRow({ place, driver, constructor }: { place: number; driver: string; constructor: string | null }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 54, height: 54, borderRadius: 27, background: PLACE_COLOR[place - 1], color: "#0b1324", fontSize: 30, fontWeight: 800 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 54, height: 54, borderRadius: 27, background: PLACE_COLOR[place - 1], color: "#0f2745", fontSize: 30, fontWeight: 800 }}>
         {place}
       </div>
       <div style={{ display: "flex", flex: 1, fontSize: 40, fontWeight: 700 }}>{driver}</div>
@@ -74,7 +74,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const event = await getF1Event(id);
   if (!event) {
     return new ImageResponse(
-      <div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>,
+      <div style={{ width: "100%", height: "100%", background: "#0f2745", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>,
       size
     );
   }

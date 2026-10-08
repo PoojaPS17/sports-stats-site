@@ -99,7 +99,7 @@ export function heroLine(loaded: LoadedBlock[], o: HeroLineOptions): { headline:
 }
 
 /** The brand blue the hero glows with when the visitor follows no team that has a colour. */
-export const HERO_FALLBACK_COLOUR = "#1470af";
+export const HERO_FALLBACK_COLOUR = "#2563d9";
 
 /** The two glow colours behind the hero: the first two different team colours among the visitor's team blocks,
  * in block order. One team gives the same colour twice; none give the brand blue. */

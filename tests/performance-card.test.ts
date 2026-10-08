@@ -54,7 +54,7 @@ test("a null stageLabel renders no stage segment, but does not crash", () => {
 test("footer parity: ends with the same navy band, wordmark and handle every other card on the site uses", () => {
   const html = renderToStaticMarkup(createElement(PerformanceCard, baseProps));
   assert.match(html, /Sports<\/span><span style="color:#c6f135">DB<\/span>/);
-  assert.match(html, /background:#0b1324/);
+  assert.match(html, /background:#0f2745/);
   assert.ok(html.includes("sportsdblive")); // X_HANDLE
   assert.ok(!html.includes("#1d4ed8"), "the old blue is gone");
 });

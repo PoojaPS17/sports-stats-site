@@ -38,7 +38,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
 
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", background: "#0b1324", color: "#eef1f7", fontFamily: "sans-serif" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", background: "#0f2745", color: "#eef1f7", fontFamily: "sans-serif" }}>
         <div
           style={{
             width: PANEL,
@@ -59,7 +59,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           </div>
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "56px 60px", gap: 20 }}>
-          <div style={{ fontSize: 24, color: "#c6f135", textTransform: "uppercase", letterSpacing: 4, fontWeight: 700 }}>{art?.sport ?? "Beyond the Scoreline"}</div>
+          <div style={{ fontSize: 24, color: "#38b6e8", textTransform: "uppercase", letterSpacing: 4, fontWeight: 700 }}>{art?.sport ?? "Beyond the Scoreline"}</div>
           <div style={{ fontSize: shareTitleSize(title), fontWeight: 800, lineHeight: 1.08, letterSpacing: -1.5 }}>{title}</div>
           <div style={{ fontSize: 26, color: "#9aa5bd", lineHeight: 1.35 }}>{dek}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 22, color: "#9aa5bd", marginTop: 14 }}>

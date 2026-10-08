@@ -17,7 +17,7 @@ export const revalidate = 300;
 // match rendered under /cricket/matches/final/<id> still has its card at /cricket/matches/<id>/opengraph-image,
 // which cricketMatchMetadata names outright.
 
-const BG = "linear-gradient(135deg, #0b1324 0%, #121c33 100%)";
+const BG = "linear-gradient(135deg, #0f2745 0%, #16345a 100%)";
 
 /** A side's name steps down for the long domestic ones ("Khan Research Laboratories"). */
 function nameSize(name: string): number {
@@ -51,7 +51,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const { id } = await params;
   const stored = await getCricketSeriesMatch(id);
   if (!stored) {
-    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0b1324", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
+    return new ImageResponse(<div style={{ width: "100%", height: "100%", background: "#0f2745", color: "#eef1f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>SportsDB</div>, size);
   }
   // ESPN's current state over the stored row, so a match in play shows its live score, as the series page does.
   const m = (await overlayLiveCricket([stored], stored.series_espn_id)).find((r) => r.espn_id === id) ?? stored;

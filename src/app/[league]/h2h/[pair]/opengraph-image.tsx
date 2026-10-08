@@ -27,7 +27,7 @@ export default async function Image({ params }: { params: Promise<{ league: stri
   const record = `${h2h.winsA}-${h2h.draws}-${h2h.winsB}`;
   const detail = `${h2h.meetings} meetings in ${LEAGUE_LABEL[league]} · ${h2h.teamA.name} ${h2h.winsA} wins, ${h2h.teamB.name} ${h2h.winsB}`;
   const meter = rivalryMeter(h2h, (t) => teamDisplayName(t.name));
-  const colorA = h2h.teamA.color ? `#${h2h.teamA.color.replace(/^#/, "")}` : "#c6f135";
+  const colorA = h2h.teamA.color ? `#${h2h.teamA.color.replace(/^#/, "")}` : "#38b6e8";
   const colorB = h2h.teamB.color ? `#${h2h.teamB.color.replace(/^#/, "")}` : "#f59e0b";
   const short = (t: typeof h2h.teamA) => t.abbreviation ?? teamDisplayName(t.name).slice(0, 3).toUpperCase();
   const pill = (r: "A" | "B" | "D") => ({ text: r === "A" ? short(h2h.teamA) : r === "B" ? short(h2h.teamB) : "D", border: r === "A" ? colorA : r === "B" ? colorB : "#6b7690" });
