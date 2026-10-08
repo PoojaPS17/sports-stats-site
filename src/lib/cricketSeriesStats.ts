@@ -82,6 +82,11 @@ export interface InningsHighlight {
 export interface CricketSeriesStats {
   /** Completed matches with figures stored. */
   matches: number;
+  /**
+   * The figures cover the series' official internationals only: it also lists warm-ups against county, Lions or
+   * invitation XIs, which are left out so a tour's leaders are its Tests, ODIs and T20Is. Stated beside the figures.
+   */
+  officialOnly?: boolean;
   batting: BattingLeader[];
   bowling: BowlingLeader[];
   highestScore: InningsHighlight | null;
@@ -95,6 +100,7 @@ export interface CricketSeriesStats {
 // Overs are written "12.3" (12 overs and 3 balls), so they are summed as balls.
 const ballsOf = (overs: number, bpo: number) => Math.floor(overs) * bpo + Math.round((overs - Math.floor(overs)) * 10);
 const oversText = (balls: number, bpo: number) => (balls % bpo ? `${Math.floor(balls / bpo)}.${balls % bpo}` : `${Math.floor(balls / bpo)}`);
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const round2 = (x: number) => Math.round(x * 100) / 100;
 const score = (runs: number, notOut: boolean) => `${runs}${notOut ? "*" : ""}`;
 
@@ -187,18 +193,21 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
   return { matches: matches.size, batting: batting.slice(0, limit), bowling: bowling.slice(0, limit), highestScore: strip(highestScore), bestBowling: strip(bestBowling), totals, mostSixes: !totals.hasBoundaries ? null : [...sixesBy.values()].filter((x) => x.sixes > 0).sort((a, b) => b.sixes - a.sixes || a.name.localeCompare(b.name))[0] ?? null };
 }
 
-/** "Most runs: Eve Alpha (125); most wickets: Dee Bravo (7)." Null when there are no leaders yet. */
-export function seriesLeadersClause(stats: CricketSeriesStats | null): string | null {
+/**
+ * "Most runs: Eve Alpha (125); most wickets: Dee Bravo (7)." Null when there are no leaders yet. `scope` adds what the
+ * figures cover when warm-ups are left out ("..., in the series' 3 international matches."), so the line is not read as
+ * every match of the tour.
+ */
+export function seriesLeadersClause(stats: CricketSeriesStats | null, scope = false): string | null {
   if (!stats) return null;
   const parts: string[] = [];
   if (stats.batting[0]) parts.push(`Most runs: ${stats.batting[0].name} (${stats.batting[0].runs})`);
   if (stats.bowling[0]) parts.push(`most wickets: ${stats.bowling[0].name} (${stats.bowling[0].wickets})`);
   if (parts.length === 0) return null;
-  const text = parts.join("; ");
+  const text = parts.join("; ") + (scope && stats.officialOnly && stats.matches > 0 ? `, in the series' ${plural(stats.matches, "international match", "international matches")}` : "");
   return `${text[0].toUpperCase()}${text.slice(1)}.`;
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const dayOf = (date: string) => new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 export interface SeriesSoFarInput {
@@ -222,7 +231,7 @@ export function cricketSeriesSoFar({ leader, lastResult, nextFixture, stats, fin
     parts.push(`Latest result: ${[cricketMatchName(lastResult.name), lastResult.stage].filter(Boolean).join(", ")}${summary ? `: ${summary}` : ""}.`);
   }
   if (nextFixture) parts.push(`Next: ${[cricketMatchName(nextFixture.name), nextFixture.stage, dayOf(nextFixture.date)].filter(Boolean).join(", ")}.`);
-  const clause = seriesLeadersClause(stats);
+  const clause = seriesLeadersClause(stats, true);
   if (clause) parts.push(clause);
   return parts.join(" ");
 }

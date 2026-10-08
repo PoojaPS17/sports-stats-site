@@ -72,10 +72,15 @@ const DESCRIPTION_LIMIT = 160;
 /**
  * What the page holds, the format in words, and the teams when there are four or fewer and they fit. With `leaders`
  * (the series' most runs and most wickets, see cricketSeriesStats.ts) the format tail gives way to them, so the
- * snippet names the players and moves as the series does.
+ * snippet names the players and moves as the series does. `leaders` may be several wordings, fullest first: the first
+ * that fits a search result is used (a scope note on the figures yields before the players do).
  */
-export function cricketSeriesDescription(s: SeriesSeoFields, hasTable: boolean, leaders?: string | null): string {
-  if (leaders) return `${s.name}: ${hasTable ? "points table, results and live scores" : "fixtures, results and live scores"}. ${leaders}`;
+export function cricketSeriesDescription(s: SeriesSeoFields, hasTable: boolean, leaders?: string | string[] | null): string {
+  const options = (Array.isArray(leaders) ? leaders : [leaders]).filter((l): l is string => Boolean(l));
+  if (options.length > 0) {
+    const lead = `${s.name}: ${hasTable ? "points table, results and live scores" : "fixtures, results and live scores"}. `;
+    return lead + (options.find((l) => (lead + l).length <= DESCRIPTION_LIMIT) ?? options[options.length - 1]);
+  }
   const holds = hasTable ? "fixtures, results, points table and live scores" : "fixtures, results and live scores";
   const format = list(seriesFormatLabels(s.formats));
   const base = `${s.name}: ${holds} for every ${format ? `${format} ` : ""}match`;

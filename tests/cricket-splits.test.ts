@@ -23,6 +23,7 @@ const career: CricketCareerStats = {
   hundreds: 1,
   fifties: 3,
   highestScore: 104,
+  highestScoreNotOut: false,
   average: 47.77,
   strikeRate: 143.3,
   inningsBowled: 4,

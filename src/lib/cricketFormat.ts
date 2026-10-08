@@ -22,6 +22,13 @@ export function trunc2(value: number | null | undefined, digits = 2, missing = "
 }
 
 /**
+ * A highest score as every scorecard and record book writes it: 254 not out is "254*". null (no innings) prints `missing`.
+ */
+export function highScoreText(score: number | null | undefined, notOut: boolean | null | undefined, missing = "-"): string {
+  return score == null ? missing : `${score}${notOut ? "*" : ""}`;
+}
+
+/**
  * One innings' strike rate as a scorecard writes it: rounded (not cut) to two decimals, "-" without a ball count.
  * A century listing shows the same innings a match page's scorecard does, so the two must agree: 109 off 94 is
  * "115.96" on ESPN's and Cricinfo's scorecards, and one decimal ("116.0") reads as a different figure.

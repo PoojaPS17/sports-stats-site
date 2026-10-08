@@ -56,7 +56,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // The title names the points table only when the page shows one (the same fetch, cached, as the page's).
   const hasTable = s.league ? false : pointsTableShown(await fetchCricketSeriesStandings(s.espn_id), s);
   // The leaders name the snippet's players ("Most runs: ..."), and move as the series does; a competition with a hub has none here.
-  const leaders = s.league ? null : seriesLeadersClause(await getCricketSeriesStats(s.espn_id));
+  const leaderStats = s.league ? null : await getCricketSeriesStats(s.espn_id);
+  const leaders = [seriesLeadersClause(leaderStats, true), seriesLeadersClause(leaderStats)].filter((l): l is string => l !== null);
   return pageMeta(fitTitle(...cricketSeriesTitleCandidates(s, hasTable)), cricketSeriesDescription(s, hasTable, leaders), `/cricket/series/${s.espn_id}`, { image: { ...image, alt: `${s.name} on SportsDB` } });
 }
 
