@@ -43,9 +43,9 @@ export function StatusPill({
   const round = gameRoundLabel(stageFields);
   if (statusState === "in") {
     return (
-      <span className="pill pill-live">
+      <span className="pill pill-wrap pill-live">
         <span className="live-dot" />
-        {round ? (clock && statusDetail ? `${round} · ${statusDetail}` : round) : (statusDetail ?? "Live")}
+        <span>{round ? (clock && statusDetail ? `${round} · ${statusDetail}` : round) : (statusDetail ?? "Live")}</span>
       </span>
     );
   }
@@ -55,7 +55,7 @@ export function StatusPill({
   // one stored as finished (a cancelled cricket match ESPN files under state "post").
   const label = gameCalledOffLabel({ completed, status_state: statusState, status_detail: statusDetail });
   if (label) {
-    return <span className="pill pill-final">{round ? `${round} · ${label}` : label}</span>;
+    return <span className="pill pill-wrap pill-final">{round ? `${round} · ${label}` : label}</span>;
   }
 
   if (completed) {
@@ -66,13 +66,16 @@ export function StatusPill({
     // says "Final" — except in cricket, where "Final" is only ever the tournament
     // decider, so the league supplies "Result" (Cricinfo's word) instead. A game that went to overtime says so
     // ("Final/OT", "Final/2OT"), as NBA.com and NFL.com do, after its stage when it has one.
-    return <span className="pill pill-final">{finishedPillLabel(league, { ...stageFields, status_detail: statusDetail })}</span>;
+    return <span className="pill pill-wrap pill-final">{finishedPillLabel(league, { ...stageFields, status_detail: statusDetail })}</span>;
   }
 
   return (
-    <span className="pill pill-upcoming">
-      {round ? `${round} · ` : ""}
-      <Kickoff league={league} game={{ date, completed, status_state: statusState, status_detail: statusDetail, local_date: localDate }} format={kickoff} />
+    <span className="pill pill-wrap pill-upcoming">
+      {/* One flex item, so the stage and the kickoff wrap together as a line of text. */}
+      <span>
+        {round ? `${round} · ` : ""}
+        <Kickoff league={league} game={{ date, completed, status_state: statusState, status_detail: statusDetail, local_date: localDate }} format={kickoff} />
+      </span>
     </span>
   );
 }

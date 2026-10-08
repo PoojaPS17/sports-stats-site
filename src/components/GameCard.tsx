@@ -125,11 +125,11 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           clock={false}
         />
         {upcoming ? (
-          <Kickoff league={league} game={game} format="time" className="text-xs font-medium text-[var(--text-muted)]" />
+          <Kickoff league={league} game={game} format="time" className="shrink-0 whitespace-nowrap text-xs font-medium text-[var(--text-muted)]" />
         ) : live && game.status_detail ? (
-          <span className="text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_detail)}</span>
+          <span className="shrink-0 whitespace-nowrap text-xs font-medium text-[var(--text-muted)]">{teamDisplayName(game.status_detail)}</span>
         ) : (
-          <span className="text-xs text-[var(--text-faint)]">
+          <span className="shrink-0 whitespace-nowrap text-xs text-[var(--text-faint)]">
             {formatGameDate(game.date, league, { month: "short", day: "numeric" }, game.local_date)}
           </span>
         )}

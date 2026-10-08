@@ -807,6 +807,17 @@
     white-space: nowrap;
   }
 
+  /* StatusPill: a playoff stage carries a long note ("NL Championship Series - Game 1 · Sun, Oct 11"). The pill
+     may shrink inside its flex row and wrap onto a second line, so the sibling time/date stays in view. */
+  .pill-wrap {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
   .pill-live {
     background: var(--pill-live-bg);
     color: var(--pill-live-text);
