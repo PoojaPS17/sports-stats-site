@@ -35,6 +35,7 @@
     "topup:cricket-series-stats": "tsx scripts/topup-cricket-series-stats.ts",
     "import:cricsheet": "tsx scripts/import-cricsheet.ts",
     "import:cricket-espn": "tsx scripts/import-cricket-espn.ts",
+    "repair:cricket-empty-reports": "tsx scripts/repair-cricket-empty-reports.ts",
     "sweep:cricket-seasons": "tsx scripts/sweep-cricket-seasons.ts",
     "backfill:cricket-dates": "tsx scripts/backfill-cricket-dates.ts",
     "fetch:tennis-rankings": "tsx scripts/fetch-tennis-rankings.ts",

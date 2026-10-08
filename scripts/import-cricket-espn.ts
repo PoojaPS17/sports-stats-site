@@ -20,12 +20,25 @@
 // Default window is the last 21 days (the weekly Cricsheet lag plus slack), which the
 // daily scrape runs; `--since` sweeps history.
 //
+//   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --ids odi:1126321,wt20i:1138196 [--dry-run]
+//
+// `--ids` imports exactly those matches (league:espnId, comma separated) and skips discovery, so a match
+// can be loaded even on a date whose header feed is down. One line is printed per id: written / would
+// write / already stored / skipped with the reason. A match abandoned or cancelled without a ball is
+// skipped and is not a failure; any other id that could not be read or written makes the run exit 1.
+//
+// The date sweep exits 3, naming the days, when a day's header feed still failed after a second pass
+// (every other day's matches are imported first), instead of finishing silently with a hole in the window.
+// `--allow-failed-days` prints the same message but exits 0.
+//
 //   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --ids 62387-63862 [--league test] [--force] [--workers 2] [--delay 400] [--attempts 8] [--dry-run]
 //
 // `--ids` loads a block of ESPN event ids oldest first with no header-feed discovery (for history the
 // daily feed cannot be swept, e.g. the pre-2000 Tests). It is resumable: ids already in games are skipped
 // unless `--force`; ESPN is read gently (2 workers, 400 ms apart, up to 8 attempts with backoff) and ids that
 // fail are re-run in up to three further passes. The daily job never passes `--ids`.
+// The two `--ids` forms are told apart by the value: `odi:1126321,wt20i:1138196` (league:id list, contains a
+// colon) is the list mode above; `62387-63862` (digits, optional dash) is the range mode.
 //
 //   npx tsx --env-file=.env.local scripts/import-cricket-espn.ts --reconcile [--league wt20i] [--cap N]
 //
@@ -58,6 +71,8 @@ const REQUEST_DELAY_MS = 150;
 const DISCOVERY_CONCURRENCY = 4;
 const REQUEST_TIMEOUT_MS = 20_000;
 const RETRIES = 4;
+// Pause before the second pass over days whose header feed failed (ESPN's 502s come in bursts).
+const RECHECK_PAUSE_MS = Number(process.env.IMPORT_RECHECK_PAUSE_MS ?? 30_000);
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -135,8 +150,15 @@ export interface Found {
 // The feed for a date returns a window around it (matches that started late the
 // previous UTC day, or early the next), so a day-by-day sweep sees each match more
 // than once; the map dedupes by id.
-async function discover(since: Date, until: Date, only: IntlLeague | undefined, step = 1): Promise<Map<string, Found>> {
+export interface Discovery {
+  found: Map<string, Found>;
+  /** Days (YYYYMMDD) whose header feed still failed after every retry and a second pass over them. */
+  failedDays: string[];
+}
+
+export async function discover(since: Date, until: Date, only: IntlLeague | undefined, step = 1): Promise<Discovery> {
   const found = new Map<string, Found>();
+  const failedDates: Date[] = [];
   let days = 0;
   const dates: Date[] = [];
   for (let d = new Date(since); d <= until; d = new Date(d.getTime() + step * 86_400_000)) dates.push(d);
@@ -144,10 +166,9 @@ async function discover(since: Date, until: Date, only: IntlLeague | undefined, 
   // order the days arrive in does not matter, since matches are written by date after.
   const workers = dates.length > 400 ? DISCOVERY_CONCURRENCY : 1;
   let cursor = 0;
-  const scan = async () => {
-    while (cursor < dates.length) {
-      const d = dates[cursor++];
-      days++;
+  // Reads one day's feed into `found`; false when the feed could not be read.
+  const scanDay = async (d: Date, quiet = false): Promise<boolean> => {
+    {
       let data: any;
       try {
         // A 200 with an empty body shape (no `sports`) is a failed render, not a quiet
@@ -159,8 +180,8 @@ async function discover(since: Date, until: Date, only: IntlLeague | undefined, 
           await sleep(1500 * (attempt + 1));
         }
       } catch (err) {
-        console.error(`[import-cricket-espn] header feed for ${ymd(d)} failed: ${err instanceof Error ? err.message : err}`);
-        continue;
+        if (!quiet) console.error(`[import-cricket-espn] header feed for ${ymd(d)} failed: ${err instanceof Error ? err.message : err}`);
+        return false;
       }
       for (const sport of data?.sports ?? []) {
         for (const lg of sport.leagues ?? []) {
@@ -174,14 +195,45 @@ async function discover(since: Date, until: Date, only: IntlLeague | undefined, 
           }
         }
       }
+      return true;
+    }
+  };
+  const scan = async () => {
+    while (cursor < dates.length) {
+      const d = dates[cursor++];
+      days++;
+      if (!(await scanDay(d))) failedDates.push(d);
       if (days % 500 === 0 || (workers === 1 && days % 100 === 0)) console.log(`[import-cricket-espn] scanned ${days}/${dates.length} days, ${found.size} internationals so far`);
       await sleep(REQUEST_DELAY_MS);
     }
   };
   await Promise.all(Array.from({ length: workers }, scan));
+  // One more pass over the failed days after a pause: ESPN's 502s are mostly transient, and a
+  // day that is still down then is reported instead of passing as a quiet day.
+  const stillFailed: string[] = [];
+  if (failedDates.length > 0) {
+    await sleep(RECHECK_PAUSE_MS);
+    for (const d of failedDates.sort((a, b) => a.getTime() - b.getTime())) {
+      if (!(await scanDay(d, true))) stillFailed.push(ymd(d));
+      await sleep(REQUEST_DELAY_MS);
+    }
+    console.log(`[import-cricket-espn] ${failedDates.length} day(s) failed on the first pass, ${failedDates.length - stillFailed.length} recovered on the second`);
+  }
   console.log(`[import-cricket-espn] scanned ${days} days: ${found.size} completed men's internationals listed`);
-  return found;
+  return { found, failedDays: stillFailed };
 }
+
+/** The message for a sweep whose header feed failed on some days (null when none did). */
+export function failedDaysMessage(failedDays: string[]): string | null {
+  if (failedDays.length === 0) return null;
+  const shown = failedDays.length > 20 ? `${failedDays.slice(0, 20).join(", ")} and ${failedDays.length - 20} more` : failedDays.join(", ");
+  return (
+    `header feed failed for ${failedDays.length} day(s) even after a second pass: ${shown}. Matches on those days were NOT discovered. ` +
+    `Re-run later, or import them directly with --ids league:espnId (--dry-run first).`
+  );
+}
+/** Exit code of a sweep that could not read some days (distinct from 1, a crash or a failed match). */
+export const FAILED_DAYS_EXIT_CODE = 3;
 
 /* ------------------------------------------------------------------------ */
 /* Writing one match                                                         */
@@ -216,25 +268,64 @@ function abbreviationOf(team: any): string {
 // id from the header feed occasionally returns a copy with no competitors.
 const FALLBACK_SERIES = "8048";
 
+/**
+ * The stored "Player of the Match" leader line (ESPN's generic extractor leaves cricket's leaders empty),
+ * or null when the summary names none. Shared with the one-off report repair.
+ */
+export function playerOfTheMatchLeaders(summary: any, players: ReturnType<typeof extractCricketMatchStats>["players"]): any[] | null {
+  const status = summary?.header?.competitions?.[0]?.status ?? {};
+  const potm = (status.featuredAthletes ?? []).find((a: any) => a.name === "playerOfTheMatch" && a.athlete?.id);
+  if (!potm) return null;
+  const card = players.find((p) => p.athleteId === String(potm.athlete.id));
+  const parts: string[] = [];
+  // A Test line reads "45 & 102*" and "3/61 & 5/48"; a one-innings line "82* (54)".
+  const bat = (b: { runs: number; ballsFaced: number | null; notOut: boolean }, balls: boolean) => `${b.runs}${b.notOut ? "*" : ""}${balls && b.ballsFaced != null ? ` (${b.ballsFaced})` : ""}`;
+  if (card?.innings) {
+    const b = card.innings.filter((i) => i.batting).map((i) => bat(i.batting!, false));
+    const w = card.innings.filter((i) => i.bowling).map((i) => `${i.bowling!.wickets}/${i.bowling!.conceded}`);
+    if (b.length) parts.push(b.join(" & "));
+    if (w.length) parts.push(w.join(" & "));
+  } else {
+    if (card?.batting) parts.push(bat(card.batting, true));
+    if (card?.bowling) parts.push(`${card.bowling.wickets}/${card.bowling.conceded}`);
+  }
+  const teamId = card?.teamId ?? String(typeof potm.team === "object" ? potm.team?.id ?? "" : potm.team ?? "");
+  return [{ team_id: teamId, label: "Player of the Match", athlete_id: String(potm.athlete.id), athlete: potm.athlete.displayName ?? potm.athlete.name, value: parts.join(", ") }];
+}
+
+/** What writeMatchResult did with one match. `skip` is a match that is not an international at all (no ball bowled); `declined` could not be read or is not finished/complete. */
+export type MatchOutcome =
+  | { kind: "written"; line: string }
+  | { kind: "skip"; line: string }
+  | { kind: "declined"; line: string };
+
 export async function writeMatch(f: Found, dryRun: boolean, summaryOptions: { retries?: number; backoffMs?: number } = {}): Promise<boolean> {
+  return (await writeMatchResult(f, dryRun, { summaryOptions })).kind === "written";
+}
+
+/**
+ * `requirePlay` (the --ids import): a match with squads but no batting or bowling figure for anyone (a toss-only
+ * no-result, a washout) is skipped rather than filed as an international. The date sweep keeps filing those, as before.
+ */
+export async function writeMatchResult(f: Found, dryRun: boolean, options: { requirePlay?: boolean; summaryOptions?: { retries?: number; backoffMs?: number } } = {}): Promise<MatchOutcome> {
   // ESPN's 502 error body ({"code":2502,...}) parses as JSON, so a bare getJson reads it as a
   // summary with no competitors and the match is skipped as if ESPN had nothing. The shared
   // read rejects it, retries, and tries the IPL id then the series id (lib/cricketSummary.ts).
   const summary = await fetchCricketSummaryVia((path) => getJson(`https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${f.id}`, 1), f.id, [...new Set([`cricket/${FALLBACK_SERIES}`, `cricket/${f.seriesId}`])], {
     accept: (s) => Boolean(s?.header?.competitions?.[0]?.competitors?.length),
-    ...summaryOptions,
+    ...options.summaryOptions,
   });
   const comp = summary?.header?.competitions?.[0];
   const home = comp?.competitors?.find((c: any) => c.homeAway === "home");
   const away = comp?.competitors?.find((c: any) => c.homeAway === "away");
   if (!comp || !home?.team?.id || !away?.team?.id) {
     console.error(`[import-cricket-espn] ${f.league} ${f.id} (${f.name}): summary has no competitors, skipped`);
-    return false;
+    return { kind: "declined", line: "summary has no competitors" };
   }
   const status = comp.status ?? {};
   if (status.type?.state !== "post") {
     console.error(`[import-cricket-espn] ${f.league} ${f.id} (${f.name}): not finished (${status.type?.state}), skipped`);
-    return false;
+    return { kind: "declined", line: `not finished (${status.type?.state})` };
   }
   // The feed HTML-escapes the ampersand in "won by an inns &amp; 103 runs".
   const summaryText: string | null = typeof status.summary === "string" && status.summary ? status.summary.replace(/&amp;/g, "&") : null;
@@ -243,14 +334,19 @@ export async function writeMatch(f: Found, dryRun: boolean, summaryOptions: { re
   // must not sit in a team's results as if it were.
   if (/(abandoned|cancelled|called off) without a ball/i.test(summaryText ?? "")) {
     console.log(`[import-cricket-espn] ${f.league} ${f.id} (${f.name}): abandoned without a ball bowled, not an international, skipped`);
-    return false;
+    return { kind: "skip", line: `abandoned/cancelled without a ball bowled: ${summaryText}` };
   }
   const { venue, players } = extractCricketMatchStats(summary);
   const rosters: any[] = summary.rosters ?? [];
   const xi = rosters.flatMap((r: any) => (r.roster ?? []).map((p: any) => ({ team: String(r.team?.id ?? ""), athlete: p.athlete })).filter((p: any) => p.team && p.athlete?.id));
   if (xi.length === 0 && players.length === 0) {
     console.error(`[import-cricket-espn] ${f.league} ${f.id} (${f.name}): no scorecard on ESPN, skipped`);
-    return false;
+    return { kind: "declined", line: `no scorecard on ESPN (${summaryText ?? "no result text"})` };
+  }
+
+  if (options.requirePlay && !players.some((p) => p.batting || p.bowling)) {
+    console.log(`[import-cricket-espn] ${f.league} ${f.id} (${f.name}): no batting or bowling figure for anyone, no ball bowled, skipped`);
+    return { kind: "skip", line: `no ball bowled (squads only, no figures): ${summaryText ?? "no result text"}` };
   }
 
   const date = comp.date ?? f.date;
@@ -273,8 +369,9 @@ export async function writeMatch(f: Found, dryRun: boolean, summaryOptions: { re
   const teamLogo = (id: string) => summary.leaders?.find((l: any) => String(l.team?.id) === id)?.team?.logo ?? `https://a.espncdn.com/i/teamlogos/cricket/500/${id}.png`;
 
   if (dryRun) {
-    console.log(`[dry-run] ${f.league} ${f.id} ${date.slice(0, 10)} ${home.team.displayName} v ${away.team.displayName} — ${summaryText ?? "?"}; ${players.length} player cards`);
-    return true;
+    const line = `${date.slice(0, 10)} ${home.team.displayName} v ${away.team.displayName} — ${summaryText ?? "?"}; ${players.length} player cards, ${xi.length} in the XIs`;
+    console.log(`[dry-run] ${f.league} ${f.id} ${line}`);
+    return { kind: "written", line };
   }
 
   for (const c of [home, away]) {
@@ -398,30 +495,14 @@ export async function writeMatch(f: Found, dryRun: boolean, summaryOptions: { re
   // The stored match report, plus the player of the match in the slot the Cricsheet
   // importer fills (ESPN's generic extractor leaves cricket's leaders empty).
   const details = extractGameDetails("cricket", summary, String(home.team.id), String(away.team.id));
-  const potm = (status.featuredAthletes ?? []).find((a: any) => a.name === "playerOfTheMatch" && a.athlete?.id);
-  if (potm) {
-    const card = players.find((p) => p.athleteId === String(potm.athlete.id));
-    const parts: string[] = [];
-    // A Test line reads "45 & 102*" and "3/61 & 5/48"; a one-innings line "82* (54)".
-    const bat = (b: { runs: number; ballsFaced: number | null; notOut: boolean }, balls: boolean) => `${b.runs}${b.notOut ? "*" : ""}${balls && b.ballsFaced != null ? ` (${b.ballsFaced})` : ""}`;
-    if (card?.innings) {
-      const b = card.innings.filter((i) => i.batting).map((i) => bat(i.batting!, false));
-      const w = card.innings.filter((i) => i.bowling).map((i) => `${i.bowling!.wickets}/${i.bowling!.conceded}`);
-      if (b.length) parts.push(b.join(" & "));
-      if (w.length) parts.push(w.join(" & "));
-    } else {
-      if (card?.batting) parts.push(bat(card.batting, true));
-      if (card?.bowling) parts.push(`${card.bowling.wickets}/${card.bowling.conceded}`);
-    }
-    const teamId = card?.teamId ?? String(typeof potm.team === "object" ? potm.team?.id ?? "" : potm.team ?? "");
-    details.leaders = [{ team_id: teamId, label: "Player of the Match", athlete_id: String(potm.athlete.id), athlete: potm.athlete.displayName ?? potm.athlete.name, value: parts.join(", ") }];
-  }
+  const leaders = playerOfTheMatchLeaders(summary, players);
+  if (leaders) details.leaders = leaders;
   await pool.query(
     `insert into game_details (league, game_espn_id, details, fetched_at) values ($1, $2, $3, now())
      on conflict (league, game_espn_id) do update set details = excluded.details, fetched_at = now()`,
     [f.league, f.id, JSON.stringify(details)]
   );
-  return true;
+  return { kind: "written", line: `${date.slice(0, 10)} ${home.team.displayName} v ${away.team.displayName} — ${summaryText ?? "?"}; ${players.length} player cards` };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -513,6 +594,76 @@ async function reconcileMain() {
   process.exit(result.failed.length > 0 ? 1 : 0);
 }
 
+/** True for the list form of `--ids` (league:espnId entries); the range form is digits and a dash. */
+export function isIdListValue(value: string | undefined): boolean {
+  return typeof value === "string" && value.includes(":");
+}
+
+/** Parses `league:espnId,league:espnId`; throws on a malformed entry, an unknown league, or a repeat. */
+export function parseIdList(raw: string): { league: IntlLeague; id: string }[] {
+  const out: { league: IntlLeague; id: string }[] = [];
+  const seen = new Set<string>();
+  for (const part of raw.split(",").map((x) => x.trim()).filter(Boolean)) {
+    const [league, id, ...rest] = part.split(":");
+    if (rest.length > 0 || !INTL_LEAGUES.includes(league as IntlLeague) || !/^\d+$/.test(id ?? "")) throw new Error(`bad --ids entry "${part}" (want league:espnId, league one of ${INTL_LEAGUES.join("|")})`);
+    if (seen.has(part)) throw new Error(`--ids lists ${part} twice`);
+    seen.add(part);
+    out.push({ league: league as IntlLeague, id });
+  }
+  if (out.length === 0) throw new Error("--ids needs at least one league:espnId");
+  return out;
+}
+
+/** The ids import: one result line per requested id, in the order given. */
+export async function importByIds(requested: { league: IntlLeague; id: string }[], dryRun: boolean, delayMs = REQUEST_DELAY_MS): Promise<{ lines: string[]; failed: string[] }> {
+  const { rows: stored } = await pool.query(`select league, espn_id from games where league = any($1::text[]) and espn_id = any($2::text[])`, [INTL_LEAGUES, requested.map((r) => r.id)]);
+  const have = new Set(stored.map((r) => `${r.league}:${r.espn_id}`));
+  const lines: string[] = [];
+  const failed: string[] = [];
+  for (const r of requested) {
+    const key = `${r.league}:${r.id}`;
+    let line: string;
+    if (have.has(key)) line = `${key} already stored, left alone`;
+    else {
+      try {
+        // No series id is known: the shared read goes to ESPN's IPL path, which serves every cricket event.
+        const out = await writeMatchResult({ id: r.id, league: r.league, seriesId: FALLBACK_SERIES, date: "", name: r.id }, dryRun, { requirePlay: true });
+        if (out.kind === "written") line = `${key} ${dryRun ? "WOULD WRITE" : "WRITTEN"} ${out.line}`;
+        else if (out.kind === "skip") line = `${key} SKIPPED ${out.line}`;
+        else {
+          line = `${key} FAILED ${out.line}`;
+          failed.push(key);
+        }
+      } catch (err) {
+        line = `${key} FAILED ${err instanceof Error ? err.message : err}`;
+        failed.push(key);
+      }
+      if (delayMs) await sleep(delayMs);
+    }
+    lines.push(line);
+    console.log(`[import-cricket-espn] ids: ${line}`);
+  }
+  return { lines, failed };
+}
+
+async function idsMain() {
+  const args = process.argv.slice(2);
+  const raw = args[args.indexOf("--ids") + 1];
+  let requested;
+  try {
+    requested = parseIdList(raw ?? "");
+  } catch (err) {
+    console.error(`[import-cricket-espn] ${err instanceof Error ? err.message : err}`);
+    process.exit(2);
+  }
+  const dryRun = args.includes("--dry-run");
+  console.log(`[import-cricket-espn] ids: ${requested.length} requested${dryRun ? " (dry run)" : ""}`);
+  const { failed } = await importByIds(requested, dryRun);
+  console.log(`[import-cricket-espn] ids done: ${requested.length - failed.length} ok, ${failed.length} failed${failed.length ? ` (${failed.join(", ")})` : ""}`);
+  await pool.end();
+  process.exit(failed.length > 0 ? 1 : 0);
+}
+
 /* ------------------------------------------------------------------------ */
 /* Id-range mode                                                             */
 /* ------------------------------------------------------------------------ */
@@ -560,6 +711,9 @@ async function idRangeMain(a: IdRangeArgs) {
 }
 
 async function main() {
+  // `--ids odi:1,wt20i:2` (a league:id list, always has a colon) is the list mode; `--ids 62387-63862` the range mode.
+  const idsValue = process.argv[process.argv.indexOf("--ids") + 1];
+  if (process.argv.includes("--ids") && isIdListValue(idsValue)) return idsMain();
   const idArgs = parseIdModeArgs(process.argv.slice(2));
   if (idArgs) {
     if ("error" in idArgs) {
@@ -571,7 +725,7 @@ async function main() {
   if (process.argv.includes("--reconcile")) return reconcileMain();
   const { since, until, league, step, dryRun } = parseArgs();
   console.log(`[import-cricket-espn] ${league ?? "odi+t20i"} ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}${dryRun ? " (dry run)" : ""}`);
-  const found = await discover(since, until, league, step);
+  const { found, failedDays } = await discover(since, until, league, step);
 
   // Stored means the game row exists: a washed-out match legitimately has no player
   // figures (from either source), so checking for cards would re-fetch it every run.
@@ -598,6 +752,13 @@ async function main() {
   }
   console.log(`[import-cricket-espn] done: ${INTL_LEAGUES.map((l) => `${l} ${written[l]}`).join(", ")} written, ${failed} skipped/failed`);
   await pool.end();
+  // Everything that could be discovered has been imported above; now say loudly that some days could not be read.
+  const dayProblem = failedDaysMessage(failedDays);
+  if (dayProblem) {
+    console.error(`[import-cricket-espn] FAILED: ${dayProblem}`);
+    // --allow-failed-days keeps the message but exits 0, for a manual run where the owner has read it.
+    process.exit(process.argv.includes("--allow-failed-days") ? 0 : FAILED_DAYS_EXIT_CODE);
+  }
 }
 
 // Only when run as a script: the reconcile and the tests import writeMatch from here.
