@@ -4,7 +4,7 @@
 //  - the SP Open doubles final, stopped at 4-3 in the first set, is still state "pre" with a partial score and a
 //    start time in the past, and no called-off text at all.
 // None of these may print as a plain start time. And a clock time always names its zone.
-import { after, before, beforeEach, test } from "node:test";
+import { after, before, beforeEach, mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement, type ReactElement } from "react";
@@ -12,6 +12,10 @@ import { startTestDb, type TestDb } from "./helpers/testDb";
 import { idsFollowingOnCourt, occupiesCourt, tennisMatchCaption, tennisMatchStatus } from "../src/lib/tennisDisplay";
 import { LocalTime } from "../src/components/LocalTime";
 import type { TennisMatch, TennisSet } from "../src/lib/tennis";
+
+// The fixtures are dated around the days the feed was sampled; the clock is set there so a match still to come is ahead of
+// "now" (a match still "pre" 30 hours after its start reads "No result", see NO_RESULT_AFTER_HOURS).
+mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-09-21T12:00:00Z") });
 
 const set = (games: number): TennisSet => ({ games, tiebreak: null, winner: false });
 const side = (name: string, sets: TennisSet[]) => ({ ids: ["1"], names: [name], countries: [null], slugs: [null], seed: null, rank: null, score: null, sets });
@@ -179,7 +183,7 @@ after(async () => {
 const ins = (id: string, court: string | null, date: string, day: string, tournament = "811-2026", detail: string | null = null, completed = false) =>
   db.pool.query(
     `insert into tennis_matches (tour, espn_id, player1_espn_id, player2_espn_id, tournament_name, round, date, completed, status_state, status_detail, tournament_espn_id, competition_type, court, day, side1, side2)
-     values ('wta', $1, '1', '2', 'Korea Open', 'Round 1', $2, $6, 'pre', $7, $5, 'womens-singles', $3, $4::date,
+     values ('wta', $1, $1 || '-p1', $1 || '-p2', 'Korea Open', 'Round 1', $2, $6, 'pre', $7, $5, 'womens-singles', $3, $4::date,
              '{"ids":["1"],"names":["A"],"countries":[null],"seed":null,"rank":null,"score":null,"sets":[]}',
              '{"ids":["2"],"names":["B"],"countries":[null],"seed":null,"rank":null,"score":null,"sets":[]}')`,
     [id, date, court, day, tournament, completed, detail]

@@ -4,6 +4,7 @@ import type { MetadataRoute } from "next";
 import { pool } from "./db";
 import { ALL_LEAGUES, LEAGUES, hasNewsFeed, hasStandings, isCricketLeague, type League } from "./leagues";
 import { TOURS } from "./tennisTours";
+import { OTHER_TOUR_PLAYER_SQL } from "./tennis";
 import { absoluteUrl } from "./site";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
 import { hasWeeks, loadWeeks } from "./matchweekPage";
@@ -245,6 +246,8 @@ async function tennisPlayers(): Promise<Entry[]> {
      )
      select p.league as tour, p.slug from players p
      join played x on x.tour = p.league and x.espn_id = p.espn_id
+     -- a woman's ATP row (a United Cup rubber) redirects to her WTA page, so it is not listed
+     where not ${OTHER_TOUR_PLAYER_SQL("p")}
      order by p.league, p.slug`
   );
   return rows.map(({ tour, slug }) => entry(`/tennis/${tour}/players/${slug}`, "weekly", 0.5));
