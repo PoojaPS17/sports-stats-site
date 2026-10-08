@@ -203,7 +203,7 @@
     --zone-4: #2dd4bf;
 
     --header-border: #25446d;
-    --header-hover-bg: rgba(255, 255, 255, 0.07);
+    --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
 
     --pill-final-bg: #1b3355;
     --pill-final-text: #b4c6dc;
@@ -271,7 +271,7 @@
   --zone-4: #2dd4bf;
 
   --header-border: #25446d;
-  --header-hover-bg: rgba(255, 255, 255, 0.07);
+  --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
 
   --pill-final-bg: #1b3355;
   --pill-final-text: #b4c6dc;
@@ -329,7 +329,7 @@
       --header-text: #eef1f7;
       --header-text-muted: #9aa5bd;
       --header-border: #1f2738;
-      --header-hover-bg: rgba(255, 255, 255, 0.07);
+      --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
       --sig: var(--logo-lit);
       --sig-ink: var(--logo-lit);
       --surface: #0f1420;
@@ -361,7 +361,7 @@
     --header-text: #eef1f7;
     --header-text-muted: #9aa5bd;
     --header-border: #1f2738;
-    --header-hover-bg: rgba(255, 255, 255, 0.07);
+    --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
     --sig: var(--logo-lit);
     --sig-ink: var(--logo-lit);
     --surface: #0f1420;
@@ -523,7 +523,7 @@
     --mast-text: var(--band-deep-text);
     --mast-muted: var(--band-deep-muted);
     --mast-line: var(--band-deep-line);
-    --header-hover-bg: rgba(255, 255, 255, 0.07);
+    --header-hover-bg: color-mix(in srgb, var(--band-deep-text) 7%, transparent);
     /* Coral reads as text on navy; the ink version is for light surfaces. */
     --live: var(--live-fill);
     --win: var(--win-fill);
@@ -3034,5 +3034,111 @@
   }
   [data-scores-block][hidden] {
     display: none;
+  }
+}
+
+/* Homepage band decoration, copied from the approved homepage design (Palettes board, `.deco`,
+   `.final::before/::after`, `.bhero .glow`): on the built hero a team-colour glow, a soft Sky glow top
+   right, two rotated pills and a solid Sky dot (the first-visit hero and closing band have their own, .pick-deco and .pk-final). Behind the content (z-index -1 inside the band's own stacking context),
+   clipped to the band so there is no horizontal scroll, no pointer events, static, no images: CSS
+   gradients only. Colours come from the theme tokens, so the dark theme gets deep navy shapes. */
+@layer components {
+  .home-deco-host {
+    isolation: isolate;
+  }
+  .home-decor,
+  .home-decor-glow {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .home-decor i {
+    position: absolute;
+    display: block;
+  }
+  .hd-glow {
+    width: 520px;
+    height: 520px;
+    right: -140px;
+    top: -190px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, var(--sky-tint), transparent 68%);
+    opacity: 0.95;
+  }
+  .hd-disc {
+    width: 280px;
+    height: 280px;
+    left: -110px;
+    bottom: -130px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+  }
+  .hd-bar {
+    border-radius: 40px;
+    transform: rotate(-22deg);
+  }
+  .hd-bar-a {
+    width: 620px;
+    height: 150px;
+    right: -120px;
+    top: 150px;
+    background: linear-gradient(90deg, transparent, var(--sky-tint) 40%, var(--tint-2));
+    opacity: 0.75;
+  }
+  .hd-bar-b {
+    width: 420px;
+    height: 70px;
+    right: 80px;
+    bottom: 30px;
+    border-radius: 30px;
+    background: linear-gradient(90deg, transparent, var(--sky-tint));
+    opacity: 0.9;
+  }
+  .home-decor .hd-dot {
+    display: none;
+    width: 72px;
+    height: 72px;
+    right: 46%;
+    top: 46px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--sky) 28%, var(--bg));
+  }
+  /* Built hero: the team-colour glow, the circle top right, one pill, the dot. */
+  .home-decor-glow {
+    background:
+      radial-gradient(520px 340px at 85% 0%, color-mix(in srgb, var(--tc) 22%, transparent), transparent 70%),
+      radial-gradient(380px 260px at 0% 100%, color-mix(in srgb, var(--tc2) 14%, transparent), transparent 70%);
+  }
+  .home-decor-built .hd-glow {
+    opacity: 0.5;
+  }
+  .home-decor-built .hd-disc,
+  .home-decor-built .hd-bar-b {
+    display: none;
+  }
+  @media (min-width: 1000px) {
+    .home-decor .hd-dot {
+      display: block;
+    }
+  }
+  /* Phone: one smaller glow and one smaller pill, no disc or dot. */
+  @media (max-width: 639px) {
+    .hd-glow {
+      width: 340px;
+      height: 340px;
+      right: -120px;
+      top: -140px;
+    }
+    .hd-bar-a {
+      width: 380px;
+      height: 96px;
+      right: -150px;
+      top: 62%;
+    }
+    .home-decor .hd-bar-b {
+      display: none;
+    }
   }
 }
