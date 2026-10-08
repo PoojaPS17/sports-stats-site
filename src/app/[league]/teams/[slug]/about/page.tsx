@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { isLeague, LEAGUE_LABEL, getTeamBySlug } from "@/lib/queries";
 import { fitTitle, pageMeta } from "@/lib/metadata";
 import { LEAGUE_SHORT } from "@/lib/leagues";
-import { teamNotFound } from "@/lib/legacySlug";
+import { aliasTeamRedirect, teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamHeader } from "@/components/TeamHeader";
 import { TeamPageNav } from "@/components/TeamPageNav";
@@ -48,6 +48,8 @@ export default async function TeamAboutPage({
 }) {
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
+
+  aliasTeamRedirect(league, slug, "/about");
 
   const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug, "/about"));
 

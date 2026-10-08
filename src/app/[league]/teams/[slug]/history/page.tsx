@@ -6,7 +6,7 @@ import { isLeague, isCupCompetition, isCricketLeague, hasTies, LEAGUE_LABEL, get
 import { getTeamHistory, isSoccer } from "@/lib/analytics";
 import { fitTitle, pageMeta } from "@/lib/metadata";
 import { LEAGUE_SHORT } from "@/lib/leagues";
-import { teamNotFound } from "@/lib/legacySlug";
+import { aliasTeamRedirect, teamNotFound } from "@/lib/legacySlug";
 import { AdSlot } from "@/components/AdSlot";
 import { TeamHeader } from "@/components/TeamHeader";
 import { TeamPageNav } from "@/components/TeamPageNav";
@@ -45,6 +45,7 @@ function ordinal(n: number): string {
 export default async function TeamHistoryPage({ params }: { params: Promise<{ league: string; slug: string }> }) {
   const { league, slug } = await params;
   if (!isLeague(league)) notFound();
+  aliasTeamRedirect(league, slug, "/history");
   const team = (await getTeamBySlug(league, slug)) ?? (await teamNotFound(league, slug, "/history"));
 
   const history = await getTeamHistory(league, team.espn_id);
