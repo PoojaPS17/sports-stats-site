@@ -4,14 +4,15 @@
 //   - men's ODIs and T20Is: Cricsheet's ball-by-ball archives start in 2002 (ODI) and 2005 (T20I); ESPN fills
 //     what Cricsheet lacks from 2009 (scripts/import-cricket-espn.ts). Some ODIs from 2002-2008 are in neither.
 //   - women's ODIs and T20Is: ESPN alone, from 2009, with a few later matches missing.
-//   - Tests: ESPN alone, every Test since the start of TEST_ARCHIVE_START_YEAR (see leagues.ts).
+//   - Tests: ESPN alone, every Test since TEST_ARCHIVE_START_YEAR (leagues.ts); the wording is derived in testArchiveCopy.ts.
 //   - domestic leagues and World Cups: no year is stated; a match with no scorecard is not counted.
-import { LEAGUE_LABEL, TEST_ARCHIVE_START_YEAR, isFirstClassCricket, isInternationalCricket, type League } from "./leagues";
+import { LEAGUE_LABEL, isFirstClassCricket, isInternationalCricket, type League } from "./leagues";
+import { testCareerCopy } from "./testArchiveCopy";
 
 const MATCHES_SENTENCE = "Matches counts every match on this site the player was in the playing XI for.";
 
 export function testCareerNote(): string {
-  return `Counts the men's Tests held on this site: every Test since the start of ${TEST_ARCHIVE_START_YEAR}. Tests before ${TEST_ARCHIVE_START_YEAR} are not included, so totals for anyone who played earlier are lower than Cricinfo's. Average, highest score, hundreds and five-wicket hauls are counted per innings. ${MATCHES_SENTENCE}`;
+  return `${testCareerCopy()} ${MATCHES_SENTENCE}`;
 }
 
 export function womensInternationalCareerNote(league: "wodi" | "wt20i"): string {

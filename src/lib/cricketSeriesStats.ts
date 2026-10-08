@@ -119,6 +119,10 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
   let highestScore: (InningsHighlight & { runs: number; notOut: boolean }) | null = null;
   let bestBowling: (InningsHighlight & { wickets: number; conceded: number }) | null = null;
   const totals = { runs: 0, fours: 0, sixes: 0, wickets: 0, hasBoundaries: false };
+  // Boundary totals are stated only when EVERY batting innings recorded them: a count over some innings, set beside
+  // all the matches ("sixes a match"), or a "most sixes" over some of the players, would read as complete.
+  let battingInnings = 0;
+  let boundaryInnings = 0;
   const sixesBy = new Map<string, { name: string; teamId: string; sixes: number }>();
 
   for (const r of rows) {
@@ -132,8 +136,9 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
         acc.innings++;
         acc.runs += b.runs;
         totals.runs += b.runs;
+        battingInnings++;
         if (b.fours !== null && b.sixes !== null) {
-          totals.hasBoundaries = true;
+          boundaryInnings++;
           totals.fours += b.fours;
           totals.sixes += b.sixes;
           const six = sixesBy.get(who.playerId) ?? { name: who.name, teamId: who.teamId, sixes: 0 };
@@ -141,7 +146,8 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
           sixesBy.set(who.playerId, six);
         }
         if (b.notOut) acc.notOuts++;
-        acc.balls = acc.balls === null || b.ballsFaced === null ? null : acc.balls + b.ballsFaced;
+        // Runs off no balls is an innings whose balls were not recorded (a lone gap inside a recorded card).
+        acc.balls = acc.balls === null || b.ballsFaced === null || (b.ballsFaced === 0 && b.runs > 0) ? null : acc.balls + b.ballsFaced;
         if (betterScore(b, acc.high)) acc.high = { runs: b.runs, notOut: b.notOut };
         bats.set(who.playerId, acc);
         if (betterScore(b, highestScore)) highestScore = { ...who, figure: score(b.runs, b.notOut), matchId: r.match_espn_id, stage: r.stage, runs: b.runs, notOut: b.notOut };
@@ -175,8 +181,10 @@ export function aggregateSeriesStats(rows: SeriesStatRow[], limit = 5): CricketS
   }));
   bowling.sort((a, b) => b.wickets - a.wickets || a.conceded - b.conceded || a.name.localeCompare(b.name));
 
+  totals.hasBoundaries = boundaryInnings > 0 && boundaryInnings === battingInnings;
+
   const strip = <T extends InningsHighlight>(h: T | null): InningsHighlight | null => (h ? { playerId: h.playerId, name: h.name, teamId: h.teamId, figure: h.figure, matchId: h.matchId, stage: h.stage } : null);
-  return { matches: matches.size, batting: batting.slice(0, limit), bowling: bowling.slice(0, limit), highestScore: strip(highestScore), bestBowling: strip(bestBowling), totals, mostSixes: [...sixesBy.values()].filter((x) => x.sixes > 0).sort((a, b) => b.sixes - a.sixes || a.name.localeCompare(b.name))[0] ?? null };
+  return { matches: matches.size, batting: batting.slice(0, limit), bowling: bowling.slice(0, limit), highestScore: strip(highestScore), bestBowling: strip(bestBowling), totals, mostSixes: !totals.hasBoundaries ? null : [...sixesBy.values()].filter((x) => x.sixes > 0).sort((a, b) => b.sixes - a.sixes || a.name.localeCompare(b.name))[0] ?? null };
 }
 
 /** "Most runs: Eve Alpha (125); most wickets: Dee Bravo (7)." Null when there are no leaders yet. */

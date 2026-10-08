@@ -4,6 +4,7 @@
 import type { CricketTeamScorecard } from "./matchDetail";
 import type { CricketSeriesStats } from "./cricketSeriesStats";
 import { teamDisplayName } from "./teamName";
+import { maskUnrecorded } from "./cricketRecorded";
 
 const MAX_LINES = 3;
 const num = (s: string | undefined) => (s != null && /^\d+$/.test(s.trim()) ? Number(s) : null);
@@ -14,12 +15,14 @@ function column(labels: string[], label: string): number {
 }
 
 /** Up to three lines about a match that has been played, from its scorecard. Empty for a match with none. */
-export function matchDidYouKnow(scorecard: CricketTeamScorecard[]): string[] {
+export function matchDidYouKnow(stored: CricketTeamScorecard[]): string[] {
+  const scorecard = maskUnrecorded(stored);
   const lines: { score: number; text: string }[] = [];
   let fours = 0;
   let sixes = 0;
   let batRuns = 0;
   let boundaryData = false;
+  let boundaryGap = false; // some batter's boundaries unrecorded: a share of ALL runs would be understated
   let top: { name: string; team: string; runs: number; total: number | null } | null = null;
 
   for (const t of scorecard) {
@@ -35,7 +38,7 @@ export function matchDidYouKnow(scorecard: CricketTeamScorecard[]): string[] {
         boundaryData = true;
         fours += num(row.stats[f]) ?? 0;
         sixes += num(row.stats[x]) ?? 0;
-      }
+      } else boundaryGap = true;
       // The innings total this batter's runs sit in (a first-class batter has two innings; the share needs one).
       const total = row.innings != null ? (t.innings?.find((i) => i.period === row.innings)?.runs ?? null) : t.innings?.length === 1 ? t.innings[0].runs : null;
       if (!top || runs > top.runs) top = { name: row.name, team: teamDisplayName(t.teamName), runs, total };
@@ -43,7 +46,7 @@ export function matchDidYouKnow(scorecard: CricketTeamScorecard[]): string[] {
   }
 
   // Boundaries: the share of the batters' runs that came in fours and sixes.
-  if (boundaryData && batRuns >= 50) {
+  if (boundaryData && !boundaryGap && batRuns >= 50) {
     const share = Math.round(((fours * 4 + sixes * 6) / batRuns) * 100);
     lines.push({ score: 3, text: `${plural(fours + sixes, "boundary", "boundaries")} (${plural(fours, "four")}, ${plural(sixes, "six", "sixes")}) brought ${share}% of the runs off the bat.` });
   }

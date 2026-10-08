@@ -10,7 +10,8 @@ import { ImageActions } from "@/components/ImageActions";
 import { CenturiesExportCard } from "@/components/CenturiesExportCard";
 import { formatGameDate } from "@/lib/gameDay";
 import { inningsStrikeRate } from "@/lib/cricketFormat";
-import { TEST_ARCHIVE_START_YEAR } from "@/lib/leagues";
+import { UNRECORDED_CELL, UNRECORDED_LEGEND } from "@/lib/cricketRecorded";
+import { testCenturiesDescription, testCenturiesIntro, testCenturiesSubtitle } from "@/lib/testArchiveCopy";
 
 // The table lists this many, newest first. A league with decades of history has thousands of centuries, and one
 // page of that is too heavy to read, render or share; the page says how many there are in all.
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const { league } = await params;
   if (!isLeague(league)) return {};
   const label = LEAGUE_LABEL[league];
-  if (league === "test") return pageMeta("Test Centuries", `Every Test century since ${TEST_ARCHIVE_START_YEAR}, most recent first, with balls faced, boundaries, opponent and ground.`, "/test/centuries");
+  if (league === "test") return pageMeta("Test Centuries", testCenturiesDescription(), "/test/centuries");
   return pageMeta(`${label} Centuries`, `Every century scored in the ${label}, most recent first.`, `/${league}/centuries`);
 }
 
@@ -41,7 +42,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
         <h1 className="page-title">{league === "test" ? "Test" : LEAGUE_LABEL[league]} Centuries</h1>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
           {league === "test"
-            ? `${count} Test centuries since the start of ${TEST_ARCHIVE_START_YEAR}, newest first.`
+            ? testCenturiesIntro(count)
             : `${count} centuries scored in the ${LEAGUE_LABEL[league]}, newest first.`}
         </p>
       </div>
@@ -61,7 +62,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                 league={league}
                 centuries={centuries}
                 title={`${league === "test" ? "Test" : LEAGUE_LABEL[league]} centuries`}
-                subtitle={league === "test" ? `${count} Test centuries since the start of ${TEST_ARCHIVE_START_YEAR}, newest first` : `${count} centuries scored in the ${LEAGUE_LABEL[league]}, newest first`}
+                subtitle={league === "test" ? testCenturiesSubtitle(count) : `${count} centuries scored in the ${LEAGUE_LABEL[league]}, newest first`}
               />
             }
           />
@@ -105,11 +106,11 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                       {c.runs}
                       {c.not_out ? "*" : ""}
                     </td>
-                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.balls_faced ?? "-"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.fours ?? "-"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.sixes ?? "-"}</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.balls_faced ?? UNRECORDED_CELL}</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.fours ?? UNRECORDED_CELL}</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">{c.sixes ?? UNRECORDED_CELL}</td>
                     <td className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
-                      {inningsStrikeRate(c.runs, c.balls_faced)}
+                      {inningsStrikeRate(c.runs, c.balls_faced, UNRECORDED_CELL)}
                     </td>
                     <td className="px-2 py-2">
                       <Link href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">
@@ -125,6 +126,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
               </tbody>
             </table>
           </div>
+          {centuries.some((c) => c.balls_faced === null || c.fours === null) && <p className="text-xs text-[var(--text-muted)]">{UNRECORDED_LEGEND}</p>}
         </div>
       )}
     </div>

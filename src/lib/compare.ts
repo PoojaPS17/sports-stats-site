@@ -5,6 +5,7 @@ import { pool } from "./db";
 import { hasTies, isCricketLeague, type League } from "./leagues";
 import { countRegularGames } from "./compareGames";
 import { trunc2 } from "./cricketFormat";
+import { strikeRateTile } from "./cricketRecorded";
 import { playerSport } from "./playerProfile";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import {
@@ -297,6 +298,18 @@ async function countGameLog(league: League, playerEspnId: string): Promise<numbe
   return countRegularGames(rows, playerSport(league));
 }
 
+// The strike-rate row of a comparison: a side with no innings that recorded balls faced reads "not recorded", and a
+// side with only some reads "over n of m innings" beside the rate, so it is never set beside a full career as equal.
+function strikeRateMetric(a: CricketCareerStats | null, b: CricketCareerStats | null): Metric {
+  const m = metric("Strike rate", a?.strikeRate ?? null, b?.strikeRate ?? null, { digits: 2, truncate: true });
+  const side = (c: CricketCareerStats | null, text: string) => {
+    if (!c) return text;
+    const tile = strikeRateTile(c.strikeRate, c.inningsWithBalls, c.inningsBatted, (n) => trunc2(n, 2, "—"));
+    return tile.note ? `${tile.value} (${tile.note})` : tile.value;
+  };
+  return { ...m, aText: side(a, m.aText), bText: side(b, m.bText) };
+}
+
 export function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStats | null): MetricGroup[] {
   const g = (k: keyof CricketCareerStats) => [a?.[k] ?? null, b?.[k] ?? null] as [number | null, number | null];
   return [
@@ -311,7 +324,7 @@ export function cricketGroups(a: CricketCareerStats | null, b: CricketCareerStat
         metric("Innings", ...g("inningsBatted"), { noBar: true }),
         metric("Runs", ...g("runs")),
         metric("Average", ...g("average"), { digits: 2, truncate: true }),
-        metric("Strike rate", ...g("strikeRate"), { digits: 2, truncate: true }),
+        strikeRateMetric(a, b),
         metric("Highest score", ...g("highestScore")),
         metric("Hundreds", ...g("hundreds")),
         metric("Fifties", ...g("fifties")),

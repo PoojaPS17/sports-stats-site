@@ -44,7 +44,15 @@ export const WOMENS_CRICKET: League[] = ["wpl", "wbbl", "wcwc", "wt20wc", "wodi"
 // and nothing live. Tests are ESPN's alone; the archive starts at TEST_ARCHIVE_START_YEAR.
 // The first calendar year of men's Test matches held on the site. Every line of copy that says where the Test
 // archive starts reads this, so loading earlier years is one change here and cannot leave a stale "since 2015".
+//
+// FLIPPING IT (to 1877 once the full history is loaded): change only this number. The copy in testArchiveCopy.ts,
+// the career note and the page descriptions all read it, and the "balls faced and boundaries were not recorded
+// before 1980" sentence appears by itself once it is below TEST_BALLS_RECORDED_FROM_YEAR.
 export const TEST_ARCHIVE_START_YEAR = 2015;
+/** The year of the first men's Test (Melbourne, March 1877): an archive that starts here is every Test there is. */
+export const FIRST_TEST_YEAR = 1877;
+/** Before this year ESPN's scorecards often lack balls faced and boundary counts (coverage <1970 1-40%, 1970s 69%, 1980s 90%). */
+export const TEST_BALLS_RECORDED_FROM_YEAR = 1980;
 export const INTERNATIONAL_CRICKET: League[] = ["test", "odi", "t20i", "wodi", "wt20i"];
 
 // A first-class match: two innings a side, no overs limit, and a draw is a result.
