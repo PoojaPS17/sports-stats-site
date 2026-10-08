@@ -1,6 +1,7 @@
 // The built homepage's hero copy, written from the visitor's own blocks: at most two facts
 // in the headline and two in the line under it, each entity named once. Pure, so the
 // priorities are tested; the component supplies the clock and the time formatting.
+import { teamHex } from "./teamColor";
 import type { BlockPayload, F1DriversBlockData, HomeBlock, LiveBlockData, PlayerFormBlockData, StandingsBlockData, TeamNextBlockData } from "./blockTypes";
 
 export interface LoadedBlock {
@@ -95,4 +96,22 @@ export function heroLine(loaded: LoadedBlock[], o: HeroLineOptions): { headline:
     return { headline: `Your ${n} block${n === 1 ? "" : "s"}, ${liveCount} live.`, sub: "", liveCount };
   }
   return { headline: picked.slice(0, 2).join(" "), sub: picked.slice(2, 4).join(" "), liveCount };
+}
+
+/** The brand blue the hero glows with when the visitor follows no team that has a colour. */
+export const HERO_FALLBACK_COLOUR = "#1470af";
+
+/** The two glow colours behind the hero: the first two different team colours among the visitor's team blocks,
+ * in block order. One team gives the same colour twice; none give the brand blue. */
+export function heroTeamColours(loaded: LoadedBlock[]): [string, string] {
+  const found: string[] = [];
+  for (const l of loaded) {
+    const d = teamNext(l);
+    if (!d?.team.color) continue;
+    const hex = teamHex(d.team.color, "");
+    if (hex && !found.includes(hex)) found.push(hex);
+    if (found.length === 2) break;
+  }
+  const first = found[0] ?? HERO_FALLBACK_COLOUR;
+  return [first, found[1] ?? first];
 }
