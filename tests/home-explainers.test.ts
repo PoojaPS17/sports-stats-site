@@ -43,7 +43,9 @@ test("the stored-results cadence in the copy is the scraper timer's cadence", ()
 
 test("the cricket archive line reads the archive years and never claims all-time history", () => {
   const line = X.cricketArchiveLine();
-  assert.ok(line.includes(`since ${cov.archiveStartYear("test")}`), line);
+  // The Test archive is complete (1877), so nothing is left out and the partial-history line does not list it.
+  assert.equal(cov.archiveStartYear("test"), null);
+  assert.doesNotMatch(line, /Tests since/);
   assert.ok(line.includes(`ODIs since ${cov.archiveStartYear("odi")}`), line);
   assert.ok(line.includes(`since ${cov.archiveStartYear("wodi")}`), line);
   assert.match(line, /not an all-time record/);

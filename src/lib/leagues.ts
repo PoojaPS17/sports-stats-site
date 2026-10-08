@@ -48,7 +48,7 @@ export const WOMENS_CRICKET: League[] = ["wpl", "wbbl", "wcwc", "wt20wc", "wodi"
 // FLIPPING IT (to 1877 once the full history is loaded): change only this number. The copy in testArchiveCopy.ts,
 // the career note and the page descriptions all read it, and the "balls faced and boundaries were not recorded
 // before 1980" sentence appears by itself once it is below TEST_BALLS_RECORDED_FROM_YEAR.
-export const TEST_ARCHIVE_START_YEAR = 2015;
+export const TEST_ARCHIVE_START_YEAR = 1877;
 /** The year of the first men's Test (Melbourne, March 1877): an archive that starts here is every Test there is. */
 export const FIRST_TEST_YEAR = 1877;
 /** Before this year ESPN's scorecards often lack balls faced and boundary counts (coverage <1970 1-40%, 1970s 69%, 1980s 90%). */
