@@ -11,11 +11,10 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 import { CricketScorecardTabs } from "@/components/CricketScorecardTabs";
 import { CricketScorecardPanel } from "@/components/CricketScorecardPanel";
 import { scorecardTabs } from "@/lib/cricketScorecardView";
-import { ImageActions } from "@/components/ImageActions";
-import { CricketScorecardExportCard } from "@/components/CricketScorecardExportCard";
-import { ExportTeamLine } from "@/components/ExportTeamLine";
-import { ExportLabel } from "@/components/ExportShell";
-import { CARD } from "@/lib/exportTheme";
+import { ScorecardActiveProvider } from "@/components/ScorecardActive";
+import { ResultShare, PerformersShare, PlayingXiShare, StoryShare, ScorecardShare } from "@/components/CricketShares";
+import { buildMatchShare, shareDate, type ShareSide } from "@/lib/cricketShare";
+import { battingFirstTeamId } from "@/lib/cricketOrder";
 import { extractGameDetails } from "@/lib/matchDetail";
 import { getCricketSeriesMatch, getCricketSeriesMatches, type SeriesSide } from "@/lib/cricketSeries";
 import { fetchCricketSummaryLive } from "@/lib/cricketLive";
@@ -152,6 +151,39 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
   const teamNames: Record<string, string> = {};
   if (home?.team?.id) teamNames[String(home.team.id)] = sides[0].name;
   if (away?.team?.id) teamNames[String(away.team.id)] = sides[1].name;
+  // Everything the Share menus carry, as plain data: the batting side first, as every cricket score line lists them.
+  const tabs = scorecardTabs(scorecard, story, colourById);
+  const shareSides: (ShareSide & { id: string })[] = [
+    { ...sides[0], id: String(home?.team?.id ?? "") },
+    { ...sides[1], id: String(away?.team?.id ?? "") },
+  ];
+  const first = battingFirstTeamId(scorecard);
+  if (first !== null && shareSides[1].id === first) shareSides.reverse();
+  const venueLine = details?.venue ? venueWithCity(details.venue, details.city) : (stored?.venue ?? null);
+  const formatLabel = format ? format[0].toUpperCase() + format.slice(1) : null;
+  const { result: shareResult, performers: sharePerformers, xi: shareXi, story: shareStory, scorecard: shareScorecard, ...common } = buildMatchShare({
+    league: "cricket",
+    id,
+    matchName,
+    link: absoluteUrl(`/cricket/matches/${id}`),
+    header: {
+      eyebrow: ["Cricket", formatLabel, description, seriesName].filter(Boolean).join(" · "),
+      when: shareDate(date),
+      state: state === "in" ? "in" : state === "post" ? "post" : "pre",
+      sides: shareSides.map(({ name, logo, score, winner }) => ({ name, logo, score, winner })),
+      result: state === "post" && summaryText ? teamDisplayName(summaryText) : null,
+    },
+    calledOff: calledOff !== null,
+    potm: potm ? { name: potm, line: potmFigures } : null,
+    performers,
+    largeLabel: potm && performers.large?.name === potm ? "Player of the Match" : "Top scorer",
+    teams: teamNames,
+    facts: [seriesName ? ["Series", seriesName] : null, description ? ["Stage", description] : null, formatLabel ? ["Format", formatLabel] : null, venueLine ? ["Venue", venueLine] : null, shareDate(date) ? ["Date", shareDate(date)!] : null].filter((f): f is [string, string] => f !== null),
+    xi: playingXi(summary),
+    story,
+    colours: colourById,
+    tabs,
+  });
   const nextMatch = stored ? ((await getCricketSeriesMatches(stored.series_espn_id)).find((m) => m.espn_id !== stored.espn_id && m.date > stored.date && m.status_state === "pre") ?? null) : null;
 
   return (
@@ -180,64 +212,41 @@ export async function CricketMatchPage({ id, mode }: { id: string; mode: Cricket
         potm={potm ? { name: potm, line: potmFigures } : null}
         pills={matchPills(summary?.notes)}
         liveLine={liveLine}
-        venue={details?.venue ? venueWithCity(details.venue, details.city) : (stored?.venue ?? null)}
+        venue={venueLine}
+        share={shareResult ? <ResultShare common={common} data={shareResult} /> : undefined}
       />
       {report ? <p className="text-sm leading-relaxed">{report}</p> : null}
 
       <AdSlot label="Cricket live match top" />
 
       {details && details.scorecard.length > 0 ? (
-        <section className="flex flex-col gap-4">
-          <SectionHeader
-            description={live ? "Updating while the match is in play" : undefined}
-            tools={
-              <ImageActions
-                filename={`${id}-scorecard-cricket`}
-                width={860}
-                shareTitle={`${matchName} scorecard`}
-                card={
-                  <CricketScorecardExportCard
-                    context={`${matchName} · Scorecard`}
-                    scorecard={details.scorecard}
-                    header={
-                      <div>
-                        <ExportLabel>{["Cricket", description, seriesName].filter(Boolean).join(" · ")}</ExportLabel>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-                          {sides.map((s) => (
-                            <ExportTeamLine key={s.name} name={s.name} logo={s.logo} color={null} score={null} scoreDisplay={s.score || null} completed={state === "post"} won={s.winner} showScore={state === "post" || live} />
-                          ))}
-                        </div>
-                        {summaryText && <div style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: CARD.accent }}>{teamDisplayName(summaryText)}</div>}
-                      </div>
-                    }
-                  />
-                }
-              />
-            }
-          >
-            Scorecard
-          </SectionHeader>
-          <CricketScorecardTabs tabs={scorecardTabs(scorecard, story, colourById).map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league="odi" playerSlugs={new Map()} /> }))} />
-        </section>
+        <ScorecardActiveProvider>
+          <section className="flex flex-col gap-4">
+            <SectionHeader description={live ? "Updating while the match is in play" : undefined} menu={shareScorecard ? <ScorecardShare common={common} data={shareScorecard} /> : undefined}>
+              Scorecard
+            </SectionHeader>
+            <CricketScorecardTabs tabs={tabs.map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league="odi" playerSlugs={new Map()} /> }))} />
+          </section>
+        </ScorecardActiveProvider>
       ) : (
         <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">{calledOff ? `No scorecard: this match was ${calledOff.toLowerCase()}.` : state === "pre" ? "The scorecard appears once play starts." : "No scorecard is available for this match."}</p>
       )}
 
       <CricketPartnerships innings={story} colours={colourById} />
 
-      {story.length > 0 && <CricketMatchStory innings={story} colours={colourById} />}
+      {story.length > 0 && <CricketMatchStory innings={story} colours={colourById} share={shareStory ? <StoryShare common={common} data={shareStory} /> : undefined} />}
 
       {(moments.length > 0 || performers.large) && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
           <CricketKeyMoments moments={moments} colours={colourById} teams={teamNames} />
-          <CricketTopPerformers large={performers.large} small={performers.small} league="odi" playerSlugs={new Map()} teams={teamNames} largeLabel={potm && performers.large?.name === potm ? "Player of the Match" : "Top scorer"} />
+          <CricketTopPerformers large={performers.large} small={performers.small} league="odi" playerSlugs={new Map()} teams={teamNames} largeLabel={potm && performers.large?.name === potm ? "Player of the Match" : "Top scorer"} share={sharePerformers ? <PerformersShare common={common} data={sharePerformers} /> : undefined} />
         </div>
       )}
 
       {kind === "result" && <CricketDidYouKnow lines={matchDidYouKnow(scorecard)} />}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
-        <CricketPlayingXi collapsed sides={playingXi(summary)} />
+        <CricketPlayingXi collapsed sides={playingXi(summary)} share={shareXi ? <PlayingXiShare common={common} data={shareXi} /> : undefined} />
         <CricketMatchInfo
           collapsed
           series={stored ? { name: stored.series_name, href: `/cricket/series/${stored.series_espn_id}` } : seriesName ? { name: seriesName, href: null } : null}

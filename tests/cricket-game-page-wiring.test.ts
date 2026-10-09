@@ -45,5 +45,6 @@ test("the league game page uses the innings tabs for cricket and keeps the expor
   assert.match(page, /<CricketScorecardPanel[^>]*playerSlugs=\{playerSlugs\}/);
   assert.doesNotMatch(page, /<CricketScorecards /);
   assert.match(page, /scorecardTabs\(cricketScorecard, story, storyColours\)/);
-  assert.match(page, /<CricketScorecardExportCard/);
+  // the scorecard keeps its share tools: the whole-match card now sits behind the section's Share menu
+  assert.match(page, /<ScorecardShare/);
 });

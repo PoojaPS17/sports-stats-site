@@ -32,6 +32,8 @@ export interface CricketMatchHeroProps {
   venue: string | null;
   /** The headline is the page's h1 unless the page has its own (the league game page keeps a screen-reader h1). */
   headingTag?: "h1" | "p";
+  /** The result's Share menu, at the right end of the first row. */
+  share?: React.ReactNode;
 }
 
 const initials = (name: string) =>
@@ -48,7 +50,7 @@ const initials = (name: string) =>
  * the facts ESPN notes. Inside `.band-deep` the band tokens resolve to the deep palette, so the
  * component names only `--sig`, `--mast-muted` and `--mast-line`.
  */
-export function CricketMatchHero({ state, calledOff, headline, date, sides, result, potm, pills, liveLine, venue, headingTag = "h1" }: CricketMatchHeroProps) {
+export function CricketMatchHero({ state, calledOff, headline, date, sides, result, potm, pills, liveLine, venue, headingTag = "h1", share }: CricketMatchHeroProps) {
   const Heading = headingTag;
   const pill =
     state === "in" ? (
@@ -65,13 +67,16 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
     );
   const line = result ?? liveLine ?? venue;
   return (
-    <section className="band-deep flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--mast-line)] px-5 py-5 sm:px-6" aria-label="Match summary">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+    <section className="band-deep relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--mast-line)] px-5 py-5 sm:px-6" aria-label="Match summary">
+      <div className={`flex flex-wrap items-center justify-between gap-2 text-xs ${share ? "max-sm:pr-12" : ""}`}>
         <span className="flex flex-wrap items-center gap-2">
           {pill}
           <Heading className="font-semibold text-[var(--mast-muted)]">{headline}</Heading>
         </span>
-        {date && <LocalTime iso={date} format={calledOff ? "date" : "datetime"} className="text-[var(--mast-muted)]" />}
+        <div className="flex shrink-0 items-center gap-3">
+          {date && <LocalTime iso={date} format={calledOff ? "date" : "datetime"} className="text-[var(--mast-muted)]" />}
+          {share && <div className="z-10 max-sm:absolute max-sm:right-5 max-sm:top-[13px]">{share}</div>}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

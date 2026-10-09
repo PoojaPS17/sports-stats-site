@@ -18,7 +18,7 @@ function Card({ href, className, children }: { href: string | null; className: s
  * The match's leading players: one large card in the accent colour for the Player of the Match (or the top
  * scorer), then the innings leaders as small cards. A card links to the player's page when SportsDB has one.
  */
-export function CricketTopPerformers({ large, small, league, playerSlugs, teams, largeLabel = "Player of the Match" }: { large: Performer | null; small: Performer[]; league: League; playerSlugs: Map<string, string>; teams: Record<string, string>; largeLabel?: string }) {
+export function CricketTopPerformers({ large, small, league, playerSlugs, teams, largeLabel = "Player of the Match", share }: { large: Performer | null; small: Performer[]; league: League; playerSlugs: Map<string, string>; teams: Record<string, string>; largeLabel?: string; /** The section's Share menu, right-aligned on the heading. */ share?: React.ReactNode }) {
   if (!large && small.length === 0) return null;
   const href = (p: Performer) => {
     const slug = playerSlugs.get(p.athleteId);
@@ -26,7 +26,7 @@ export function CricketTopPerformers({ large, small, league, playerSlugs, teams,
   };
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader description="The best batting and bowling of each innings">Top performers</SectionHeader>
+      <SectionHeader menu={share} description="The best batting and bowling of each innings">Top performers</SectionHeader>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {large && (
           <Card href={href(large)} className="flex flex-col gap-1 rounded-2xl bg-[var(--sig)] px-5 py-5 text-[var(--sig-on)] sm:col-span-2">
