@@ -37,7 +37,7 @@ export function TeamStatsComparison({ away, home, homeFirst = false }: { away: T
               <span className="tabular-nums font-semibold">{rightValue}</span>
             </div>
             <div className="flex h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-              <span className={`h-full ${homeFirst ? homeColor : awayColor}`} style={{ width: `${leftPct}%` }} />
+              <span className={`bar-grow h-full ${homeFirst ? homeColor : awayColor}`} style={{ width: `${leftPct}%` }} />
               <span className={`h-full flex-1 ${homeFirst ? awayColor : homeColor}`} />
             </div>
           </div>

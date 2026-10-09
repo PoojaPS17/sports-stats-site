@@ -3,6 +3,7 @@ import Link from "next/link";
 import { teamDisplayName } from "@/lib/teamName";
 import { LocalTime } from "@/components/LocalTime";
 import { TeamLogo } from "@/components/TeamLogo";
+import { ScoreFlash } from "@/components/motion/ScoreFlash";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { formatSeriesDates, SERIES_KIND_LABEL } from "@/lib/cricketSeriesDisplay";
 import type { CricketSeries, CricketSeriesMatch, SeriesSide } from "@/lib/cricketSeriesTypes";
@@ -55,7 +56,7 @@ function Side({ side, decided }: { side: SeriesSide | null; decided: boolean }) 
     <div className="flex items-center gap-2 py-0.5">
       <TeamLogo name={teamDisplayName(side.name)} logoUrl={side.logo} size={20} />
       <span className={`min-w-0 flex-1 truncate text-[15px] ${loser ? "text-[var(--text-muted)]" : "font-semibold"}`}>{teamDisplayName(side.name)}</span>
-      <span className={`shrink-0 text-sm tabular-nums ${loser ? "text-[var(--text-muted)]" : "font-bold"}`}>{side.score ?? ""}</span>
+      <ScoreFlash value={side.score ?? ""} className={`shrink-0 text-sm tabular-nums ${loser ? "text-[var(--text-muted)]" : "font-bold"}`}>{side.score ?? ""}</ScoreFlash>
     </div>
   );
 }

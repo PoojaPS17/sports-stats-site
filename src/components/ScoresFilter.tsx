@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useSlideIndicator } from "./motion/useSlideIndicator";
 
 export interface ScoresFilterItem {
   key: string;
@@ -11,6 +12,8 @@ export interface ScoresFilterItem {
 // down the page; with it, a chip shows only that block (every block carries data-scores-block).
 export function ScoresFilter({ items }: { items: ScoresFilterItem[] }) {
   const [active, setActive] = useState("all");
+  const navRef = useRef<HTMLElement>(null);
+  useSlideIndicator(navRef, active);
   const pick = (key: string) => {
     setActive(key);
     for (const el of document.querySelectorAll<HTMLElement>("[data-scores-block]")) {
@@ -20,7 +23,7 @@ export function ScoresFilter({ items }: { items: ScoresFilterItem[] }) {
   };
   const chips = [{ key: "all", label: "All" }, ...items];
   return (
-    <nav aria-label="Filter by league" className="scores-filter">
+    <nav ref={navRef} aria-label="Filter by league" className="scores-filter slide-host">
       {chips.map((c) => (
         <a
           key={c.key}
@@ -36,6 +39,7 @@ export function ScoresFilter({ items }: { items: ScoresFilterItem[] }) {
           {c.label}
         </a>
       ))}
+      <span className="slide-ind" aria-hidden="true" />
     </nav>
   );
 }

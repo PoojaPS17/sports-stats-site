@@ -69,7 +69,7 @@ export function SendToPhone({ setup, onSent }: { setup: HomeSetup; onSent?: () =
   }
 
   return (
-    <button type="button" onClick={send} className="inline-flex h-10 items-center rounded-lg border border-[var(--mast-line)] px-3.5 text-[13px] font-bold text-[var(--mast-text)]" aria-live="polite">
+    <button type="button" onClick={send} className="btn-lift inline-flex h-10 items-center rounded-lg border border-[var(--mast-line)] px-3.5 text-[13px] font-bold text-[var(--mast-text)]" aria-live="polite">
       {copied ? "Link copied" : "Send to my phone"}
     </button>
   );

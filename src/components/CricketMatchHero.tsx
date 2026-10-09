@@ -1,4 +1,5 @@
 import { TeamLogo } from "@/components/TeamLogo";
+import { ScoreFlash } from "@/components/motion/ScoreFlash";
 import { LocalTime } from "@/components/LocalTime";
 import { splitCricketScore } from "@/lib/cricketMatchExtras";
 
@@ -84,7 +85,7 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
                 <span className={`line-clamp-2 text-[20px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
                 {detail && <span className="text-[13px] text-[var(--mast-muted)]">{detail}</span>}
               </div>
-              {main && <span className={`display ml-auto shrink-0 leading-none tabular-nums ${main.length > 6 ? "text-[30px] sm:text-[40px]" : "text-[44px] sm:text-[56px]"}`}>{main}</span>}
+              {main && <ScoreFlash value={main} className={`display ml-auto shrink-0 leading-none tabular-nums ${main.length > 6 ? "text-[30px] sm:text-[40px]" : "text-[44px] sm:text-[56px]"}`}>{main}</ScoreFlash>}
             </div>
           );
         })}

@@ -104,7 +104,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
                     </span>
                   </div>
                   <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
-                    <span className="h-full" style={{ width: `${first.win * 100}%`, background: first.color }} />
+                    <span className="bar-grow h-full" style={{ width: `${first.win * 100}%`, background: first.color }} />
                     {soccer && <span className="h-full bg-[var(--draw)]" style={{ width: `${draw * 100}%` }} />}
                     <span className="h-full flex-1" style={{ background: second.color }} />
                   </div>

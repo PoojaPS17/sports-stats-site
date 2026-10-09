@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useSlideIndicator } from "../motion/useSlideIndicator";
 
 // "Live now" and "Coming up" inside the Right now section: two tabs over two server-drawn panels (WAI-ARIA tabs:
 // roving tabindex, arrow keys, Home and End). Only the chosen panel is shown, and the server picks which one that is
@@ -10,6 +11,8 @@ export function HomeTabs({ live, coming, liveCount, initial }: { live: ReactNode
   const id = useId();
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const order = ["live", "coming"] as const;
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useSlideIndicator(tabsRef, tab);
   const onKey = (e: KeyboardEvent) => {
     const i = order.indexOf(tab);
     const next = e.key === "ArrowRight" || e.key === "ArrowDown" ? order[(i + 1) % 2] : e.key === "ArrowLeft" || e.key === "ArrowUp" ? order[(i + 1) % 2] : e.key === "Home" ? order[0] : e.key === "End" ? order[1] : null;
@@ -21,7 +24,7 @@ export function HomeTabs({ live, coming, liveCount, initial }: { live: ReactNode
   const label = { live: liveCount > 0 ? `Live now · ${liveCount}` : "Live now", coming: "Coming up" };
   return (
     <div className="rn-tabs">
-      <div className="home-tabs" role="tablist" aria-label="In play now or coming up" onKeyDown={onKey}>
+      <div ref={tabsRef} className="home-tabs slide-host" role="tablist" aria-label="In play now or coming up" onKeyDown={onKey}>
         {order.map((t) => (
           <button
             key={t}
@@ -40,6 +43,7 @@ export function HomeTabs({ live, coming, liveCount, initial }: { live: ReactNode
             {label[t]}
           </button>
         ))}
+        <span className="slide-ind" aria-hidden="true" />
       </div>
       <div role="tabpanel" id={`${id}-p-live`} aria-labelledby={`${id}-live`} hidden={tab !== "live"} tabIndex={0}>
         {live}

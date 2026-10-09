@@ -76,7 +76,7 @@ export function ScrollToPicker({ children }: { children: React.ReactNode }) {
     band?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   };
   return (
-    <button type="button" className="hx-add hx-start" onClick={go}>
+    <button type="button" className="hx-add hx-start btn-lift" onClick={go}>
       {children}
     </button>
   );

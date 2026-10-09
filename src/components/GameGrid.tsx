@@ -15,7 +15,7 @@ import type { GameRow, League } from "@/lib/queries";
 export function GameGrid({ league, games, gridClassName }: { league: League; games: GameRow[]; gridClassName: string }) {
   const clusters = groupByKickoff(games);
   return (
-    <div className={gridClassName}>
+    <div className={`${gridClassName} motion-stagger`}>
       {clusters.map((cluster) => (
         <Fragment key={cluster[0].espn_id}>
           {cluster.length > 1 && (

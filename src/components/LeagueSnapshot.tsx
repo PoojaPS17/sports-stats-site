@@ -1,3 +1,4 @@
+import { CountUp } from "./motion/CountUp";
 import Link from "next/link";
 import { isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
 import { formatLeaderValue } from "@/lib/leaders";
@@ -79,11 +80,11 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
                                 {row.team_name && <span className="text-xs text-[var(--text-muted)]">{row.team_name}</span>}
                               </span>
                               <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                                <span className="block h-full rounded-full bg-[var(--sig)]" style={{ width: `${Math.max(6, Math.round((row.value / top) * 100))}%` }} />
+                                <span className="bar-grow block h-full rounded-full bg-[var(--sig)]" style={{ width: `${Math.max(6, Math.round((row.value / top) * 100))}%` }} />
                               </span>
                             </span>
                             <span className="display shrink-0 text-2xl tabular-nums">
-                              {formatLeaderValue(row.value, board.unit)}
+                              <CountUp value={formatLeaderValue(row.value, board.unit)} />
                               <span className="ml-1 font-sans text-[10px] font-bold uppercase tracking-wider text-[var(--text-faint)]">{board.unit}</span>
                             </span>
                           </Link>

@@ -43,7 +43,7 @@ export function OnTheBrinkView({ items }: { items: BrinkItem[] }) {
                   {i.value.toLocaleString("en-US")} {i.unit} → {i.target.toLocaleString("en-US")}
                 </span>
                 <span className="rw-bar" role="img" aria-label={`${Math.round(pct)}% of the way to ${i.target.toLocaleString("en-US")} ${i.unit}`}>
-                  <i style={{ width: `${pct.toFixed(1)}%` }} />
+                  <i className="bar-grow" style={{ width: `${pct.toFixed(1)}%` }} />
                 </span>
                 <span className="rw-s">{brinkSentence(i, scopeOf(i))}</span>
               </Link>

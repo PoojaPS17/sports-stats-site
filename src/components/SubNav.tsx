@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef } from "react";
+import { useSlideIndicator } from "./motion/useSlideIndicator";
 
 export interface SubNavTab {
   label: string;
@@ -16,6 +18,8 @@ export interface SubNavTab {
 // pages. Sticks below the header so the tabs stay reachable on long pages.
 export function SubNav({ title, titleHref, tabs }: { title: string; titleHref: string; tabs: SubNavTab[] }) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+  useSlideIndicator(navRef, pathname);
 
   return (
     <div className="sticky top-[var(--header-h)] z-20 -mx-4 mb-6 border-b border-[var(--border)] bg-[var(--bg)]/95 border-[var(--border)] backdrop-blur sm:-mx-6">
@@ -24,7 +28,7 @@ export function SubNav({ title, titleHref, tabs }: { title: string; titleHref: s
           {title}
         </Link>
         <span className="hidden h-5 w-px bg-[var(--border)] sm:block" />
-        <nav className="-mb-px flex overflow-x-auto" aria-label={`${title} sections`}>
+        <nav ref={navRef} className="slide-host slide-host-tabs -mb-px flex overflow-x-auto" aria-label={`${title} sections`}>
           {tabs.map((tab) => {
             const prefixes = [tab.href, ...(tab.match ? [tab.match] : [])];
             const active = tab.exact ? pathname === tab.href : prefixes.some((p) => pathname === p || pathname?.startsWith(`${p}/`));
@@ -34,6 +38,7 @@ export function SubNav({ title, titleHref, tabs }: { title: string; titleHref: s
               </Link>
             );
           })}
+          <span className="slide-ind" aria-hidden="true" />
         </nav>
       </div>
     </div>

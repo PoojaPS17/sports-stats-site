@@ -3,6 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { stripeStyle } from "@/lib/teamColor";
 import type { GameRow, League } from "@/lib/queries";
 import { TeamLogo } from "./TeamLogo";
+import { ScoreFlash } from "./motion/ScoreFlash";
 import { StatusPill } from "./StatusPill";
 import { Kickoff } from "./Kickoff";
 import { formatGameDate } from "@/lib/gameDay";
@@ -51,15 +52,15 @@ function TeamRow({
           </span>
         </span>
         {showScore && !isLongScore && score !== null && (
-          <span className={`score-display shrink-0 tabular-nums ${won ? "text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+          <ScoreFlash value={score} className={`score-display shrink-0 tabular-nums ${won ? "text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
             {score}
-          </span>
+          </ScoreFlash>
         )}
       </span>
       {showScore && isLongScore && (
-        <span className={`pl-[36px] text-xs tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+        <ScoreFlash value={scoreDisplay} className={`pl-[36px] text-xs tabular-nums ${won ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
           {scoreDisplay}
-        </span>
+        </ScoreFlash>
       )}
     </div>
   );

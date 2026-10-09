@@ -48,7 +48,7 @@ export function CompareTable({
                   </div>
                   {!neutral && !m.noBar && both && total > 0 && (
                     <div className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
-                      <span className="h-full" style={{ width: `${pctA}%`, background: ca, opacity: aBetter || !bBetter ? 1 : 0.45 }} />
+                      <span className="bar-grow h-full" style={{ width: `${pctA}%`, background: ca, opacity: aBetter || !bBetter ? 1 : 0.45 }} />
                       <span className="h-full flex-1" style={{ background: cb, opacity: bBetter || !aBetter ? 1 : 0.45 }} />
                     </div>
                   )}
