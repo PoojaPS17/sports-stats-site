@@ -39,8 +39,8 @@ export function CricketTopPerformers({ large, small, league, playerSlugs, teams,
         {small.map((p) => (
           <Card key={`${p.athleteId}-${p.innings}-${p.kind}`} href={href(p)} className="card flex items-center justify-between gap-3 px-4 py-3">
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-[15px] font-bold">{p.name}</span>
-              <span className="truncate text-xs text-[var(--text-muted)]">{[p.detail, teams[p.teamId]].filter(Boolean).join(" · ")}</span>
+              <span className="break-words text-[15px] font-bold">{p.name}</span>
+              <span className="break-words text-xs text-[var(--text-muted)]">{[p.detail, teams[p.teamId]].filter(Boolean).join(" · ")}</span>
             </span>
             <span className="display shrink-0 text-[28px] leading-none tabular-nums">{p.figure}</span>
           </Card>

@@ -19,14 +19,14 @@ function ScorecardTable({
 }) {
   if (rows.length === 0) return null;
   return (
-    <div className="overflow-x-auto">
+    <div className="scorecard-scroll">
       <p className="px-4 pt-3 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{title}</p>
-      <table className="w-full min-w-[420px] border-collapse text-sm">
+      <table className="scorecard-table w-full min-w-[17.5rem] border-collapse text-sm">
         <thead>
           <tr className="table-head text-left">
             <th className="py-2 pl-4 font-medium">Player</th>
             {labels.map((label) => (
-              <th key={label} className="px-2 py-2 text-right font-medium">
+              <th key={label} className="py-2 text-right font-medium">
                 {label}
               </th>
             ))}
@@ -48,7 +48,7 @@ function ScorecardTable({
                   {row.dismissal && <span className="block text-xs font-normal text-[var(--text-muted)]">{row.dismissal}</span>}
                 </td>
                 {row.stats.map((value, i) => (
-                  <td key={i} className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
+                  <td key={i} className="py-2 text-right tabular-nums text-[var(--text-muted)]">
                     {value}
                   </td>
                 ))}

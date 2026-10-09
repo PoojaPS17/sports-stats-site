@@ -84,13 +84,13 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
           const muted = state === "post" && !side.winner;
           const { main, detail } = splitCricketScore(side.score);
           return (
-            <div key={i} className={`flex min-w-0 items-center gap-4 border-l-[6px] pl-4 ${muted ? "text-[var(--mast-muted)]" : ""}`} style={{ borderColor: side.colour ?? "var(--mast-line)" }}>
+            <div key={i} className={`flex min-w-0 items-center gap-4 border-l-[6px] pl-4 max-[359px]:gap-2.5 max-[359px]:pl-3 ${muted ? "text-[var(--mast-muted)]" : ""}`} style={{ borderColor: side.colour ?? "var(--mast-line)" }}>
               <TeamLogo name={side.name} logoUrl={side.logo} size={52} priority />
               <div className="flex min-w-0 flex-col">
-                <span className={`line-clamp-2 text-[20px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
+                <span className={`line-clamp-2 text-[20px] max-[359px]:text-[17px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
                 {detail && <span className="text-[13px] text-[var(--mast-muted)]">{detail}</span>}
               </div>
-              {main && <ScoreFlash value={main} className={`display ml-auto shrink-0 leading-none tabular-nums ${main.length > 6 ? "text-[30px] sm:text-[40px]" : "text-[44px] sm:text-[56px]"}`}>{main}</ScoreFlash>}
+              {main && <ScoreFlash value={main} className={`display ml-auto shrink-0 leading-none tabular-nums ${main.length > 6 ? "text-[30px] sm:text-[40px]" : "text-[44px] max-[359px]:text-[30px] sm:text-[56px]"}`}>{main}</ScoreFlash>}
             </div>
           );
         })}
