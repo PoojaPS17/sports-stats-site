@@ -131,14 +131,41 @@ export function clearSetup() {
   window.dispatchEvent(new Event(SETUP_EVENT));
 }
 
-/** How many rows the built page's block grid will fill at this viewport width (1 column under 768px, 2 from
- * md, 3 from xl; the live block spans two columns from md; the "Add another block" button takes a slot).
- * `--hb-rows` feeds the min-height that keeps the footer from jumping while the blocks mount
- * (`.home-page` in globals.css). The pre-paint script in app/layout.tsx repeats this arithmetic. */
-export function gridRows(blockTypes: readonly string[], width: number): number {
+/** Rendered block heights in px, measured on sports-db.live (headless Chrome, 2026-10-09) and rounded DOWN a little: a
+ * short reserve costs a small jump, a tall one leaves blank space. Block heights do not change with width (they are
+ * fixed-row tables and cards) except "live", whose rows are data-dependent (about 100px a match, 6 matches = 678px on the day measured, taller on a phone).
+ * The pre-paint script in app/layout.tsx repeats these numbers: tests/built-home-stable-layout.test.ts runs it against this. */
+export function blockHeight(block: { type: string; params?: Record<string, string> }, cols: number): number {
+  switch (block.type) {
+    case "live": return cols > 1 ? 640 : 800;
+    case "team-next": return block.params?.league === "cricket" ? 285 : 440;
+    case "standings": case "series-standings": return 315;
+    case "player-form": return 160;
+    case "f1-drivers": return 270;
+    case "bts": return 330;
+    default: return 280;
+  }
+}
+
+/** Height the built page will fill, in px: hero band + the block grid (1 column under 768px, 2 from md, 3 from xl; the
+ * live block spans two columns from md; the "Add another block" button, 96px, takes a slot; rows are as tall as their
+ * tallest card; 16px gaps) + the back link and page gaps. `--hb-h` feeds the min-height that keeps the footer from
+ * jumping while the blocks mount (`.home-page` in globals.css). The pre-paint script in app/layout.tsx repeats this. */
+export function reserveHeight(blocks: readonly { type: string; params?: Record<string, string> }[], width: number): number {
   const cols = width >= 1280 ? 3 : width >= 768 ? 2 : 1;
-  const slots = blockTypes.length + 1 + (cols > 1 && blockTypes.includes("live") ? 1 : 0);
-  return Math.ceil(slots / cols);
+  const items = blocks.map((b) => ({ span: b.type === "live" && cols > 1 ? 2 : 1, h: blockHeight(b, cols) }));
+  items.push({ span: 1, h: 96 });
+  const rows: number[] = [0];
+  let col = 0;
+  for (const it of items) {
+    if (col + it.span > cols) { rows.push(0); col = 0; }
+    rows[rows.length - 1] = Math.max(rows[rows.length - 1], it.h);
+    col += it.span;
+    if (col >= cols) { rows.push(0); col = 0; }
+  }
+  if (rows[rows.length - 1] === 0) rows.pop();
+  const grid = rows.reduce((a, h) => a + h, 0) + 16 * (rows.length - 1);
+  return (cols > 1 ? 270 : 280) + 80 + grid;
 }
 
 /** Mirrors the pre-paint script in app/layout.tsx: `data-home` on <html> drives which hero is visible. */
@@ -148,8 +175,8 @@ export function applyHomeAttribute(stored: Stored | null) {
   if (!stored) delete el.dataset.home;
   else el.dataset.home = isSetup(stored) ? "built" : "collapsed";
   if (!el.style || typeof window === "undefined") return;
-  if (isSetup(stored)) el.style.setProperty("--hb-rows", String(gridRows(stored.blocks.map((b) => b.type), window.innerWidth)));
-  else el.style.removeProperty("--hb-rows");
+  if (isSetup(stored)) el.style.setProperty("--hb-h", reserveHeight(stored.blocks, window.innerWidth) + "px");
+  else el.style.removeProperty("--hb-h");
 }
 
 // --- transfer link ---------------------------------------------------------------
