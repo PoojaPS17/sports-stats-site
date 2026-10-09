@@ -6,6 +6,7 @@ import type { HomeBlock } from "@/lib/blockTypes";
 import { MAX_BLOCKS, writeSetup, type HomeSetup } from "@/lib/homeSetup";
 import { BlockPalette } from "./BlockPalette";
 import { useDragReorder } from "./useDragReorder";
+import { BackToFullSite } from "./BackToFullSite";
 
 // The editor on the built page ("Edit your blocks"): the current blocks as removable chips, the
 // add palette, a draggable preview and a save button. The first-visit picker is SportPicker.
@@ -16,6 +17,7 @@ export function HomeBuilder({ ctx, initial, onClose }: { ctx: EditionContext; in
   const chosen = new Set(blocks.map((b) => b.id));
   const add = (b: HomeBlock) => setBlocks((list) => (list.some((x) => x.id === b.id) || list.length >= MAX_BLOCKS ? list : [...list, b]));
   const remove = (id: string) => setBlocks((list) => list.filter((b) => b.id !== id));
+  const unpick = (ids: string[]) => setBlocks((list) => list.filter((b) => !ids.includes(b.id)));
   // Same semantics as moveBlock in lib/homeSetup.ts, on the plain draft list this card edits
   // before it is saved.
   const move = (id: string, delta: -1 | 1) =>
@@ -53,9 +55,9 @@ export function HomeBuilder({ ctx, initial, onClose }: { ctx: EditionContext; in
                 </span>
               </li>
             ))}
-            {blocks.length === 0 && <li className="text-[13px] text-[var(--mast-muted)]">No blocks yet. Add some below.</li>}
+            {blocks.length === 0 && <li className="text-[13px] text-[var(--mast-muted)]">No blocks yet. Add some below, or go back to the full site view.</li>}
           </ul>
-          <BlockPalette ctx={ctx} existing={chosen} onPick={add} />
+          <BlockPalette ctx={ctx} existing={chosen} onPick={add} onUnpick={unpick} />
         </div>
         <div className="rounded-xl bg-[var(--bg)] p-3 text-[var(--text)] lg:col-span-2">
           <p className="eyebrow eyebrow-quiet mb-2">Preview · {blocks.length} {blocks.length === 1 ? "block" : "blocks"} · drag to reorder</p>
@@ -79,6 +81,7 @@ export function HomeBuilder({ ctx, initial, onClose }: { ctx: EditionContext; in
           Save my blocks
         </button>
         <button type="button" onClick={onClose} className="h-12 rounded-xl border border-[var(--mast-line)] px-4 text-[14px] font-bold">Cancel</button>
+        <BackToFullSite className="h-12 px-2 text-[14px] font-bold underline underline-offset-4 text-[var(--mast-muted)] hover:text-[var(--sig)]" />
         <span className="ml-auto text-[12px] text-[var(--mast-muted)]">{saveError ? "Couldn't save on this device" : "No sign-up. Saved in this browser only."}</span>
       </div>
     </div>

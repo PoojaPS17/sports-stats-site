@@ -67,7 +67,11 @@ test("two players of one name are told apart by club or competition", () => {
   assert.deepEqual(resultLabels([r("Rohit Sharma", "odi", "rohit-sharma", "India"), r("Rohit Sharma", "odi", "rohit-sharma-2", "Indonesia"), r("Virat Kohli", "odi", "virat-kohli", "India")]), ["Rohit Sharma (India)", "Rohit Sharma (Indonesia)", "Virat Kohli"]);
 });
 
-test("the first-visit wrapper is hidden under both saved states, like the builder hero", () => {
+// "Everything" (collapsed) used to hide these too, which left a bare bar and an empty page. It now shows the full
+// home under the slim bar; only a built page hides the first-visit wrapper (the builder hero is still hidden in both).
+test("the first-visit wrapper is hidden only under a built page; collapsed keeps the full home", () => {
   const css = readFileSync(join(__dirname, "../src/app/globals.css"), "utf8");
-  assert.match(css, /:root\[data-home="built"\] \.home-firstvisit,\s*:root\[data-home="collapsed"\] \.home-firstvisit\s*\{\s*display: none;/);
+  assert.match(css, /:root\[data-home="built"\] \.home-firstvisit\s*\{\s*display: none;/);
+  assert.doesNotMatch(css, /:root\[data-home="collapsed"\] \.home-firstvisit/);
+  assert.match(css, /:root\[data-home="collapsed"\] \.home-builder-hero/);
 });

@@ -7,6 +7,7 @@ import { heroLine, heroTeamColours, type LoadedBlock } from "@/lib/homeHeroLine"
 import { addBlock, applyHomeAttribute, clearSetup, decodeSetup, isSetup, moveBlock, newSetup, readSetup, removeBlock, reorderBlocks, SETUP_EVENT, writeSetup, type HomeSetup } from "@/lib/homeSetup";
 import { BlockFrame } from "./BlockFrame";
 import { BlockPalette } from "./BlockPalette";
+import { BackToFullSite } from "./BackToFullSite";
 import { BuiltHero } from "./BuiltHero";
 import { HomeBuilder } from "./HomeBuilder";
 import { MakeItYours } from "./MakeItYours";
@@ -43,6 +44,11 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
       const s = readSetup();
       applyHomeAttribute(s);
       setSetup(isSetup(s) ? s : null);
+      if (!isSetup(s)) {
+        // Back to the full site view (from the hero, the editor or the last block going): nothing left to edit or add to.
+        setEditing(false);
+        setAdding(false);
+      }
       document.documentElement.dataset.homeReady = "1";
     };
     const encoded = new URLSearchParams(window.location.search).get("setup");
@@ -124,6 +130,14 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
     setAdding(false);
   };
 
+  // A ticked chip in the add dialog takes its block off again.
+  const onUnpick = (ids: string[]) => {
+    const next = ids.reduce(removeBlock, setup);
+    setAdding(false);
+    if (next.blocks.length === 0) clearSetup();
+    else commit(next);
+  };
+
   return (
     <>
       {editing ? (
@@ -163,6 +177,12 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
         </button>
       </div>
 
+      {!editing && (
+        <p className="-mt-4 text-center">
+          <BackToFullSite className="inline-flex min-h-10 items-center px-3 text-[13px] font-bold text-[var(--text-muted)] underline underline-offset-4 hover:text-[var(--sig-ink)]" />
+        </p>
+      )}
+
       {adding && (
         <div role="dialog" aria-modal="true" aria-label="Add another block" className="fixed inset-0 z-40 flex items-end justify-center bg-[color-mix(in_srgb,var(--mast)_60%,transparent)] p-4 sm:items-center" onClick={() => setAdding(false)}>
           <div className="card max-h-[85vh] w-full max-w-2xl overflow-auto p-5" onClick={(e) => e.stopPropagation()}>
@@ -170,7 +190,7 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
               <p className="display text-[24px]">Add another block</p>
               <button type="button" onClick={() => setAdding(false)} aria-label="Close" className="text-[var(--text-faint)]">×</button>
             </div>
-            <BlockPalette ctx={ctx} existing={new Set(blocks.map((b) => b.id))} onPick={onPick} dark={false} />
+            <BlockPalette ctx={ctx} existing={new Set(blocks.map((b) => b.id))} onPick={onPick} onUnpick={onUnpick} dark={false} />
           </div>
         </div>
       )}

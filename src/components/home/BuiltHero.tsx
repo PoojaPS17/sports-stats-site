@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import type { HomeSetup } from "@/lib/homeSetup";
 import { SendToPhone } from "./SendToPhone";
 import { HeroDecor } from "./HeroDecor";
+import { BackToFullSite } from "./BackToFullSite";
 
 // The built homepage's hero: the approved deep navy band, with a glow in each of the visitor's team colours
 // (brand blue when they follow no team). The text stays white on the navy, so a pale team colour never
@@ -39,6 +40,7 @@ export function BuiltHero({ setup, headline, sub, liveCount, colours, onEdit }: 
           )}
           <button type="button" onClick={onEdit} className="btn-lift inline-flex h-10 items-center rounded-lg border border-[var(--ctl)] px-3.5 text-[13px] font-bold text-[var(--text)]">Edit blocks</button>
           <SendToPhone setup={setup} />
+          <BackToFullSite className="btn-lift inline-flex h-10 items-center rounded-lg px-3.5 text-[13px] font-bold text-[var(--text-muted)] underline underline-offset-4 hover:text-[var(--sig-ink)]" />
         </div>
       </div>
     </section>
