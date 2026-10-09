@@ -183,10 +183,13 @@ export function ShareMenu({ section, filename, shareTitle, caption, link, league
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open, note]);
 
-  // Focus the first control when the menu opens.
+  // Focus the first control when the menu opens. The menu stays visibility:hidden until the layout effect above has
+  // placed it, and a hidden element cannot take focus, so the first open waits for `placed` (later opens reuse the
+  // last position and are visible at once).
+  const placed = pos !== null;
   useEffect(() => {
-    if (open) menuRef.current?.querySelector<HTMLElement>('[role="menuitem"],[role="menuitemradio"]')?.focus();
-  }, [open]);
+    if (open && placed) menuRef.current?.querySelector<HTMLElement>('[role="menuitem"],[role="menuitemradio"]')?.focus();
+  }, [open, placed]);
 
   useEffect(() => {
     if (!note) return;
