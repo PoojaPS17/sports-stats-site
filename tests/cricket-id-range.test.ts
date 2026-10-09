@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ID_MODE_DEFAULTS, idsToFetch, parseIdModeArgs, parseIdRange, retriesForAttempts } from "../scripts/lib/cricket-id-range";
-import { distinctDays, parseLeagueDays } from "../scripts/lib/cricket-series-days";
+import { distinctDays, parseLeagueDays, UNFILED_EXTRA_DAYS } from "../scripts/lib/cricket-series-days";
 
 test("a range, a single id, and nothing else parse as ids", () => {
   assert.deepEqual(parseIdRange("62387-63862"), { from: 62387, to: 63862 });
@@ -73,4 +73,8 @@ test("--league-days reads one request per distinct start day, ascending, at noon
     distinctDays(["1930-01-23T18:30:00Z", "1930-01-24T05:00:00Z"], true).map((d) => d.toISOString().slice(0, 10)),
     ["1930-01-23", "1930-01-24", "1930-01-25"]
   );
+  // ESPN's old listing names a Test on only some of its days: the 1990 Trent Bridge Test (started 21 June) is listed 24-26 June.
+  const unfiled = distinctDays(["1990-06-21T10:00:00Z"], UNFILED_EXTRA_DAYS).map((d) => d.toISOString().slice(0, 10));
+  assert.equal(unfiled.length, UNFILED_EXTRA_DAYS + 1);
+  for (const listed of ["1990-06-24", "1990-06-25", "1990-06-26"]) assert.ok(unfiled.includes(listed), listed);
 });

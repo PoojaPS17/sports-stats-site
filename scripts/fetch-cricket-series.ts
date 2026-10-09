@@ -13,13 +13,14 @@
 //
 // `--league-days <league>` reads only the days on which a stored match of that league started inside --since/--until
 // (the pre-2000 Tests: one request per Test start date, not one per calendar day of a century). Add `--unfiled` for a
-// second pass over the matches the first one left without a series row (it reads their day and the day after: ESPN files
-// a match under its local day, which for a New Zealand Test stored at 18:30 UTC is the next UTC day).
+// second pass over the matches the first one left without a series row (it reads their day and the seven after: ESPN files
+// a match under its local day, which for a New Zealand Test stored at 18:30 UTC is the next UTC day, and lists an old Test on only
+// some of its days).
 //
 // A recurring tournament (BBL, WBBL, IPL, ...) keeps one ESPN league id for every season, so its matches are filed
 // per edition, `<league id>-<season>` ("8044-2025-26"), see src/lib/cricketSeriesKey.ts; a bilateral tour keeps its own id.
 import { pool } from "./lib/db";
-import { distinctDays, parseLeagueDays } from "./lib/cricket-series-days";
+import { distinctDays, parseLeagueDays, UNFILED_EXTRA_DAYS } from "./lib/cricket-series-days";
 import { ingestDay, storeMatches, storeSeries, type SeriesMap } from "./lib/cricket-series-ingest";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
@@ -93,7 +94,7 @@ async function main() {
          ${unfiled ? "and not exists (select 1 from cricket_series_matches m where m.espn_id = g.espn_id)" : ""}`,
       [leagueDays, since, until]
     );
-    dates = distinctDays(rows.map((r) => r.date), unfiled);
+    dates = distinctDays(rows.map((r) => r.date), unfiled ? UNFILED_EXTRA_DAYS : false);
   } else for (let d = new Date(since); d <= until; d = new Date(d.getTime() + 86_400_000)) dates.push(d);
 
   for (const d of dates) {
