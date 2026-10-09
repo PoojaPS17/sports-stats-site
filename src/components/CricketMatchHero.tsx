@@ -86,7 +86,7 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
           return (
             <div key={i} className={`flex min-w-0 items-center gap-4 border-l-[6px] pl-4 max-[359px]:gap-2.5 max-[359px]:pl-3 ${main.length > 12 ? "max-[359px]:flex-wrap" : ""} ${muted ? "text-[var(--mast-muted)]" : ""}`} style={{ borderColor: side.colour ?? "var(--mast-line)" }}>
               <TeamLogo name={side.name} logoUrl={side.logo} size={52} priority />
-              <div className="flex min-w-0 min-w-min flex-col">
+              <div className="flex min-w-min flex-col">
                 <span className={`line-clamp-2 text-[20px] max-[419px]:text-[18px] max-[359px]:text-[17px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
                 {detail && <span className="text-[13px] text-[var(--mast-muted)]">{detail}</span>}
               </div>
