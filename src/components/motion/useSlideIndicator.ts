@@ -25,8 +25,9 @@ export function useSlideIndicator(ref: RefObject<HTMLElement | null>, key: strin
       }
       host.style.setProperty("--ind-x", String(active.offsetLeft));
       host.style.setProperty("--ind-w", String(active.offsetWidth));
-      if (!host.hasAttribute("data-ind")) {
-        host.setAttribute("data-ind", "1");
+      if (host.getAttribute("data-ind") !== "go") {
+        host.setAttribute("data-ind", host.getAttribute("data-ind") ?? "1");
+        cancelAnimationFrame(raf);
         raf = requestAnimationFrame(() => {
           raf = requestAnimationFrame(() => host.setAttribute("data-ind", "go"));
         });
