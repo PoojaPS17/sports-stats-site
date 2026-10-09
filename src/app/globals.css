@@ -3109,10 +3109,10 @@
   }
   .home-decor .hd-dot {
     display: none;
-    width: 72px;
-    height: 72px;
-    right: 46%;
-    top: 46px;
+    width: 64px;
+    height: 64px;
+    right: -22px;
+    top: 28px;
     border-radius: 50%;
     background: color-mix(in srgb, var(--sky) 28%, var(--bg));
   }
@@ -3129,12 +3129,32 @@
   .home-decor-built .hd-bar-b {
     display: none;
   }
+  /* Built hero: the headline can run three lines across the whole band, so the solid shapes (dot, pill)
+     only draw from 1000px up, in the empty right-hand corners, half clipped by the band edge, and never behind
+     text (tests/built-hero-layout.test.ts). Below that only the soft glow and the team wash remain. */
+  .home-decor-built .hd-bar-a {
+    display: none;
+  }
   @media (min-width: 1000px) {
     .home-decor .hd-dot {
       display: block;
     }
+    .home-decor-built .hd-bar-a {
+      display: block;
+      width: 360px;
+      height: 64px;
+      right: -150px;
+      top: auto;
+      bottom: -60px;
+    }
   }
-  /* Phone: one smaller glow and one smaller pill, no disc or dot. */
+  @media (min-width: 1280px) {
+    .home-decor .hd-dot {
+      right: 7%;
+      top: 40px;
+    }
+  }
+  /* Phone: one smaller glow, no disc, pill or dot. */
   @media (max-width: 639px) {
     .hd-glow {
       width: 340px;
@@ -3142,14 +3162,16 @@
       right: -120px;
       top: -140px;
     }
-    .hd-bar-a {
-      width: 380px;
-      height: 96px;
-      right: -150px;
-      top: 62%;
-    }
     .home-decor .hd-bar-b {
       display: none;
     }
+  }
+  /* Built hero text column: the actions row directly under the sub-line. */
+  .bhero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
   }
 }
