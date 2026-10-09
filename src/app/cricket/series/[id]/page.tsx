@@ -21,7 +21,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import { FollowButton } from "@/components/FollowButton";
 import { ImageActions } from "@/components/ImageActions";
 import { SeriesMatchesExportCard } from "@/components/SeriesMatchesExportCard";
-import { SeriesCard, SeriesMatchList, formatSeriesDates } from "@/components/CricketSeries";
+import { SeriesCard, SeriesMatchList, SeriesMatchRow, formatSeriesDates } from "@/components/CricketSeries";
 import { LEAGUE_LABEL } from "@/lib/leagues";
 import { seriesHubStandingsLink } from "@/lib/cricketSeriesHubLink";
 import { getCricketSeries, getCricketSeriesBySeason, getCricketSeriesEditions, getCricketSeriesMatches, getCricketSeriesSeasons, getLatestCricketEdition, SERIES_KIND_LABEL } from "@/lib/cricketSeries";
@@ -165,6 +165,18 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
 
       {intro && <p className="card px-4 py-3 text-sm leading-relaxed">{intro}</p>}
 
+      {/* The onward path, where the eye already is: a search lands here, reads the table and leaves (GA4,
+          2026-10-09: 44 organic users on one series page, 7s, 1.6 pages each). The match pages hold a reader
+          two to three times longer, and their only links sat below the table, the leaders and the trivia. */}
+      {results[0] && (
+        <section data-testid="series-latest-result">
+          <SectionHeader description="Opens the full scorecard">Latest result</SectionHeader>
+          <div className="card overflow-hidden">
+            <SeriesMatchRow m={results[0]} />
+          </div>
+        </section>
+      )}
+
       <AdSlot label="Cricket series detail top" />
 
       {editions.length > 1 && (
@@ -209,6 +221,15 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
 
       <CricketDidYouKnow lines={seriesDidYouKnow(stats)} />
 
+      {/* Results lead once the series is under way. `started` is live or results, so before the first ball
+          this block renders nothing and Fixtures leads on its own — no condition needed here. */}
+      {results.length > 0 && (
+        <section>
+          <SectionHeader description="Most recent first" tools={<ImageActions filename={`${s.espn_id}-results-cricket`} width={860} shareTitle={`${s.name} results`} card={<SeriesMatchesExportCard series={s} title="Results" matches={results} />} />}>Results</SectionHeader>
+          <SeriesMatchList matches={results} />
+        </section>
+      )}
+
       {fixtures.length > 0 && (
         <section>
           <SectionHeader description="Times shown in your local time zone" tools={<ImageActions filename={`${s.espn_id}-fixtures-cricket`} width={860} shareTitle={`${s.name} fixtures`} card={<SeriesMatchesExportCard series={s} title="Fixtures" matches={fixtures} />} />}>Fixtures</SectionHeader>
@@ -220,13 +241,6 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
         <section>
           <SectionHeader description="Not played as scheduled. A suspended match may resume.">Postponed, cancelled or suspended</SectionHeader>
           <SeriesMatchList matches={calledOff} />
-        </section>
-      )}
-
-      {results.length > 0 && (
-        <section>
-          <SectionHeader description="Most recent first" tools={<ImageActions filename={`${s.espn_id}-results-cricket`} width={860} shareTitle={`${s.name} results`} card={<SeriesMatchesExportCard series={s} title="Results" matches={results} />} />}>Results</SectionHeader>
-          <SeriesMatchList matches={results} />
         </section>
       )}
 

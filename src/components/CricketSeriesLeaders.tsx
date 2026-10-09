@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SectionHeader } from "@/components/SectionHeader";
 import { teamDisplayName } from "@/lib/teamName";
 import type { CricketSeriesStats, InningsHighlight } from "@/lib/cricketSeriesStats";
@@ -17,11 +18,18 @@ export function CricketSeriesLeaders({ stats, teams }: { stats: CricketSeriesSta
   const full = (id: string) => (team(id) ? teamDisplayName(team(id)!.name) : null);
   const numCell = "px-2 py-2.5 text-right tabular-nums";
   const head = "text-[11px] font-semibold uppercase tracking-wider text-[var(--text-faint)]";
+  // The one figure on this page that belongs to a single match, so it is the one that can carry the reader
+  // onward to the scorecard. `matchId` has always been on the row; it was simply never rendered. The series
+  // page reaches here only for a series with no SportsDB hub, and /cricket/matches/<id> redirects by itself
+  // when a match does have a stored scorecard elsewhere.
   const highlight = (label: string, h: InningsHighlight) => (
     <span>
-      {label}: <strong className="tabular-nums">{h.figure}</strong> {h.name}
-      {full(h.teamId) ? ` (${full(h.teamId)})` : ""}
-      {h.stage ? `, ${h.stage}` : ""}
+      {label}:{" "}
+      <Link href={`/cricket/matches/${h.matchId}`} className="underline underline-offset-2 hover:text-[var(--text)]">
+        <strong className="tabular-nums">{h.figure}</strong> {h.name}
+        {full(h.teamId) ? ` (${full(h.teamId)})` : ""}
+        {h.stage ? `, ${h.stage}` : ""}
+      </Link>
     </span>
   );
   const player = (name: string, teamId: string) => (
