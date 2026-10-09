@@ -20,13 +20,13 @@ export function PlayerMilestones({ league, slug, profile }: { league: League; sl
           </span>
           {m.game && (
             <span className="flex flex-wrap items-center gap-2">
-              <Link href={`/${league}/games/${m.game.game_espn_id}`} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
+              <Link prefetch={false} href={`/${league}/games/${m.game.game_espn_id}`} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
                 {m.game.is_home ? "vs" : "at"} {teamDisplayName(m.game.opponent_name)}, {fmtDate(m.game.date, league)}
               </Link>
               {showCardShare && (
                 <>
                   <ImageActions filename={`${m.game.game_espn_id}-${slug}-card-${league}`} imageUrl={`/${league}/games/${m.game.game_espn_id}/players/${slug}/card?format=og`} shareTitle={`Performance card`} />
-                  <Link href={performancePagePath(league, m.game.game_espn_id, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
+                  <Link prefetch={false} href={performancePagePath(league, m.game.game_espn_id, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
                     View full breakdown
                   </Link>
                 </>

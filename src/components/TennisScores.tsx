@@ -63,7 +63,7 @@ function SideRow({ tour, side, other, won, decided, setCount }: { tour: string; 
             <span key={`${name}-${i}`} className="flex min-w-0 items-center gap-1.5">
               <Flag code={side.countries?.[i]} />
               {slug ? (
-                <Link href={`/tennis/${tour}/players/${slug}`} className="min-w-0 hover:text-[var(--accent)]">
+                <Link prefetch={false} href={`/tennis/${tour}/players/${slug}`} className="min-w-0 hover:text-[var(--accent)]">
                   {label}
                 </Link>
               ) : (

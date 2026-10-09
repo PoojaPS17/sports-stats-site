@@ -93,7 +93,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                 {centuries.map((c, i) => (
                   <tr key={`${c.player_espn_id}-${c.date}-${i}`} className="table-row">
                     <td className="py-2 pl-4">
-                      <Link href={`/${league}/players/${c.player_slug}`} className="flex items-center gap-2 font-medium hover:underline">
+                      <Link prefetch={false} href={`/${league}/players/${c.player_slug}`} className="flex items-center gap-2 font-medium hover:underline">
                         {c.headshot_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={c.headshot_url} alt="" className="h-6 w-6 rounded-full object-cover" />
@@ -104,7 +104,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                       </Link>
                     </td>
                     <td className="px-2 py-2">
-                      <Link href={`/${league}/teams/${c.team_slug}`} className="flex items-center gap-1.5 text-[var(--text-muted)] hover:underline">
+                      <Link prefetch={false} href={`/${league}/teams/${c.team_slug}`} className="flex items-center gap-1.5 text-[var(--text-muted)] hover:underline">
                         <TeamLogo name={teamDisplayName(c.team_name)} logoUrl={c.team_logo} color={c.team_color} size={18} />
                         <span className="hidden sm:inline">{teamDisplayName(c.team_name)}</span>
                       </Link>
@@ -120,7 +120,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                       {inningsStrikeRate(c.runs, c.balls_faced, UNRECORDED_CELL)}
                     </td>
                     <td className="px-2 py-2">
-                      <Link href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">
+                      <Link prefetch={false} href={`/${league}/teams/${c.opponent_slug}`} className="text-[var(--text-muted)] hover:underline">
                         vs {teamDisplayName(c.opponent_name)}
                       </Link>
                     </td>

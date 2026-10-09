@@ -1,5 +1,6 @@
 import { cricketFormatTitle, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { teamDisplayName } from "@/lib/teamName";
 import { LocalTime } from "@/components/LocalTime";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -69,7 +70,7 @@ export function SeriesMatchRow({ m, showSeries = false }: { m: CricketSeriesMatc
   const calledOff = typeof kind === "object" ? kind.calledOff : null;
   const decided = done && Boolean(m.home?.winner || m.away?.winner);
   return (
-    <Link href={matchHref(m)} className="flex flex-col px-4 py-2.5 hover:bg-[var(--surface-muted)]">
+    <Link prefetch={prefetchFor(matchHref(m))} href={matchHref(m)} className="flex flex-col px-4 py-2.5 hover:bg-[var(--surface-muted)]">
       <div className="mb-1 flex items-center justify-between gap-2 text-xs">
         <span className="flex min-w-0 items-center gap-2">
           {live ? <span className="pill pill-live">Live</span> : done ? <span className="pill pill-final">Result</span> : calledOff ? <span className="pill pill-final">{calledOff}</span> : <span className="pill pill-upcoming"><LocalTime iso={m.date} format="datetime" /></span>}

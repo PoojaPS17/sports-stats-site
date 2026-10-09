@@ -59,7 +59,7 @@ export function SpotlightCard({ game }: { game: GameRow }) {
   const c1 = teamHex(order[0] === "home" ? game.home_color : game.away_color, "var(--mast-2)");
   const c2 = teamHex(order[0] === "home" ? game.away_color : game.home_color, "var(--mast-2)");
   return (
-    <Link
+    <Link prefetch={false}
       href={`/${league}/games/${game.espn_id}`}
       className="card block rounded-2xl border-[var(--mast-line)] px-5 py-4 text-[var(--mast-text)] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.8)]"
       // Team colours are mixed toward navy so light kits never wash out the light text.

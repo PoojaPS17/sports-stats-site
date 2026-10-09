@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import type { StandingsBlockData } from "@/lib/blockTypes";
 
 export function StandingsBlock({ data }: { data: StandingsBlockData }) {
@@ -24,7 +25,7 @@ export function StandingsBlock({ data }: { data: StandingsBlockData }) {
                   {r.position ?? "–"}
                 </span>
               </td>
-              <td className="py-1.5"><Link href={r.href} className="font-semibold hover:text-[var(--sig-ink)]">{r.name}</Link></td>
+              <td className="py-1.5"><Link prefetch={prefetchFor(r.href)} href={r.href} className="font-semibold hover:text-[var(--sig-ink)]">{r.name}</Link></td>
               <td className="py-1.5 text-right text-[var(--text-muted)]">{r.played}</td>
               {data.rows.some((x) => x.netRunRate) && <td className="py-1.5 text-right text-[var(--text-muted)]">{r.netRunRate ?? ""}</td>}
               <td className="py-1.5 text-right font-bold">{r.figure}</td>

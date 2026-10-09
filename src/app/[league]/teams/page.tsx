@@ -35,7 +35,7 @@ export default async function TeamsIndexPage({ params }: { params: Promise<{ lea
   const grid = (list: typeof teams) => (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {list.map((t) => (
-        <Link key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="card flex items-center gap-3 px-4 py-3">
+        <Link prefetch={false} key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="card flex items-center gap-3 px-4 py-3">
           <TeamLogo name={t.name} logoUrl={t.logo_url} color={t.color} size={30} />
           <span className="min-w-0 truncate text-sm font-semibold">{t.name}</span>
         </Link>

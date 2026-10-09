@@ -24,7 +24,7 @@ export function PlayerBestGames({ league, slug, profile }: { league: League; slu
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {profile.best.map((row, i) => (
         <div key={row.game_espn_id} className="card flex flex-col gap-2 px-4 py-3 text-sm">
-          <Link href={`/${league}/games/${row.game_espn_id}`} className="flex items-start gap-3">
+          <Link prefetch={false} href={`/${league}/games/${row.game_espn_id}`} className="flex items-start gap-3">
             <span className="mt-0.5 w-5 shrink-0 text-lg font-bold tabular-nums text-[var(--text-faint)]">{i + 1}</span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2">
@@ -45,7 +45,7 @@ export function PlayerBestGames({ league, slug, profile }: { league: League; slu
           {showCardShare && (
             <div className="flex flex-wrap items-center gap-2 pl-8">
               <ImageActions filename={`${row.game_espn_id}-${slug}-card-${league}`} imageUrl={`/${league}/games/${row.game_espn_id}/players/${slug}/card?format=og`} shareTitle={`Performance card`} />
-              <Link href={performancePagePath(league, row.game_espn_id, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
+              <Link prefetch={false} href={performancePagePath(league, row.game_espn_id, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
                 View full breakdown
               </Link>
             </div>

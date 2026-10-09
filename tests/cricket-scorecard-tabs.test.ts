@@ -23,13 +23,32 @@ test("the tabs: one pill per innings with the side's colour dot, the first press
   const html = renderToStaticMarkup(createElement(CricketScorecardTabs, { tabs: tabs.map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: createElement("p", null, `panel ${t.key}`) })) }));
   assert.match(html, /role="tablist"/);
   assert.equal((html.match(/<button/g) ?? []).length, 2);
-  assert.match(html, /aria-pressed="true"[^>]*>.*West Indies · 171 all out \(19\.1 ov\)/);
+  assert.match(html, /aria-selected="true"[^>]*>.*West Indies · 171 all out \(19\.1 ov\)/);
   assert.match(html, /background-color:#790d1a/);
   assert.match(html, /data-innings="1"/);
   assert.match(html, /data-innings="2"[^>]*hidden=""/);
   assert.equal((html.match(/hidden=""/g) ?? []).length, 1);
   assert.match(html, /panel 1/);
   assert.match(html, /panel 2/);
+});
+
+test("the tabs are a tablist: role=tab with aria-selected and aria-controls, each panel a tabpanel labelled by its tab", () => {
+  const html = renderToStaticMarkup(createElement(CricketScorecardTabs, { tabs: tabs.map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: createElement("p", null, `panel ${t.key}`) })) }));
+  assert.doesNotMatch(html, /aria-pressed/);
+  const tabEls = [...html.matchAll(/<button[^>]*>/g)].map((m) => m[0]);
+  assert.equal(tabEls.length, 2);
+  assert.ok(tabEls.every((b) => /role="tab"/.test(b)));
+  assert.match(tabEls[0], /aria-selected="true"/);
+  assert.match(tabEls[1], /aria-selected="false"/);
+  const panelEls = [...html.matchAll(/<div[^>]*role="tabpanel"[^>]*>/g)].map((m) => m[0]);
+  assert.equal(panelEls.length, 2);
+  tabEls.forEach((b, i) => {
+    const id = b.match(/ id="([^"]+)"/)?.[1];
+    const controls = b.match(/aria-controls="([^"]+)"/)?.[1];
+    assert.ok(id && controls);
+    assert.match(panelEls[i], new RegExp(` id="${controls}"`));
+    assert.match(panelEls[i], new RegExp(`aria-labelledby="${id}"`));
+  });
 });
 
 test("a panel: batting with strike-rate bars, extras and total rows, bowling with economy bars and the fall of wickets, player links where known", () => {

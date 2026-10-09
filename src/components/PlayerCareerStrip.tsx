@@ -36,7 +36,7 @@ export function PlayerCareerStrip({ league, profile }: { league: League; profile
                     /
                   </span>
                 )}
-                <Link href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 font-semibold text-[var(--text)] hover:text-[var(--accent)]">
+                <Link prefetch={false} href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 font-semibold text-[var(--text)] hover:text-[var(--accent)]">
                   <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={14} />
                   {t.name}
                 </Link>

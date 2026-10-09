@@ -69,7 +69,7 @@ export default async function LeadersPage({ params }: { params: Promise<{ league
                   <ol>
                     {board.rows.map((row, rank) => (
                       <li key={row.player_espn_id} className="table-row first:border-t-0">
-                        <Link href={`/${league}/players/${row.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
+                        <Link prefetch={false} href={`/${league}/players/${row.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
                           <span className="flex min-w-0 items-center gap-2.5">
                             <span className={`w-5 text-right text-xs tabular-nums ${(row.rank ?? rank + 1) === 1 ? "font-bold text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
                               {row.rank ?? rank + 1}

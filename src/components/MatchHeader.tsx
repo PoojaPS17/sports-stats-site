@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { isPlaceholderName } from "@/lib/playoffSeries";
@@ -46,7 +47,7 @@ function TeamLine({
     <div className="flex items-center justify-between gap-3">
       {/* A "Winner of CLE-CHW" side is not a team yet: it has no page to link to. */}
       {isPlaceholderName(name) ? <div className="flex min-w-0 items-center gap-3">{inner}</div> : (
-        <Link href={href} className="flex min-w-0 items-center gap-3 hover:text-[var(--accent)]">
+        <Link prefetch={prefetchFor(href)} href={href} className="flex min-w-0 items-center gap-3 hover:text-[var(--accent)]">
           {inner}
         </Link>
       )}

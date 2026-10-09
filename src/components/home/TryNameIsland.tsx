@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { Crest } from "./Crest";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -101,7 +102,7 @@ function CardView({ card, followed, onFollow }: { card: TryCard; followed: boole
       )}
       {card.small && <p className="text-[13px] text-[var(--text-muted)]">No game-by-game figures for {card.name} in {card.leagueLabel} on this site yet. The player page has what we hold.</p>}
       <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
-        <Link href={card.href} className="inline-flex items-center rounded-xl bg-[var(--sig)] px-4 py-[9px] text-[13.5px] font-extrabold text-[var(--sig-on)] shadow-[0_8px_18px_-8px_var(--sig)]">
+        <Link prefetch={prefetchFor(card.href)} href={card.href} className="inline-flex items-center rounded-xl bg-[var(--sig)] px-4 py-[9px] text-[13.5px] font-extrabold text-[var(--sig-on)] shadow-[0_8px_18px_-8px_var(--sig)]">
           Full profile →
         </Link>
         {card.block && (
@@ -260,7 +261,7 @@ export function TryNameIsland({ initial, chips }: { initial: TryCard | null; chi
                       {row}
                     </button>
                   ) : (
-                    <Link href={resultHref(r)} className={cls}>
+                    <Link prefetch={prefetchFor(resultHref(r))} href={resultHref(r)} className={cls}>
                       {row}
                     </Link>
                   )}

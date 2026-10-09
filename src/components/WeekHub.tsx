@@ -241,7 +241,7 @@ export async function WeekHub({
                     <ol>
                       {b.rows.map((r, i) => (
                         <li key={`${r.slug}-${r.game_espn_id}`} className="table-row first:border-t-0">
-                          <Link href={`/${league}/players/${r.slug}`} className="flex items-center gap-2 px-3 py-2 text-sm">
+                          <Link prefetch={false} href={`/${league}/players/${r.slug}`} className="flex items-center gap-2 px-3 py-2 text-sm">
                             <span className="w-4 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
                             <TeamLogo name={r.name} logoUrl={r.headshot_url} size={24} />
                             <span className="min-w-0 flex-1">
@@ -291,7 +291,7 @@ export async function WeekHub({
                     {table.map((r) => (
                       <tr key={r.team.espn_id} className="table-row">
                         <td className="py-1.5 pl-3">
-                          <Link href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
+                          <Link prefetch={false} href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
                             <span className="w-4 text-right text-xs tabular-nums text-[var(--text-muted)]">{r.position}</span>
                             <span
                               className={`w-6 text-center text-[10px] font-bold tabular-nums ${r.movement > 0 ? "text-[var(--win)]" : r.movement < 0 ? "text-[var(--loss)]" : "text-[var(--text-faint)]"}`}

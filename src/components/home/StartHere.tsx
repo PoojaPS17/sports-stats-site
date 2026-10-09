@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { useEffect, useState } from "react";
 import { LADDER } from "@/lib/homeLadder";
 import { writeDeclined } from "@/lib/homeSetup";
@@ -45,7 +46,7 @@ export function StartHere({ lines }: { lines: SportLines }) {
             <ul>
               {LADDER[sport].map((page) => (
                 <li key={page.href}>
-                  <Link href={page.href}>{page.label}</Link>
+                  <Link prefetch={prefetchFor(page.href)} href={page.href}>{page.label}</Link>
                 </li>
               ))}
             </ul>

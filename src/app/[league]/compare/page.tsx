@@ -129,7 +129,7 @@ export default async function CompareTeamsPage({
         <>
           <div className="grid grid-cols-2 gap-3">
             {[cmp.a, cmp.b].map((s) => (
-              <Link key={s.team.espn_id} href={`/${league}/teams/${s.team.slug}`} className="card flex items-center gap-3 px-4 py-3" style={{ borderTop: `3px solid ${s.team.color ?? "var(--accent)"}` }}>
+              <Link prefetch={false} key={s.team.espn_id} href={`/${league}/teams/${s.team.slug}`} className="card flex items-center gap-3 px-4 py-3" style={{ borderTop: `3px solid ${s.team.color ?? "var(--accent)"}` }}>
                 <TeamLogo name={teamDisplayName(s.team.name)} logoUrl={s.team.logo_url} color={s.team.color} size={44} priority />
                 <span className="min-w-0">
                   <span className="block truncate text-base font-bold">{teamDisplayName(s.team.name)}</span>
@@ -152,7 +152,7 @@ export default async function CompareTeamsPage({
           </div>
 
           {cmp.h2h && cmp.h2h.meetings > 0 && (
-            <Link href={h2hPath(league, cmp.a.team.slug, cmp.b.team.slug)} className="card flex flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 text-sm">
+            <Link prefetch={false} href={h2hPath(league, cmp.a.team.slug, cmp.b.team.slug)} className="card flex flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 text-sm">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Head-to-head</span>
               <span className="font-semibold">
                 {cmp.a.team.abbreviation ?? teamDisplayName(cmp.a.team.name)} <span className="text-[var(--win)]">{cmp.h2h.winsA}</span>

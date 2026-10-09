@@ -33,7 +33,7 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
               const zone = data.bands[i] ?? null;
               return (
                 <li key={r.team_espn_id} className="table-row first:border-t-0">
-                  <Link href={`/${league}/teams/${r.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
+                  <Link prefetch={false} href={`/${league}/teams/${r.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <span className="flex items-center gap-1.5">
                         <span className={`zone-marker ${zone?.cls ?? ""}`} title={zone?.label} />
@@ -72,7 +72,7 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
                       const n = row.rank ?? rank + 1;
                       return (
                         <li key={row.player_espn_id}>
-                          <Link href={`/${league}/players/${row.slug}`} className="flex items-center gap-3 text-sm">
+                          <Link prefetch={false} href={`/${league}/players/${row.slug}`} className="flex items-center gap-3 text-sm">
                             <span className={`display w-5 text-right text-xl ${n === 1 ? "text-[var(--sig-ink)]" : "text-[var(--text-faint)]"}`}>{n}</span>
                             <span className="min-w-0 flex-1">
                               <span className="flex items-baseline gap-1.5 truncate">

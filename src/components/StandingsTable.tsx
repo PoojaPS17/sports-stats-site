@@ -145,7 +145,7 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
                     return (
                       <tr key={r.team_espn_id} className="table-row">
                         <td className="py-2 pl-4">
-                          <Link href={`/${league}/teams/${r.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
+                          <Link prefetch={false} href={`/${league}/teams/${r.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
                             <span className="flex w-7 items-center gap-1.5">
                               <span className={`zone-marker ${zone?.cls ?? ""}`} title={zone?.label} />
                               <span className="w-4 text-right text-xs tabular-nums text-[var(--text-muted)]">{position ?? "–"}</span>

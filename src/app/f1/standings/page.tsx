@@ -121,7 +121,7 @@ export default async function F1StandingsPage({
                     <td className="py-2 pl-4 tabular-nums text-[var(--text-muted)]">{c.position ?? "—"}</td>
                     <td className="py-2">
                       {c.slug ? (
-                        <Link href={`/f1/teams/${c.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
+                        <Link prefetch={false} href={`/f1/teams/${c.slug}`} className="flex items-center gap-2.5 font-medium hover:underline">
                           <TeamLogo name={c.name} logoUrl={c.logo_url} color={c.color} size={24} />
                           {c.name}
                         </Link>

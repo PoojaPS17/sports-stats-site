@@ -135,7 +135,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
           <SectionHeader action={{ label: "All teams", href: `/${league}/teams` }}>Teams</SectionHeader>
           <div className="flex flex-wrap gap-2">
             {teams.map((t) => (
-              <Link key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="card flex items-center gap-2 px-3 py-1.5 text-sm font-medium hover:text-[var(--accent)]">
+              <Link prefetch={false} key={t.espn_id} href={`/${league}/teams/${t.slug}`} className="card flex items-center gap-2 px-3 py-1.5 text-sm font-medium hover:text-[var(--accent)]">
                 <TeamLogo name={t.name} logoUrl={t.logo_url} color={t.color} size={18} />
                 {t.name}
               </Link>

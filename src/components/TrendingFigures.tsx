@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { matchedTopicHref, type TrendingTopic } from "@/lib/queries";
 import { TeamLogo } from "./TeamLogo";
 
@@ -20,7 +21,7 @@ export function TrendingFigures({ topics }: { topics: TrendingTopic[] }) {
             <TeamLogo name={t.label} logoUrl={t.avatar_url} color={t.avatar_color} size={36} />
             <div className="min-w-0 flex-1">
               {href ? (
-                <Link href={href} className="truncate text-sm font-semibold hover:text-[var(--accent)]">
+                <Link prefetch={prefetchFor(href)} href={href} className="truncate text-sm font-semibold hover:text-[var(--accent)]">
                   {t.label}
                 </Link>
               ) : (

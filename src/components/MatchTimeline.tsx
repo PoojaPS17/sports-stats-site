@@ -19,7 +19,7 @@ const BADGE: Record<TimelineEventType, { text: string; cls: string }> = {
 function PlayerName({ league, player, slugs }: { league: League; player: { id: string; name: string }; slugs: Map<string, string> }) {
   const slug = slugs.get(player.id);
   return slug ? (
-    <Link href={`/${league}/players/${slug}`} className="font-semibold hover:text-[var(--accent)]">{player.name}</Link>
+    <Link prefetch={false} href={`/${league}/players/${slug}`} className="font-semibold hover:text-[var(--accent)]">{player.name}</Link>
   ) : (
     <span className="font-semibold">{player.name}</span>
   );

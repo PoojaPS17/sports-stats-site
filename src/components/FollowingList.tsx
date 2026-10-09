@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FOLLOWS_EVENT, addFollows, getFollows, removeFollow, type FollowItem, type FollowKind } from "@/lib/follow";
@@ -68,7 +69,7 @@ export function FollowingList() {
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             {shared.map((s) => (
               <li key={`${s.kind}:${s.league}:${s.refId}`}>
-                <Link href={s.href} className="text-[var(--accent)] hover:underline">
+                <Link prefetch={prefetchFor(s.href)} href={s.href} className="text-[var(--accent)] hover:underline">
                   {s.label}
                 </Link>
               </li>
@@ -117,7 +118,7 @@ export function FollowingList() {
                 <ul className="card divide-y divide-[var(--border)]">
                   {rows.map((i) => (
                     <li key={`${i.league}:${i.refId}`} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <Link href={i.href} className="flex min-w-0 flex-col hover:text-[var(--accent)]">
+                      <Link prefetch={prefetchFor(i.href)} href={i.href} className="flex min-w-0 flex-col hover:text-[var(--accent)]">
                         <span className="truncate font-semibold">{i.label}</span>
                         {i.sublabel && <span className="text-xs text-[var(--text-muted)]">{i.sublabel}</span>}
                       </Link>

@@ -146,7 +146,7 @@ export default async function PlayerPage({
         claims={claims}
         photoCredit={player.photo_credit ? { credit: player.photo_credit, license: player.photo_license ?? "see source", sourceUrl: player.photo_source_url ?? "https://commons.wikimedia.org" } : null}
       />
-      <Link href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
+      <Link prefetch={false} href={`/${league}/compare/players?a=${slug}`} className="-mt-3 text-sm font-semibold text-[var(--accent)] hover:underline">
         Compare {player.name} with another player →
       </Link>
       <AdSlot label="Player page top" />
@@ -247,7 +247,7 @@ export default async function PlayerPage({
               <>
                 {" "}
                 Looking for the other {player.name}?{" "}
-                <Link href={`/${league}/players/${sameName.slug}`} className="font-semibold text-[var(--accent)] hover:underline">
+                <Link prefetch={false} href={`/${league}/players/${sameName.slug}`} className="font-semibold text-[var(--accent)] hover:underline">
                   {sameName.name}{[realPosition(sameName.position), sameName.team_name].filter(Boolean).length > 0 ? ` (${[realPosition(sameName.position), sameName.team_name].filter(Boolean).join(", ")})` : ""}
                 </Link>{" "}
                 has games on record.

@@ -159,7 +159,7 @@ export default async function TennisPlayerPage({ params }: { params: Promise<{ t
               </SectionHeader>
               <div className="card overflow-hidden">
                 {rivals.map((r) => (
-                  <Link key={r.espn_id} href={`/tennis/${tour}/players/${r.slug}`} className="table-row flex items-center gap-3 px-4 py-2 text-sm first:border-t-0">
+                  <Link prefetch={false} key={r.espn_id} href={`/tennis/${tour}/players/${r.slug}`} className="table-row flex items-center gap-3 px-4 py-2 text-sm first:border-t-0">
                     <span className="flex-1 truncate font-semibold">{r.name}</span>
                     <span className="tabular-nums text-[var(--text-muted)]">
                       <span className={r.wins * 2 > r.matches ? "font-bold text-[var(--win)]" : r.wins * 2 < r.matches ? "font-bold text-[var(--live)]" : "font-bold"}>

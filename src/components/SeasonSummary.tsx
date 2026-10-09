@@ -19,11 +19,11 @@ function PlayoffSummary({ league, results }: { league: League; results: PlayoffR
           <div key={`${r.round}-${i}`} className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-3">
             <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)] sm:w-44 sm:shrink-0">{normalizeStage(r.round) ?? r.round}</span>
             <span className="text-sm">
-              <Link href={`/${league}/teams/${r.winnerSlug}`} className="font-semibold hover:underline">
+              <Link prefetch={false} href={`/${league}/teams/${r.winnerSlug}`} className="font-semibold hover:underline">
                 {r.winnerName}
               </Link>
               {r.noWinner ? " v " : " beat "}
-              <Link href={`/${league}/teams/${r.loserSlug}`} className="hover:underline">
+              <Link prefetch={false} href={`/${league}/teams/${r.loserSlug}`} className="hover:underline">
                 {r.loserName}
               </Link>
               <span className="text-[var(--text-muted)]">, {r.resultText}</span>
@@ -42,7 +42,7 @@ function ClubsLine({ league, label, clubs }: { league: League; label: string; cl
       <span className="mr-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">{label}</span>
       {clubs.map((t, i) => (
         <span key={t.team_espn_id}>
-          <Link href={`/${league}/teams/${t.slug}`} className="hover:underline">
+          <Link prefetch={false} href={`/${league}/teams/${t.slug}`} className="hover:underline">
             {t.name}
           </Link>
           {i < clubs.length - 1 ? ", " : ""}
@@ -70,7 +70,7 @@ function TableHighlights({ league, standings }: { league: League; standings: Sta
       <div className="card flex flex-col gap-2.5 px-4 py-3">
         <p className="text-sm">
           <span className="mr-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Champion</span>
-          <Link href={`/${league}/teams/${champion.slug}`} className="font-semibold hover:underline">
+          <Link prefetch={false} href={`/${league}/teams/${champion.slug}`} className="font-semibold hover:underline">
             {champion.name}
           </Link>
         </p>

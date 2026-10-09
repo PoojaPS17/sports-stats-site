@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 
 export function SectionHeader({
   children,
@@ -27,7 +28,7 @@ export function SectionHeader({
           {description && <p className="mt-1.5 text-sm font-medium leading-snug text-[var(--text-muted)]">{description}</p>}
         </div>
         {action && (
-          <Link href={action.href} className="shrink-0 pb-0.5 text-[13px] font-bold text-[var(--sig-ink)] hover:underline">
+          <Link prefetch={prefetchFor(action.href)} href={action.href} className="shrink-0 pb-0.5 text-[13px] font-bold text-[var(--sig-ink)] hover:underline">
             {action.label} →
           </Link>
         )}
@@ -50,7 +51,7 @@ export function SectionHeader({
           {description && <p className="mt-0.5 text-xs text-[var(--text-muted)]">{description}</p>}
         </div>
         {action && (
-          <Link href={action.href} className="shrink-0 text-[13px] font-bold text-[var(--sig-ink)] hover:underline">
+          <Link prefetch={prefetchFor(action.href)} href={action.href} className="shrink-0 text-[13px] font-bold text-[var(--sig-ink)] hover:underline">
             {action.label} →
           </Link>
         )}

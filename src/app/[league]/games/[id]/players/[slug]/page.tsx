@@ -108,10 +108,10 @@ export default async function PerformancePage({ params }: { params: Promise<Para
         </tbody>
       </table>
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
-        <Link href={`/${data.league}/games/${id}`} className="hover:text-[var(--accent)]">
+        <Link prefetch={false} href={`/${data.league}/games/${id}`} className="hover:text-[var(--accent)]">
           Back to the game
         </Link>
-        <Link href={`/${data.league}/players/${slug}`} className="hover:text-[var(--accent)]">
+        <Link prefetch={false} href={`/${data.league}/players/${slug}`} className="hover:text-[var(--accent)]">
           Full stats for {data.player.name}
         </Link>
       </div>

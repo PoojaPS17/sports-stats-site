@@ -1,5 +1,6 @@
 import { SectionHeader } from "@/components/SectionHeader";
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { getThreeLines } from "@/lib/threeLinesData";
 import type { LineFact } from "@/lib/threeLines";
 
@@ -31,7 +32,7 @@ export async function TodayInThreeLines() {
       <ol className="card t3">
         {lines.map((fact, i) => (
           <li key={fact.id}>
-            <Link href={fact.href} className="t3-line">
+            <Link prefetch={prefetchFor(fact.href)} href={fact.href} className="t3-line">
               <b aria-hidden>{i + 1}</b>
               <span>
                 <Line fact={fact} />

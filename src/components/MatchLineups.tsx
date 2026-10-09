@@ -10,7 +10,7 @@ function Row({ league, p, slugs, sub }: { league: League; p: LineupPlayer; slugs
       <span className="w-6 shrink-0 text-right text-xs tabular-nums text-[var(--text-faint)]">{p.jersey ?? ""}</span>
       <span className="min-w-0 flex-1 truncate">
         {slug ? (
-          <Link href={`/${league}/players/${slug}`} className="hover:text-[var(--accent)]">{p.name}</Link>
+          <Link prefetch={false} href={`/${league}/players/${slug}`} className="hover:text-[var(--accent)]">{p.name}</Link>
         ) : (
           p.name
         )}

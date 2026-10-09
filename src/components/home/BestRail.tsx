@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { useEffect, useState, type ReactNode } from "react";
 import { blockId, type HomeBlock } from "@/lib/blockTypes";
 import type { BestChip } from "@/lib/bestOfWeek";
@@ -73,11 +74,11 @@ export function BestRail({ chips, items }: { chips: BestChip[]; items: BestItem[
           const what = block ? block.label.replace(/: next three$|: last five$/, "") : it.follow && isSportPick(it.follow.sport) ? SPORT_PICK_LABEL[it.follow.sport] : "";
           return (
             <li key={it.id} hidden={chip !== "all" && it.chip !== chip} className="bw-card card">
-              <Link href={it.href} className="bw-link">
+              <Link prefetch={prefetchFor(it.href)} href={it.href} className="bw-link">
                 {it.card}
               </Link>
               <div className="bw-foot">
-                <Link href={it.href} className="bw-go">
+                <Link prefetch={prefetchFor(it.href)} href={it.href} className="bw-go">
                   {it.go}
                 </Link>
                 {it.follow && (

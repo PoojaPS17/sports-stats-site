@@ -47,7 +47,7 @@ export async function HeadToHeadStrip({
 
   return (
     <div className="card flex flex-col">
-    <Link href={h2hPath(league, homeSlug, awaySlug)} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm">
+    <Link prefetch={false} href={h2hPath(league, homeSlug, awaySlug)} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm">
       <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Head-to-head</span>
       <span className="flex items-center gap-2 font-semibold">
         <span>{h2h.teamA.abbreviation ?? teamDisplayName(h2h.teamA.name)}</span>

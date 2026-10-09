@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { LocalTime } from "@/components/LocalTime";
 import type { CSSProperties } from "react";
 import type { FixtureLine, TeamNextBlockData, TeamSummary } from "@/lib/blockTypes";
@@ -36,7 +37,7 @@ function SummaryCard({ name, color, s }: { name: string; color: string | null; s
 function Line({ f, team }: { f: FixtureLine; team: string }) {
   const sides = f.home ? `${team} v ${f.opponent}` : `${f.opponent} v ${team}`;
   return (
-    <Link href={f.href} className="flex items-center justify-between gap-3 py-2 text-sm hover:text-[var(--sig-ink)]">
+    <Link prefetch={prefetchFor(f.href)} href={f.href} className="flex items-center justify-between gap-3 py-2 text-sm hover:text-[var(--sig-ink)]">
       <span className="flex items-center gap-2 truncate">
         {f.result && <span className={`result-badge result-${f.result.toLowerCase()}`}>{f.result}</span>}
         {f.live && <span className="live-dot" />}
@@ -65,7 +66,7 @@ export function TeamNextBlock({ data }: { data: TeamNextBlockData }) {
         <p className="eyebrow text-[var(--text-faint)]">Next</p>
         {data.next.length === 0 ? <p className="py-2 text-sm text-[var(--text-muted)]">No fixtures listed yet.</p> : data.next.map((f) => <Line key={f.id} f={f} team={data.team.name} />)}
       </div>
-      <Link href={data.team.href} className="block pt-2 text-sm font-semibold text-[var(--sig-ink)]">All fixtures →</Link>
+      <Link prefetch={prefetchFor(data.team.href)} href={data.team.href} className="block pt-2 text-sm font-semibold text-[var(--sig-ink)]">All fixtures →</Link>
       </div>
     </div>
   );

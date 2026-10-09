@@ -88,7 +88,7 @@ export function PlayerGameLogTable({ league, slug, profile, rows, split, season 
             <LogTable league={league} profile={profile} rows={group} split={split} />
           </div>
         ) : (
-          <Link key={season} href={`/${league}/players/${slug}/${season}`} className="card table-head flex items-center justify-between px-4 py-2.5 hover:opacity-80">
+          <Link prefetch={false} key={season} href={`/${league}/players/${slug}/${season}`} className="card table-head flex items-center justify-between px-4 py-2.5 hover:opacity-80">
             <span>
               {formatSeasonLabel(league, season)} · {group.length} {split ? "games logged" : profile.profile.gamesLabel.toLowerCase()}
             </span>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { useEffect, useState } from "react";
 import { LocalTime } from "@/components/LocalTime";
 import type { BlockResponse, HomeBlock, Moment, MomentsBlockData } from "@/lib/blockTypes";
@@ -36,7 +37,7 @@ function leagueName(league: string): string {
 function Row({ m }: { m: Moment }) {
   const headline = m.summary ?? `${m.team} ${m.score} ${m.opponent}`;
   return (
-    <Link href={m.href} className="flex items-center gap-3 py-2.5 hover:text-[var(--sig-ink)]">
+    <Link prefetch={prefetchFor(m.href)} href={m.href} className="flex items-center gap-3 py-2.5 hover:text-[var(--sig-ink)]">
       <span className={`result-badge result-${m.result.toLowerCase()}`} aria-label={m.result === "W" ? "Win" : m.result === "L" ? "Loss" : "Draw"}>
         {m.result}
       </span>
