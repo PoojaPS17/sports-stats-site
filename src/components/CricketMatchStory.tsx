@@ -52,7 +52,7 @@ function OverPanel({ over, innings, colour, number }: { over: StoryOver | undefi
  * inspector under it showing the balls of one over. The first render on the server and on the
  * client are identical (state starts from the model's default over), so the page can still be cached.
  */
-export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[]; colours: Record<string, string> }) {
+export function CricketMatchStory({ innings, colours, share }: { innings: StoryInnings[]; colours: Record<string, string>; /** The section's Share menu, right-aligned on the heading. */ share?: React.ReactNode }) {
   const model = matchStoryModel(innings);
   const [view, setView] = useState<"worm" | "bars">("worm");
   const [over, setOver] = useState(model.defaultOver);
@@ -68,7 +68,7 @@ export function CricketMatchStory({ innings, colours }: { innings: StoryInnings[
 
   return (
     <section className="flex flex-col" aria-label="Match story">
-      <SectionHeader description="Over by over, from the ball-by-ball. Click an over to see its balls.">Match story</SectionHeader>
+      <SectionHeader menu={share} description="Over by over, from the ball-by-ball. Click an over to see its balls.">Match story</SectionHeader>
       <div className="card flex flex-col gap-3.5 px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-4 text-[13px] text-[var(--text-muted)]">

@@ -10,7 +10,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
 import { fetchMatchSummary, extractGameDetails, presentDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
 import { getMatchContext } from "@/lib/matchContext";
-import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
+import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, scoreLineSides, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { NotPlayedGame } from "@/components/NotPlayedGame";
@@ -35,13 +35,19 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamStatsComparison } from "@/components/TeamStatsComparison";
 import { ImageActions } from "@/components/ImageActions";
+import { ScorecardActiveProvider } from "@/components/ScorecardActive";
+import { ResultShare, PerformersShare, PlayingXiShare, StoryShare, ScorecardShare } from "@/components/CricketShares";
+import { buildMatchShare, shareDate } from "@/lib/cricketShare";
+import { playingXi } from "@/lib/cricketPlayingXi";
+import { CricketPlayingXi } from "@/components/CricketPlayingXi";
+import { CricketMatchInfo } from "@/components/CricketMatchInfo";
+import { normalizeStage } from "@/lib/stage";
+import { absoluteUrl } from "@/lib/site";
 import { TeamStatsExportCard } from "@/components/TeamStatsExportCard";
 import { MatchTimelineExportCard } from "@/components/MatchTimelineExportCard";
 import { MatchLineupsExportCard } from "@/components/MatchLineupsExportCard";
 import { MatchLeadersExportCard } from "@/components/MatchLeadersExportCard";
 import { PlayerBoxScoreExportCard } from "@/components/PlayerBoxScoreExportCard";
-import { CricketScorecardExportCard } from "@/components/CricketScorecardExportCard";
-import { MatchScoreHeader } from "@/components/MatchScoreHeader";
 import { PlayerBoxScoreTable } from "@/components/PlayerBoxScoreTable";
 import { CricketScorecardTabs } from "@/components/CricketScorecardTabs";
 import { CricketScorecardPanel } from "@/components/CricketScorecardPanel";
@@ -229,6 +235,51 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
   const teamNames: Record<string, string> = { [game.home_team_espn_id]: teamDisplayName(game.home_name), [game.away_team_espn_id]: teamDisplayName(game.away_name) };
   const nextMatch = seriesMatch ? ((await getCricketSeriesMatches(seriesMatch.series_espn_id)).find((m) => m.espn_id !== seriesMatch.espn_id && m.date > seriesMatch.date && m.status_state === "pre") ?? null) : null;
 
+  // Everything the cricket Share menus carry, as plain data (the same build as the /cricket/matches page): the side that
+  // batted first is listed first.
+  const tabs = isCricket ? scorecardTabs(cricketScorecard, story, storyColours) : [];
+  const xiSides = isCricket ? playingXi(summary) : [];
+  const venueLine = details?.venue ? venueWithCity(details.venue, details.city) : null;
+  const stage = normalizeStage(game.round);
+  const seriesName = seriesMatch?.series_name ?? null;
+  const when = shareDate(game.date);
+  const sideOf = (which: "home" | "away") => ({
+    name: teamDisplayName(which === "home" ? game.home_name : game.away_name),
+    logo: which === "home" ? game.home_logo : game.away_logo,
+    score: sideScoreText(league, which === "home" ? game.home_score : game.away_score, which === "home" ? game.home_score_display : game.away_score_display, game.completed) ?? "",
+    winner: which === "home" ? (game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0)) : (game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0)),
+  });
+  const lineOrder = isCricket ? scoreLineSides(league, game, cricketScorecard) : (["home", "away"] as const);
+  const built = !isCricket ? null : buildMatchShare({
+    league,
+    id,
+    matchName,
+    link: absoluteUrl(`/${league}/games/${id}`),
+    header: {
+      eyebrow: ["Cricket", LEAGUE_LABEL[league], stage, seriesName].filter(Boolean).join(" · "),
+      when,
+      state: game.status_state === "in" ? "in" : game.status_state === "post" ? "post" : "pre",
+      sides: [sideOf(lineOrder[0]), sideOf(lineOrder[1])],
+      result: game.completed && game.status_summary ? teamDisplayName(game.status_summary) : null,
+    },
+    calledOff: game.status_state === "post" && !game.completed,
+    potm: playerOfTheMatch ? { name: playerOfTheMatch, line: details ? potmLine(details.scorecard, playerOfTheMatch) : null } : null,
+    performers,
+    largeLabel: playerOfTheMatch && performers.large?.name === playerOfTheMatch ? "Player of the Match" : "Top scorer",
+    teams: teamNames,
+    facts: [seriesName ? ["Series", seriesName] : null, stage ? ["Stage", stage] : null, ["Format", LEAGUE_LABEL[league]], venueLine ? ["Venue", venueLine] : null, when ? ["Date", when] : null].filter((f): f is [string, string] => f !== null),
+    xi: xiSides,
+    story,
+    colours: storyColours,
+    tabs,
+  });
+  const common = built ? { league: built.league, id: built.id, matchName: built.matchName, link: built.link, caption: built.caption } : null;
+  const shareResult = built?.result ?? null;
+  const sharePerformers = built?.performers ?? null;
+  const shareXi = built?.xi ?? null;
+  const shareStory = built?.story ?? null;
+  const shareScorecard = built?.scorecard ?? null;
+
   // A "Winner of CLE-CHW" side is no team yet: nothing links to a page for it.
   const homeTeam = !isPlaceholderName(game.home_name);
   const awayTeam = !isPlaceholderName(game.away_name);
@@ -265,7 +316,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
           potm={playerOfTheMatch ? { name: playerOfTheMatch, line: details ? potmLine(details.scorecard, playerOfTheMatch) : null } : null}
           pills={matchPills(summary?.notes)}
           liveLine={game.status_state === "in" ? liveStatusLine(teamDisplayName(game.status_summary ?? game.status_detail ?? null), story.at(-1)) : null}
-          venue={details?.venue ? venueWithCity(details.venue, details.city) : null}
+          venue={venueLine}
+          share={common && shareResult ? <ResultShare common={common} data={shareResult} /> : undefined}
         />
       ) : (
         <MatchHeader league={league} game={game} scorecard={cricketScorecard} />
@@ -275,35 +327,44 @@ export default async function GameDetailPage({ params }: { params: Promise<{ lea
       <AdSlot label="Match detail top" />
 
       {isCricket && cricketScorecard.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <SectionHeader
-            tools={
-              <ImageActions
-                filename={`${id}-scorecard-${league}`}
-                width={860}
-                shareTitle={`${matchName} scorecard`}
-                card={<CricketScorecardExportCard header={<MatchScoreHeader league={league} game={game} scorecard={cricketScorecard} />} context={`${matchName} · Scorecard`} scorecard={cricketScorecard} />}
-              />
-            }
-          >
-            Scorecard
-          </SectionHeader>
-          <CricketScorecardTabs tabs={scorecardTabs(cricketScorecard, story, storyColours).map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league={league} playerSlugs={playerSlugs} /> }))} />
-        </section>
+        <ScorecardActiveProvider>
+          <section className="flex flex-col gap-4">
+            <SectionHeader menu={common && shareScorecard ? <ScorecardShare common={common} data={shareScorecard} /> : undefined}>Scorecard</SectionHeader>
+            <CricketScorecardTabs tabs={tabs.map((t) => ({ key: t.key, label: t.label, colour: t.colour, panel: <CricketScorecardPanel tab={t} league={league} playerSlugs={playerSlugs} /> }))} />
+          </section>
+        </ScorecardActiveProvider>
       )}
 
       {isCricket && <CricketPartnerships innings={story} colours={storyColours} />}
 
-      {story.length > 0 && <CricketMatchStory innings={story} colours={storyColours} />}
+      {story.length > 0 && <CricketMatchStory innings={story} colours={storyColours} share={common && shareStory ? <StoryShare common={common} data={shareStory} /> : undefined} />}
 
       {(moments.length > 0 || performers.large) && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
           <CricketKeyMoments moments={moments} colours={storyColours} teams={teamNames} />
-          <CricketTopPerformers large={performers.large} small={performers.small} league={league} playerSlugs={playerSlugs} teams={teamNames} largeLabel={playerOfTheMatch && performers.large?.name === playerOfTheMatch ? "Player of the Match" : "Top scorer"} />
+          <CricketTopPerformers large={performers.large} small={performers.small} league={league} playerSlugs={playerSlugs} teams={teamNames} largeLabel={playerOfTheMatch && performers.large?.name === playerOfTheMatch ? "Player of the Match" : "Top scorer"} share={common && sharePerformers ? <PerformersShare common={common} data={sharePerformers} /> : undefined} />
         </div>
       )}
 
       {isCricket && game.completed && <CricketDidYouKnow lines={matchDidYouKnow(cricketScorecard)} />}
+
+      {/* The same two collapsed cards as the /cricket/matches page; each hides itself when the feed gave it nothing. */}
+      {isCricket && !(game.status_state === "post" && !game.completed) && (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
+          <CricketPlayingXi collapsed sides={xiSides} share={common && shareXi ? <PlayingXiShare common={common} data={shareXi} /> : undefined} />
+          <CricketMatchInfo
+            collapsed
+            series={seriesMatch ? { name: seriesMatch.series_name, href: `/cricket/series/${seriesMatch.series_espn_id}` } : null}
+            stage={stage}
+            format={LEAGUE_LABEL[league]}
+            date={game.date}
+            venue={venueLine}
+            officials={details?.officials ?? []}
+            playerOfTheMatch={playerOfTheMatch}
+            result={game.completed && game.status_summary ? game.status_summary : null}
+          />
+        </div>
+      )}
 
       {context && (
         <section>

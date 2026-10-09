@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useActiveInnings } from "./ScorecardActive";
 import { useSlideIndicator } from "./motion/useSlideIndicator";
 import { inningsFromQuery } from "@/lib/cricketScorecardView";
 
@@ -31,6 +32,12 @@ export function CricketScorecardTabs({ tabs }: { tabs: ScorecardTab[] }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const base = useId();
   useSlideIndicator(rowRef, active);
+  // Tell the section's share menu which innings is open.
+  const scope = useActiveInnings();
+  const setScope = scope?.set;
+  useEffect(() => {
+    if (setScope && keys.includes(active)) setScope(active);
+  }, [setScope, active, keys.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
   if (tabs.length === 0) return null;
   return (
     <>

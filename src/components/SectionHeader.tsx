@@ -7,6 +7,7 @@ export function SectionHeader({
   description,
   badge,
   tools,
+  menu,
   plain,
 }: {
   children: React.ReactNode;
@@ -17,6 +18,8 @@ export function SectionHeader({
   description?: React.ReactNode;
   /** Buttons for this section (Share image / Download image), on their own row under the heading. */
   tools?: React.ReactNode;
+  /** A single compact control (the match pages' Share menu), right-aligned on the heading row. */
+  menu?: React.ReactNode;
   /** The first-visit page's module heading: no accent bar, a 24px (30px from 1000px) title and a 14px grey line under it. */
   plain?: boolean;
 }) {
@@ -55,6 +58,7 @@ export function SectionHeader({
             {action.label} →
           </Link>
         )}
+        {menu && <div className="-mt-1 shrink-0 self-start">{menu}</div>}
       </div>
       {tools && <div className="mt-2.5">{tools}</div>}
     </div>

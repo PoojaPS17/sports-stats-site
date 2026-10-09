@@ -5,7 +5,7 @@ import type { TeamXi } from "@/lib/cricketPlayingXi";
 // Each side's Playing XI on a cricket match page: the names in roster order, the captain and the
 // wicketkeeper marked, the player's usual role when ESPN knows it. Renders nothing without a squad
 // (a fixture ESPN has not listed yet, a summary served without rosters).
-export function CricketPlayingXi({ sides, collapsed = false }: { sides: TeamXi[]; collapsed?: boolean }) {
+export function CricketPlayingXi({ sides, collapsed = false, share }: { sides: TeamXi[]; collapsed?: boolean; /** The section's Share menu: beside the note once the card is open (never inside the summary), on the heading otherwise. */ share?: React.ReactNode }) {
   if (sides.length === 0) return null;
   const note = "Captain (c) and wicketkeeper (wk) as listed in the match summary";
   const lists = (
@@ -38,7 +38,10 @@ export function CricketPlayingXi({ sides, collapsed = false }: { sides: TeamXi[]
           <span className="text-xs font-bold text-[var(--sig-ink)]">Show</span>
         </summary>
         <div className="flex flex-col gap-3 border-t border-[var(--border)] px-3 pb-3 pt-3">
-          <p className="text-xs text-[var(--text-muted)]">{note}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 pt-2.5 text-xs text-[var(--text-muted)]">{note}</p>
+            {share}
+          </div>
           {lists}
         </div>
       </details>
@@ -46,7 +49,7 @@ export function CricketPlayingXi({ sides, collapsed = false }: { sides: TeamXi[]
   }
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader description={note}>Playing XI</SectionHeader>
+      <SectionHeader menu={share} description={note}>Playing XI</SectionHeader>
       {lists}
     </section>
   );

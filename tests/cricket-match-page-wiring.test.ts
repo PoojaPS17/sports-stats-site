@@ -17,7 +17,7 @@ test("the SEO surfaces are untouched: h1 line, report paragraph, share tools, sc
   assert.match(page, /headline=\{\[matchName, description, seriesName\]\.filter\(Boolean\)\.join\(" · "\)\}/);
   assert.match(page, /cricketMatchReport\(/);
   assert.match(page, /\{report \? <p className="text-sm leading-relaxed">\{report\}<\/p>/);
-  assert.match(page, /<ImageActions/);
+  assert.match(page, /<ScorecardShare/);
   assert.match(page, /cricketSeriesMatchSchema\(/);
   assert.match(page, /export async function cricketMatchMetadata/);
 });
@@ -48,6 +48,6 @@ test("the scorecard is innings tabs with per-innings panels, and the Playing XI 
   assert.match(page, /<CricketPlayingXi collapsed/);
   assert.match(page, /<CricketMatchInfo\s+collapsed/);
   // the share tools and the "Scorecard" heading stay
-  assert.match(page, /<CricketScorecardExportCard/);
+  assert.match(page, /<ScorecardShare/);
   assert.match(page, />\s*Scorecard\s*<\/SectionHeader>/);
 });
