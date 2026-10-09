@@ -298,6 +298,11 @@ export function SportPicker({ ctx, lines, liveNow, counts, popular }: { ctx: Edi
           <button type="button" onClick={build} disabled={blocks.length === 0 || building !== null} className="pk-btn">
             Build my page
           </button>
+          {picks > 0 && !building && (
+            <button type="button" className="pk-clear" onClick={() => { setSports([]); setExtra([]); }}>
+              Clear my picks
+            </button>
+          )}
           <small className="pk-note">{saveError ? "Couldn't save on this device" : sports.length === 0 ? "Pick at least one sport" : "Saved on this device. No account."}</small>
         </div>
       </div>

@@ -8,9 +8,10 @@ import { searchResultsToPalette, type PaletteResult } from "@/lib/followBlocks";
 import type { SearchResult } from "@/lib/queries";
 
 // The "Add more blocks" palette: grouped chips plus a search box for any team, player or
-// competition. `existing` chips are shown ticked and do nothing. Used inside the builder
-// and, inside a dialog, from the built page's "+ Add another block".
-export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: EditionContext; existing: Set<string>; onPick: (block: HomeBlock) => void; dark?: boolean }) {
+// competition. `existing` chips are shown ticked; tapping a ticked chip takes it off again (`onUnpick`
+// gets the ids of that chip that are on the list). Used inside the builder and, inside a dialog, from
+// the built page's "+ Add another block".
+export function BlockPalette({ ctx, existing, onPick, onUnpick, dark = true }: { ctx: EditionContext; existing: Set<string>; onPick: (block: HomeBlock) => void; onUnpick?: (ids: string[]) => void; dark?: boolean }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PaletteResult[]>([]);
 
@@ -45,9 +46,10 @@ export function BlockPalette({ ctx, existing, onPick, dark = true }: { ctx: Edit
       <button
         key={b.id}
         type="button"
-        disabled={on}
-        onClick={() => onPick(b)}
+        disabled={on && !onUnpick}
+        onClick={() => (on ? onUnpick?.(ids.filter((id) => existing.has(id))) : onPick(b))}
         aria-pressed={on}
+        title={on && onUnpick ? "Tap to take it off your page" : undefined}
         className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-bold transition ${
           on
             ? "border-transparent bg-[var(--sig)] text-[var(--sig-on)]"
