@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ExportFooter } from "./ExportFooter";
-import { LEAGUE_LABEL, type League } from "@/lib/queries";
+import { LEAGUE_LABEL, type League } from "@/lib/leagues";
 import { CARD, CARD_DISPLAY_FONT } from "@/lib/exportTheme";
 
 /** Long lists on a card stop here, then say how many more there are on the site. */
