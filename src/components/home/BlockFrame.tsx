@@ -63,7 +63,7 @@ export function BlockFrame({
         </span>
         <button type="button" onClick={onRemove} aria-label={`Remove ${block.label}`} className="rounded px-1 text-[var(--text-faint)] hover:text-[var(--live)]">×</button>
       </header>
-      {state?.status === "loading" && <div className="h-24 animate-pulse rounded-lg bg-[var(--surface-muted)]" aria-hidden />}
+      {state?.status === "loading" && <div className="h-40 animate-pulse rounded-lg bg-[var(--surface-muted)]" aria-hidden />}
       {state?.status === "error" && <p className="text-sm text-[var(--text-muted)]">Couldn&apos;t load, retrying.</p>}
       {state?.status === "empty" && <p className="text-sm text-[var(--text-muted)]">Nothing to show yet.</p>}
       {state?.status === "ok" && children}

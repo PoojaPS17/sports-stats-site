@@ -131,12 +131,25 @@ export function clearSetup() {
   window.dispatchEvent(new Event(SETUP_EVENT));
 }
 
+/** How many rows the built page's block grid will fill at this viewport width (1 column under 768px, 2 from
+ * md, 3 from xl; the live block spans two columns from md; the "Add another block" button takes a slot).
+ * `--hb-rows` feeds the min-height that keeps the footer from jumping while the blocks mount
+ * (`.home-page` in globals.css). The pre-paint script in app/layout.tsx repeats this arithmetic. */
+export function gridRows(blockTypes: readonly string[], width: number): number {
+  const cols = width >= 1280 ? 3 : width >= 768 ? 2 : 1;
+  const slots = blockTypes.length + 1 + (cols > 1 && blockTypes.includes("live") ? 1 : 0);
+  return Math.ceil(slots / cols);
+}
+
 /** Mirrors the pre-paint script in app/layout.tsx: `data-home` on <html> drives which hero is visible. */
 export function applyHomeAttribute(stored: Stored | null) {
   if (typeof document === "undefined") return;
   const el = document.documentElement;
   if (!stored) delete el.dataset.home;
   else el.dataset.home = isSetup(stored) ? "built" : "collapsed";
+  if (!el.style || typeof window === "undefined") return;
+  if (isSetup(stored)) el.style.setProperty("--hb-rows", String(gridRows(stored.blocks.map((b) => b.type), window.innerWidth)));
+  else el.style.removeProperty("--hb-rows");
 }
 
 // --- transfer link ---------------------------------------------------------------

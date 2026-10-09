@@ -44,7 +44,7 @@ export default async function HomePage() {
   });
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="home-page flex flex-col gap-10">
       <section className="home-builder-hero pick bleed" suppressHydrationWarning>
         <div className="pick-deco" aria-hidden>
           <i className="c1" />

@@ -926,6 +926,10 @@
     border-bottom: 1px solid var(--border);
   }
   .strip-scroll {
+    /* The "Live:" screen-reader span in a chip is position:absolute. An overflow container only clips absolutely
+       positioned descendants when it is their containing block, so without this they sat outside the clip and
+       stretched the page to the full width of the strip (scrollWidth 1728 at 375, 1872 at 1440). */
+    position: relative;
     scrollbar-width: none;
     padding-left: 1rem;
     scroll-snap-type: x proximity;
@@ -1071,6 +1075,14 @@
 }
 :root[data-home="collapsed"] .home-collapsed-bar {
   display: flex;
+}
+
+/* Reserved height for the built page. The hero, the catch-up strip and the blocks all mount after the
+   first paint (localStorage, then one fetch per block), and the footer used to ride down with them
+   (CLS 0.5 to 2). The page keeps the room they will fill: a hero band plus a row of cards per grid row
+   (--hb-rows, set before first paint in app/layout.tsx and kept current by applyHomeAttribute). */
+:root[data-home="built"] .home-page {
+  min-height: calc(32rem + var(--hb-rows, 2) * 14rem);
 }
 
 /* First-visit modules: shown only to a visitor with no saved setup (neither built nor collapsed). */

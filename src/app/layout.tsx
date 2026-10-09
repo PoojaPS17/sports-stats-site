@@ -71,7 +71,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`try {
             var h = JSON.parse(localStorage.getItem('sportsdb-home') || 'null');
             var fromLink = /[?&]setup=/.test(location.search);
-            if (fromLink || (h && h.v === 1 && Array.isArray(h.blocks) && h.blocks.length)) document.documentElement.dataset.home = 'built';
+            if (fromLink || (h && h.v === 1 && Array.isArray(h.blocks) && h.blocks.length)) {
+              document.documentElement.dataset.home = 'built';
+              var b = (h && h.blocks) || [], w = innerWidth, c = w >= 1280 ? 3 : w >= 768 ? 2 : 1;
+              var hasLive = b.some(function (x) { return x && x.type === 'live'; });
+              document.documentElement.style.setProperty('--hb-rows', String(Math.ceil((b.length + 1 + (c > 1 && hasLive ? 1 : 0)) / c)));
+            }
             else if (h && h.v === 1 && h.declined) document.documentElement.dataset.home = 'collapsed';
           } catch (e) {}`}
         </Script>
