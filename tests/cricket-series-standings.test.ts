@@ -87,3 +87,26 @@ test("cricketSeriesStandingsUrl: the feed is keyed by ESPN's league id, so an ed
   assert.equal(cricketSeriesStandingsUrl("1554058"), "https://site.web.api.espn.com/apis/v2/sports/cricket/1554058/standings");
   assert.equal(cricketSeriesStandingsUrl("8679-2026"), "https://site.web.api.espn.com/apis/v2/sports/cricket/8679/standings");
 });
+
+// President's Trophy 2026-27 (ESPN league 8836), a first-class competition. Two things the CSA fixture above
+// cannot show: the feed carries `matchesDraw`, which a multi-day table needs or its rows do not add up (Khan
+// Research Labs played 5, won 0, lost 0 — five draws); and its `netrr` is noise, because ESPN derives it from
+// `for`/`against` runs/overs pairs that mean nothing once a side declares (Pakistan Television: 815.064).
+const firstClass = JSON.parse(readFileSync(new URL("./fixtures/espn-cricket-standings-8836.json", import.meta.url), "utf8"));
+
+test("parseCricketSeriesStandings: a multi-day feed's draws are read, so every row adds up", () => {
+  const table = parseCricketSeriesStandings(firstClass);
+  assert.ok(table);
+  assert.equal(table.hasDraws, true);
+  const rows = table.groups[0].rows;
+  assert.equal(rows.length, 8);
+  for (const r of rows) assert.equal(r.won + r.lost + r.drawn + r.tied + r.noResult, r.played, r.team);
+  const krl = rows.find((r) => r.team === "Khan Research Labs")!;
+  assert.deepEqual([krl.played, krl.won, krl.lost, krl.drawn, krl.points], [5, 0, 0, 5, 54]);
+});
+
+test("parseCricketSeriesStandings: a limited-overs feed has no draws, so no D column", () => {
+  const table = parseCricketSeriesStandings(body)!;
+  assert.equal(table.hasDraws, false);
+  assert.deepEqual(table.groups[0].rows.map((r) => r.drawn), Array(8).fill(0));
+});

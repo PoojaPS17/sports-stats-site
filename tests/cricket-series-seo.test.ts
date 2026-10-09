@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cricketFormatTitle, cricketSeasonCrumbs, cricketSeriesCrumbs, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatLabels, seriesFormatTitles } from "../src/lib/cricketSeriesSeo";
+import { cricketFormatTitle, cricketSeasonCrumbs, cricketSeriesCrumbs, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatLabels, seriesFormatTitles, seriesIsMultiDayOnly } from "../src/lib/cricketSeriesSeo";
 import { fitTitle } from "../src/lib/metadata";
 
 // The series row's `formats` are ESPN's class cards as stored ("Other OD", "Other T20", "Women T20", "List A",
@@ -79,4 +79,21 @@ test("cricketSeasonCrumbs: Cricket series, then the season archive year", () => 
     { label: "Cricket series", href: "/cricket/series" },
     { label: "2025" },
   ]);
+});
+
+// Net run rate is undefined in multi-day cricket: a side that declares has no overs-faced figure to divide by.
+// ESPN publishes a `netrr` for first-class competitions anyway, and it is noise (President's Trophy 2026-27:
+// Pakistan Television 815.064, Hyderabad Kingsmen -30.556). A series mixing formats still plays limited-overs
+// matches, so its table keeps the column.
+test("seriesIsMultiDayOnly: true only when every class card is multi-day", () => {
+  assert.equal(seriesIsMultiDayOnly(["First-class"]), true);
+  assert.equal(seriesIsMultiDayOnly(["Test"]), true);
+  assert.equal(seriesIsMultiDayOnly(["First-class", "Test"]), true);
+  assert.equal(seriesIsMultiDayOnly(["Women's Test", "Youth Test"]), true);
+  // A tour with Tests and white-ball matches keeps NRR: the limited-overs legs have a real one.
+  assert.equal(seriesIsMultiDayOnly(["First-class", "T20I", "Test"]), false);
+  assert.equal(seriesIsMultiDayOnly(["ODI"]), false);
+  assert.equal(seriesIsMultiDayOnly(["List A", "Twenty20"]), false);
+  // Nothing known is not "multi-day".
+  assert.equal(seriesIsMultiDayOnly([]), false);
 });
