@@ -1,6 +1,7 @@
 import { CountUp } from "./motion/CountUp";
 import Link from "next/link";
 import { isSoccerLeague, isCricketLeague, type League } from "@/lib/leagues";
+import { isRelegation } from "@/lib/standingsZones";
 import { formatLeaderValue } from "@/lib/leaders";
 import { formatWinLossTie } from "@/lib/teamSummary";
 import { cricketRecord } from "@/lib/cricketStandings";
@@ -32,7 +33,7 @@ export function LeagueSnapshot({ league, data }: { league: League; data: LeagueS
             {data.table.map((r, i) => {
               const zone = data.bands[i] ?? null;
               return (
-                <li key={r.team_espn_id} className="table-row first:border-t-0">
+                <li key={r.team_espn_id} className={`table-row first:border-t-0${isRelegation(zone) ? " zone-tint-row" : ""}`}>
                   <Link prefetch={false} href={`/${league}/teams/${r.slug}`} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <span className="flex items-center gap-1.5">

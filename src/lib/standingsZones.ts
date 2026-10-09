@@ -13,6 +13,11 @@ import type { StandingRow } from "./queries";
 import { isCupCompetition, isSoccerLeague, type League } from "./leagues";
 import { notStarted, tableComplete } from "./standingsOrder";
 
+/** The relegation band: its rows get the Soft Coral background tint. */
+export function isRelegation(zone: Zone | null | undefined): boolean {
+  return zone?.label === "Relegation";
+}
+
 export interface Zone {
   /** One of the `.zone-N` classes in globals.css. */
   cls: string;

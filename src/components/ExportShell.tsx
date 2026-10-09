@@ -81,6 +81,8 @@ export type ExportRow = {
   cells: ExportCell[];
   /** A thin coloured bar on the row's left edge (qualification / relegation zones). */
   marker?: string;
+  /** A background tint across the whole row (relegation zone). */
+  tint?: string;
 };
 
 function renderCell(cell: ExportCell): { content: ReactNode; style: React.CSSProperties } {
@@ -134,7 +136,7 @@ export function ExportTable({
         </thead>
         <tbody>
           {shown.map((r) => (
-            <tr key={r.key} style={{ borderTop: `1px solid ${CARD.border}` }}>
+            <tr key={r.key} style={{ borderTop: `1px solid ${CARD.border}`, background: r.tint }}>
               <td style={{ ...cell, textAlign: "left", paddingLeft: 12, fontWeight: 600, whiteSpace: "normal", minWidth: firstMinWidth, boxShadow: r.marker ? `inset 4px 0 0 ${r.marker}` : undefined }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {ranked && <span style={{ minWidth: 20, textAlign: "right", fontSize: 12, fontWeight: 600, color: CARD.textMuted }}>{r.rank ?? ""}</span>}
