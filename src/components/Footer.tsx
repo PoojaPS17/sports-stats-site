@@ -92,8 +92,6 @@ export function Footer() {
               { label: "Top Games", href: "/top-games" },
               { label: "Search", href: "/search" },
               { label: "My follows", href: "/following" },
-              { label: "Methodology", href: "/methodology" },
-              { label: "Data status", href: "/status" },
               { label: "Contact", href: "/contact" },
               { label: "Privacy Policy", href: "/privacy" },
               { label: "Terms of Use", href: "/terms" },
