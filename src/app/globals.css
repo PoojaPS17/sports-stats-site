@@ -1079,10 +1079,11 @@
 
 /* Reserved height for the built page. The hero, the catch-up strip and the blocks all mount after the
    first paint (localStorage, then one fetch per block), and the footer used to ride down with them
-   (CLS 0.5 to 2). The page keeps the room they will fill: a hero band plus a row of cards per grid row
-   (--hb-rows, set before first paint in app/layout.tsx and kept current by applyHomeAttribute). */
+   (CLS 0.5 to 2). The page keeps the room they will fill: the hero band plus the block grid, each block type at
+   its measured height (--hb-h in px, set before first paint in app/layout.tsx and kept current by applyHomeAttribute;
+   see reserveHeight in lib/homeSetup.ts). */
 :root[data-home="built"] .home-page {
-  min-height: calc(32rem + var(--hb-rows, 2) * 14rem);
+  min-height: var(--hb-h, 46rem);
 }
 
 /* First-visit modules: hidden once the visitor has a built page. "Everything" (collapsed) keeps them: the full home under a slim bar. */

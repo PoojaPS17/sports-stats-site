@@ -49,6 +49,30 @@ export const metadata: Metadata = {
   },
 };
 
+// Runs in <head> before first paint: marks the built page (data-home) and reserves its height (--hb-h, px).
+// The block heights and grid arithmetic repeat reserveHeight in lib/homeSetup.ts; tests/built-home-stable-layout.test.ts runs this against it.
+const HOME_INIT = `try {
+            var h = JSON.parse(localStorage.getItem('sportsdb-home') || 'null');
+            var fromLink = /[?&]setup=/.test(location.search);
+            if (fromLink || (h && h.v === 1 && Array.isArray(h.blocks) && h.blocks.length)) {
+              document.documentElement.dataset.home = 'built';
+              var b = (h && h.blocks) || [], w = innerWidth, c = w >= 1280 ? 3 : w >= 768 ? 2 : 1, r = [0], k = 0, g = 0, i, x, t, n, hh, sp;
+              b = b.concat({ type: 'add' });
+              for (i = 0; i < b.length; i++) {
+                x = b[i]; t = x && x.type; sp = t === 'live' && c > 1 ? 2 : 1;
+                hh = t === 'add' ? 96 : t === 'live' ? (c > 1 ? 640 : 800) : t === 'team-next' ? (x.params && x.params.league === 'cricket' ? 285 : 440) : t === 'standings' || t === 'series-standings' ? 315 : t === 'player-form' ? 160 : t === 'f1-drivers' ? 270 : t === 'bts' ? 330 : 280;
+                if (k + sp > c) { r.push(0); k = 0; }
+                r[r.length - 1] = Math.max(r[r.length - 1], hh);
+                k += sp;
+                if (k >= c) { r.push(0); k = 0; }
+              }
+              if (!r[r.length - 1]) r.pop();
+              for (n = 0; n < r.length; n++) g += r[n];
+              document.documentElement.style.setProperty('--hb-h', (g + 16 * (r.length - 1) + (c > 1 ? 350 : 360)) + 'px');
+            }
+            else if (h && h.v === 1 && h.declined) document.documentElement.dataset.home = 'collapsed';
+          } catch (e) {}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -68,19 +92,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
           } catch (e) {}`}
         </Script>
-        <Script id="home-init" strategy="beforeInteractive">
-          {`try {
-            var h = JSON.parse(localStorage.getItem('sportsdb-home') || 'null');
-            var fromLink = /[?&]setup=/.test(location.search);
-            if (fromLink || (h && h.v === 1 && Array.isArray(h.blocks) && h.blocks.length)) {
-              document.documentElement.dataset.home = 'built';
-              var b = (h && h.blocks) || [], w = innerWidth, c = w >= 1280 ? 3 : w >= 768 ? 2 : 1;
-              var hasLive = b.some(function (x) { return x && x.type === 'live'; });
-              document.documentElement.style.setProperty('--hb-rows', String(Math.ceil((b.length + 1 + (c > 1 && hasLive ? 1 : 0)) / c)));
-            }
-            else if (h && h.v === 1 && h.declined) document.documentElement.dataset.home = 'collapsed';
-          } catch (e) {}`}
-        </Script>
+        {/* A plain inline <script>, not next/script: with Next 16 an inline beforeInteractive script is queued (self.__next_s) and runs only once the async runtime chunks load, after the first paint. */}
+        <script id="home-init" dangerouslySetInnerHTML={{ __html: HOME_INIT }} />
       </head>
       <body className="min-h-full flex flex-col bg-[var(--bg)] text-[var(--text)]">
         <a
