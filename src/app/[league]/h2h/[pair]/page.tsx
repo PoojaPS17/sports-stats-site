@@ -158,7 +158,7 @@ export default async function HeadToHeadPage({ params }: { params: Promise<{ lea
           {h2h.meetings > 0 && (
             <div className="px-4 pb-4 sm:px-8">
               <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]" aria-hidden="true">
-                <span className="h-full" style={{ width: `${pctA}%`, background: teamA.color ?? "var(--accent)" }} />
+                <span className="bar-grow h-full" style={{ width: `${pctA}%`, background: teamA.color ?? "var(--accent)" }} />
                 <span className="h-full bg-[var(--draw)]" style={{ width: `${pctD}%` }} />
                 <span className="h-full flex-1" style={{ background: teamB.color ?? "var(--sky)" }} />
               </div>

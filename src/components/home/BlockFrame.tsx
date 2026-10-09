@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import type { HomeBlock } from "@/lib/blockTypes";
 import type { BlockState } from "./useBlocksData";
 
@@ -22,6 +22,7 @@ export function BlockFrame({
   index,
   count,
   state,
+  leaving = false,
   onRemove,
   onMove,
   handleProps,
@@ -31,18 +32,23 @@ export function BlockFrame({
   index: number;
   count: number;
   state: BlockState | undefined;
+  /** True while the block shrinks and fades out, just before it is removed. */
+  leaving?: boolean;
   onRemove: () => void;
   onMove: (delta: -1 | 1) => void;
   handleProps: React.HTMLAttributes<HTMLButtonElement>;
   children: ReactNode;
 }) {
   const liveCount = block.type === "live" && state?.data ? (state.data as { games: unknown[]; cricket: unknown[]; tennis: unknown[] }) : null;
+  // Only the first eight blocks fade up in turn, and only when they first appear: decided once at mount, so a later reorder replays nothing.
+  const [enterIndex] = useState(() => (index < 8 ? index : -1));
   const n = liveCount ? liveCount.games.length + liveCount.cricket.length + liveCount.tennis.length : 0;
   return (
     <section
       id={`block-${block.id}`}
       data-drag-id={block.id}
-      className={`card group flex flex-col gap-3 p-4 ${block.type === "live" ? "md:col-span-2" : ""}`}
+      className={`card group flex flex-col gap-3 p-4 ${block.type === "live" ? "md:col-span-2" : ""} ${enterIndex >= 0 ? "motion-enter" : ""} ${leaving ? "block-leaving" : ""}`}
+      style={enterIndex >= 0 ? ({ "--i": enterIndex } as CSSProperties) : undefined}
       aria-label={block.label}
     >
       <header className="flex items-center gap-2">

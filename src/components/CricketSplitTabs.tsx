@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useSlideIndicator } from "./motion/useSlideIndicator";
 
 /**
  * The split a `?split=` query asks for, or the first one when it names nothing the page has — the
@@ -30,10 +31,12 @@ export function CricketSplitTabs({ tabs }: { tabs: { key: string; label: string;
   const search = useSyncExternalStore(subscribe, clientSearch, serverSearch);
   const [picked, setPicked] = useState<string | null>(null);
   const active = picked ?? splitFromQuery(search, keys);
+  const rowRef = useRef<HTMLDivElement>(null);
+  useSlideIndicator(rowRef, active);
 
   return (
     <>
-      <div className="mb-3 flex gap-1.5" role="group" aria-label="Split by">
+      <div ref={rowRef} className="slide-host mb-2 flex gap-1.5 pb-1" role="group" aria-label="Split by">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -45,6 +48,7 @@ export function CricketSplitTabs({ tabs }: { tabs: { key: string; label: string;
             {t.label}
           </button>
         ))}
+        <span className="slide-ind" aria-hidden="true" />
       </div>
       {tabs.map((t) => (
         <div key={t.key} data-split={t.key} hidden={active !== t.key}>

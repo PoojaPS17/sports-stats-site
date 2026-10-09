@@ -33,11 +33,11 @@ export function BuiltHero({ setup, headline, sub, liveCount, colours, onEdit }: 
         {/* Actions sit directly under the sub-line, left-aligned with the text, and wrap on a narrow screen. */}
         <div className="bhero-actions">
           {liveCount > 0 && (
-            <a href="#block-live" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[var(--sig)] px-3.5 text-[13px] font-extrabold text-[var(--sig-on)]">
+            <a href="#block-live" className="btn-lift inline-flex h-10 items-center gap-2 rounded-lg bg-[var(--sig)] px-3.5 text-[13px] font-extrabold text-[var(--sig-on)]">
               <span className="live-dot bg-[var(--sig-on)]" aria-hidden />Jump to live ({liveCount})
             </a>
           )}
-          <button type="button" onClick={onEdit} className="inline-flex h-10 items-center rounded-lg border border-[var(--ctl)] px-3.5 text-[13px] font-bold text-[var(--text)]">Edit blocks</button>
+          <button type="button" onClick={onEdit} className="btn-lift inline-flex h-10 items-center rounded-lg border border-[var(--ctl)] px-3.5 text-[13px] font-bold text-[var(--text)]">Edit blocks</button>
           <SendToPhone setup={setup} />
         </div>
       </div>

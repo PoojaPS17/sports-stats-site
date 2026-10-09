@@ -14,6 +14,11 @@ import { MomentsMissed } from "./MomentsMissed";
 import { renderBlock } from "./blocks";
 import { useBlocksData } from "./useBlocksData";
 import { useDragReorder } from "./useDragReorder";
+import { useFlip } from "../motion/useFlip";
+import { prefersReducedMotion } from "../motion/reduced";
+
+// How long a removed block shrinks and fades (the .block-leaving animation in globals.css) before it is taken out.
+const LEAVE_MS = 240;
 
 // The built homepage: reads the setup saved in this browser, fetches its blocks, writes the
 // hero from them and lets the visitor reorder, remove and add. Renders nothing on the server
@@ -23,6 +28,9 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
   const [setup, setSetup] = useState<HomeSetup | null>(null);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [leaving, setLeaving] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const snapshot = useFlip(gridRef);
   const setupRef = useRef(setup);
   // react-hooks/refs forbids writing a ref during render; this keeps the ref in sync for the
   // drag-drop onDrop below (which needs the latest setup, not the one from when the drag started).
@@ -66,13 +74,20 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
     formatDay: (iso) => new Date(iso).toLocaleDateString(undefined, { weekday: "short" }),
   });
 
-  const commit = useCallback((next: HomeSetup) => {
-    setSetup(next);
-    writeSetup(next);
-  }, []);
+  const commit = useCallback(
+    (next: HomeSetup) => {
+      snapshot();
+      setSetup(next);
+      writeSetup(next);
+    },
+    [snapshot]
+  );
   const { handleProps } = useDragReorder(
     blocks.map((b) => b.id),
-    (ids) => setSetup((s) => (s ? reorderBlocks(s, ids) : s)),
+    (ids) => {
+      snapshot();
+      setSetup((s) => (s ? reorderBlocks(s, ids) : s));
+    },
     () => {
       if (setupRef.current) writeSetup(setupRef.current);
     }
@@ -88,6 +103,21 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
   }, [adding]);
 
   if (!setup) return null;
+
+  // A removed block shrinks and fades first, then leaves; the blocks after it glide up (FLIP) when it goes.
+  const remove = (id: string) => {
+    const take = () => {
+      const current = setupRef.current;
+      if (!current) return;
+      const next = removeBlock(current, id);
+      setLeaving(null);
+      if (next.blocks.length === 0) clearSetup();
+      else commit(next);
+    };
+    if (prefersReducedMotion()) return take();
+    setLeaving(id);
+    window.setTimeout(take, LEAVE_MS);
+  };
 
   const onPick = (b: HomeBlock) => {
     commit(addBlock(setup, b));
@@ -108,7 +138,7 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
 
       {!editing && <MomentsMissed blocks={blocks} />}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div ref={gridRef} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {blocks.map((b, i) => (
           <BlockFrame
             key={b.id}
@@ -116,11 +146,8 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
             index={i}
             count={blocks.length}
             state={states[b.id]}
-            onRemove={() => {
-              const next = removeBlock(setup, b.id);
-              if (next.blocks.length === 0) clearSetup();
-              else commit(next);
-            }}
+            leaving={leaving === b.id}
+            onRemove={() => remove(b.id)}
             onMove={(d) => commit(moveBlock(setup, b.id, d))}
             handleProps={handleProps(b.id)}
           >
@@ -130,7 +157,7 @@ export function HomeBlocks({ ctx }: { ctx: EditionContext }) {
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="flex min-h-24 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--border-strong)] text-[14px] font-bold text-[var(--text-muted)] hover:border-[var(--sig-ink)] hover:text-[var(--sig-ink)]"
+          className="add-block btn-lift flex min-h-24 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--border-strong)] text-[14px] font-bold text-[var(--text-muted)] hover:border-[var(--sig-ink)] hover:text-[var(--sig-ink)]"
         >
           + Add another block
         </button>

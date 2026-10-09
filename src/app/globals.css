@@ -3187,3 +3187,280 @@
     margin-top: 8px;
   }
 }
+
+/* Site motion: the owner-approved set (card lift, press, staggered entrance, reorder and remove, sliding tab underline,
+   score flash, bars growing in, number count-up, hero drift, button lift and the add-block pulse). Tokens only, no colour
+   literals. Everything animates transform or opacity (the lifts also ease the shadow and the edge they already had), and
+   the closing reduced-motion block turns all of it off. Not in the set, so not here: a tab-content crossfade, a live-dot ping. */
+@layer components {
+  :root {
+    --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  /* 1. Card lift on hover (a touch screen has no hover, so the lift is for pointers only). The hover edge colour is not set here. */
+  a.card,
+  .card-link,
+  .player-grid > a {
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.2s var(--motion-ease),
+      transform 0.2s var(--motion-ease),
+      scale 0.12s var(--motion-ease);
+  }
+  @media (hover: hover) {
+    a.card:hover,
+    .card-link:hover,
+    .player-grid > a:hover {
+      transform: translateY(-3px);
+    }
+  }
+
+  /* 2. Press feedback: cards and buttons dip a little while held. The individual scale property composes with a lift. */
+  a.card:active,
+  .card-link:active,
+  .player-grid > a:active {
+    scale: 0.98;
+  }
+  :where(button, [role="button"]) {
+    transition: scale 0.12s var(--motion-ease);
+  }
+  .nav-pill,
+  .scores-chip {
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      scale 0.12s var(--motion-ease);
+  }
+  button:not(:disabled):active,
+  [role="button"]:active,
+  .nav-pill:active,
+  .scores-chip:active {
+    scale: 0.96;
+  }
+
+  /* 3. Staggered entrance: the first eight children fade and rise 10px, 45ms apart, once, when they are first drawn.
+     It is a plain CSS animation, so it needs no script, never leaves content hidden, and moves nothing in the layout. */
+  @keyframes motion-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .motion-stagger > :nth-child(-n + 8),
+  .motion-enter {
+    animation: motion-enter 0.35s var(--motion-ease) backwards;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+  .motion-stagger > :nth-child(2) {
+    --i: 1;
+  }
+  .motion-stagger > :nth-child(3) {
+    --i: 2;
+  }
+  .motion-stagger > :nth-child(4) {
+    --i: 3;
+  }
+  .motion-stagger > :nth-child(5) {
+    --i: 4;
+  }
+  .motion-stagger > :nth-child(6) {
+    --i: 5;
+  }
+  .motion-stagger > :nth-child(7) {
+    --i: 6;
+  }
+  .motion-stagger > :nth-child(8) {
+    --i: 7;
+  }
+
+  /* 4. Remove on the built home: the block shrinks and fades, then leaves (HomeBlocks takes it out after 240ms; the others glide up by FLIP). */
+  @keyframes block-leave {
+    to {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+  }
+  .block-leaving {
+    animation: block-leave 0.24s ease-in forwards;
+    pointer-events: none;
+  }
+
+  /* 5. Sliding underline under the active tab or chip. useSlideIndicator measures; this only moves it with transform. */
+  .slide-host {
+    position: relative;
+  }
+  .slide-ind {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 1px;
+    height: 3px;
+    background: var(--sig);
+    transform-origin: 0 50%;
+    transform: translateX(calc(var(--ind-x, 0) * 1px)) scaleX(var(--ind-w, 0));
+    opacity: 0;
+    pointer-events: none;
+  }
+  .slide-host[data-ind] > .slide-ind {
+    opacity: 1;
+  }
+  .slide-host[data-ind="go"] > .slide-ind {
+    transition: transform 0.28s var(--motion-ease);
+  }
+  .slide-host-tabs > .slide-ind {
+    bottom: -1px;
+    height: 2px;
+  }
+  .slide-host-tabs[data-ind] .tab-active::after {
+    background: transparent;
+  }
+
+  /* 6. Score change flash: a green wash that fades once, on a real change after mount (ScoreFlash adds the class). */
+  @keyframes score-flash {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  .score-flash {
+    position: relative;
+  }
+  .score-flash::after {
+    content: "";
+    position: absolute;
+    inset: -2px -5px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--win-fill) 40%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    animation: score-flash 0.9s ease-out;
+  }
+
+  /* 7. Bars grow in from the left when first seen. At load the animation runs as drawn; BarReveal parks the bars that start
+     below the fold at zero (data-bar-wait) and releases each as it scrolls into view. */
+  @keyframes bar-grow {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  .bar-grow {
+    transform-origin: 0 50%;
+    animation: bar-grow 0.8s var(--motion-ease) backwards;
+  }
+  .bar-grow[data-bar-wait] {
+    animation: none;
+    transform: scaleX(0);
+  }
+
+  /* 9. Hero drift on the built home: the glow circle and the dot move a few pixels, slowly, with transform only. */
+  @keyframes hero-drift {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(-14px, 10px);
+    }
+  }
+  .home-decor-built .hd-glow {
+    animation: hero-drift 11s ease-in-out infinite;
+  }
+  .home-decor-built .hd-dot {
+    animation: hero-drift 7s ease-in-out infinite reverse;
+  }
+
+  /* 10. Button lift on hover, and the dashed add-block box pulsing its edge (an overlay that fades in and out, so only opacity moves). */
+  .btn-lift {
+    transition:
+      transform 0.18s var(--motion-ease),
+      box-shadow 0.18s var(--motion-ease),
+      scale 0.12s var(--motion-ease),
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .btn-lift:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-pop);
+    }
+  }
+  .btn-lift:active:not(:disabled) {
+    scale: 0.96;
+  }
+  @keyframes add-pulse {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  .add-block {
+    position: relative;
+  }
+  .add-block::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border: 2px dashed var(--sig-ink);
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    animation: add-pulse 2.4s ease-in-out infinite;
+  }
+
+  /* Reduced motion: every animation and transition above is off, the lifts and presses do not move, bars and counts show
+     their final state at once (the count-up and the bar release also check this in script). */
+  @media (prefers-reduced-motion: reduce) {
+    a.card,
+    .card-link,
+    .player-grid > a,
+    :where(button, [role="button"]),
+    .nav-pill,
+    .scores-chip,
+    .btn-lift,
+    .motion-stagger > *,
+    .motion-enter,
+    .block-leaving,
+    .bar-grow,
+    .score-flash::after,
+    .add-block::after,
+    .home-decor-built .hd-glow,
+    .home-decor-built .hd-dot,
+    .slide-host[data-ind="go"] > .slide-ind {
+      animation: none !important;
+      transition: none !important;
+    }
+    a.card:hover,
+    .card-link:hover,
+    .player-grid > a:hover,
+    .btn-lift:hover,
+    .bar-grow[data-bar-wait] {
+      transform: none !important;
+    }
+    a.card:active,
+    .card-link:active,
+    .player-grid > a:active,
+    button:active,
+    [role="button"]:active,
+    .nav-pill:active,
+    .scores-chip:active,
+    .btn-lift:active {
+      scale: none !important;
+    }
+    .score-flash::after,
+    .add-block::after {
+      display: none;
+    }
+  }
+}

@@ -5,6 +5,7 @@ import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { BarReveal } from "@/components/motion/BarReveal";
 import { Ticker } from "@/components/Ticker";
 import { SiteNoticeBar } from "@/components/SiteNoticeBar";
 import { SITE_URL } from "@/lib/site";
@@ -97,6 +98,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer />
+        <BarReveal />
         {/* Loads only once NEXT_PUBLIC_GA_ID is set; asks first where consent is required. */}
         <GoogleAnalytics />
       </body>

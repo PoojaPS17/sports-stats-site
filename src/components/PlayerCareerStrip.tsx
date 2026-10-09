@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { joinTeams, teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
+import { CountUp } from "./motion/CountUp";
 import { formatSeasonLabel, LEAGUE_LABEL, type League } from "@/lib/queries";
 import type { PlayerProfile } from "@/lib/playerProfile";
 import { careerStripStats } from "./PlayerStatsShared";
@@ -55,7 +56,7 @@ function Stat({ label, value, title, noBoxScore }: { label: string; value: strin
         {label}
       </p>
       <p className="text-xl font-bold tabular-nums tracking-tight sm:text-2xl" title={noBoxScore ? title : undefined}>
-        {value}
+        <CountUp value={value} />
       </p>
     </div>
   );

@@ -56,7 +56,7 @@ export default async function HomePage() {
         <SportPicker popular={popular} ctx={editionContext} lines={lines} liveNow={home.liveGames.length + home.liveCricket.length + home.liveTennis.length} counts={counts} />
       </section>
       <CollapsedBar />
-      <div className="home-firstvisit home-mods">
+      <div className="home-firstvisit home-mods motion-stagger">
         <div className="home-duo home-duo-wide">
           <div className="home-col">
             <RightNow />

@@ -28,7 +28,7 @@ export function CricketPartnerships({ innings, colours }: { innings: StoryInning
                       {p.batters[0]} & {p.batters[1]}
                     </span>
                     <span className="mt-1 block h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-                      <span className="block h-2 rounded-full" style={{ width: `${Math.max(2, Math.round((p.runs / max) * 100))}%`, backgroundColor: colours[inn.teamId] ?? "var(--sig)" }} />
+                      <span className="bar-grow block h-2 rounded-full" style={{ width: `${Math.max(2, Math.round((p.runs / max) * 100))}%`, backgroundColor: colours[inn.teamId] ?? "var(--sig)" }} />
                     </span>
                   </span>
                   <span className="text-right text-[14px] font-bold tabular-nums">

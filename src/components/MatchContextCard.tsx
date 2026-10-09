@@ -112,7 +112,7 @@ export function MatchContextCard({ league, game, context, view }: { league: Leag
             )}
           </div>
           <div className="flex h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-            <span className={homeFirst ? "bg-[var(--win)]" : "bg-[var(--loss)]"} style={{ width: `${(homeFirst ? p.homeWin : p.awayWin) * 100}%` }} />
+            <span className={`bar-grow ${homeFirst ? "bg-[var(--win)]" : "bg-[var(--loss)]"}`} style={{ width: `${(homeFirst ? p.homeWin : p.awayWin) * 100}%` }} />
             {soccer && <span className="bg-[var(--draw-fill)]" style={{ width: `${p.draw * 100}%` }} />}
             <span className={homeFirst ? "bg-[var(--loss)]" : "bg-[var(--win)]"} style={{ width: `${(homeFirst ? p.awayWin : p.homeWin) * 100}%` }} />
           </div>
