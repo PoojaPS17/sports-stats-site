@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- ESPN feed JSON has no published schema */
 // A series' points table, read from ESPN at request time. ESPN serves one for any series at
 // site.web.api.espn.com/apis/v2/sports/cricket/<league id>/standings (the site.api.espn.com host
-// answers 404): rank, matches, wins, losses, ties, no results, points, and for most competitions the
-// net run rate and a qualified flag. Points always come from the feed: a competition may award bonus
-// points (the CSA Women Pro50 gives 5 for a win with a bonus, 2 without), so counting results is wrong.
+// answers 404): rank, matches, wins, losses, draws, ties, no results, points, and for most competitions
+// the net run rate and a qualified flag. The net run rate is only meaningful in limited-overs cricket;
+// `seriesIsMultiDayOnly` decides whether the page shows the column. Points always come from the feed:
+// a competition may award bonus points (the CSA Women Pro50 gives 5 for a win with a bonus, 2 without),
+// so counting results is wrong.
 import { baseSeriesId } from "./cricketSeriesKey";
 import { resolveTeamLogo } from "./teamLogos";
 
@@ -16,6 +18,8 @@ export interface PointsTableRow {
   played: number;
   won: number;
   lost: number;
+  /** Multi-day cricket only: the feed's `matchesDraw`. Without it a first-class row does not add up. */
+  drawn: number;
   tied: number;
   noResult: number;
   points: number;
@@ -31,6 +35,7 @@ export interface CricketSeriesStandings {
   /** One group for a league table, several for a tournament with pools (the feed's group name; null for "overall"). */
   groups: { name: string | null; rows: PointsTableRow[] }[];
   hasNrr: boolean;
+  hasDraws: boolean;
   hasTies: boolean;
   hasQualified: boolean;
 }
@@ -49,6 +54,7 @@ export function parseCricketSeriesStandings(body: unknown): CricketSeriesStandin
   const children: any[] = Array.isArray(b.children) ? b.children : [];
   const groups: CricketSeriesStandings["groups"] = [];
   let hasNrr = false;
+  let hasDraws = false;
   let hasTies = false;
   let hasQualified = false;
   for (const child of children) {
@@ -76,6 +82,7 @@ export function parseCricketSeriesStandings(body: unknown): CricketSeriesStandin
         played: num("matchesPlayed"),
         won: num("matchesWon"),
         lost: num("matchesLost"),
+        drawn: num("matchesDraw"),
         tied: num("matchesTied"),
         noResult: num("noresult"),
         points: num("matchPoints"),
@@ -86,6 +93,7 @@ export function parseCricketSeriesStandings(body: unknown): CricketSeriesStandin
     }
     if (rows.length === 0) continue;
     rows.sort((a, b) => a.rank - b.rank);
+    if (rows.some((r) => r.drawn > 0)) hasDraws = true;
     if (rows.some((r) => r.tied > 0)) hasTies = true;
     if (rows.some((r) => r.qualified === true)) hasQualified = true;
     const name = String(child.name ?? "").trim();
@@ -93,7 +101,7 @@ export function parseCricketSeriesStandings(body: unknown): CricketSeriesStandin
   }
   if (groups.length === 0) return null;
   const year = Number(b.season?.year);
-  return { seasonYear: Number.isFinite(year) && year > 0 ? year : null, groups, hasNrr, hasTies, hasQualified };
+  return { seasonYear: Number.isFinite(year) && year > 0 ? year : null, groups, hasNrr, hasDraws, hasTies, hasQualified };
 }
 
 /**

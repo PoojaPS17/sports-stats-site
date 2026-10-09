@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { fitTitle, pageMeta } from "@/lib/metadata";
-import { cricketSeasonCrumbs, cricketSeriesCrumbs, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatTitles } from "@/lib/cricketSeriesSeo";
+import { cricketSeasonCrumbs, cricketSeriesCrumbs, cricketSeriesDescription, cricketSeriesTitleCandidates, seriesFormatTitles, seriesIsMultiDayOnly } from "@/lib/cricketSeriesSeo";
 import { fetchCricketSeriesStandings, pointsTableShown } from "@/lib/cricketSeriesStandings";
 import { CricketPointsTable } from "@/components/CricketPointsTable";
 import { CricketSeriesLeaders } from "@/components/CricketSeriesLeaders";
@@ -215,7 +215,7 @@ export default async function CricketSeriesDetailPage({ params }: { params: Prom
         </section>
       )}
 
-      {showTable && table && <CricketPointsTable table={table} />}
+      {showTable && table && <CricketPointsTable table={table} showNrr={!seriesIsMultiDayOnly(s.formats)} />}
 
       <CricketSeriesLeaders stats={stats} teams={s.teams} />
 

@@ -5,12 +5,15 @@ import type { CricketSeriesStandings } from "@/lib/cricketSeriesStandings";
 
 // A series' points table as ESPN publishes it: one table per group, the columns the feed carries.
 // Points are the feed's own (bonus-point competitions exist), never a count of results.
-export function CricketPointsTable({ table }: { table: CricketSeriesStandings }) {
+// `showNrr` is the caller's: net run rate is undefined in multi-day cricket and the feed's figures for it
+// are noise, so a first-class series drops the column (see `seriesIsMultiDayOnly`).
+export function CricketPointsTable({ table, showNrr = true }: { table: CricketSeriesStandings; showNrr?: boolean }) {
   const numCell = "px-2 py-2.5 text-right tabular-nums";
-  const cols = ["M", "W", "L", ...(table.hasTies ? ["T"] : []), "NR", "Pts", ...(table.hasNrr ? ["NRR"] : [])];
+  const nrr = showNrr && table.hasNrr;
+  const cols = ["M", "W", "L", ...(table.hasDraws ? ["D"] : []), ...(table.hasTies ? ["T"] : []), "NR", "Pts", ...(nrr ? ["NRR"] : [])];
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader description="Points and net run rate as published in the ESPN feed, refreshed every five minutes">Points table</SectionHeader>
+      <SectionHeader description={`Points${nrr ? " and net run rate" : ""} as published in the ESPN feed, refreshed every five minutes`}>Points table</SectionHeader>
       {table.groups.map((group, gi) => (
         <div key={group.name ?? gi} className="card overflow-hidden">
           {group.name && <h3 className="border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-bold">{group.name}</h3>}
@@ -44,10 +47,11 @@ export function CricketPointsTable({ table }: { table: CricketSeriesStandings })
                     <td className={`${numCell} text-[var(--text-muted)]`}>{r.played}</td>
                     <td className={numCell}>{r.won}</td>
                     <td className={numCell}>{r.lost}</td>
+                    {table.hasDraws && <td className={numCell}>{r.drawn}</td>}
                     {table.hasTies && <td className={numCell}>{r.tied}</td>}
                     <td className={numCell}>{r.noResult}</td>
                     <td className={`${numCell} font-bold`}>{r.points}</td>
-                    {table.hasNrr && <td className={numCell}>{r.nrr ?? "-"}</td>}
+                    {nrr && <td className={numCell}>{r.nrr ?? "-"}</td>}
                   </tr>
                 ))}
               </tbody>

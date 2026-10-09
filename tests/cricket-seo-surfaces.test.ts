@@ -146,3 +146,29 @@ test("series cards, rows, the export card and the series header print formats in
   assert.match(card, /3rd Match · One-day/);
   assert.doesNotMatch(card, /Other OD/);
 });
+
+// A first-class table needs a D column or its rows do not add up, and must not carry the feed's nonsense NRR.
+const firstClassTable = parseCricketSeriesStandings(
+  JSON.parse(readFileSync(new URL("./fixtures/espn-cricket-standings-8836.json", import.meta.url), "utf8"))
+)!;
+
+test("CricketPointsTable: a multi-day table shows D and drops the meaningless NRR column", () => {
+  const html = renderToStaticMarkup(createElement(CricketPointsTable, { table: firstClassTable, showNrr: false }));
+  for (const col of ["Team", "M", "W", "L", "D", "NR", "Pts"]) assert.match(html, new RegExp(`<th[^>]*>${col}</th>`), col);
+  assert.doesNotMatch(html, /<th[^>]*>NRR<\/th>/);
+  // The feed's junk figures must not reach the page at all.
+  assert.doesNotMatch(html, /815\.064/);
+  assert.doesNotMatch(html, /-30\.556/);
+  // Khan Research Labs: five played, five drawn — the row that read 0 won / 0 lost / nothing else.
+  assert.match(html, /Khan Research Labs/);
+  // With no net run rate on show, the heading must not promise one.
+  assert.doesNotMatch(html, /Points and net run rate/);
+  assert.match(html, /Points as published in the ESPN feed/);
+});
+
+test("CricketPointsTable: a limited-overs table keeps NRR and shows no D column", () => {
+  const html = renderToStaticMarkup(createElement(CricketPointsTable, { table: standings, showNrr: true }));
+  assert.match(html, /<th[^>]*>NRR<\/th>/);
+  assert.doesNotMatch(html, /<th[^>]*>D<\/th>/);
+  assert.match(html, /Points and net run rate as published in the ESPN feed/);
+});

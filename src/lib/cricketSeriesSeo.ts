@@ -28,6 +28,19 @@ export function cricketFormatTitle(card: string | null | undefined): string | nu
   return label ? label[0].toUpperCase() + label.slice(1) : null;
 }
 
+// Multi-day cricket has no net run rate: a side that declares faces no fixed quota of overs, so there is
+// nothing to divide by. ESPN still publishes a `netrr` for first-class competitions and it is noise — the
+// President's Trophy 2026-27 feed gives Pakistan Television 815.064 and Hyderabad Kingsmen -30.556, derived
+// from `for`/`against` runs/overs pairs that mean nothing in the format.
+function isMultiDayFormat(card: string): boolean {
+  return /test|first-class/i.test(card);
+}
+
+/** Whether every one of a series' class cards is multi-day, so a net run rate column would say nothing. */
+export function seriesIsMultiDayOnly(formats: string[]): boolean {
+  return formats.length > 0 && formats.every(isMultiDayFormat);
+}
+
 /** The formats as labels, in the order given, without repeats. */
 export function seriesFormatTitles(formats: string[]): string[] {
   const out: string[] = [];
