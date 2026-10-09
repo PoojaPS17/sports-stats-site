@@ -17,7 +17,7 @@ export function CricketPlayingXi({ sides, collapsed = false, share }: { sides: T
               {side.players.map((p, i) => (
                 <li key={`${p.id}-${i}`} className="flex items-center gap-3 px-4 py-2">
                   <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
-                  <span className="min-w-0 flex-1 truncate font-medium">
+                  <span className="min-w-0 flex-1 break-words font-medium">
                     {p.name}
                     {(p.captain || p.keeper) && <span className="ml-1 text-xs font-semibold text-[var(--text-muted)]">{p.captain && p.keeper ? "(c & wk)" : p.captain ? "(c)" : "(wk)"}</span>}
                   </span>

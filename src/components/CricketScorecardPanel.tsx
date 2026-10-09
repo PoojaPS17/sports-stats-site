@@ -34,13 +34,13 @@ function Table({
   return (
     <div className="card overflow-hidden">
       <p className="px-4 pt-3 text-[0.65rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{title}</p>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[420px] border-collapse text-sm">
+      <div className="scorecard-scroll">
+        <table className="scorecard-table w-full min-w-[17.5rem] border-collapse text-sm">
           <thead>
             <tr className="table-head text-left">
               <th className="py-2 pl-4 font-medium">Player</th>
               {labels.map((label) => (
-                <th key={label} className="px-2 py-2 text-right font-medium">
+                <th key={label} className="py-2 text-right font-medium">
                   {label}
                 </th>
               ))}
@@ -62,7 +62,7 @@ function Table({
                     {row.dismissal && <span className="block text-xs font-normal text-[var(--text-muted)]">{row.dismissal}</span>}
                   </td>
                   {row.stats.map((value, i) => (
-                    <td key={i} className="relative px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
+                    <td key={i} className="relative py-2 text-right tabular-nums text-[var(--text-muted)]">
                       {i === bar.column && <Bar {...bar.of(value)} />}
                       <span className="relative">{value}</span>
                     </td>
@@ -93,7 +93,7 @@ export function CricketScorecardPanel({ tab, league, playerSlugs }: { tab: Score
             <th scope="row" className="py-2 pl-4 text-left font-semibold">
               Extras
             </th>
-            <td colSpan={span} className="px-2 py-2 text-right tabular-nums text-[var(--text-muted)]">
+            <td colSpan={span} className="py-2 text-right tabular-nums text-[var(--text-muted)]">
               {extras.total}
               {extras.breakdown ? ` (${extras.breakdown})` : ""}
             </td>
@@ -104,7 +104,7 @@ export function CricketScorecardPanel({ tab, league, playerSlugs }: { tab: Score
             <th scope="row" className="py-2 pl-4 text-left font-bold">
               Total
             </th>
-            <td colSpan={span} className="px-2 py-2 text-right font-bold tabular-nums">
+            <td colSpan={span} className="py-2 text-right font-bold tabular-nums">
               {totalLine}
             </td>
           </tr>

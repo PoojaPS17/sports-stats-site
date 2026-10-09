@@ -24,7 +24,7 @@ export function CricketPartnerships({ innings, colours }: { innings: StoryInning
                 <li key={p.wicket} className="grid grid-cols-[2.4rem_minmax(0,1fr)_4rem] items-center gap-2">
                   <span className="text-xs tabular-nums text-[var(--text-faint)]">{ORDINAL(p.wicket)}</span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[13px] font-medium">
+                    <span className="block break-words text-[13px] font-medium">
                       {p.batters[0]} & {p.batters[1]}
                     </span>
                     <span className="mt-1 block h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]">
