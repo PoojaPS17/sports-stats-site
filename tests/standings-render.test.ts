@@ -285,3 +285,12 @@ test("the season summary uses a finished season's notes: Serie A 2022-23's Spezi
   const lines = [...markup.matchAll(/<p class="text-sm">([\s\S]*?)<\/p>/g)].map((m) => text(m[1]));
   assert.deepEqual(lines, ["ChampionClub 01", "RelegatedClub 17, Club 19, Club 20"]);
 });
+
+test("relegation rows carry the Soft Coral tint class and a matching legend swatch; other zones do not", async () => {
+  const { isRelegation } = await import("../src/lib/standingsZones");
+  assert.equal(isRelegation({ cls: "zone-3", label: "Relegation" }), true);
+  assert.equal(isRelegation({ cls: "zone-3", label: "Eliminated" }), false);
+  assert.equal(isRelegation({ cls: "zone-2", label: "Relegation play-off" }), false);
+  assert.equal(isRelegation({ cls: "zone-1", label: "Champions League" }), false);
+  assert.equal(isRelegation(null), false);
+});

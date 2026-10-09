@@ -93,6 +93,8 @@
   --zone-2: #d97706;
   --zone-3: #dc2626;
   --zone-4: #0f766e;
+  --zone-relegation-tint: #fde8e7;
+  --zone-relegation-tint-hover: #fcdfde;
 
   --header-bg: var(--mast);
   --header-text: var(--mast-text);
@@ -201,6 +203,8 @@
     --zone-2: #f59e0b;
     --zone-3: #f87171;
     --zone-4: #2dd4bf;
+    --zone-relegation-tint: rgba(248, 113, 113, 0.16);
+    --zone-relegation-tint-hover: rgba(248, 113, 113, 0.2);
 
     --header-border: #25446d;
     --header-hover-bg: rgba(255, 255, 255, 0.07);
@@ -269,6 +273,8 @@
   --zone-2: #f59e0b;
   --zone-3: #f87171;
   --zone-4: #2dd4bf;
+  --zone-relegation-tint: rgba(248, 113, 113, 0.16);
+  --zone-relegation-tint-hover: rgba(248, 113, 113, 0.2);
 
   --header-border: #25446d;
   --header-hover-bg: rgba(255, 255, 255, 0.07);
@@ -900,6 +906,25 @@
 
   .zone-4 {
     background: var(--zone-4);
+  }
+
+  /* Relegation rows: Soft Coral background tint only (text stays on the normal ink; coral is not used for text). */
+  .zone-tint-row {
+    background: var(--zone-relegation-tint);
+  }
+
+  .zone-tint-row:hover {
+    background: var(--zone-relegation-tint-hover);
+  }
+
+  /* Legend swatch for the tinted band: the tint with the band's marker bar. */
+  .zone-swatch-tint {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1rem;
+    border-radius: 3px;
+    background: var(--zone-relegation-tint);
+    border-left: 3px solid var(--zone-3);
   }
 
   @keyframes pulse-dot {

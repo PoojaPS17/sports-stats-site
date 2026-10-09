@@ -7,7 +7,7 @@ import { cricketPlayed, hasCricketTies, qualifierLegend, showQualifiers } from "
 import type { StandingRow, League } from "@/lib/queries";
 import { hasPosition, isPreseasonTable, notStarted } from "@/lib/standingsOrder";
 import { PRESEASON_LABEL } from "@/lib/standingsSeasons";
-import { clinchLabel, zonesFor } from "@/lib/standingsZones";
+import { clinchLabel, isRelegation, zonesFor } from "@/lib/standingsZones";
 
 function StreakCell({ streak }: { streak: string | null }) {
   if (!streak) return <span className="text-[var(--text-faint)]">—</span>;
@@ -143,7 +143,7 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
                     const zone = zones && position !== null ? zones.zoneAt(rows, i) : null;
                     const gd = r.goals_for != null && r.goals_against != null ? r.goals_for - r.goals_against : null;
                     return (
-                      <tr key={r.team_espn_id} className="table-row">
+                      <tr key={r.team_espn_id} className={`table-row${isRelegation(zone) ? " zone-tint-row" : ""}`}>
                         <td className="py-2 pl-4">
                           <Link prefetch={false} href={`/${league}/teams/${r.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
                             <span className="flex w-7 items-center gap-1.5">
@@ -227,7 +227,7 @@ export function StandingsTable({ league, standings, seasonFinished = false }: { 
           <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
             {zones.legend.map((z) => (
               <li key={z.label} className="flex items-center gap-1.5">
-                <span className={`zone-marker ${z.cls}`} /> {z.label}
+                <span className={isRelegation(z) ? "zone-swatch-tint" : `zone-marker ${z.cls}`} /> {z.label}
               </li>
             ))}
           </ul>

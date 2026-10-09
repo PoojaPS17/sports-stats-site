@@ -4,13 +4,14 @@ import { ExportShell, ExportTitle, ExportGroup, ExportTable, type ExportCell, ty
 import { groupStandings } from "./StandingsTable";
 import { hasPosition, isPreseasonTable, notStarted } from "@/lib/standingsOrder";
 import { PRESEASON_LABEL } from "@/lib/standingsSeasons";
-import { zonesFor } from "@/lib/standingsZones";
+import { isRelegation, zonesFor } from "@/lib/standingsZones";
 import type { League, StandingRow } from "@/lib/queries";
 import { hasTies } from "@/lib/leagues";
 import { cricketPlayed, hasCricketTies, qualifierLegend, showQualifiers } from "@/lib/cricketStandings";
 import { computedWinPct, isSoccer, type ComputedTableRow } from "@/lib/analytics";
 import { CARD } from "@/lib/exportTheme";
 
+const RELEGATION_TINT = "#fde8e7";
 const ZONE_COLOR: Record<string, string> = { "zone-1": "#2563eb", "zone-2": "#d97706", "zone-3": "#dc2626", "zone-4": "#0f766e" };
 
 function logo(name: string, url: string | null, color: string | null) {
@@ -69,7 +70,7 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
     const cricketTies = mode === "cricket" && hasCricketTies(rows);
     const list: ExportRow[] = rows.map((r, i) => {
       const zone = zones && hasPosition(r) ? zones.zoneAt(rows, i) : null;
-      return { key: r.team_espn_id, rank: hasPosition(r) ? i + 1 : "–", lead: logo(r.name, r.logo_url, r.color), name: qualifiers && r.qualified === true ? <>{teamDisplayName(r.name)} <span style={{ fontSize: 10, fontWeight: 800, color: CARD.accent }}>Q</span></> : teamDisplayName(r.name), cells: cellsFor(r, cricketTies), marker: zone ? ZONE_COLOR[zone.cls] : undefined };
+      return { key: r.team_espn_id, rank: hasPosition(r) ? i + 1 : "–", lead: logo(r.name, r.logo_url, r.color), name: qualifiers && r.qualified === true ? <>{teamDisplayName(r.name)} <span style={{ fontSize: 10, fontWeight: 800, color: CARD.accent }}>Q</span></> : teamDisplayName(r.name), cells: cellsFor(r, cricketTies), marker: zone ? ZONE_COLOR[zone.cls] : undefined, tint: isRelegation(zone) ? RELEGATION_TINT : undefined };
     });
     // No row cap: the image is the whole table (a 32-team NFL season, a 36-team league phase).
     const table = <ExportTable firstHeader="Team" headers={headersFor(rows)} rows={list} bare compact={mode === "soccer" && sections.length > 1} />;
@@ -94,7 +95,7 @@ export function StandingsExportCard({ league, standings, title, subtitle, contex
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>
             {zones.legend.map((z) => (
               <span key={z.label} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 4, height: 14, borderRadius: 2, background: ZONE_COLOR[z.cls] }} />
+                <span style={isRelegation(z) ? { width: 18, height: 14, borderRadius: 3, background: RELEGATION_TINT, borderLeft: `4px solid ${ZONE_COLOR[z.cls]}` } : { width: 4, height: 14, borderRadius: 2, background: ZONE_COLOR[z.cls] }} />
                 {z.label}
               </span>
             ))}
