@@ -33,3 +33,12 @@ test("other cricket cards wrap names instead of truncating them", () => {
     assert.ok(!/\btruncate\b/.test(read(`src/components/${f}.tsx`)), `${f} does not cut text with an ellipsis`);
   }
 });
+
+// Live check on a 375px phone: the 44px "503/9d" score squeezed the name column and line-clamp cut the last letter of
+// "India" and "Lanka". The name column now never shrinks below its longest word and the score/name drop a size under 420px.
+test("match hero: team names keep their longest word on phones", () => {
+  const src = read("src/components/CricketMatchHero.tsx");
+  assert.match(src, /flex min-w-min flex-col/);
+  assert.match(src, /max-\[419px\]:text-\[18px\]/);
+  assert.match(src, /max-\[419px\]:text-\[34px\]/);
+});

@@ -86,11 +86,11 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
           return (
             <div key={i} className={`flex min-w-0 items-center gap-4 border-l-[6px] pl-4 max-[359px]:gap-2.5 max-[359px]:pl-3 ${main.length > 12 ? "max-[359px]:flex-wrap" : ""} ${muted ? "text-[var(--mast-muted)]" : ""}`} style={{ borderColor: side.colour ?? "var(--mast-line)" }}>
               <TeamLogo name={side.name} logoUrl={side.logo} size={52} priority />
-              <div className="flex min-w-0 flex-col">
-                <span className={`line-clamp-2 text-[20px] max-[359px]:text-[17px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
+              <div className="flex min-w-min flex-col">
+                <span className={`line-clamp-2 text-[20px] max-[419px]:text-[18px] max-[359px]:text-[17px] leading-tight sm:text-[22px] ${muted ? "font-bold" : "font-extrabold"}`}>{side.name}</span>
                 {detail && <span className="text-[13px] text-[var(--mast-muted)]">{detail}</span>}
               </div>
-              {main && <ScoreFlash value={main} className={`display ml-auto tabular-nums ${main.length > 12 ? "min-w-0 max-w-[58%] text-right max-[359px]:ml-0 max-[359px]:max-w-full max-[359px]:basis-full max-[359px]:text-left text-[22px] leading-tight sm:text-[30px]" : main.length > 6 ? "shrink-0 text-[30px] leading-none sm:text-[40px]" : "shrink-0 text-[44px] leading-none max-[359px]:text-[30px] sm:text-[56px]"}`}>{main}</ScoreFlash>}
+              {main && <ScoreFlash value={main} className={`display ml-auto tabular-nums ${main.length > 12 ? "min-w-0 max-w-[58%] text-right max-[359px]:ml-0 max-[359px]:max-w-full max-[359px]:basis-full max-[359px]:text-left text-[22px] leading-tight sm:text-[30px]" : main.length > 6 ? "shrink-0 text-[30px] leading-none sm:text-[40px]" : "shrink-0 text-[44px] leading-none max-[419px]:text-[34px] max-[359px]:text-[30px] sm:text-[56px]"}`}>{main}</ScoreFlash>}
             </div>
           );
         })}
