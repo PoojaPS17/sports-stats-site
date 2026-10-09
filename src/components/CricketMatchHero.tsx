@@ -68,13 +68,15 @@ export function CricketMatchHero({ state, calledOff, headline, date, sides, resu
   const line = result ?? liveLine ?? venue;
   return (
     <section className="band-deep relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-[var(--mast-line)] px-5 py-5 sm:px-6" aria-label="Match summary">
-      {share && <div className="absolute right-5 top-[13px] z-10 sm:right-6">{share}</div>}
-      <div className={`flex flex-wrap items-center justify-between gap-2 text-xs ${share ? "pr-12" : ""}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 text-xs ${share ? "max-sm:pr-12" : ""}`}>
         <span className="flex flex-wrap items-center gap-2">
           {pill}
           <Heading className="font-semibold text-[var(--mast-muted)]">{headline}</Heading>
         </span>
-        {date && <LocalTime iso={date} format={calledOff ? "date" : "datetime"} className="text-[var(--mast-muted)]" />}
+        <div className="flex shrink-0 items-center gap-3">
+          {date && <LocalTime iso={date} format={calledOff ? "date" : "datetime"} className="text-[var(--mast-muted)]" />}
+          {share && <div className="z-10 max-sm:absolute max-sm:right-5 max-sm:top-[13px]">{share}</div>}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
