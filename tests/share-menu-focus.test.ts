@@ -54,3 +54,14 @@ test("the first open focuses the first menu item only once the menu is visible",
     dom.window.close();
   }
 });
+
+// On phones the button is icon-only. The status label ("Preparing…", "Saved") must stay hidden there too, so the
+// button keeps its 40px width and the heading beside it does not re-wrap; the icon swap and the sr-only live
+// region carry the feedback.
+test("the button label is hidden on phones whatever the status", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../src/components/ShareMenu.tsx", import.meta.url), "utf8");
+  const m = src.match(/<span className=("[^"]*"|\{`[^`]*`\}) data-share-label>/);
+  assert.ok(m, "label span found");
+  assert.ok(m[1].includes("max-sm:hidden") && !m[1].includes("${"), "label is hidden below sm unconditionally");
+});

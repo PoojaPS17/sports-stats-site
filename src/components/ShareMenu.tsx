@@ -392,7 +392,7 @@ export function ShareMenu({ section, filename, shareTitle, caption, link, league
         className={`btn-lift inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-lg border bg-transparent px-2.5 text-[13px] font-bold sm:px-3 ${tonal}`}
       >
         {busy ? <SpinIcon /> : done ? <CheckIcon /> : <ShareIcon />}
-        <span className={`${status ? "" : "max-sm:hidden"} text-left`} data-share-label>
+        <span className="max-sm:hidden text-left" data-share-label>
           {status ?? "Share"}
         </span>
       </button>
