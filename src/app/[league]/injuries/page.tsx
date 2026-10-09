@@ -89,7 +89,7 @@ export default async function InjuriesPage({
               const team = list[0].team;
               return (
                 <section key={team.espn_id} className="card overflow-hidden">
-                  <Link href={`/${league}/teams/${team.slug}`} className="flex items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 hover:text-[var(--accent)]">
+                  <Link prefetch={false} href={`/${league}/teams/${team.slug}`} className="flex items-center gap-2.5 border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 hover:text-[var(--accent)]">
                     <TeamLogo name={team.name} logoUrl={team.logo_url} color={team.color} size={22} />
                     <span className="text-sm font-bold">{team.name}</span>
                     <span className="ml-auto text-xs text-[var(--text-muted)]">{list.length}</span>
@@ -99,7 +99,7 @@ export default async function InjuriesPage({
                       <li key={i.player_espn_id} className="flex flex-col gap-1 px-4 py-2.5">
                         <div className="flex items-center gap-2">
                           {i.player_slug ? (
-                            <Link href={`/${league}/players/${i.player_slug}`} className="font-semibold hover:text-[var(--accent)]">
+                            <Link prefetch={false} href={`/${league}/players/${i.player_slug}`} className="font-semibold hover:text-[var(--accent)]">
                               {i.player_name}
                             </Link>
                           ) : (

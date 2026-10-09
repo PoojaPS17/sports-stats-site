@@ -139,7 +139,7 @@ export default async function TeamPage({
             </div>
           )}
           {next && (
-            <Link href={`/${league}/games/${next.espn_id}`} className="card flex items-center justify-between gap-3 px-4 py-3">
+            <Link prefetch={false} href={`/${league}/games/${next.espn_id}`} className="card flex items-center justify-between gap-3 px-4 py-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Next</span>
               <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
                 <span className="text-[var(--text-muted)]">{nextIsHome ? "vs" : "at"}</span>
@@ -158,11 +158,11 @@ export default async function TeamPage({
           {supportsScoreAnalytics(league) && (
             <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold sm:col-span-2">
               {next && (
-                <Link href={h2hPath(league, slug, nextIsHome ? next.away_slug : next.home_slug)} className="text-[var(--accent)] hover:underline">
+                <Link prefetch={false} href={h2hPath(league, slug, nextIsHome ? next.away_slug : next.home_slug)} className="text-[var(--accent)] hover:underline">
                   Head-to-head vs {nextIsHome ? teamDisplayName(next.away_name) : teamDisplayName(next.home_name)} →
                 </Link>
               )}
-              <Link href={`/${league}/compare?a=${slug}${next ? `&b=${nextIsHome ? next.away_slug : next.home_slug}` : ""}`} className="text-[var(--accent)] hover:underline">
+              <Link prefetch={false} href={`/${league}/compare?a=${slug}${next ? `&b=${nextIsHome ? next.away_slug : next.home_slug}` : ""}`} className="text-[var(--accent)] hover:underline">
                 Compare {teamDisplayName(team.name)} with another team →
               </Link>
             </div>
@@ -241,7 +241,7 @@ export default async function TeamPage({
                   {roster.map((p) => (
                     <tr key={p.espn_id} className="table-row">
                       <td className="py-2 pl-4">
-                        <Link href={`/${league}/players/${p.slug}`} className="flex items-center gap-2.5 font-medium hover:text-[var(--accent)]">
+                        <Link prefetch={false} href={`/${league}/players/${p.slug}`} className="flex items-center gap-2.5 font-medium hover:text-[var(--accent)]">
                           {p.headshot_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={p.headshot_url} alt="" loading="lazy" className="h-7 w-7 rounded-full bg-[var(--surface-muted)] object-cover" />

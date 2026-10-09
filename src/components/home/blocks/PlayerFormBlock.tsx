@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import type { PlayerFormBlockData } from "@/lib/blockTypes";
 
 export function PlayerFormBlock({ data }: { data: PlayerFormBlockData }) {
@@ -14,7 +15,7 @@ export function PlayerFormBlock({ data }: { data: PlayerFormBlockData }) {
         </div>
         <div className="flex h-12 flex-1 items-end gap-1.5" aria-label={`${data.statLabel}, last ${data.games.length} games, newest first`}>
           {[...data.games].reverse().map((g, i, arr) => (
-            <Link
+            <Link prefetch={prefetchFor(g.href)}
               key={g.id}
               href={g.href}
               title={`${g.display} v ${g.opponent}`}
@@ -24,7 +25,7 @@ export function PlayerFormBlock({ data }: { data: PlayerFormBlockData }) {
           ))}
         </div>
       </div>
-      <Link href={data.player.href} className="text-sm font-semibold text-[var(--sig-ink)]">{data.player.name}&apos;s page →</Link>
+      <Link prefetch={prefetchFor(data.player.href)} href={data.player.href} className="text-sm font-semibold text-[var(--sig-ink)]">{data.player.name}&apos;s page →</Link>
     </div>
   );
 }

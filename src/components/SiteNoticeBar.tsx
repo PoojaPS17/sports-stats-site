@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { SITE_NOTICE, activeNotice } from "@/lib/siteNotice";
 
 export function SiteNoticeBar() {
@@ -11,7 +12,7 @@ export function SiteNoticeBar() {
         <span className="font-semibold">{since}:</span>
         <span>{notice.text}</span>
         {notice.href && (
-          <Link href={notice.href} className="text-[var(--accent)] underline">
+          <Link prefetch={prefetchFor(notice.href)} href={notice.href} className="text-[var(--accent)] underline">
             More
           </Link>
         )}

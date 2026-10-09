@@ -88,7 +88,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
               const homeFirst = scoreLineHomeFirst(league);
               const [first, second] = homeFirst ? [home, away] : [away, home];
               return (
-                <Link key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
+                <Link prefetch={false} key={game.espn_id} href={`/${league}/games/${game.espn_id}`} className="card flex flex-col gap-2 px-4 py-3">
                   <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                     <Kickoff league={league} game={game} format="datetime" />
                   </div>
@@ -167,7 +167,7 @@ export default async function ProjectionsPage({ params }: { params: Promise<{ le
                     {rows.map((t) => (
                       <tr key={t.team.espn_id} className="table-row">
                         <td className="py-2 pl-4">
-                          <Link href={`/${league}/teams/${t.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
+                          <Link prefetch={false} href={`/${league}/teams/${t.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
                             <TeamLogo name={teamDisplayName(t.team.name)} logoUrl={t.team.logo_url} color={t.team.color} size={22} />
                             <span className="truncate">{teamDisplayName(t.team.name)}</span>
                             {t.division && <span className="text-[10px] font-semibold uppercase text-[var(--text-faint)]">{t.division.replace(/^(AFC|NFC)\s+/, "")}</span>}

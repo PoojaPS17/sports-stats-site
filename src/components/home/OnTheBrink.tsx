@@ -28,7 +28,7 @@ export function OnTheBrinkView({ items }: { items: BrinkItem[] }) {
           const pct = Math.min(100, Math.max(0, (i.value / i.target) * 100));
           return (
             <li key={`${i.league}:${i.playerId}:${i.stat}`} className="rw">
-              <Link href={`/${i.league}/players/${i.slug}`} className="rw-link">
+              <Link prefetch={false} href={`/${i.league}/players/${i.slug}`} className="rw-link">
                 <span className="rw-t">
                   <b>
                     {i.name}

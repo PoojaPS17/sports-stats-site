@@ -23,7 +23,7 @@ export function MatchLeaders({ league, game, gameId, leaders, playerSlugs }: { l
             </p>
             <p className="mt-0.5 font-semibold">
               {slug ? (
-                <Link href={`/${league}/players/${slug}`} className="hover:text-[var(--accent)]">{l.athlete}</Link>
+                <Link prefetch={false} href={`/${league}/players/${slug}`} className="hover:text-[var(--accent)]">{l.athlete}</Link>
               ) : (
                 l.athlete
               )}
@@ -34,7 +34,7 @@ export function MatchLeaders({ league, game, gameId, leaders, playerSlugs }: { l
             {showCardShare && slug && (
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <ImageActions filename={`${gameId}-${slug}-card-${league}`} imageUrl={`/${league}/games/${gameId}/players/${slug}/card?format=og`} shareTitle={`${l.athlete} performance card`} />
-                <Link href={performancePagePath(league, gameId!, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
+                <Link prefetch={false} href={performancePagePath(league, gameId!, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
                   View full breakdown
                 </Link>
               </div>

@@ -11,7 +11,7 @@ import type { LeaderEntry } from "@/lib/whoLeads";
 function Who({ entry, league }: { entry: LeaderEntry; league: string }) {
   const [first, second] = entry.people;
   const link = (p: { name: string; slug: string }) => (
-    <Link href={`/${league}/players/${p.slug}`} className="font-bold text-[var(--text)] hover:text-[var(--accent)] hover:underline">
+    <Link prefetch={false} href={`/${league}/players/${p.slug}`} className="font-bold text-[var(--text)] hover:text-[var(--accent)] hover:underline">
       {p.name}
     </Link>
   );

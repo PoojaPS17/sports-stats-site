@@ -55,7 +55,7 @@ function PlayerCard({ league, side, coverage }: { league: string; side: PlayerCo
   const p = side.player;
   const facts = [p.position, p.jersey ? `#${p.jersey}` : null, p.age ? `${p.age} yrs` : null, p.height].filter(Boolean).join(" · ");
   return (
-    <Link href={`/${league}/players/${p.slug}`} className="card flex items-center gap-3 px-4 py-3" style={{ borderTop: `3px solid ${p.team_color ?? "var(--accent)"}` }}>
+    <Link prefetch={false} href={`/${league}/players/${p.slug}`} className="card flex items-center gap-3 px-4 py-3" style={{ borderTop: `3px solid ${p.team_color ?? "var(--accent)"}` }}>
       {p.headshot_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={p.headshot_url} alt="" className="h-12 w-12 shrink-0 rounded-full bg-[var(--surface-muted)] object-cover" />

@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { SectionHeader } from "@/components/SectionHeader";
 import type { Performer } from "@/lib/cricketPerformers";
 import type { League } from "@/lib/leagues";
 
 function Card({ href, className, children }: { href: string | null; className: string; children: React.ReactNode }) {
   return href ? (
-    <Link href={href} className={`${className} card-link`}>
+    <Link prefetch={prefetchFor(href)} href={href} className={`${className} card-link`}>
       {children}
     </Link>
   ) : (

@@ -32,7 +32,7 @@ function RunList({ league, runs, tone }: { league: string; runs: FixtureDifficul
           <div className="flex items-center gap-3 text-sm">
             <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
             <TeamLogo name={teamDisplayName(r.team.name)} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
-            <Link href={`/${league}/teams/${r.team.slug}`} className="min-w-0 flex-1 truncate font-semibold hover:text-[var(--accent)]">
+            <Link prefetch={false} href={`/${league}/teams/${r.team.slug}`} className="min-w-0 flex-1 truncate font-semibold hover:text-[var(--accent)]">
               {teamDisplayName(r.team.name)}
             </Link>
             <span className={`shrink-0 text-sm font-bold tabular-nums ${tone === "hard" ? "text-[var(--loss)]" : "text-[var(--win)]"}`}>
@@ -41,7 +41,7 @@ function RunList({ league, runs, tone }: { league: string; runs: FixtureDifficul
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1 pl-8">
             {r.opponents.map((o) => (
-              <Link
+              <Link prefetch={false}
                 key={o.espn_id}
                 href={`/${league}/games/${o.espn_id}`}
                 title={`${o.home ? "vs" : "at"} ${teamDisplayName(o.team.name)}, rating ${Math.round(o.rating)}`}
@@ -102,7 +102,7 @@ export default async function PowerRankingsPage({ params }: { params: Promise<{ 
                   {pr.rows.map((r, i) => (
                     <tr key={r.team.espn_id} className="table-row">
                       <td className="py-2.5 pl-4">
-                        <Link href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
+                        <Link prefetch={false} href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
                           <span className="w-5 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
                           <TeamLogo name={teamDisplayName(r.team.name)} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
                           <span className="truncate">{teamDisplayName(r.team.name)}</span>

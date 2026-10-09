@@ -105,7 +105,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   };
 
   return (
-    <Link
+    <Link prefetch={false}
       href={`/${league}/games/${game.espn_id}`}
       aria-label={gameAccessibleLabel(league, game)}
       className={`card match block py-3 pr-4 ${live ? "match-live" : ""}`}

@@ -53,7 +53,7 @@ function Table({
                 <tr key={`${row.athleteId}-${row.innings ?? 0}-${idx}`} className="border-t border-[var(--border)]">
                   <td className="py-2 pl-4 font-medium">
                     {slug ? (
-                      <Link href={`/${league}/players/${slug}`} className="hover:underline">
+                      <Link prefetch={false} href={`/${league}/players/${slug}`} className="hover:underline">
                         {row.name}
                       </Link>
                     ) : (

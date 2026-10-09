@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { useEffect, useState } from "react";
 import { LastUpdated } from "./LastUpdated";
 import type { TickerChip } from "@/lib/ticker";
@@ -38,7 +39,7 @@ export function Ticker() {
       <div className="container-x flex h-10 items-stretch gap-0 px-0">
         <div className="strip-scroll flex min-w-0 flex-1 items-stretch overflow-x-auto" role="region" aria-label="Latest scores">
           {items.map((chip, i) => (
-            <Link key={`${chip.href}-${i}`} href={chip.href} className="strip-chip">
+            <Link prefetch={prefetchFor(chip.href)} key={`${chip.href}-${i}`} href={chip.href} className="strip-chip">
               <span className="strip-lg">{chip.league}</span>
               {chip.live && (
                 <>

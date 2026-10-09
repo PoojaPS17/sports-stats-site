@@ -39,7 +39,7 @@ function SplitTable({ label, rows, league }: { label: string; rows: CricketSplit
             <tr key={row.key} className="border-t border-[var(--border)]">
               <td className="py-2 pl-4 font-medium">
                 {row.slug ? (
-                  <Link href={`/${league}/teams/${row.slug}`} className="hover:underline">
+                  <Link prefetch={false} href={`/${league}/teams/${row.slug}`} className="hover:underline">
                     {row.label}
                   </Link>
                 ) : (

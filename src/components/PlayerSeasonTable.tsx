@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { Fragment } from "react";
 import { joinTeams, teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
@@ -76,7 +77,7 @@ export function PlayerSeasonTable({
             {profile.seasons.map((row) => (
               <tr key={row.season} className={`table-row ${row.season === activeSeason ? "bg-[var(--accent-soft)]" : ""}`}>
                 <td className="py-2 pl-4 font-medium">
-                  <Link href={row.season === latest ? basePath : `${basePath}/${row.season}`} className="hover:text-[var(--accent)]">
+                  <Link prefetch={prefetchFor(row.season === latest ? basePath : `${basePath}/${row.season}`)} href={row.season === latest ? basePath : `${basePath}/${row.season}`} className="hover:text-[var(--accent)]">
                     {formatSeasonLabel(league, row.season)}
                   </Link>
                 </td>
@@ -90,7 +91,7 @@ export function PlayerSeasonTable({
                             /
                           </span>
                         )}
-                        <Link href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 hover:text-[var(--accent)]" title={t.name}>
+                        <Link prefetch={false} href={`/${league}/teams/${t.slug}`} className="inline-flex items-center gap-1 hover:text-[var(--accent)]" title={t.name}>
                           <TeamLogo name={teamDisplayName(t.name)} logoUrl={t.logo} size={16} />
                           <span className="hidden sm:inline">{t.name}</span>
                         </Link>

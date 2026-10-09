@@ -38,7 +38,7 @@ export function NotPlayedGame({ league, game, notNeeded }: { league: League; gam
       <p className="mt-3 border-t border-[var(--border)] pt-3 text-sm font-medium text-[var(--accent)]">{notPlayedText(notNeeded)}</p>
       <p className="mt-2 text-sm text-[var(--text-muted)]">
         This game was on the schedule for {day} in case the series went the distance.{" "}
-        <Link href={`/${league}/teams/${winner.slug}`} className="font-medium text-[var(--text)] hover:text-[var(--accent)]">
+        <Link prefetch={false} href={`/${league}/teams/${winner.slug}`} className="font-medium text-[var(--text)] hover:text-[var(--accent)]">
           {teamDisplayName(winner.name)}
         </Link>{" "}
         beat {teamDisplayName(loserName)} {notNeeded.score}, so it was never played.

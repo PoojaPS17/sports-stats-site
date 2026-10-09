@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import type { CSSProperties } from "react";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -224,7 +225,7 @@ export function RightNowCard({ view, tabs }: { view: RightNowView; tabs?: React.
             <Prob view={view} />
           </>
         )}
-        <Link href={pick.href} className="rn-go" aria-label={pick.chase ? `${linkLabel}: ${needLine(pick.chase)}` : undefined}>
+        <Link prefetch={prefetchFor(pick.href)} href={pick.href} className="rn-go" aria-label={pick.chase ? `${linkLabel}: ${needLine(pick.chase)}` : undefined}>
           {linkLabel} →
         </Link>
       </article>

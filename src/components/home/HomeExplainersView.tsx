@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { LocalTime } from "@/components/LocalTime";
 import { SectionHeader } from "@/components/SectionHeader";
 import { cricketArchiveLine, HOW_NOTE, HOW_STEPS, showcaseTiles, trustItems, type ExplainerExamples, type ShowcaseVisual } from "@/lib/homeExplainers";
@@ -83,7 +84,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
               <div className={`hx-vis hx-vis-${t.id}`}>{VISUAL[t.id]}</div>
               <h3>{t.title}</h3>
               <p>{t.text}</p>
-              <Link href={t.link.href}>{t.link.label} →</Link>
+              <Link prefetch={prefetchFor(t.link.href)} href={t.link.href}>{t.link.label} →</Link>
             </article>
           ))}
         </div>
@@ -127,7 +128,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
                   Newest result stored: {newest.leagueLabel}, started <LocalTime iso={newest.startedIso} format="datetime" serverTimeZone="UTC" showZone />
                 </p>
               )}
-              <Link href={t.link.href}>{t.link.label} →</Link>
+              <Link prefetch={prefetchFor(t.link.href)} href={t.link.href}>{t.link.label} →</Link>
             </div>
           ))}
         </div>

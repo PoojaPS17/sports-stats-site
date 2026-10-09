@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 
 export type TeamPageTab = "overview" | "history" | "about";
 
@@ -11,7 +12,7 @@ export function TeamPageNav({ basePath, active }: { basePath: string; active: Te
   return (
     <div className="inline-flex gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1" role="tablist">
       {tabs.map((t) => (
-        <Link
+        <Link prefetch={prefetchFor(t.href)}
           key={t.key}
           href={t.href}
           role="tab"

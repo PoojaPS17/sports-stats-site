@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { JsonLd } from "./JsonLd";
 import { breadcrumbSchema } from "@/lib/structuredData";
 
@@ -28,7 +29,7 @@ export function Breadcrumbs({ items, tone }: { items: Crumb[]; /** "band": for u
                 <path d="M3.5 1.5 7 5l-3.5 3.5" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               {item.href && !last ? (
-                <Link href={item.href} className={linkClass}>
+                <Link prefetch={prefetchFor(item.href)} href={item.href} className={linkClass}>
                   {item.label}
                 </Link>
               ) : (

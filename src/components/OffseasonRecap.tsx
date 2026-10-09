@@ -32,7 +32,7 @@ export function OffseasonRecap({ league, recap }: { league: League; recap: Recap
         {recap.champion && (
           <p className="mt-1 text-sm">
             <span className="mr-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Champions</span>
-            <Link href={`/${league}/teams/${recap.champion.slug}`} className="font-semibold hover:underline">
+            <Link prefetch={false} href={`/${league}/teams/${recap.champion.slug}`} className="font-semibold hover:underline">
               {recap.champion.name}
             </Link>
           </p>

@@ -47,7 +47,7 @@ export function ComputedStandingsTable({ league, rows, scope }: { league: League
                 return (
                   <tr key={r.team.espn_id} className="table-row">
                     <td className="py-2 pl-4">
-                      <Link href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
+                      <Link prefetch={false} href={`/${league}/teams/${r.team.slug}`} className="flex items-center gap-2.5 whitespace-nowrap font-medium hover:text-[var(--accent)]">
                         <span className="w-5 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
                         <TeamLogo name={teamDisplayName(r.team.name)} logoUrl={r.team.logo_url} color={r.team.color} size={22} />
                         <span className="truncate">{teamDisplayName(r.team.name)}</span>

@@ -49,7 +49,7 @@ export function PlayerBoxScoreTable({
                   <td className="py-2 pl-4 font-medium">
                     <div className="flex items-center gap-2">
                       {slug ? (
-                        <Link href={`/${league}/players/${slug}`} className="hover:underline">
+                        <Link prefetch={false} href={`/${league}/players/${slug}`} className="hover:underline">
                           {row.name}
                         </Link>
                       ) : (
@@ -58,7 +58,7 @@ export function PlayerBoxScoreTable({
                       {slug && supportsPerformanceCards(league) && playedInGame(row) && (
                         <>
                           <ImageActions filename={`${gameId}-${slug}-card-${league}`} imageUrl={`/${league}/games/${gameId}/players/${slug}/card?format=og`} shareTitle={`${row.name} performance card`} />
-                          <Link href={performancePagePath(league, gameId, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
+                          <Link prefetch={false} href={performancePagePath(league, gameId, slug)} className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)]">
                             View full breakdown
                           </Link>
                         </>

@@ -57,7 +57,7 @@ export function PlayerHeader({
               <>
                 <span className="mx-1.5 text-[var(--text-faint)]">·</span>
                 {teamSlug ? (
-                  <Link href={`/${league}/teams/${teamSlug}`} className="hover:text-[var(--accent)]">
+                  <Link prefetch={false} href={`/${league}/teams/${teamSlug}`} className="hover:text-[var(--accent)]">
                     {teamDisplayName(teamName)}
                   </Link>
                 ) : (

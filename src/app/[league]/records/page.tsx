@@ -41,7 +41,7 @@ function GameList({ league, games, unit }: { league: League; games: RecordGame[]
         const [first, second] = scoreLineHomeFirst(league) ? [home, away] : [away, home];
         return (
           <li key={g.espn_id} className="table-row first:border-t-0">
-            <Link href={`/${league}/games/${g.espn_id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+            <Link prefetch={false} href={`/${league}/games/${g.espn_id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
               <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-1.5">
@@ -72,7 +72,7 @@ function StreakList({ league, streaks }: { league: League; streaks: StreakRecord
     <ol>
       {streaks.map((s, i) => (
         <li key={`${s.team.espn_id}-${s.start}`} className="table-row first:border-t-0">
-          <Link href={`/${league}/teams/${s.team.slug}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+          <Link prefetch={false} href={`/${league}/teams/${s.team.slug}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
             <span className="w-5 shrink-0 text-right text-xs tabular-nums text-[var(--text-muted)]">{i + 1}</span>
             <TeamLogo name={teamDisplayName(s.team.name)} logoUrl={s.team.logo_url} color={s.team.color} size={22} />
             <span className="flex min-w-0 flex-1 flex-col">

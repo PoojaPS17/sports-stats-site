@@ -82,7 +82,7 @@ export default async function TennisTournamentPage({ params }: { params: Promise
                 <span className="text-right font-semibold">
                   {c.names.map((n, i) =>
                     c.slugs[i] ? (
-                      <Link key={n} href={`/tennis/${c.competition_type.startsWith("womens") ? "wta" : "atp"}/players/${c.slugs[i]}`} className="hover:text-[var(--accent)]">
+                      <Link prefetch={false} key={n} href={`/tennis/${c.competition_type.startsWith("womens") ? "wta" : "atp"}/players/${c.slugs[i]}`} className="hover:text-[var(--accent)]">
                         {n}
                         {i < c.names.length - 1 ? " / " : ""}
                       </Link>

@@ -59,7 +59,7 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
                     <tr key={r.player_espn_id} className="table-row">
                       <td className="py-2 pl-4 font-bold tabular-nums">{r.rank}</td>
                       <td className="px-2 py-2">
-                        <Link href={`/tennis/${tour}/players/${r.slug}`} className="flex items-center gap-2.5 font-medium hover:text-[var(--accent)]">
+                        <Link prefetch={false} href={`/tennis/${tour}/players/${r.slug}`} className="flex items-center gap-2.5 font-medium hover:text-[var(--accent)]">
                           {r.headshot_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={r.headshot_url} alt="" className="h-7 w-7 rounded-full object-cover" />

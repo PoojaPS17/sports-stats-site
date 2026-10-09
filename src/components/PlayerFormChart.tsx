@@ -37,7 +37,7 @@ export function PlayerFormChart({ league, profile }: { league: League; profile: 
           const x = pad.l + slot * i + (slot - barW) / 2;
           const y = pad.t + innerH - bh;
           return (
-            <Link key={p.row.game_espn_id} href={`/${league}/games/${p.row.game_espn_id}`}>
+            <Link prefetch={false} key={p.row.game_espn_id} href={`/${league}/games/${p.row.game_espn_id}`}>
               <title>{`${p.row.is_home ? "vs" : "at"} ${teamDisplayName(p.row.opponent_name)}, ${fmtDate(p.row.date, league)}: ${p.value ?? "–"}`}</title>
               <rect x={x} y={y} width={barW} height={Math.max(bh, 1)} rx="3" fill={RESULT_FILL[p.row.result ?? "D"]} opacity={v === 0 ? 0.35 : 0.9} />
               <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--text)">

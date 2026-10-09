@@ -39,7 +39,7 @@ export function PlayerSplitsTable({ league, profile, rows, firstColumn, linkTeam
               <tr key={row.key} className="table-row">
                 <td className="py-2 pl-4 font-medium">
                   {linkTeams && row.slug ? (
-                    <Link href={`/${league}/teams/${row.slug}`} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
+                    <Link prefetch={false} href={`/${league}/teams/${row.slug}`} className="flex items-center gap-2 whitespace-nowrap hover:text-[var(--accent)]">
                       <TeamLogo name={row.label} logoUrl={row.logo ?? null} size={18} />
                       <span className="truncate">{row.label}</span>
                     </Link>

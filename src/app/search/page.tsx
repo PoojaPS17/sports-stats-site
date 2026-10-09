@@ -2,6 +2,7 @@ import { pageMeta } from "@/lib/metadata";
 import { teamDisplayName } from "@/lib/teamName";
 import { f1TeamLabel } from "@/lib/f1Names";
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { search, searchGames, LEAGUE_LABEL, isLeague, type SearchResult, type GameSearchResult } from "@/lib/queries";
 import { formatGameDate } from "@/lib/gameDay";
 import { isTour, TOUR_LABEL } from "@/lib/tennisTours";
@@ -76,7 +77,7 @@ export default async function SearchPage({
             <section className="flex flex-col gap-2">
               <h2 className="text-sm font-semibold text-[var(--text-muted)]">Games and matches</h2>
               {games.map((g, i) => (
-                <Link key={`${g.href}-${i}`} href={g.href} className="card flex flex-col px-4 py-3">
+                <Link prefetch={prefetchFor(g.href)} key={`${g.href}-${i}`} href={g.href} className="card flex flex-col px-4 py-3">
                   <span className="font-medium">{g.title}</span>
                   <span className="text-xs text-[var(--text-muted)]">{gameLine(g)}</span>
                 </Link>
@@ -89,7 +90,7 @@ export default async function SearchPage({
               {games.length > 0 && <h2 className="text-sm font-semibold text-[var(--text-muted)]">Teams, players and series</h2>}
               {results.map((r, i) => {
                 const main = (
-                  <Link href={resultHref(r)} className={r.also ? "flex items-center gap-3 px-4 py-3" : "card flex items-center gap-3 px-4 py-3"}>
+                  <Link prefetch={prefetchFor(resultHref(r))} href={resultHref(r)} className={r.also ? "flex items-center gap-3 px-4 py-3" : "card flex items-center gap-3 px-4 py-3"}>
                     <TeamLogo name={resultName(r)} logoUrl={r.image} size={32} />
                     <div className="flex flex-col">
                       <span className="font-medium">{resultName(r)}</span>
@@ -108,7 +109,7 @@ export default async function SearchPage({
                     <p className="flex flex-wrap gap-x-3 gap-y-1 px-4 pb-3 pl-[60px] text-xs text-[var(--text-muted)]">
                       Also in
                       {r.also.map((a) => (
-                        <Link key={a.league} href={`/${a.league}/players/${a.slug}`} className="font-semibold text-[var(--accent)] hover:underline">
+                        <Link prefetch={false} key={a.league} href={`/${a.league}/players/${a.slug}`} className="font-semibold text-[var(--accent)] hover:underline">
                           {isLeague(a.league) ? LEAGUE_LABEL[a.league] : a.league}
                         </Link>
                       ))}

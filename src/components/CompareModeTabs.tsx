@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prefetchFor } from "@/lib/prefetch";
 import { isLeague, isCricketLeague } from "@/lib/leagues";
 
 export function CompareModeTabs({ league, active }: { league: string; active: "teams" | "players" }) {
@@ -11,7 +12,7 @@ export function CompareModeTabs({ league, active }: { league: string; active: "t
   return (
     <div className="inline-flex gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1" role="tablist">
       {tabs.map((t) => (
-        <Link
+        <Link prefetch={prefetchFor(t.href)}
           key={t.key}
           href={t.href}
           role="tab"
