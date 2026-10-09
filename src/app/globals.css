@@ -1085,9 +1085,8 @@
   min-height: calc(32rem + var(--hb-rows, 2) * 14rem);
 }
 
-/* First-visit modules: shown only to a visitor with no saved setup (neither built nor collapsed). */
-:root[data-home="built"] .home-firstvisit,
-:root[data-home="collapsed"] .home-firstvisit {
+/* First-visit modules: hidden once the visitor has a built page. "Everything" (collapsed) keeps them: the full home under a slim bar. */
+:root[data-home="built"] .home-firstvisit {
   display: none;
 }
 

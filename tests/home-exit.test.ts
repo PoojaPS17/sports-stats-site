@@ -50,6 +50,11 @@ test("the first-visit picker can clear its picks", () => {
   assert.match(css, /\.pk-clear\s*\{/);
 });
 
+test("Everything (collapsed) keeps the first-visit modules; a built page still hides them", () => {
+  assert.match(css, /:root\[data-home="built"\] \.home-firstvisit\s*\{\s*display:\s*none;/);
+  assert.doesNotMatch(css, /:root\[data-home="collapsed"\] \.home-firstvisit/);
+});
+
 test("removing every block, or clearing, leaves nothing stored and no data-home", () => {
   const store: Record<string, string> = {};
   const dataset: Record<string, string> = {};
