@@ -10,7 +10,7 @@ export function parseLeagueDays(argv: string[]): string | null | { error: string
   return v && !v.startsWith("--") ? v : { error: "--league-days needs a league (e.g. test)" };
 }
 
-/** Days after a match's start the --unfiled pass also reads. ESPN's historical listing names a Test on only some of its days (1990 NZ tour of England, a Test starting 21 June: listed 24-26 June only; 1994 Kingston Test starting 19 Feb: 22 Feb only), so the next day is not enough. */
+/** Days after a match's start the --unfiled pass also reads. ESPN's historical listing names a Test on only some of its days (1990 NZ tour of England, the Lord's Test starting 21 June: listed 24-26 June only; 1994 Kingston Test starting 19 Feb: 22 Feb only), so the next day is not enough. */
 export const UNFILED_EXTRA_DAYS = 7;
 
 /**

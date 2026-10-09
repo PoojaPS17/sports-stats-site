@@ -73,7 +73,7 @@ test("--league-days reads one request per distinct start day, ascending, at noon
     distinctDays(["1930-01-23T18:30:00Z", "1930-01-24T05:00:00Z"], true).map((d) => d.toISOString().slice(0, 10)),
     ["1930-01-23", "1930-01-24", "1930-01-25"]
   );
-  // ESPN's old listing names a Test on only some of its days: the 1990 Trent Bridge Test (started 21 June) is listed 24-26 June.
+  // ESPN's old listing names a Test on only some of its days: the 1990 Lord's Test (started 21 June) is listed 24-26 June.
   const unfiled = distinctDays(["1990-06-21T10:00:00Z"], UNFILED_EXTRA_DAYS).map((d) => d.toISOString().slice(0, 10));
   assert.equal(unfiled.length, UNFILED_EXTRA_DAYS + 1);
   for (const listed of ["1990-06-24", "1990-06-25", "1990-06-26"]) assert.ok(unfiled.includes(listed), listed);
