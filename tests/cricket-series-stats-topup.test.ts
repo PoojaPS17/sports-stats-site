@@ -154,3 +154,87 @@ test("a fetch that fails is reported, exits 1 and leaves the match a candidate",
   assert.equal(await checkedAt("bad"), null);
   assert.match(lib.summaryLine(result, 15), /failed: bad/);
 });
+
+// The manual backfill (scripts/backfill-cricket-series-stats.ts): the same pipeline scoped to one
+// competition instead of to the last 45 days, with a dry run that measures how far back ESPN's cards go
+// before anything is written. Production holds the Ranji Trophy across 52 editions with figures on one.
+test("a series scope takes every edition of one competition and replaces the recency window", async () => {
+  await seedMatch("new", { series: "8050-2026-27", daysAgo: 1 });
+  await seedMatch("old", { series: "8050-2013-14", daysAgo: 4000 });
+  await seedMatch("older", { series: "8050-2005", daysAgo: 7000 });
+  // Another competition, inside the window: not this backfill's business.
+  await seedMatch("other", { series: "8043-2026-27", daysAgo: 1 });
+  const scoped = await lib.findSeriesStatsCandidates(10, undefined, "8050");
+  assert.deepEqual([scoped.total, scoped.matches.map((m) => m.espn_id)], [3, ["new", "old", "older"]]);
+  // A bare series id reduces to itself, so a non-editioned series is still reachable by its own id.
+  await seedMatch("bilateral", { series: "24276", daysAgo: 500 });
+  const bare = await lib.findSeriesStatsCandidates(10, undefined, "24276");
+  assert.deepEqual(
+    bare.matches.map((m) => m.espn_id),
+    ["bilateral"]
+  );
+  // Without a scope the window still applies, so only the recent ones are candidates.
+  const windowed = await lib.findSeriesStatsCandidates(10);
+  assert.deepEqual(windowed.matches.map((m) => m.espn_id).sort(), ["new", "other"]);
+});
+
+test("a dry run writes nothing at all, so every match it measured is still a candidate for the real run", async () => {
+  await seedMatch("m1", { series: "8050-2013-14", daysAgo: 4000 });
+  await seedMatch("m2", { series: "8050-2013-14", daysAgo: 4001 });
+  const byId = { m1: summary({ id: "m1" }), m2: summary({ id: "m2" }) };
+  const dry = await lib.topUpCricketSeriesStats({ series: "8050", dryRun: true, fetchSummary: fetcherFor(byId) });
+  // Counted exactly as a real run would count it...
+  assert.deepEqual([dry.attempted, dry.written, dry.playerRows, dry.failed.length], [2, 2, 8, 0]);
+  // ...but no rows, and crucially no stats_checked_at: a match 4000 days old is long past the three-day
+  // settle window, so marking it checked would have dropped it from the candidate set permanently.
+  assert.equal((await rowsOf("m1")).length, 0);
+  assert.equal(await checkedAt("m1"), null);
+  assert.equal(await checkedAt("m2"), null);
+  const real = await lib.topUpCricketSeriesStats({ series: "8050", fetchSummary: fetcherFor(byId) });
+  assert.deepEqual([real.eligible, real.attempted, real.written, real.playerRows], [2, 2, 2, 8]);
+  assert.equal((await rowsOf("m1")).length, 4);
+  assert.ok(await checkedAt("m1"));
+});
+
+test("the decade breakdown reports the card rate per decade, newest first, so a backfill can see the cliff", async () => {
+  const agoFor = (y: number) => (Date.now() - Date.UTC(y, 5, 1)) / DAY;
+  await seedMatch("y2024", { series: "8050-2024-25", daysAgo: agoFor(2024) });
+  await seedMatch("y2012", { series: "8050-2012-13", daysAgo: agoFor(2012) });
+  await seedMatch("y2015", { series: "8050-2015-16", daysAgo: agoFor(2015) });
+  // The 1990s: ESPN answers with no scorecard, and one request fails — what the table is meant to surface.
+  await seedMatch("y1995", { series: "8050-1995-96", daysAgo: agoFor(1995) });
+  await seedMatch("y1996", { series: "8050-1996-97", daysAgo: agoFor(1996) });
+  const result = await lib.topUpCricketSeriesStats({
+    series: "8050",
+    dryRun: true,
+    fetchSummary: fetcherFor({
+      y2024: summary({ id: "y2024" }),
+      y2015: summary({ id: "y2015" }),
+      y2012: summary({ id: "y2012" }),
+      y1995: summary({ id: "y1995", noFigures: true }),
+      y1996: new Error("ESPN 502"),
+    }),
+  });
+  assert.deepEqual(
+    result.byDecade.map((d) => [d.decade, d.attempted, d.withCard, d.noCard, d.failed]),
+    [
+      ["2020s", 1, 1, 0, 0],
+      ["2010s", 2, 2, 0, 0],
+      ["1990s", 2, 0, 1, 1],
+    ]
+  );
+  const table = lib.decadeTable(result);
+  assert.equal(table.length, 3);
+  assert.match(table[0], /2020s\s+attempted\s+1\s+card\s+1 \(100%\)/);
+  assert.match(table[2], /1990s\s+attempted\s+2\s+card\s+0 \(\s*0%\)\s+no card\s+1\s+failed\s+1/);
+});
+
+test("the nightly job still gets a decade breakdown and its summary line is unchanged", async () => {
+  await seedMatch("m1");
+  const result = await lib.topUpCricketSeriesStats({ fetchSummary: fetcherFor({ m1: summary({ id: "m1" }) }) });
+  assert.equal(result.byDecade.length, 1);
+  assert.match(
+    lib.summaryLine(result, 15),
+    /^\[topup-cricket-series-stats\] 1 match\(es\) without figures; attempted 1 \(cap 15\), stored 1 \(4 player rows\), 0 with no scorecard on ESPN yet, 0 failed$/
+  );
+});

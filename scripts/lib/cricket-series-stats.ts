@@ -36,22 +36,29 @@ export interface SeriesStatsCandidate {
 type Queryable = Pick<PoolClient, "query">;
 
 /**
- * Finished matches without figures, in a series with no SportsDB competition, played within `sinceDays`:
- * never read first, then newest first. A match read with no card is a candidate again an hour later, until
- * three days after it was played.
+ * Finished matches without figures, in a series with no SportsDB competition: never read first, then newest
+ * first. A match read with no card is a candidate again an hour later, until three days after it was played.
+ *
+ * Scope is either recency (`sinceDays`, what the nightly job uses) or one competition (`series`, an ESPN
+ * league id as `baseSeriesId` returns it, which a backfill uses). A series scope REPLACES the window rather
+ * than narrowing it: reaching matches older than 45 days is the whole point of a backfill, and the cap still
+ * bounds the run. `split_part` matches `baseSeriesId` exactly — "8836-2026-27" and a bare "24276" both reduce
+ * to their league id.
  */
-export async function findSeriesStatsCandidates(cap: number, sinceDays = DEFAULT_SINCE_DAYS): Promise<{ total: number; matches: SeriesStatsCandidate[] }> {
-  // CALLED_OFF is a constant pattern, not user input.
+export async function findSeriesStatsCandidates(cap: number, sinceDays = DEFAULT_SINCE_DAYS, series?: string): Promise<{ total: number; matches: SeriesStatsCandidate[] }> {
+  // CALLED_OFF is a constant pattern, not user input; $1 is the series id or the day count.
+  const scope = series ? `split_part(m.series_espn_id, '-', 1) = $1` : `m.date >= now() - ($1 || ' days')::interval`;
   const where = `m.status_state = 'post'
        and coalesce(m.status_summary, '') !~* '${CALLED_OFF.source}'
-       and m.date >= now() - ($1 || ' days')::interval
+       and ${scope}
        and not exists (select 1 from games g where g.espn_id = m.espn_id and g.league = any(m.league_candidates))
        and not exists (select 1 from cricket_series_player_stats s where s.match_espn_id = m.espn_id)
        and (m.stats_checked_at is null
             or (m.stats_checked_at < m.date + interval '${SETTLED_AFTER_DAYS} days' and m.stats_checked_at < now() - interval '${RECHECK_HOURS} hours'))`;
+  const arg: string | number = series ?? sinceDays;
   const [{ rows: matches }, { rows: count }] = await Promise.all([
-    pool.query(`select m.espn_id, m.series_espn_id, m.date, m.stats_checked_at from cricket_series_matches m where ${where} order by m.stats_checked_at nulls first, m.date desc limit $2`, [sinceDays, cap]),
-    pool.query(`select count(*)::int as n from cricket_series_matches m where ${where}`, [sinceDays]),
+    pool.query(`select m.espn_id, m.series_espn_id, m.date, m.stats_checked_at from cricket_series_matches m where ${where} order by m.stats_checked_at nulls first, m.date desc limit $2`, [arg, cap]),
+    pool.query(`select count(*)::int as n from cricket_series_matches m where ${where}`, [arg]),
   ]);
   return { total: count[0].n, matches };
 }
@@ -99,47 +106,92 @@ export interface SeriesStatsResult {
   /** The no-scorecard matches more than three days past their date: ESPN is not going to publish one soon. */
   overdue: string[];
   failed: { id: string; error: string }[];
+  /**
+   * The same outcomes split by the decade a match was played in, newest first. A backfill reads it to find
+   * where ESPN's scorecards stop: card counts hold up through the 2000s and fall away before that, and there
+   * is no point fetching a competition's 1930s editions to learn it one match at a time.
+   */
+  byDecade: { decade: string; attempted: number; withCard: number; noCard: number; failed: number }[];
 }
 
-export async function topUpCricketSeriesStats(options: { cap?: number; sinceDays?: number; fetchSummary?: SeriesSummaryFetcher; delayMs?: number } = {}): Promise<SeriesStatsResult> {
+/** "2010s" for any date in 2010-2019; the bucket a match's outcome is counted under. */
+function decadeOf(date: Date | string): string {
+  const year = new Date(date).getUTCFullYear();
+  return `${Math.floor(year / 10) * 10}s`;
+}
+
+export async function topUpCricketSeriesStats(
+  options: { cap?: number; sinceDays?: number; series?: string; dryRun?: boolean; fetchSummary?: SeriesSummaryFetcher; delayMs?: number } = {}
+): Promise<SeriesStatsResult> {
   const cap = options.cap ?? DEFAULT_SERIES_STATS_CAP;
   const fetchSummary = options.fetchSummary ?? defaultSeriesSummaryFetcher();
-  const { total, matches } = await findSeriesStatsCandidates(cap, options.sinceDays);
-  const result: SeriesStatsResult = { eligible: total, attempted: matches.length, written: 0, playerRows: 0, noScorecard: 0, overdue: [], failed: [] };
+  const { total, matches } = await findSeriesStatsCandidates(cap, options.sinceDays, options.series);
+  const result: SeriesStatsResult = { eligible: total, attempted: matches.length, written: 0, playerRows: 0, noScorecard: 0, overdue: [], failed: [], byDecade: [] };
+  const decades = new Map<string, { decade: string; attempted: number; withCard: number; noCard: number; failed: number }>();
+  const bucket = (date: Date | string) => {
+    const decade = decadeOf(date);
+    const b = decades.get(decade) ?? { decade, attempted: 0, withCard: 0, noCard: 0, failed: 0 };
+    decades.set(decade, b);
+    return b;
+  };
 
   for (const match of matches) {
+    const tally = bucket(match.date);
+    tally.attempted++;
     try {
       const summary = await fetchSummary(match);
       const { players } = extractCricketMatchStats(summary);
-      // One transaction per match, so a failure part-way never leaves a match with some of its rows.
-      const client = await pool.connect();
-      try {
-        await client.query("begin");
-        result.playerRows += await writeSeriesPlayerRows(client, match, players);
-        await client.query("commit");
-      } catch (err) {
-        await client.query("rollback").catch(() => {});
-        throw err;
-      } finally {
-        client.release();
-      }
-      if (players.length > 0) result.written++;
+      // A dry run writes NOTHING, stats_checked_at included: a historical match is long past the three-day
+      // settle window, so marking it checked would drop it out of the candidate set for good and the real
+      // run that follows would skip every match the dry run measured.
+      if (options.dryRun) result.playerRows += players.length;
       else {
+        // One transaction per match, so a failure part-way never leaves a match with some of its rows.
+        const client = await pool.connect();
+        try {
+          await client.query("begin");
+          result.playerRows += await writeSeriesPlayerRows(client, match, players);
+          await client.query("commit");
+        } catch (err) {
+          await client.query("rollback").catch(() => {});
+          throw err;
+        } finally {
+          client.release();
+        }
+      }
+      if (players.length > 0) {
+        result.written++;
+        tally.withCard++;
+      } else {
         result.noScorecard++;
+        tally.noCard++;
         if (isScorecardOverdue(match.date)) result.overdue.push(match.espn_id);
       }
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       result.failed.push({ id: match.espn_id, error });
+      tally.failed++;
       console.error(`[topup-cricket-series-stats] ${match.series_espn_id} ${match.espn_id} failed: ${error}`);
     }
     if (options.delayMs) await new Promise((r) => setTimeout(r, options.delayMs));
   }
+  result.byDecade = [...decades.values()].sort((a, b) => b.decade.localeCompare(a.decade));
   return result;
 }
 
 /** The job's exit status: 1 when any match could not be read or stored, so the scrape run records the failure. */
 export const topUpExitCode = (r: SeriesStatsResult): number => (r.failed.length > 0 ? 1 : 0);
+
+/**
+ * The decade breakdown a backfill prints, one line each, newest first: what a run learned about how far back
+ * ESPN's scorecards go. Empty when nothing was attempted.
+ */
+export function decadeTable(r: SeriesStatsResult): string[] {
+  return r.byDecade.map((d) => {
+    const rate = d.attempted > 0 ? Math.round((d.withCard / d.attempted) * 100) : 0;
+    return `  ${d.decade}  attempted ${String(d.attempted).padStart(4)}  card ${String(d.withCard).padStart(4)} (${String(rate).padStart(3)}%)  no card ${String(d.noCard).padStart(4)}  failed ${String(d.failed).padStart(4)}`;
+  });
+}
 
 /** The one line the job logs; failures are also listed one per line above it. */
 export function summaryLine(r: SeriesStatsResult, cap: number): string {
