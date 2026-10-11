@@ -100,6 +100,14 @@ test("a team in a table nobody has played in yet has no position, so the card sh
   assert.equal(block.summary.position, null);
   assert.equal(block.summary.figure, null);
   assert.equal(block.summary.record, null);
+  // The table says the same: before the first round it is ordered by the tie-break alone, so nobody holds first
+  // place and nobody sits in a zone. A whole column of dashes reads as a season yet to start.
+  const table = (await (await call("standings", "?league=nba")).json()).block;
+  assert.equal(table.rows.length, 2);
+  assert.ok(
+    table.rows.every((r: { position: number | null; zone: string | null }) => r.position === null && r.zone === null),
+    `a position or zone in a table nobody has played in: ${JSON.stringify(table.rows)}`
+  );
 });
 
 test("a team with no games played in a table where others have played is unranked, and the teams that have played keep their positions, ties included", async () => {
@@ -124,6 +132,14 @@ test("a team with no games played in a table where others have played is unranke
   assert.equal((await summary("atlanta-hawks")).position, 1);
   assert.equal((await summary("brooklyn-nets")).position, 2);
   assert.deepEqual(await summary("chicago-bulls"), { leagueLabel: "NBA · Western Conference", position: 3, figure: "1-1", record: "2 played", form: [] });
+  // A single team yet to play does not unrank the table: one dash among numbers would read as a fault, so every
+  // row keeps its number here, the Mavericks included. Only a table with no match at all in it loses its positions.
+  const table = (await (await call("standings", "?league=nba")).json()).block;
+  assert.ok(
+    table.rows.every((r: { position: number | null }) => r.position !== null),
+    `an unranked row in a table that has been played: ${JSON.stringify(table.rows)}`
+  );
+  assert.ok(table.rows.some((r: { name: string }) => r.name.includes("Mavericks")), "the team yet to play is still listed");
 });
 
 test("games not yet played show no score, even with the feed's placeholder 0-0, but a finished or live 0-0 keeps its score", async () => {
