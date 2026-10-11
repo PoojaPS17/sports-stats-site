@@ -3580,6 +3580,19 @@
   .home-duo-wide > section > :last-child {
     flex: 1;
   }
+  /* A short Right now card (a football match, no chase chart) is stretched to Try a name's height: centre the score block in the
+     room and keep the link at the foot, instead of leaving a blank lower half. */
+  .home-duo-wide .rn {
+    display: flex;
+    flex-direction: column;
+  }
+  .home-duo-wide .rn-sides {
+    margin-block: auto;
+    padding-block: 1rem;
+  }
+  .home-duo-wide .rn-go {
+    margin-top: auto;
+  }
   /* Phones: Right now, then the live scores, then Try a name. From 1000px the live scores take a full-width row under the pair. */
   .home-duo-wide > [data-module="try-a-name"] {
     order: 3;
