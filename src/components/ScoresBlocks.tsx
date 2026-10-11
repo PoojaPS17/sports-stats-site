@@ -6,11 +6,12 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { LeagueSnapshot } from "@/components/LeagueSnapshot";
 import type { HomeSection } from "@/lib/homeData";
 import type { LeagueSnapshotData } from "@/lib/leagueSnapshot";
+import { hasAttr, sportOfLeague } from "@/lib/sportFilter";
 
 export function LeagueBlock({ section, snapshot }: { section: HomeSection; snapshot: LeagueSnapshotData | null | undefined }) {
   const { league, games, liveCount } = section;
   return (
-    <section id={`scores-${league}`} data-scores-block={league} className="scroll-mt-[calc(var(--header-h)+1rem)]">
+    <section id={`scores-${league}`} data-has={sportOfLeague(league)} className="scroll-mt-[calc(var(--header-h)+1rem)]">
       <SectionHeader
         action={{ label: "All fixtures", href: `/${league}` }}
         badge={liveCount > 0 ? `${liveCount} live` : snapshot?.seasonLabel}
@@ -44,11 +45,11 @@ export function LeagueBlock({ section, snapshot }: { section: HomeSection; snaps
 export function OffSeasonList({ items }: { items: { league: League; lastSeason: number | null; resumesOn: string | null }[] }) {
   if (items.length === 0) return null;
   return (
-    <section id="scores-off-season" data-scores-block="off-season">
+    <section id="scores-off-season" data-has={hasAttr(items.map((i) => sportOfLeague(i.league)))}>
       <SectionHeader description="Nothing scheduled in the next few days">{items.every((s) => s.resumesOn === null) ? "Between seasons" : "Nothing on this week"}</SectionHeader>
       <ul className="card divide-y divide-[var(--border)] overflow-hidden">
         {items.map(({ league, lastSeason, resumesOn }) => (
-          <li key={league} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
+          <li key={league} data-sport={sportOfLeague(league)} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
             <span>
               <span className="font-semibold">{LEAGUE_LABEL[league]}</span>
               <span className="text-[var(--text-muted)]"> · {breakLine(league, resumesOn)}</span>

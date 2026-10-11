@@ -3735,3 +3735,12 @@
     text-decoration: underline;
   }
 }
+
+@layer components {
+  .scores-chip-n {
+    margin-left: 6px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--sig-ink);
+  }
+}
