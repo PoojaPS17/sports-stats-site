@@ -74,8 +74,12 @@ interface SeoFields extends StatusFields {
 /**
  * The page title, longest form first for fitTitle: the teams as searchers type them, then the word that names the
  * page (Scorecard for a result, Live Score in play, nothing for a fixture or a called-off match), then the stage and
- * the series. The series is dropped before the stage: the description still names it, and "14th Match" alone tells
- * the match apart from the sides' other meetings. The last form is the names and the keyword alone, offered even when
+ * the series. The series is dropped before the stage, because the stage is what makes the title unique: the same two
+ * sides meet twice in a Shield season, and again in a Ranji knockout. Until 2026-10-11 this list ran [stage+series,
+ * series, stage], and the middle form fit the 59-character budget where the first did not, so "Tamil Nadu vs Uttar
+ * Pradesh Scorecard, Ranji Trophy 2019-20" was the title of both their 14th Match and their Semi Final, while Mumbai
+ * v Karnataka got one shape for the 9th Match and another for the Final. ESPNcricinfo and Cricbuzz both keep the
+ * stage for this reason. The last form is the names and the keyword alone, offered even when
  * it is over the budget: domestic sides have long names ("Khan Research Laboratories vs Hyderabad Kingsmen Academy
  * Scorecard" is 66 characters), and the queries that find these pages are typed with those names in full (Search
  * Console, 2026-10-06), so a title that runs over and is clipped by Google still beats one with abbreviations.
@@ -86,7 +90,7 @@ export function cricketMatchTitleCandidates(m: SeoFields): string[] {
   const stage = m.description?.trim() || null;
   const lead = `${cricketMatchName(m.name)}${keyword}`;
   const out: string[] = [];
-  for (const parts of [[lead, stage, m.series_name], [lead, m.series_name], [lead, stage], [lead]]) {
+  for (const parts of [[lead, stage, m.series_name], [lead, stage], [lead, m.series_name], [lead]]) {
     if (parts.includes(null)) continue;
     const title = parts.join(", ");
     if (!out.includes(title)) out.push(title);
