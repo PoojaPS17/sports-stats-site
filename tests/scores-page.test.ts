@@ -35,7 +35,7 @@ test("the home page does not fetch or draw the per-league blocks", () => {
 });
 
 test("the sport filter wraps the page: chips are links to each sport's page without JavaScript, and nothing is hidden by script", () => {
-  const html = renderToStaticMarkup(createElement(ScoresFilter, { intro: createElement("h1", null, "Scores"), sports: ["cricket", "football", "nfl"], live: { football: 4, nfl: 8 }, children: createElement("p", null, "body") }));
+  const html = renderToStaticMarkup(createElement(ScoresFilter, { intro: createElement("h1", null, "Scores"), sports: ["cricket", "football", "nfl"], live: { football: 4, nfl: 8 } }, createElement("p", null, "body")));
   assert.match(html, /data-filter="all"/);
   assert.match(html, /href="#scores-top"[^>]*>All</);
   assert.match(html, /href="\/cricket\/series"[^>]*>Cricket</);

@@ -10,7 +10,7 @@ import { SPORT_PICK_LABEL, type SportPick } from "@/lib/sportPicks";
 // card data-sport; the chosen sport only sets data-filter on the wrapper and the stylesheet hides what does not belong
 // (see "Sport filter" in globals.css). Nothing is hidden by script, so a block can never be left hidden by a refresh, and
 // the live matches stay on the page whichever sport is chosen. Without JavaScript a chip is a plain link to that sport's page.
-export function ScoresFilter({ intro, sports, live, children }: { intro: ReactNode; sports: SportPick[]; live: SportCounts; children: ReactNode }) {
+export function ScoresFilter({ intro, sports, live, children }: { intro: ReactNode; sports: SportPick[]; live: SportCounts; children?: ReactNode }) {
   const [active, setActive] = useState<SportPick | "all">("all");
   const navRef = useRef<HTMLElement>(null);
   useSlideIndicator(navRef, active);
