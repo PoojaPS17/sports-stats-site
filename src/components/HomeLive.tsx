@@ -23,9 +23,18 @@ export function F1Card({ ev }: { ev: F1EventRow }) {
   );
 }
 
+/** Last item of a card grid on the homepage: it takes whatever room the final row has left, so the grid never ends on a lone card with a hole beside it. */
+function AllScoresTile() {
+  return (
+    <Link href="/scores" className="fill-tile">
+      All scores <span aria-hidden>→</span>
+    </Link>
+  );
+}
+
 /** What is in play right now, across every sport: cards, no heading. The first-visit "Live now" tab and the built page's "Live now" section both draw it. */
-export function LiveNowList({ data, narrow = false }: { data: HomeData; narrow?: boolean }) {
-  const cols = narrow ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3";
+export function LiveNowList({ data, fill = false }: { data: HomeData; fill?: boolean }) {
+  const cols = fill ? "fill-grid" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3";
   const { liveGames, liveTennis } = data;
   const liveCricket = data.liveCricket.slice(0, 6);
   return (
@@ -35,6 +44,7 @@ export function LiveNowList({ data, narrow = false }: { data: HomeData; narrow?:
           {liveGames.map((g) => (
             <GameCard key={`${g.league}-${g.espn_id}`} league={g.league} game={g} />
           ))}
+          {fill && <AllScoresTile />}
         </div>
       )}
       {liveCricket.length > 0 && (
@@ -59,8 +69,8 @@ export function LiveNowList({ data, narrow = false }: { data: HomeData; narrow?:
 }
 
 /** The headline fixtures of the coming week, no heading. */
-export function ComingUpList({ data, narrow = false }: { data: HomeData; narrow?: boolean }) {
-  const cols = narrow ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3";
+export function ComingUpList({ data, fill = false }: { data: HomeData; fill?: boolean }) {
+  const cols = fill ? "fill-grid" : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3";
   const { upcomingGames, nextCricket, nextTennis, f1 } = data;
   return (
     <div className="flex flex-col gap-3">
@@ -70,6 +80,7 @@ export function ComingUpList({ data, narrow = false }: { data: HomeData; narrow?
             <GameCard key={`${g.league}-${g.espn_id}`} league={g.league} game={g} />
           ))}
           {f1 && <F1Card ev={f1} />}
+          {fill && <AllScoresTile />}
         </div>
       )}
       {nextCricket.length > 0 && <SeriesMatchList matches={nextCricket} showSeries />}

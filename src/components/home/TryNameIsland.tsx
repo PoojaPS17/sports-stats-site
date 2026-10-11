@@ -65,7 +65,7 @@ function Bars({ card }: { card: TryCard }) {
 
 function CardView({ card, followed, onFollow }: { card: TryCard; followed: boolean; onFollow: () => void }) {
   return (
-    <article className="rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-[18px] shadow-[var(--shadow-card)]" data-testid="try-card" data-league={card.league} data-slug={card.slug}>
+    <article className="flex flex-1 flex-col rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-[18px] shadow-[var(--shadow-card)]" data-testid="try-card" data-league={card.league} data-slug={card.slug}>
       <div className="flex items-center gap-3">
         <Crest name={card.name} color={card.teamColor} size={46} />
         <div className="min-w-0">
@@ -101,7 +101,7 @@ function CardView({ card, followed, onFollow }: { card: TryCard; followed: boole
         </p>
       )}
       {card.small && <p className="text-[13px] text-[var(--text-muted)]">No game-by-game figures for {card.name} in {card.leagueLabel} on this site yet. The player page has what we hold.</p>}
-      <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+      <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-3.5">
         <Link prefetch={prefetchFor(card.href)} href={card.href} className="inline-flex items-center rounded-xl bg-[var(--sig)] px-4 py-[9px] text-[13.5px] font-extrabold text-[var(--sig-on)] shadow-[0_8px_18px_-8px_var(--sig)]">
           Full profile →
         </Link>
@@ -220,7 +220,7 @@ export function TryNameIsland({ initial, chips }: { initial: TryCard | null; chi
   const isFollowed = !!card?.block && followed.has(card.block.id);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid h-full grid-rows-[auto_1fr] gap-4">
       <div className="min-w-0">
         <label className="flex h-[52px] items-center gap-2.5 rounded-2xl border-[1.5px] border-[var(--border)] bg-[var(--surface)] px-3.5 shadow-[var(--shadow-card)] focus-within:border-[var(--sig)] focus-within:shadow-[0_0_0_4px_color-mix(in_srgb,var(--sig)_20%,transparent)]">
           <svg aria-hidden viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -290,12 +290,12 @@ export function TryNameIsland({ initial, chips }: { initial: TryCard | null; chi
         )}
       </div>
 
-      <div className={`min-w-0 transition-opacity ${busy ? "opacity-60" : ""}`} aria-live="polite" aria-busy={busy}>
+      <div className={`flex min-w-0 flex-col transition-opacity ${busy ? "opacity-60" : ""}`} aria-live="polite" aria-busy={busy}>
         {failed && <p className="mb-2 rounded-xl bg-[var(--sig-soft)] px-3 py-2 text-[13px] font-semibold text-[var(--text)]">That card did not load. Try again in a moment.</p>}
         {card ? (
           <CardView card={card} followed={isFollowed} onFollow={follow} />
         ) : (
-          <div className="rounded-[20px] border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-4 py-6 text-sm text-[var(--text-muted)]">
+          <div className="flex-1 rounded-[20px] border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-4 py-6 text-sm text-[var(--text-muted)]">
             Type a player&apos;s name to see their season, their last games and how they do against each side, in one card.
           </div>
         )}
