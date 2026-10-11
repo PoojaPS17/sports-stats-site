@@ -147,20 +147,24 @@ function Chase({ view }: { view: RightNowView }) {
 }
 
 export async function RightNow() {
-  const [view, home] = await Promise.all([getRightNow(), getHomeData()]);
+  return <RightNowCard view={await getRightNow()} />;
+}
+
+/** "Live now" and "Coming up": a full-width row of its own under the Right now card and Try a name. */
+export async function LiveTabs() {
+  const home = await getHomeData();
   const live = liveCountOf(home);
-  const tabs = (
-    <>
+  return (
+    <section aria-label="Live now and coming up">
       <LiveRefresh active={live > 0} />
       <HomeTabs
         initial={live > 0 ? "live" : "coming"}
         liveCount={live}
-        live={live > 0 ? <LiveNowList data={home} narrow /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">Nothing in play right now.</p>}
-        coming={hasComingUp(home) ? <ComingUpList data={home} narrow /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">No fixtures listed for the coming week yet.</p>}
+        live={live > 0 ? <LiveNowList data={home} fill /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">Nothing in play right now.</p>}
+        coming={hasComingUp(home) ? <ComingUpList data={home} fill /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">No fixtures listed for the coming week yet.</p>}
       />
-    </>
+    </section>
   );
-  return <RightNowCard view={view} tabs={tabs} />;
 }
 
 /** The card for a chosen view; split from the loader so a test can render any state. */

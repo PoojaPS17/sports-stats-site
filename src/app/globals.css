@@ -1439,8 +1439,8 @@
   }
   .bw-card {
     position: relative;
-    flex: none;
-    width: 256px;
+    /* 256px minimum: a long rail still scrolls sideways; a short one grows to fill the row. */
+    flex: 1 0 256px;
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
@@ -3562,6 +3562,94 @@
     .scorecard-table th:first-child,
     .scorecard-table td:first-child {
       padding-left: 1rem;
+    }
+  }
+}
+
+@layer components {
+  /* First-visit rows are full width (no half-width pairs that leave a hole beside the shorter block). The one pair left is
+     Right now beside Try a name: both stretch to the taller one. Card grids that must never end on a lone card use
+     flex-wrap so the last row's items share the room that is left. */
+  .home-duo-wide {
+    align-items: stretch;
+  }
+  .home-duo-wide > section {
+    display: flex;
+    flex-direction: column;
+  }
+  .home-duo-wide > section > :last-child {
+    flex: 1;
+  }
+  /* Phones: Right now, then the live scores, then Try a name. From 1000px the live scores take a full-width row under the pair. */
+  .home-duo-wide > [data-module="try-a-name"] {
+    order: 3;
+  }
+  @media (min-width: 1000px) {
+    .home-duo-wide {
+      row-gap: 64px;
+    }
+    .home-duo-wide > [data-module="try-a-name"] {
+      order: 0;
+    }
+    .home-duo-wide > [aria-label="Live now and coming up"] {
+      grid-column: 1 / -1;
+    }
+  }
+  .rn-tabs {
+    margin-top: 0;
+  }
+  .fill-grid,
+  .home-mods .wl-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .fill-grid > * {
+    flex: 1 1 17rem;
+    min-width: 0;
+  }
+  .home-mods .wl-grid > * {
+    flex: 1 1 20rem;
+    min-width: 0;
+  }
+  .fill-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 3.25rem;
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--sig-ink);
+  }
+  .fill-tile:hover {
+    background: var(--surface-muted);
+  }
+  .fill-grid > .fill-tile {
+    flex-basis: 10rem;
+  }
+  @media (min-width: 1000px) {
+    .home-mods .t3 {
+      flex-direction: row;
+      gap: 28px;
+    }
+    .home-mods .t3 > li {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    .home-mods .fcard {
+      columns: 2;
+      column-gap: 40px;
+    }
+    .home-mods .fcard .rw {
+      break-inside: avoid;
+    }
+    .home-mods .fcard .rw,
+    .home-mods .fcard .rw:first-child,
+    .home-mods .fcard .rw:last-child {
+      padding-block: 10px;
     }
   }
 }

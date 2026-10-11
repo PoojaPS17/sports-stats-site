@@ -7,7 +7,7 @@ import { absoluteUrl } from "@/lib/site";
 import { SportPicker } from "@/components/home/SportPicker";
 import { HomeBlocks } from "@/components/home/HomeBlocks";
 import { CollapsedBar } from "@/components/home/CollapsedBar";
-import { RightNow } from "@/components/home/RightNow";
+import { LiveTabs, RightNow } from "@/components/home/RightNow";
 import { TodayInThreeLines } from "@/components/home/TodayInThreeLines";
 import { getEditionContext } from "@/lib/editionContext";
 import { sportLines } from "@/lib/sportPicks";
@@ -58,17 +58,14 @@ export default async function HomePage() {
       <CollapsedBar />
       <div className="home-firstvisit home-mods motion-stagger">
         <div className="home-duo home-duo-wide">
-          <div className="home-col">
-            <RightNow />
-            <TodayInThreeLines />
-          </div>
+          <RightNow />
           <TryAName />
+          <LiveTabs />
         </div>
+        <TodayInThreeLines />
         <BestOfWeek />
-        <div className="home-duo">
-          <WhoLeads />
-          <OnTheBrink />
-        </div>
+        <WhoLeads />
+        <OnTheBrink />
         <HomeExplainers lines={lines} />
         {beyondTheScorelineArticles.length > 0 && (
           <section data-module="from-the-desk" aria-labelledby="home-from-the-desk">
