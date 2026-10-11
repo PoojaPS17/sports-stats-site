@@ -3671,7 +3671,7 @@
   [data-filter="mlb"] [data-has]:not([data-has~="mlb"]),
   [data-filter="tennis"] [data-has]:not([data-has~="tennis"]),
   [data-filter="f1"] [data-has]:not([data-has~="f1"]) {
-    display: none;
+    display: none !important; /* beats utility display classes such as `flex` on a card or row */
   }
   .sf-item {
     display: flex;
