@@ -11,6 +11,7 @@ import { getHomeData } from "@/lib/homeData";
 import { ComingUpList, hasComingUp, LiveNowList, liveCountOf } from "@/components/HomeLive";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { HomeTabs } from "./HomeTabs";
+import { comingSportCounts, liveSportCounts } from "@/lib/sportFilter";
 
 // Module 2 of the first visit: the one match worth a stranger's attention this second, picked by a stated
 // rule (see rightNow.ts), with a truthful "Next up" or "Latest result" when nothing is in play. A server
@@ -150,16 +151,17 @@ export async function RightNow() {
   return <RightNowCard view={await getRightNow()} />;
 }
 
-/** "Live now" and "Coming up": a full-width row of its own under the Right now card and Try a name. */
+/** "Live now" and "Coming up": the first row under the hero, with sport chips to narrow both panels. */
 export async function LiveTabs() {
   const home = await getHomeData();
   const live = liveCountOf(home);
   return (
-    <section aria-label="Live now and coming up">
+    <section id="live" aria-label="Live now and coming up" className="scroll-mt-[calc(var(--header-h)+1rem)]">
       <LiveRefresh active={live > 0} />
       <HomeTabs
         initial={live > 0 ? "live" : "coming"}
         liveCount={live}
+        sports={{ live: liveSportCounts(home), coming: comingSportCounts(home) }}
         live={live > 0 ? <LiveNowList data={home} fill /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">Nothing in play right now.</p>}
         coming={hasComingUp(home) ? <ComingUpList data={home} fill /> : <p className="card px-4 py-4 text-sm text-[var(--text-muted)]">No fixtures listed for the coming week yet.</p>}
       />

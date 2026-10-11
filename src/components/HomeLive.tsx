@@ -6,6 +6,7 @@ import { LocalTime } from "@/components/LocalTime";
 import type { HomeData } from "@/lib/homeData";
 import type { F1EventRow } from "@/lib/f1";
 import { f1RaceInstant } from "@/lib/f1Dates";
+import { hasAttr, sportOfLeague } from "@/lib/sportFilter";
 
 // Dated by the Race (weekday, date and time in the visitor's zone), not the practice day the weekend opens on. The time always names its zone:
 // the server's first paint is UTC and says so (a circuit-local clock with no zone beside it read as the visitor's own), the visitor's own zone follows.
@@ -40,15 +41,17 @@ export function LiveNowList({ data, fill = false }: { data: HomeData; fill?: boo
   return (
     <div className="flex flex-col gap-3">
       {liveGames.length > 0 && (
-        <div className={cols}>
+        <div className={cols} data-has={hasAttr(liveGames.map((g) => sportOfLeague(g.league)))}>
           {liveGames.map((g) => (
-            <GameCard key={`${g.league}-${g.espn_id}`} league={g.league} game={g} />
+            <div key={`${g.league}-${g.espn_id}`} className="sf-item" data-sport={sportOfLeague(g.league)}>
+              <GameCard league={g.league} game={g} />
+            </div>
           ))}
           {fill && <AllScoresTile />}
         </div>
       )}
       {liveCricket.length > 0 && (
-        <div>
+        <div data-sport="cricket" data-has="cricket">
           <SeriesMatchList matches={liveCricket} showSeries />
           {data.liveCricket.length > liveCricket.length && (
             <Link href="/cricket/series" className="mt-2 inline-block text-sm font-semibold text-[var(--accent)] hover:underline">
@@ -58,7 +61,7 @@ export function LiveNowList({ data, fill = false }: { data: HomeData; fill?: boo
         </div>
       )}
       {liveTennis.length > 0 && (
-        <div className="card divide-y divide-[var(--border)] overflow-hidden">
+        <div className="card divide-y divide-[var(--border)] overflow-hidden" data-sport="tennis" data-has="tennis">
           {liveTennis.map((m) => (
             <TennisMatchLine key={m.espn_id} match={m} showTournament />
           ))}
@@ -75,17 +78,27 @@ export function ComingUpList({ data, fill = false }: { data: HomeData; fill?: bo
   return (
     <div className="flex flex-col gap-3">
       {(upcomingGames.length > 0 || f1) && (
-        <div className={cols}>
+        <div className={cols} data-has={hasAttr([...upcomingGames.map((g) => sportOfLeague(g.league)), ...(f1 ? ["f1" as const] : [])])}>
           {upcomingGames.map((g) => (
-            <GameCard key={`${g.league}-${g.espn_id}`} league={g.league} game={g} />
+            <div key={`${g.league}-${g.espn_id}`} className="sf-item" data-sport={sportOfLeague(g.league)}>
+              <GameCard league={g.league} game={g} />
+            </div>
           ))}
-          {f1 && <F1Card ev={f1} />}
+          {f1 && (
+            <div className="sf-item" data-sport="f1">
+              <F1Card ev={f1} />
+            </div>
+          )}
           {fill && <AllScoresTile />}
         </div>
       )}
-      {nextCricket.length > 0 && <SeriesMatchList matches={nextCricket} showSeries />}
+      {nextCricket.length > 0 && (
+        <div data-sport="cricket" data-has="cricket">
+          <SeriesMatchList matches={nextCricket} showSeries />
+        </div>
+      )}
       {nextTennis.length > 0 && (
-        <div className="card divide-y divide-[var(--border)] overflow-hidden">
+        <div className="card divide-y divide-[var(--border)] overflow-hidden" data-sport="tennis" data-has="tennis">
           {nextTennis.map((m) => (
             <TennisMatchLine key={m.espn_id} match={m} showTournament />
           ))}

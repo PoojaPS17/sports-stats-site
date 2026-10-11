@@ -57,10 +57,10 @@ export default async function HomePage() {
       </section>
       <CollapsedBar />
       <div className="home-firstvisit home-mods motion-stagger">
+        <LiveTabs />
         <div className="home-duo home-duo-wide">
           <RightNow />
           <TryAName />
-          <LiveTabs />
         </div>
         <TodayInThreeLines />
         <BestOfWeek />

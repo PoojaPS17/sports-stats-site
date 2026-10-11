@@ -192,7 +192,9 @@ export function SportPicker({ ctx, lines, liveNow, counts, popular }: { ctx: Edi
           {liveNow > 0 && (
             <span>
               <span className="live-dot" aria-hidden />
-              <b>{liveNow}</b> in play
+              <a href="#live" className="pk-live-link">
+                <b>{liveNow}</b> in play <span aria-hidden>↓</span>
+              </a>
             </span>
           )}
           {counts && (
