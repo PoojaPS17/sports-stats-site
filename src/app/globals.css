@@ -3653,3 +3653,85 @@
     }
   }
 }
+
+@layer components {
+  /* Sport filter (src/lib/sportFilter.ts): a container's data-filter names the chosen sport; a card is hidden when its
+     data-sport is another one, and a whole grid or list when its data-has lists no card of the chosen sport. */
+  [data-filter="football"] [data-sport]:not([data-sport="football"]),
+  [data-filter="cricket"] [data-sport]:not([data-sport="cricket"]),
+  [data-filter="nfl"] [data-sport]:not([data-sport="nfl"]),
+  [data-filter="nba"] [data-sport]:not([data-sport="nba"]),
+  [data-filter="mlb"] [data-sport]:not([data-sport="mlb"]),
+  [data-filter="tennis"] [data-sport]:not([data-sport="tennis"]),
+  [data-filter="f1"] [data-sport]:not([data-sport="f1"]),
+  [data-filter="football"] [data-has]:not([data-has~="football"]),
+  [data-filter="cricket"] [data-has]:not([data-has~="cricket"]),
+  [data-filter="nfl"] [data-has]:not([data-has~="nfl"]),
+  [data-filter="nba"] [data-has]:not([data-has~="nba"]),
+  [data-filter="mlb"] [data-has]:not([data-has~="mlb"]),
+  [data-filter="tennis"] [data-has]:not([data-has~="tennis"]),
+  [data-filter="f1"] [data-has]:not([data-has~="f1"]) {
+    display: none;
+  }
+  .sf-item {
+    display: flex;
+    min-width: 0;
+  }
+  .sf-item > * {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .sport-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 0 4px;
+    margin-top: 8px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .sport-chips button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    padding: 5px 11px;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--text-muted);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .sport-chips button b {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--sig-ink);
+  }
+  .sport-chips button[aria-pressed="true"] {
+    background: var(--sig-soft);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1.5px var(--sig);
+  }
+  .sport-more {
+    margin-top: 10px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .sport-more a {
+    font-weight: 800;
+    color: var(--sig-ink);
+  }
+  .sport-more a:hover {
+    text-decoration: underline;
+  }
+  .pk-live-link {
+    color: inherit;
+  }
+  .pk-live-link:hover {
+    text-decoration: underline;
+  }
+}
