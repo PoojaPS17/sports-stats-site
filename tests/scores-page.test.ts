@@ -34,13 +34,18 @@ test("the home page does not fetch or draw the per-league blocks", () => {
   assert.match(read("src/lib/scoresData.ts"), /snapshotFromRecap\(/);
 });
 
-test("the league filter is a set of links that work without JavaScript, one chip per block, plus All", () => {
-  const html = renderToStaticMarkup(createElement(ScoresFilter, { items: [{ key: "epl", label: "Premier League" }, { key: "cricket", label: "Cricket" }] }));
+test("the sport filter wraps the page: chips are links to each sport's page without JavaScript, and nothing is hidden by script", () => {
+  const html = renderToStaticMarkup(createElement(ScoresFilter, { intro: createElement("h1", null, "Scores"), sports: ["cricket", "football", "nfl"], live: { football: 4, nfl: 8 } }, createElement("p", null, "body")));
+  assert.match(html, /data-filter="all"/);
   assert.match(html, /href="#scores-top"[^>]*>All</);
-  assert.match(html, /href="#scores-epl"[^>]*>Premier League</);
-  assert.match(html, /href="#scores-cricket"[^>]*>Cricket</);
-  assert.match(read("src/components/ScoresFilter.tsx"), /data-scores-block|dataset\.scoresBlock/);
-  assert.match(read("src/components/ScoresBlocks.tsx"), /data-scores-block=\{league\}/);
+  assert.match(html, /href="\/cricket\/series"[^>]*>Cricket</);
+  assert.match(html, /href="\/scores"[^>]*>Football<b class="scores-chip-n">4</);
+  assert.match(html, /href="\/nfl"[^>]*>NFL<b class="scores-chip-n">8</);
+  const src = read("src/components/ScoresFilter.tsx");
+  assert.doesNotMatch(src, /\.hidden\s*=|querySelector|data-scores-block|dataset/);
+  assert.match(read("src/components/ScoresBlocks.tsx"), /data-has=\{sportOfLeague\(league\)\}/);
+  assert.match(read("src/app/scores/page.tsx"), /<section id="live" data-has=/);
+  assert.match(read("src/app/scores/page.tsx"), /<section id="coming-up" data-has=/);
 });
 
 test("HomeCricket links the domestic and women's series in progress", () => {
