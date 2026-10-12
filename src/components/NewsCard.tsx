@@ -1,4 +1,5 @@
 import type { NewsArticle } from "@/lib/queries";
+import { SafeImg } from "./SafeImg";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "";
@@ -18,11 +19,8 @@ export function NewsCard({ article, compact = false }: { article: NewsArticle; c
       className={`card group flex gap-3 overflow-hidden ${compact ? "p-2.5" : "p-3"}`}
     >
       {article.image_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <SafeImg
           src={article.image_url}
-          alt=""
-          loading="lazy"
           className={`shrink-0 rounded-md bg-[var(--surface-muted)] object-cover ${compact ? "h-14 w-20" : "h-20 w-28 rounded-lg"}`}
         />
       )}

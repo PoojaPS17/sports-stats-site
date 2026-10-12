@@ -10,6 +10,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { Flag } from "@/components/TennisScores";
 import { ImageActions } from "@/components/ImageActions";
 import { TennisRankingsExportCard } from "@/components/TennisExportCards";
+import { SafeImg } from "@/components/SafeImg";
 
 // The published ranking changes every Monday, and the tour's points move under it.
 export const revalidate = 300;
@@ -61,8 +62,7 @@ export default async function TennisRankingsPage({ params }: { params: Promise<{
                       <td className="px-2 py-2">
                         <Link prefetch={false} href={`/tennis/${tour}/players/${r.slug}`} className="flex items-center gap-2.5 font-medium hover:text-[var(--accent)]">
                           {r.headshot_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={r.headshot_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+                            <SafeImg src={r.headshot_url} className="h-7 w-7 shrink-0 rounded-full object-cover" />
                           ) : (
                             <span className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface-muted)]" />
                           )}

@@ -1,4 +1,5 @@
 import type { TrendingTopic } from "@/lib/queries";
+import { SafeImg } from "./SafeImg";
 
 export function TrendingApps({ topics }: { topics: TrendingTopic[] }) {
   if (topics.length === 0) {
@@ -23,8 +24,7 @@ export function TrendingApps({ topics }: { topics: TrendingTopic[] }) {
             {t.rank}
           </span>
           {t.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={t.image_url} alt={t.label} className="h-10 w-10 shrink-0 rounded-xl object-cover" />
+            <SafeImg src={t.image_url} alt={t.label} className="h-10 w-10 shrink-0 rounded-xl object-cover" />
           ) : (
             <div className="h-10 w-10 shrink-0 rounded-xl bg-[var(--surface-muted)]" />
           )}
