@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { SafeImg } from "./SafeImg";
 
 interface Option {
   slug: string;
@@ -136,8 +137,7 @@ export function PlayerPicker({
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm ${i === active ? "bg-[var(--surface-muted)]" : ""}`}
               >
                 {o.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={o.image} alt="" className="h-7 w-7 rounded-full bg-[var(--surface-muted)] object-cover" />
+                  <SafeImg src={o.image} className="h-7 w-7 rounded-full bg-[var(--surface-muted)] object-cover" />
                 ) : (
                   <span className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface-muted)]" />
                 )}

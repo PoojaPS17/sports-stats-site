@@ -13,6 +13,7 @@ import { inningsStrikeRate } from "@/lib/cricketFormat";
 import { UNRECORDED_CELL, UNRECORDED_LEGEND } from "@/lib/cricketRecorded";
 import { archiveScope } from "@/lib/cricketCoverage";
 import { testCenturiesDescription, testCenturiesIntro, testCenturiesSubtitle } from "@/lib/testArchiveCopy";
+import { SafeImg } from "@/components/SafeImg";
 
 // The table lists this many, newest first. A league with decades of history has thousands of centuries, and one
 // page of that is too heavy to read, render or share; the page says how many there are in all.
@@ -95,8 +96,7 @@ export default async function CenturiesPage({ params }: { params: Promise<{ leag
                     <td className="py-2 pl-4">
                       <Link prefetch={false} href={`/${league}/players/${c.player_slug}`} className="flex items-center gap-2 font-medium hover:underline">
                         {c.headshot_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.headshot_url} alt="" className="h-6 w-6 rounded-full object-cover" />
+                          <SafeImg src={c.headshot_url} className="h-6 w-6 shrink-0 rounded-full object-cover" />
                         ) : (
                           <span className="h-6 w-6 shrink-0 rounded-full bg-[var(--surface-muted)]" />
                         )}

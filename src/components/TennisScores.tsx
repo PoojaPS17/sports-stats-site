@@ -5,6 +5,7 @@ import { displayCountry } from "@/lib/tennisCountry";
 import { formatTournamentRange, TENNIS_ZONE, tournamentInPlay } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType } from "@/lib/tennisCompetitions";
 import type { TennisMatch, TennisSide, TennisTournament } from "@/lib/tennis";
+import { SafeImg } from "@/components/SafeImg";
 
 /* ------------------------------------------------------------------------ */
 /* Small pieces                                                              */
@@ -15,8 +16,7 @@ import type { TennisMatch, TennisSide, TennisTournament } from "@/lib/tennis";
 export function Flag({ code, size = 16 }: { code: string | null | undefined; size?: number }) {
   if (!code) return <span style={{ width: size, height: Math.round(size * 0.7) }} className="inline-block shrink-0" />;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <SafeImg
       src={`https://a.espncdn.com/i/teamlogos/countries/500/${code.toLowerCase()}.png`}
       alt={displayCountry(code) ?? code}
       title={displayCountry(code) ?? code}

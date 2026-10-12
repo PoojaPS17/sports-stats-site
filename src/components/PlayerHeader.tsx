@@ -3,6 +3,7 @@ import { teamDisplayName } from "@/lib/teamName";
 import { TeamLogo } from "./TeamLogo";
 import { FollowButton } from "./FollowButton";
 import { LEAGUE_LABEL, type League } from "@/lib/queries";
+import { SafeImg } from "./SafeImg";
 
 export function PlayerHeader({
   league,
@@ -36,12 +37,11 @@ export function PlayerHeader({
     <div className="card flex flex-col gap-4 overflow-hidden px-5 py-5 sm:flex-row sm:items-start sm:justify-between" style={{ borderLeft: `4px solid ${teamColor ?? "var(--accent)"}` }}>
       <div className="flex min-w-0 items-center gap-4">
         {headshotUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <SafeImg
             src={headshotUrl}
-            alt=""
             width={72}
             height={72}
+            loading="eager"
             // Commons photos are portraits, not face crops: keep the head in the circle.
             className={`h-[72px] w-[72px] shrink-0 rounded-full bg-[var(--surface-muted)] object-cover ${photoCredit ? "object-[50%_18%]" : ""}`}
           />

@@ -37,6 +37,7 @@ import { Kickoff } from "@/components/Kickoff";
 import { JsonLd } from "@/components/JsonLd";
 import { teamSchema } from "@/lib/structuredData";
 import { rosterSourceNote } from "@/lib/playerCopy";
+import { SafeImg } from "@/components/SafeImg";
 
 export const revalidate = 300;
 
@@ -243,8 +244,7 @@ export default async function TeamPage({
                       <td className="py-2 pl-4">
                         <Link prefetch={false} href={`/${league}/players/${p.slug}`} className="flex items-center gap-2.5 font-medium hover:text-[var(--accent)]">
                           {p.headshot_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={p.headshot_url} alt="" loading="lazy" className="h-7 w-7 rounded-full bg-[var(--surface-muted)] object-cover" />
+                            <SafeImg src={p.headshot_url} className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface-muted)] object-cover" />
                           ) : (
                             <span className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface-muted)]" />
                           )}

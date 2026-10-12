@@ -16,6 +16,7 @@ import { CompareModeTabs } from "@/components/CompareModeTabs";
 import { PlayerPicker } from "@/components/PlayerPicker";
 import { ImageActions } from "@/components/ImageActions";
 import { CompareExportCard } from "@/components/CompareExportCard";
+import { SafeImg } from "@/components/SafeImg";
 
 export const revalidate = 600;
 
@@ -57,8 +58,7 @@ function PlayerCard({ league, side, coverage }: { league: string; side: PlayerCo
   return (
     <Link prefetch={false} href={`/${league}/players/${p.slug}`} className="card flex items-center gap-3 px-4 py-3" style={{ borderTop: `3px solid ${p.team_color ?? "var(--accent)"}` }}>
       {p.headshot_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={p.headshot_url} alt="" className="h-12 w-12 shrink-0 rounded-full bg-[var(--surface-muted)] object-cover" />
+        <SafeImg src={p.headshot_url} className="h-12 w-12 shrink-0 rounded-full bg-[var(--surface-muted)] object-cover" />
       ) : (
         <TeamLogo name={p.name} logoUrl={null} color={p.team_color} size={48} />
       )}
