@@ -191,10 +191,22 @@ async function loadCricketSide(sideId: string): Promise<TeamNextBlockData | null
   };
 }
 
+/** A team's completed matches, by which a standings row is judged to have been played at all. */
+function playedIn(r: StandingRow): number {
+  return r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0);
+}
+
 function tableFrom(league: League, rows: StandingRow[], label: string, href: string): StandingsBlockData {
   // Bands read against the whole table: ESPN's notes for a finished season, position while it runs.
   const preseason = rows.length > 0 && rows.every((r) => r.preseason);
-  const bands = preseason ? [] : topBands(league, rows, TABLE_ROWS);
+  // Before the first round, a table is ordered by its tie-break alone — the teams' names — so first place is not a
+  // standing anyone has earned, and neither is a relegation marker. The WHOLE table yields its positions and zones,
+  // never a single row: a column of dashes reads as a season that has not started, where one dash among numbers
+  // reads as a fault. The team card goes the other way and does so deliberately (teamSummary, `played > 0`): it
+  // speaks about one team, so it can say that team has no position yet without unsettling a ranked list.
+  const unplayed = rows.length > 0 && rows.every((r) => playedIn(r) === 0);
+  const ranked = !preseason && !unplayed;
+  const bands = ranked ? topBands(league, rows, TABLE_ROWS) : [];
   const record = usesRecordOrder(league);
   return {
     label,
@@ -202,13 +214,13 @@ function tableFrom(league: League, rows: StandingRow[], label: string, href: str
     record,
     ...(preseason ? { preseason: true } : {}),
     rows: rows.slice(0, TABLE_ROWS).map((r, i) => {
-      // Exhibition records seed nobody: no position in a preseason table.
-      const position = preseason ? null : r.rank ?? i + 1;
+      // Exhibition records seed nobody, and nor does a table with no match in it yet.
+      const position = ranked ? r.rank ?? i + 1 : null;
       return {
         position,
         name: teamDisplayName(r.name),
         href: `/${league}/teams/${r.slug}`,
-        played: r.wins + r.losses + (r.draws ?? 0) + (r.no_result ?? 0),
+        played: playedIn(r),
         figure: record ? `${r.wins}-${r.losses}` : String(r.points ?? 0),
         netRunRate: r.net_run_rate,
         zone: bands[i]?.cls ?? null,
