@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ID_MODE_DEFAULTS, idsToFetch, parseIdModeArgs, parseIdRange, retriesForAttempts } from "../scripts/lib/cricket-id-range";
-import { distinctDays, parseLeagueDays, parseRequestDelay, RETRY_BACKOFF_CAP_MS, retryBackoffs, UNFILED_EXTRA_DAYS } from "../scripts/lib/cricket-series-days";
+import { distinctDays, parseAttempts, parseLeagueDays, parseRequestDelay, RETRY_BACKOFF_CAP_MS, retryBackoffs, UNFILED_EXTRA_DAYS } from "../scripts/lib/cricket-series-days";
 
 test("a range, a single id, and nothing else parse as ids", () => {
   assert.deepEqual(parseIdRange("62387-63862"), { from: 62387, to: 63862 });
@@ -97,7 +97,7 @@ test("parseRequestDelay: the flag, its default, and what is not a delay", () => 
 });
 
 test("retryBackoffs: doubles rather than stepping, never waits longer than the cap, and is empty without retries", () => {
-  // The four attempts a run allows. The third was 3.6s while this stepped by the base; it doubles now, because a
+  // The four attempts the nightly top-up allows (--attempts sets it). The third was 3.6s while this stepped by the base; it doubles now, because a
   // request that has already failed twice is asking a feed that wants to be left alone.
   assert.deepEqual(retryBackoffs(4), [1200, 2400, 4800, 9600]);
   // Only the first three are ever waited (the run gives up after the last attempt), so a dead day costs 8.4s.
@@ -111,4 +111,38 @@ test("retryBackoffs: doubles rather than stepping, never waits longer than the c
   const long = retryBackoffs(7);
   assert.ok(long.every((ms) => ms <= RETRY_BACKOFF_CAP_MS), `a wait over the cap: ${long.join(", ")}`);
   assert.equal(long[long.length - 1], RETRY_BACKOFF_CAP_MS);
+});
+
+// How persistently fetch-cricket-series.ts reads one day. The nightly top-up cannot come back later, so it keeps
+// four tries; a sweep asks for one, because a day that fails is cheaper to pick up on the next pass than to spend
+// 8.4s backing off from (the measurement is in parseAttempts' comment).
+test("parseAttempts: the flag, its default, and what is not a number of tries", () => {
+  assert.equal(parseAttempts([], 4), 4, "no flag keeps the caller's persistence");
+  assert.equal(parseAttempts(["--since", "2000-01-01"], 4), 4);
+  assert.equal(parseAttempts(["--attempts", "1"], 4), 1);
+  assert.equal(parseAttempts(["--since", "2000-01-01", "--attempts", "2", "--delay", "500"], 4), 2);
+  // Zero is a pace for --delay but not a number of tries: a run that never asks is a mistake, not a request.
+  for (const argv of [
+    ["--attempts"],
+    ["--attempts", "--delay"],
+    ["--attempts", "soon"],
+    ["--attempts", "0"],
+    ["--attempts", "-1"],
+    ["--attempts", "1.5"],
+  ]) {
+    const got = parseAttempts(argv, 4);
+    assert.ok(typeof got === "object", `accepted ${JSON.stringify(argv)} as a number of tries: ${got}`);
+  }
+});
+
+test("retryBackoffs: what a dead day costs is the waits before its last attempt, and at one try that is nothing", () => {
+  // getJson waits backoffs[attempt] only while another attempt follows, so this is the whole cost of a day that
+  // never answers — the figure the sweep strategy turns on.
+  const totalWait = (attempts: number) =>
+    retryBackoffs(attempts)
+      .slice(0, -1)
+      .reduce((a, b) => a + b, 0);
+  assert.equal(totalWait(1), 0, "--attempts 1 waits for nothing: a failed day costs one request and moves on");
+  assert.equal(totalWait(2), 1200);
+  assert.equal(totalWait(4), 8400, "the nightly default spends 8.4s on a day that never answers");
 });
