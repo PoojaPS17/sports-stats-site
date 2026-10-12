@@ -167,19 +167,19 @@ test("cricketMatchTitleCandidates: result, live and fixture forms, longest first
   const base = { name: "Khan Research Laboratories v Hyderabad Kingsmen Academy", series_name: "President's Trophy 2026-27", description: "14th Match" };
   assert.deepEqual(cricketMatchTitleCandidates({ ...base, ...m("post", "Match drawn") }), [
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, 14th Match, President's Trophy 2026-27",
-    "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, President's Trophy 2026-27",
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, 14th Match",
+    "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard, President's Trophy 2026-27",
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Scorecard",
   ]);
   assert.deepEqual(cricketMatchTitleCandidates({ ...base, ...m("in", "Stumps") }).slice(0, 2), [
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy Live Score, 14th Match, President's Trophy 2026-27",
-    "Khan Research Laboratories vs Hyderabad Kingsmen Academy Live Score, President's Trophy 2026-27",
+    "Khan Research Laboratories vs Hyderabad Kingsmen Academy Live Score, 14th Match",
   ]);
   // A fixture and a called-off match have no scorecard yet: the teams, stage and series alone.
   assert.deepEqual(cricketMatchTitleCandidates({ ...base, ...m("pre", null) }), [
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy, 14th Match, President's Trophy 2026-27",
-    "Khan Research Laboratories vs Hyderabad Kingsmen Academy, President's Trophy 2026-27",
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy, 14th Match",
+    "Khan Research Laboratories vs Hyderabad Kingsmen Academy, President's Trophy 2026-27",
     "Khan Research Laboratories vs Hyderabad Kingsmen Academy",
   ]);
   assert.deepEqual(cricketMatchTitleCandidates({ ...base, ...m("pre", "Match postponed") })[0], "Khan Research Laboratories vs Hyderabad Kingsmen Academy, 14th Match, President's Trophy 2026-27");
@@ -213,4 +213,28 @@ test("cricketMatchTitleCandidates: a long-named match keeps its full names and k
   );
   // Short names never run over: the first fitting full form wins, as before.
   assert.equal(fitTitle(...cricketMatchTitleCandidates({ name: "India v Australia", series_name: "Australia tour of India 2026-27", description: "2nd ODI", ...m("post", "India won") })), "India vs Australia Scorecard, 2nd ODI");
+});
+
+// The same two sides meet more than once inside one edition — twice in a Shield season, and again if they reach a
+// Ranji knockout — so the stage is the only thing that tells those pages apart. It has to outlive the series in the
+// fallback list: with the series kept first, "Tamil Nadu vs Uttar Pradesh Scorecard, Ranji Trophy 2019-20" fit the
+// budget at exactly 59 characters and was served as the title of both the 14th Match and the Semi Final, and Mumbai
+// v Karnataka took one shape for a group match and another for the Final. Duplicate titles across a competition are
+// what Search Console reports as pages competing with each other.
+test("cricketMatchTitleCandidates: two meetings of one pair in one edition get different titles", () => {
+  const edition = (name: string, series_name: string, description: string) =>
+    fitTitle(...cricketMatchTitleCandidates({ name, series_name, description, ...m("post", "Match drawn") }));
+  const pairs: [string, string, string, string][] = [
+    ["Tamil Nadu v Uttar Pradesh", "Ranji Trophy 2019-20", "14th Match", "Semi Final"],
+    ["Mumbai v Karnataka", "Ranji Trophy 2019-20", "9th Match", "Final"],
+    ["Victoria v New South Wales", "Sheffield Shield 2019-20", "4th Match", "19th Match"],
+    ["Saurashtra v Bengal", "Ranji Trophy 2019-20", "31st Match", "Final"],
+  ];
+  for (const [name, series, first, second] of pairs) {
+    const a = edition(name, series, first);
+    const b = edition(name, series, second);
+    assert.notEqual(a, b, `${name} in ${series}: ${first} and ${second} share a title (${a})`);
+    assert.ok(a.includes(first), `${a} does not name its stage`);
+    assert.ok(b.includes(second), `${b} does not name its stage`);
+  }
 });
