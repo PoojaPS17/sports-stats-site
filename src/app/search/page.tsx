@@ -97,6 +97,7 @@ export default async function SearchPage({
                       <span className="text-xs text-[var(--text-muted)]">
                         {resultLeagueLabel(r)} {r.type === "player" ? "player" : r.type === "series" ? "series" : "team"}
                         {r.subtitle ? ` · ${teamDisplayName(r.subtitle)}` : ""}
+                        {r.detail ? ` · ${r.detail}` : ""}
                       </span>
                     </div>
                   </Link>

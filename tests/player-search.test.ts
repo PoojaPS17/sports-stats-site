@@ -63,7 +63,7 @@ test("the joined has-games lookup returns exactly what the per-player EXISTS did
     for (const limit of [1, 3, 20]) {
       // The same rows as the old query; the order is now by relevance, so compare as sets when nothing is cut off.
       const expected = (await db.pool.query(REFERENCE_SEARCH, [`%${term}%`, 1000])).rows;
-      const got = await queries.search(term, limit);
+      const got = (await queries.search(term, limit)).map((r) => ({ ...r, detail: undefined })).map(({ detail, ...r }) => (void detail, r));
       assert.equal(got.length, Math.min(limit, expected.length), `${term} limit ${limit}`);
       if (limit >= expected.length) assert.deepEqual([...got].sort(byKey), [...expected].sort(byKey), `${term} limit ${limit}`);
     }
@@ -123,4 +123,25 @@ test("the bare-slug page with no games links to the namesake who has games; the 
   const later = await pageText("van-jefferson");
   assert.match(later, /Regular season since 2015/);
   assert.doesNotMatch(later, /these are not career totals/);
+});
+
+test("two players with one name get role and years on record; a unique name gets none", async () => {
+  const q = (sql: string, params: unknown[] = []) => db.pool.query(sql, params);
+  await q(`insert into teams (league, espn_id, name, slug) values ('test', 'aus', 'Australia', 'australia')`);
+  await q(`insert into players (league, espn_id, team_espn_id, name, slug, position) values
+    ('test', 'wp1', 'aus', 'Wayne Phillips', 'wayne-phillips', 'Wicketkeeper batter'),
+    ('test', 'wp2', 'aus', 'Wayne Phillips', 'wayne-phillips-wp2', 'Unknown'),
+    ('test', 'wl1', 'aus', 'Wayne Lone', 'wayne-lone', 'Bowler')`);
+  for (const [id, date] of [["m1", "1982-01-10"], ["m2", "1986-03-01"], ["m3", "1992-02-01"], ["m4", "1990-01-01"]]) {
+    await q(`insert into games (league, espn_id, date, name, season_year, home_team_espn_id, away_team_espn_id, completed, season_type, competition_type) values ('test', $1, $2, 'x', 2000, 'aus', 'aus', true, 2, 'STD')`, [id, date]);
+  }
+  for (const [game, player] of [["m1", "wp1"], ["m2", "wp1"], ["m3", "wp2"], ["m4", "wl1"]]) {
+    await q(`insert into player_game_stats (league, game_espn_id, player_espn_id, team_espn_id, stats) values ('test', $1, $2, 'aus', '{}')`, [game, player]);
+  }
+  const results = await queries.search("wayne", 20, { fold: true });
+  const detail = Object.fromEntries(results.map((r) => [r.slug, r.detail]));
+  assert.equal(detail["wayne-phillips"], "Wicketkeeper batter · 1982–1986");
+  assert.equal(detail["wayne-phillips-wp2"], "1992");
+  assert.equal(detail["wayne-lone"], undefined);
+  assert.deepEqual((await queries.search("lone")).map((r) => r.detail), [undefined]);
 });

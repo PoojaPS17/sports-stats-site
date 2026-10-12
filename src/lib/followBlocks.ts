@@ -40,7 +40,7 @@ export interface PaletteResult {
  * Two different people with one name (an Indian and an Indonesian "Rohit Sharma") stay separate and get the club or country
  * in the label, so the chips can be told apart.
  */
-export function searchResultsToPalette(results: (Pick<SearchResult, "type" | "league" | "name" | "slug" | "subtitle"> & { also?: { league: string; slug: string }[] })[], limit: number): PaletteResult[] {
+export function searchResultsToPalette(results: (Pick<SearchResult, "type" | "league" | "name" | "slug" | "subtitle"> & { also?: { league: string; slug: string }[]; detail?: string })[], limit: number): PaletteResult[] {
   const entries: { r: (typeof results)[number]; block: HomeBlock; ids: string[] }[] = [];
   const seen = new Set<string>();
   for (const r of results) {
@@ -62,7 +62,8 @@ export function searchResultsToPalette(results: (Pick<SearchResult, "type" | "le
     const withTeam = group.map((e) => e.r.subtitle || LEAGUE_LABEL[e.r.league as League] || e.r.league);
     const needsMore = new Set(withTeam.filter((t, i) => withTeam.indexOf(t) !== i));
     group.forEach((e, i) => {
-      const where = needsMore.has(withTeam[i]) ? `${withTeam[i]}, ${LEAGUE_LABEL[e.r.league as League] ?? e.r.league}` : withTeam[i];
+      const base = needsMore.has(withTeam[i]) ? `${withTeam[i]}, ${LEAGUE_LABEL[e.r.league as League] ?? e.r.league}` : withTeam[i];
+      const where = e.r.detail ? `${base} · ${e.r.detail}` : base;
       e.block = { ...e.block, label: `${e.r.name} (${where}): last five` };
     });
   }
