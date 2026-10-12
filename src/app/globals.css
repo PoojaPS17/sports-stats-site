@@ -2247,7 +2247,6 @@
 
   /* Right now tabs (Live now / Coming up): the artifact's .tabs pills over a panel. */
   .rn-tabs {
-    margin-top: 14px;
     min-width: 0;
   }
   .home-tabs {
@@ -3009,16 +3008,11 @@
     gap: 44px;
     min-width: 0;
   }
-  .home-duo,
-  .home-col {
+  .home-duo {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 44px;
     min-width: 0;
-  }
-  .home-col {
-    display: flex;
-    flex-direction: column;
   }
   .home-mods > *,
   .home-duo > * {
@@ -3592,24 +3586,6 @@
   }
   .home-duo-wide .rn-go {
     margin-top: auto;
-  }
-  /* Phones: Right now, then the live scores, then Try a name. From 1000px the live scores take a full-width row under the pair. */
-  .home-duo-wide > [data-module="try-a-name"] {
-    order: 3;
-  }
-  @media (min-width: 1000px) {
-    .home-duo-wide {
-      row-gap: 64px;
-    }
-    .home-duo-wide > [data-module="try-a-name"] {
-      order: 0;
-    }
-    .home-duo-wide > [aria-label="Live now and coming up"] {
-      grid-column: 1 / -1;
-    }
-  }
-  .rn-tabs {
-    margin-top: 0;
   }
   .fill-grid,
   .home-mods .wl-grid {
