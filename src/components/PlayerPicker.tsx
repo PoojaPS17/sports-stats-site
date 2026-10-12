@@ -6,6 +6,7 @@ interface Option {
   slug: string;
   name: string;
   subtitle: string | null;
+  detail?: string;
   image: string | null;
 }
 
@@ -142,7 +143,7 @@ export function PlayerPicker({
                 )}
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{o.name}</span>
-                  {o.subtitle && <span className="block truncate text-xs text-[var(--text-muted)]">{o.subtitle}</span>}
+                  {(o.subtitle || o.detail) && <span className="block truncate text-xs text-[var(--text-muted)]">{[o.subtitle, o.detail].filter(Boolean).join(" · ")}</span>}
                 </span>
               </button>
             </li>

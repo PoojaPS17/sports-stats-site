@@ -36,7 +36,7 @@ export function resultLabels(results: SearchResult[]): string[] {
   return results.map((r) => {
     if ((counts.get(r.name.toLowerCase()) ?? 0) < 2) return r.name;
     const where = r.subtitle || (isLeague(r.league) ? LEAGUE_LABEL[r.league] : r.league);
-    return `${r.name} (${where})`;
+    return `${r.name} (${r.detail ? `${where} · ${r.detail}` : where})`;
   });
 }
 

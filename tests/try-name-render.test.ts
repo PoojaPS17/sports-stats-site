@@ -75,3 +75,11 @@ test("the first-visit wrapper is hidden only under a built page; collapsed keeps
   assert.doesNotMatch(css, /:root\[data-home="collapsed"\] \.home-firstvisit/);
   assert.match(css, /:root\[data-home="collapsed"\] \.home-builder-hero/);
 });
+
+test("same-name players with the same country get role and years after it; unique names stay bare", () => {
+  const r = (name: string, slug: string, detail?: string): SearchResult => ({ type: "player", name, league: "test", slug, subtitle: "Australia", image: null, ...(detail ? { detail } : {}) });
+  assert.deepEqual(
+    resultLabels([r("Wayne Phillips", "wayne-phillips", "Wicketkeeper batter · 1982–1986"), r("Wayne Phillips", "wayne-phillips-7116", "1992"), r("Allan Border", "allan-border")]),
+    ["Wayne Phillips (Australia · Wicketkeeper batter · 1982–1986)", "Wayne Phillips (Australia · 1992)", "Allan Border"]
+  );
+});

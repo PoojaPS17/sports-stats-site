@@ -1342,6 +1342,8 @@ export interface SearchResult {
   slug: string;
   subtitle: string | null;
   image: string | null;
+  /** Set only on a player whose name another player in the same list shares: role and years played ("Wicketkeeper batter · 1982–1986"), so the two can be told apart. */
+  detail?: string;
   /** Folded results only: the same person's pages in other competitions (a cricketer's other formats, a footballer's other leagues). */
   also?: { league: string; slug: string }[];
 }
@@ -1410,7 +1412,57 @@ export async function search(query: string, limit = 20, options: { fold?: boolea
      limit $2`,
     [phrase, limit, ...terms, CRICKET_LEAGUES, SOCCER_LEAGUES]
   );
-  return fold ? rows.map(withAlso) : rows;
+  const results: SearchResult[] = fold ? rows.map(withAlso) : rows;
+  return addNamesakeDetail(results);
+}
+
+const yearSpan = (first: number | null, last: number | null): string | null => (first === null || last === null ? null : first === last ? String(first) : `${first}–${last}`);
+
+// Two different players with one name (the two Wayne Phillips, both Australian Test cricketers) show the same name, country and
+// format (a pair that club or country already separates is left alone), so each also gets its role and the years it has games on record. Only players that collide get it, so a unique name's row is
+// unchanged, and the lookup is one extra query that runs only when there is a collision. A cricketer or footballer who is listed
+// under several competitions is one person (ESPN keeps one id), not a collision.
+async function addNamesakeDetail(results: SearchResult[]): Promise<SearchResult[]> {
+  const byName = new Map<string, SearchResult[]>();
+  // A pair already told apart by its club or country (an Indian and an Indonesian Rohit Sharma) keeps its row as it was.
+  const key = (r: SearchResult) => `${r.name.toLowerCase()}|${(r.subtitle ?? r.league).toLowerCase()}`;
+  for (const r of results) if (r.type === "player") byName.set(key(r), [...(byName.get(key(r)) ?? []), r]);
+  const clashing = [...byName.values()].filter((g) => g.length > 1).flat();
+  if (clashing.length === 0) return results;
+  const pages = new Map<string, { league: string; slug: string }>();
+  for (const r of clashing) for (const pg of [{ league: r.league, slug: r.slug }, ...(r.also ?? [])]) pages.set(`${pg.league}:${pg.slug}`, pg);
+  const { rows } = await pool.query(
+    `select p.league, p.slug, p.espn_id, p.position,
+            (select min(extract(year from g.date))::int from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
+              where s.league = p.league and s.player_espn_id = p.espn_id and g.completed) as first_year,
+            (select max(extract(year from g.date))::int from player_game_stats s join games g on g.league = s.league and g.espn_id = s.game_espn_id
+              where s.league = p.league and s.player_espn_id = p.espn_id and g.completed) as last_year
+     from players p where (p.league, p.slug) in (select * from unnest($1::text[], $2::text[]))`,
+    [[...pages.values()].map((x) => x.league), [...pages.values()].map((x) => x.slug)]
+  );
+  const info = new Map<string, { position: string | null; first: number | null; last: number | null }>(
+    rows.map((x) => [`${x.league}:${x.slug}`, { position: x.position, first: x.first_year, last: x.last_year }])
+  );
+  const person = (r: SearchResult): string => {
+    const id = rows.find((x) => x.league === r.league && x.slug === r.slug)?.espn_id;
+    if (id && (CRICKET_LEAGUES as readonly string[]).includes(r.league)) return `cricket:${id}`;
+    if (id && (SOCCER_LEAGUES as readonly string[]).includes(r.league)) return `soccer:${id}`;
+    return `${r.league}:${r.slug}`;
+  };
+  const detail = (r: SearchResult): string | undefined => {
+    const all = [{ league: r.league, slug: r.slug }, ...(r.also ?? [])].map((x) => info.get(`${x.league}:${x.slug}`)).filter((x) => x !== undefined);
+    const firsts = all.map((x) => x.first).filter((x): x is number => x !== null);
+    const lasts = all.map((x) => x.last).filter((x): x is number => x !== null);
+    const position = info.get(`${r.league}:${r.slug}`)?.position;
+    const parts = [position && position.toLowerCase() !== "unknown" ? position : null, yearSpan(firsts.length ? Math.min(...firsts) : null, lasts.length ? Math.max(...lasts) : null)].filter(Boolean);
+    return parts.length ? parts.join(" · ") : undefined;
+  };
+  const collides = new Set<SearchResult>();
+  for (const g of byName.values()) if (g.length > 1 && new Set(g.map(person)).size > 1) g.forEach((r) => collides.add(r));
+  return results.map((r) => {
+    const d = collides.has(r) ? detail(r) : undefined;
+    return d ? { ...r, detail: d } : r;
+  });
 }
 
 // The folded query returns every page of a person with the leading one chosen; `also` is the rest, in the site's order.
