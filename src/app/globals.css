@@ -3733,3 +3733,19 @@
     color: var(--sig-ink);
   }
 }
+
+@layer components {
+  .pk-hint {
+    margin-top: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .pk-hint a {
+    color: var(--sig-ink);
+    font-weight: 700;
+  }
+  .pk-hint a:hover {
+    text-decoration: underline;
+  }
+}

@@ -208,6 +208,9 @@ export function SportPicker({ ctx, lines, liveNow, counts, popular }: { ctx: Edi
         <p className="pk-q">
           <span className="pk-stp">STEP 1 OF 2</span>What do you follow?
         </p>
+        <p className="pk-hint">
+          Tap a sport to add it to your page. <a href="#live">Live scores below&nbsp;↓</a>
+        </p>
         <div className="pk-tiles" role="group" aria-label="Sports">
           {SPORT_PICKS.map((s) => {
             const on = sports.includes(s);

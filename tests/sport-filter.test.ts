@@ -78,4 +78,6 @@ test("the home page opens with Live now and Coming up under the hero, then Right
   assert.match(page, /<div className="home-firstvisit home-mods(?: motion-stagger)?">\s*<LiveTabs \/>\s*<div className="home-duo home-duo-wide">\s*<RightNow \/>\s*<TryAName \/>/);
   assert.match(read("src/components/home/RightNow.tsx"), /<section id="live"/);
   assert.match(read("src/components/home/SportPicker.tsx"), /href="#live"/);
+  // The tiles pick sports for Your page; the line under the question says so and points at the live scores.
+  assert.match(read("src/components/home/SportPicker.tsx"), /Tap a sport to add it to your page\. <a href="#live">Live scores below&nbsp;/);
 });
