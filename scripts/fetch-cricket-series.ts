@@ -8,6 +8,7 @@
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts                    # last 3 days + next 10
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --days 10 --ahead 90
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --since 2024-01-01 # backfill
+//   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --since 2019-01-01 --until 2019-12-31 --delay 500
 //
 //   npx tsx --env-file=.env.local scripts/fetch-cricket-series.ts --league-days test --since 1877-01-01 --until 1999-12-31
 //
@@ -20,12 +21,14 @@
 // A recurring tournament (BBL, WBBL, IPL, ...) keeps one ESPN league id for every season, so its matches are filed
 // per edition, `<league id>-<season>` ("8044-2025-26"), see src/lib/cricketSeriesKey.ts; a bilateral tour keeps its own id.
 import { pool } from "./lib/db";
-import { distinctDays, parseLeagueDays, UNFILED_EXTRA_DAYS } from "./lib/cricket-series-days";
+import { distinctDays, parseLeagueDays, parseRequestDelay, retryBackoffs, UNFILED_EXTRA_DAYS } from "./lib/cricket-series-days";
 import { ingestDay, storeMatches, storeSeries, type SeriesMap } from "./lib/cricket-series-ingest";
 
 const HEADER_URL = "https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=cricket&dates=";
+/** The pace of the nightly top-up, and the default of --delay; history is swept slower (see parseRequestDelay). */
 const REQUEST_DELAY_MS = 120;
 const RETRIES = 4;
+const BACKOFFS = retryBackoffs(RETRIES);
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,7 +44,8 @@ async function getJson(url: string): Promise<any> {
       return data;
     } catch (err) {
       lastErr = err;
-      await sleep(1200 * (attempt + 1));
+      // No wait after the last attempt: the run gives up on this day and moves to the next one.
+      if (attempt < RETRIES - 1) await sleep(BACKOFFS[attempt]);
     }
   }
   throw lastErr;
@@ -59,7 +63,7 @@ function parseArgs() {
   const since = opt("since") ? new Date(`${opt("since")}T12:00:00Z`) : new Date(today.getTime() - days * 86_400_000);
   const until = opt("until") ? new Date(`${opt("until")}T12:00:00Z`) : new Date(today.getTime() + ahead * 86_400_000);
   if (Number.isNaN(since.getTime()) || Number.isNaN(until.getTime()) || since > until) {
-    console.error("usage: fetch-cricket-series.ts [--days N] [--ahead M] | [--since YYYY-MM-DD [--until YYYY-MM-DD]]");
+    console.error("usage: fetch-cricket-series.ts [--days N] [--ahead M] | [--since YYYY-MM-DD [--until YYYY-MM-DD]] [--delay MS]");
     process.exit(1);
   }
   const leagueDays = parseLeagueDays(args);
@@ -67,7 +71,12 @@ function parseArgs() {
     console.error(leagueDays.error);
     process.exit(1);
   }
-  return { since, until, leagueDays: leagueDays as string | null };
+  const delayMs = parseRequestDelay(args, REQUEST_DELAY_MS);
+  if (typeof delayMs === "object") {
+    console.error(delayMs.error);
+    process.exit(1);
+  }
+  return { since, until, leagueDays: leagueDays as string | null, delayMs };
 }
 
 function ymd(d: Date): string {
@@ -79,8 +88,8 @@ function ymd(d: Date): string {
 /* ------------------------------------------------------------------------ */
 
 async function main() {
-  const { since, until, leagueDays } = parseArgs();
-  console.log(`[fetch-cricket-series] ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}${leagueDays ? ` (days of stored ${leagueDays} matches)` : ""}`);
+  const { since, until, leagueDays, delayMs } = parseArgs();
+  console.log(`[fetch-cricket-series] ${since.toISOString().slice(0, 10)} → ${until.toISOString().slice(0, 10)}${leagueDays ? ` (days of stored ${leagueDays} matches)` : ""}, ${delayMs}ms apart`);
   const seriesMeta: SeriesMap = new Map();
   let days = 0;
   let matches = 0;
@@ -110,7 +119,7 @@ async function main() {
     await storeMatches(rows);
     matches += rows.length;
     if (days % 50 === 0) console.log(`[fetch-cricket-series] ${days} days, ${matches} match rows`);
-    await sleep(REQUEST_DELAY_MS);
+    await sleep(delayMs);
   }
 
   await storeSeries(seriesMeta);

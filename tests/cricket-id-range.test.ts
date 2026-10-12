@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ID_MODE_DEFAULTS, idsToFetch, parseIdModeArgs, parseIdRange, retriesForAttempts } from "../scripts/lib/cricket-id-range";
-import { distinctDays, parseLeagueDays, UNFILED_EXTRA_DAYS } from "../scripts/lib/cricket-series-days";
+import { distinctDays, parseLeagueDays, parseRequestDelay, RETRY_BACKOFF_CAP_MS, retryBackoffs, UNFILED_EXTRA_DAYS } from "../scripts/lib/cricket-series-days";
 
 test("a range, a single id, and nothing else parse as ids", () => {
   assert.deepEqual(parseIdRange("62387-63862"), { from: 62387, to: 63862 });
@@ -77,4 +77,38 @@ test("--league-days reads one request per distinct start day, ascending, at noon
   const unfiled = distinctDays(["1990-06-21T10:00:00Z"], UNFILED_EXTRA_DAYS).map((d) => d.toISOString().slice(0, 10));
   assert.equal(unfiled.length, UNFILED_EXTRA_DAYS + 1);
   for (const listed of ["1990-06-24", "1990-06-25", "1990-06-26"]) assert.ok(unfiled.includes(listed), listed);
+});
+
+// How fast fetch-cricket-series.ts reads the listing. A year is one request per calendar day, so the delay between
+// days is the whole of the load ESPN sees: sweeping 2019 at the nightly 120ms failed 22% of its days, and a second
+// pass started straight after failed 55%. The nightly top-up reads about a dozen days and keeps the default, so the
+// flag exists to let a history sweep be slower without touching the job that runs every night.
+test("parseRequestDelay: the flag, its default, and what is not a delay", () => {
+  assert.equal(parseRequestDelay([], 120), 120, "no flag keeps the caller's pace");
+  assert.equal(parseRequestDelay(["--since", "2019-01-01"], 120), 120);
+  assert.equal(parseRequestDelay(["--delay", "500"], 120), 500);
+  assert.equal(parseRequestDelay(["--since", "2019-01-01", "--delay", "750", "--until", "2019-12-31"], 120), 750);
+  // Zero is a pace, not a missing value: it asks for no wait at all.
+  assert.equal(parseRequestDelay(["--delay", "0"], 120), 0);
+  for (const argv of [["--delay"], ["--delay", "--since"], ["--delay", "soon"], ["--delay", "-250"]]) {
+    const got = parseRequestDelay(argv, 120);
+    assert.ok(typeof got === "object", `accepted ${JSON.stringify(argv)} as a delay: ${got}`);
+  }
+});
+
+test("retryBackoffs: doubles rather than stepping, never waits longer than the cap, and is empty without retries", () => {
+  // The four attempts a run allows. The third was 3.6s while this stepped by the base; it doubles now, because a
+  // request that has already failed twice is asking a feed that wants to be left alone.
+  assert.deepEqual(retryBackoffs(4), [1200, 2400, 4800, 9600]);
+  // Only the first three are ever waited (the run gives up after the last attempt), so a dead day costs 8.4s.
+  assert.equal(
+    retryBackoffs(4)
+      .slice(0, 3)
+      .reduce((a, b) => a + b, 0),
+    8400
+  );
+  assert.deepEqual(retryBackoffs(0), []);
+  const long = retryBackoffs(7);
+  assert.ok(long.every((ms) => ms <= RETRY_BACKOFF_CAP_MS), `a wait over the cap: ${long.join(", ")}`);
+  assert.equal(long[long.length - 1], RETRY_BACKOFF_CAP_MS);
 });
