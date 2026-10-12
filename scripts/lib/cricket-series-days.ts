@@ -1,6 +1,7 @@
 // The days fetch-cricket-series.ts reads in `--league-days <league>` mode: one listing request per distinct start
 // date of the matches already stored for a league (the pre-2000 Tests, ~1,480 days, instead of a century of empty ones).
-// and how fast it reads them. Pure, so a test can pin the day list and the pacing without a database or a network.
+// and how fast, and how persistently, it reads them. Pure, so a test can pin the day list, the pacing and the
+// retrying without a database or a network.
 
 /** The league named after `--league-days`, or null when the flag is absent; `{error}` when it has no value. */
 export function parseLeagueDays(argv: string[]): string | null | { error: string } {
@@ -45,6 +46,24 @@ export function parseRequestDelay(argv: string[], fallback: number): number | { 
   if (i < 0) return fallback;
   const ms = Number(argv[i + 1]);
   return Number.isFinite(ms) && ms >= 0 ? ms : { error: "--delay needs a number of milliseconds (e.g. 500)" };
+}
+
+/**
+ * How many times one listing request is tried before the run gives up on that day: `--attempts <n>`, or `fallback`
+ * when the flag is absent. `{error}` when the value is not a whole number of tries, one or more.
+ *
+ * Retries DO rescue requests: of 40 days of 2018 probed on 2026-10-12, 24 failed their first try and 10 of those
+ * succeeded on a later one. But a rescued day pays the whole backoff, so a day costs ~5s at four attempts against
+ * ~0.5s at one, and a sweep buys far more coverage per hour from repeated single-attempt passes — five of them took
+ * those 40 days from 32/40 to 40/40, where one four-attempt pass reached 26/40 in twice the time. The nightly top-up
+ * cannot come back later, so it keeps the default. Two is the one value never worth choosing: the second attempt
+ * rescued nothing at all (0 of 24), every rescue landing at 3.6s or 8.4s cumulative.
+ */
+export function parseAttempts(argv: string[], fallback: number): number | { error: string } {
+  const i = argv.indexOf("--attempts");
+  if (i < 0) return fallback;
+  const n = Number(argv[i + 1]);
+  return Number.isInteger(n) && n >= 1 ? n : { error: "--attempts needs a whole number of tries, 1 or more (e.g. 1)" };
 }
 
 /** The first retry's wait after a failed listing request; each further attempt doubles it. */
