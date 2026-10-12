@@ -42,6 +42,14 @@ function event(homeScore: string, awayScore: string, detail = "Final") {
   };
 }
 
+// node-postgres hands timestamptz back as a JS Date, which keeps milliseconds only, while Postgres keeps
+// microseconds. Two writes a few hundred microseconds apart can therefore read back as equal, so a
+// "moved" assertion against a value read straight after the first write is a coin flip. Backdating the
+// row makes "it moved" a comparison against a time that is certainly earlier, with no sleeping.
+const LONG_AGO = new Date("2020-01-01T00:00:00Z");
+const backdate = (league: string, id: string) =>
+  db.pool.query(`update games set updated_at = $3 where league = $1 and espn_id = $2`, [league, id, LONG_AGO]);
+
 const updatedAt = async (): Promise<Date> =>
   (await db.pool.query(`select updated_at from games where league = 'nba' and espn_id = 'g'`)).rows[0].updated_at;
 
@@ -56,11 +64,11 @@ test("re-ingesting a game whose data has not changed leaves updated_at alone", a
 
 test("re-ingesting a game with a new score moves updated_at", async () => {
   await games.upsertEvent("nba", event("100", "90"));
-  const first = await updatedAt();
+  await backdate("nba", "g");
 
   await games.upsertEvent("nba", event("110", "95"));
 
-  assert.ok((await updatedAt()) > first, "updated_at should advance when the score changes");
+  assert.ok((await updatedAt()) > LONG_AGO, "updated_at should advance when the score changes");
 });
 
 // IndexNow is for pages a crawler has not seen; re-announcing a game on every scrape pass
@@ -74,11 +82,11 @@ test("upsertEvent reports a game it has just created, and not one it has seen be
 
 test("a change to the status alone still moves updated_at", async () => {
   await games.upsertEvent("nba", event("100", "90", "Final"));
-  const first = await updatedAt();
+  await backdate("nba", "g");
 
   await games.upsertEvent("nba", event("100", "90", "Final/OT"));
 
-  assert.ok((await updatedAt()) > first, "updated_at should advance when the status detail changes");
+  assert.ok((await updatedAt()) > LONG_AGO, "updated_at should advance when the status detail changes");
 });
 
 // storeCricketDates already refuses to rewrite unchanged dates (the live scrape calls it on
@@ -92,10 +100,10 @@ test("a cricket match whose local day changes has its lastmod moved", async () =
   const at = async () => (await db.pool.query(`select updated_at from games where league = 'ipl' and espn_id = 'c1'`)).rows[0].updated_at;
 
   await games.storeCricketDates("ipl", "c1", "1st Match (N), Indian Premier League at Mumbai, Mar 23 2026", [], "2026-03-23T14:00:00Z");
-  const first = await at();
+  await backdate("ipl", "c1");
 
   await games.storeCricketDates("ipl", "c1", "1st Match (N), Indian Premier League at Mumbai, Mar 24 2026", [], "2026-03-24T14:00:00Z");
-  assert.ok((await at()) > first, "a new local day should move the match's lastmod");
+  assert.ok((await at()) > LONG_AGO, "a new local day should move the match's lastmod");
 
   const moved = await at();
   await games.storeCricketDates("ipl", "c1", "1st Match (N), Indian Premier League at Mumbai, Mar 24 2026", [], "2026-03-24T14:00:00Z");
