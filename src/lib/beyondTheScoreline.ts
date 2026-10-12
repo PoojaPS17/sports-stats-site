@@ -16,6 +16,7 @@ import { article as tunnicliffe171CsaPro50ByTheNumbers } from "@/content/beyondT
 import { article as kavindi145U19TriSeriesNumbers } from "@/content/beyondTheScoreline/kavindi-145-u19-tri-series-numbers";
 import { article as kapp104Super60WomenOneOut } from "@/content/beyondTheScoreline/kapp-104-super60-women-one-out";
 import { article as raysSweepYankeesAldsFirstEver } from "@/content/beyondTheScoreline/rays-sweep-yankees-alds-first-ever";
+import { article as guardians21StrikeoutsAldsComeback } from "@/content/beyondTheScoreline/guardians-21-strikeouts-alds-comeback";
 
 export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "mlb" | "tennis" | "neutral";
 
@@ -89,6 +90,7 @@ export const ARTICLES: BeyondTheScorelineArticle[] = [
   kavindi145U19TriSeriesNumbers,
   kapp104Super60WomenOneOut,
   raysSweepYankeesAldsFirstEver,
+  guardians21StrikeoutsAldsComeback,
 ];
 
 assertUniqueSlugs(ARTICLES);
