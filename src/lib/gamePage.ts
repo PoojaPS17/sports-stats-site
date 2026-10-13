@@ -69,15 +69,27 @@ const noun = (league: League): string => (isUsSport(league) ? "game" : "match");
  */
 const neverPlayed = (game: Status): boolean => isGameCalledOff(game) && isNeverPlayed(game.status_detail);
 
+/** "Atlanta Braves beat Los Angeles Dodgers 4-3" for a finished game with a winner, or null (no scores, or level). */
+function mlbResultLine(game: { home_name: string; away_name: string; home_score?: number | null; away_score?: number | null }): string | null {
+  const { home_score: home, away_score: away } = game;
+  if (home == null || away == null || home === away) return null;
+  const homeWon = home > away;
+  const [winner, loser] = homeWon ? [game.home_name, game.away_name] : [game.away_name, game.home_name];
+  return `${teamDisplayName(winner)} beat ${teamDisplayName(loser)} ${Math.max(home, away)}-${Math.min(home, away)}`;
+}
+
 /**
  * The meta description of a game page. `where` is " at <venue>" or ""; `scorers` is the soccer goals line (with its
  * leading space) or "". A called-off game says it was called off and keeps the parts that stay true (form and
  * head-to-head); a finished cricket match reports its result, including "Match abandoned without a ball bowled". A
  * finished game ESPN published no player statistics for (`boxScore` false) says so where it would list a box score.
  */
-export function gameDescription(league: League, game: Status & { status_summary: string | null; home_name: string; away_name: string }, date: string, where: string, scorers = "", boxScore = true): string {
+export function gameDescription(league: League, game: Status & { status_summary: string | null; home_name: string; away_name: string; home_score?: number | null; away_score?: number | null }, date: string, where: string, scorers = "", boxScore = true): string {
   const { first, second, awayFirst } = gameSides(league, game);
   const off = offWord(game);
+  // A finished MLB game leads with who won and the score, the answer a searcher wants, then what the page holds.
+  const mlbResult = league === "mlb" && game.completed && !off && boxScore ? mlbResultLine(game) : null;
+  if (mlbResult) return `${LEAGUE_LABEL[league]}: ${mlbResult}${where}, ${date}. Box score, player stats, win probability and head-to-head.`;
   const cricket = isCricketLeague(league);
   const result = game.completed && game.status_summary ? ` ${teamDisplayName(game.status_summary)}.` : "";
   // A Test's two-innings score line is too long for a title; the description carries the result.
@@ -249,6 +261,8 @@ export function gameTitle(league: League, sides: string, score: string, when: Ti
     return fitTitle(`${sides}, ${when.date}`, `${sides}, ${when.monthDay}`, sides);
   }
   const base = `${sides}${score}`;
+  // A finished MLB game names its box score where the title has the room; long names fall back to the usual forms.
+  if (league === "mlb" && score) return fitTitle(`${base} Box Score, ${when.date}`, `${base}, ${when.date}`, `${base}, ${when.monthDay}`, `${base}, ${when.year}`, base, sides);
   return fitTitle(`${base}, ${when.date}`, `${base}, ${when.monthDay}`, `${base}, ${when.year}`, base, sides);
 }
 
