@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gameDescription, gameLeadersShown, gameSides, gameSections, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE, NO_BOX_SCORE_NOTE, playerBoxIsBlank, teamStatsFraming } from "../src/lib/gamePage";
+import { firstClassTitle, gameDescription, gameLeadersShown, gameTitle, gameSides, gameSections, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE, NO_BOX_SCORE_NOTE, playerBoxIsBlank, teamStatsFraming } from "../src/lib/gamePage";
 
 const game = (over: Record<string, unknown> = {}) => ({
   completed: false,
@@ -330,4 +330,38 @@ test("gameLeadersShown: a game with no box score shows no leaders, since a leade
   assert.deepEqual(gameLeadersShown({ leaders: false }, false, leaders), []);
   assert.deepEqual(gameLeadersShown({ leaders: true }, false, undefined), []);
   assert.deepEqual(gameLeadersShown({ leaders: true }, true, undefined), []);
+});
+
+/* ---- titles ------------------------------------------------------------- */
+
+test("firstClassTitle: a Test carries its start day, so the Tests of one series in one month stay apart", () => {
+  assert.equal(firstClassTitle("Sri Lanka", "India", "Aug 23, 2026"), "Sri Lanka v India Test, Aug 23, 2026");
+  assert.notEqual(firstClassTitle("England", "India", "Aug 4, 2018"), firstClassTitle("England", "India", "Aug 18, 2018"));
+});
+
+test("firstClassTitle: names too long for a result lose 'Test' before the date", () => {
+  const long = firstClassTitle("A Very Long Team Name Of Many Words", "Another Very Long Team Name", "Aug 23, 2026");
+  assert.equal(long, "A Very Long Team Name Of Many Words v Another Very Long Team Name, Aug 23, 2026");
+});
+
+test("gameTitle: a scored game keeps its score, as before", () => {
+  assert.equal(gameTitle("odi", "India vs West Indies", " 351/7-352/5", "Oct 3, 2026"), "India vs West Indies 351/7-352/5");
+  assert.equal(gameTitle("epl", "Arsenal vs Chelsea", " 2-1", "Oct 3, 2026"), "Arsenal vs Chelsea 2-1");
+});
+
+test("gameTitle: a cricket match with no score carries its date", () => {
+  assert.equal(gameTitle("wbbl", "Sydney Sixers Women vs Sydney Thunder Women", "", "Oct 3, 2026"), "Sydney Sixers Women vs Sydney Thunder Women, Oct 3, 2026");
+  assert.equal(gameTitle("t20i", "Belgium vs Malta", "", "Jun 11, 2022"), "Belgium vs Malta, Jun 11, 2022");
+});
+
+test("gameTitle: other sports' unscored games keep the bare sides", () => {
+  assert.equal(gameTitle("epl", "Nottingham Forest vs Arsenal", "", "Oct 18, 2026"), "Nottingham Forest vs Arsenal");
+  assert.equal(gameTitle("nba", "Dallas Mavericks vs Houston Rockets", "", "Oct 11, 2026"), "Dallas Mavericks vs Houston Rockets");
+});
+
+test("gameTitle: long cricket names with no score keep the day and lose the year, then the date", () => {
+  const sides = "Perth Scorchers Women vs Hobart Hurricanes Women";
+  assert.equal(gameTitle("wbbl", sides, "", "Oct 3, 2026", "Oct 3"), `${sides}, Oct 3`);
+  const longer = "Rajasthan Royals vs Sunrisers Hyderabad Extra Long Name Indeed";
+  assert.equal(gameTitle("ipl", longer, "", "May 27, 2026", "May 27"), longer);
 });

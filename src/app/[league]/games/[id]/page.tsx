@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
 import { notFound } from "next/navigation";
 import { isLeague, isCricketLeague, isFirstClassCricket, LEAGUE_LABEL, getGameByEspnId, getGameDetails, getPlayerSlugsByEspnIds, isSoccerLeague } from "@/lib/queries";
-import { fitTitle, pageMeta } from "@/lib/metadata";
+import { pageMeta } from "@/lib/metadata";
 import { formatGameDate } from "@/lib/gameDay";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { HeadToHeadStrip } from "@/components/HeadToHeadStrip";
@@ -10,7 +10,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { gameSchema } from "@/lib/structuredData";
 import { fetchMatchSummary, extractGameDetails, presentDetails, type GameDetails, type MatchSport } from "@/lib/matchDetail";
 import { getMatchContext } from "@/lib/matchContext";
-import { gameDescription, gameLeadersShown, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, scoreLineSides, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
+import { firstClassTitle, gameDescription, gameLeadersShown, gameTitle, gameSections, gameSides, hasNoBoxScore, hasTeamStats, matchContextView, matchupLabel, scoreLineHomeFirst, scoreLineSides, NO_BOX_SCORE_NOTE, teamStatsFraming } from "@/lib/gamePage";
 import { AdSlot } from "@/components/AdSlot";
 import { MatchHeader } from "@/components/MatchHeader";
 import { NotPlayedGame } from "@/components/NotPlayedGame";
@@ -134,14 +134,12 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   const boxScore = !(details && !isCricketLeague(league) && hasNoBoxScore(game, details.player_box));
   const description = gameDescription(league, game, date, where, game.completed ? scorersLine(details) : "", boxScore);
   // A Test's two-innings score line ("254 & 258 (95.2 ov, target 271)") is too long
-  // for a title; the month names the match and the description carries the result.
+  // for a title; the start day names the match and the description carries the result.
   if (isFirstClassCricket(league)) {
-    const month = formatGameDate(game.date, league, { month: "long", year: "numeric" }, game.local_date);
-    return pageMeta(`${teamDisplayName(first)} v ${teamDisplayName(second)} Test, ${month}`, description, `/${league}/games/${id}`, { ownImage: true });
+    return pageMeta(firstClassTitle(teamDisplayName(first), teamDisplayName(second), date), description, `/${league}/games/${id}`, { ownImage: true });
   }
-  // When two long names and a score would not fit a search result the score goes, then (if it fits) the date stands in for it.
   const sides = `${teamDisplayName(first)} vs ${teamDisplayName(second)}`;
-  return pageMeta(fitTitle(`${sides}${score}`, `${sides}, ${date}`, sides), description, `/${league}/games/${id}`, { ownImage: true });
+  return pageMeta(gameTitle(league, sides, score, date, formatGameDate(game.date, league, { month: "short", day: "numeric" }, game.local_date)), description, `/${league}/games/${id}`, { ownImage: true });
 }
 
 export default async function GameDetailPage({ params }: { params: Promise<{ league: string; id: string }> }) {
