@@ -6,7 +6,9 @@ import { gameCalledOffLabel, isGameCalledOff, isNeverPlayed } from "./gameStatus
 import { isCricketLeague, isFirstClassCricket, isSoccerLeague, isUsSport, LEAGUE_LABEL, type League } from "./leagues";
 import { teamDisplayName } from "./teamName";
 import { scoreLineOrder } from "./cricketOrder";
+import type { Metadata } from "next";
 import { fitTitle } from "./metadata";
+import { absoluteUrl } from "./site";
 import type { CricketTeamScorecard } from "./matchDetail";
 
 interface Status {
@@ -248,4 +250,22 @@ export function gameTitle(league: League, sides: string, score: string, when: Ti
   }
   const base = `${sides}${score}`;
   return fitTitle(`${base}, ${when.date}`, `${base}, ${when.monthDay}`, `${base}, ${when.year}`, base, sides);
+}
+
+/**
+ * The share image of a game rendered under final/[id], where Next finds no opengraph-image file to name
+ * (the file sits beside the live route) and the card goes out as a bare link. The page's own metadata
+ * is kept; its image is named, at the path the live route serves it, only when it has none of its own
+ * (a page already carrying the site image keeps that).
+ */
+export function withShareImage(meta: Metadata, imagePath: string, alt: string): Metadata {
+  if (!meta.openGraph) return meta;
+  const og = meta.openGraph as { images?: unknown };
+  if (og.images) return meta;
+  const url = absoluteUrl(imagePath);
+  return {
+    ...meta,
+    openGraph: { ...meta.openGraph, images: [{ url, width: 1200, height: 630, alt }] },
+    twitter: { ...meta.twitter, images: [url] },
+  };
 }

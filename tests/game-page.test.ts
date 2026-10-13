@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { firstClassTitle, gameDescription, gameLeadersShown, gameTitle, gameSides, gameSections, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE, NO_BOX_SCORE_NOTE, playerBoxIsBlank, teamStatsFraming } from "../src/lib/gamePage";
+import { absoluteUrl } from "../src/lib/site";
+import { firstClassTitle, withShareImage, gameDescription, gameLeadersShown, gameTitle, gameSides, gameSections, hasNoBoxScore, hasTeamStats, matchContextView, NO_BOX_SCORE, NO_BOX_SCORE_NOTE, playerBoxIsBlank, teamStatsFraming } from "../src/lib/gamePage";
 
 const game = (over: Record<string, unknown> = {}) => ({
   completed: false,
@@ -375,4 +376,22 @@ test("gameTitle: a long name keeps the day, then the year, then the bare score, 
   assert.equal(gameTitle("nba", "Los Angeles Clippers vs Oklahoma City Thunder", " 120-118", OCT3), "Los Angeles Clippers vs Oklahoma City Thunder 120-118, 2026");
   const huge = "A Very Very Long Football Club Name vs Another Very Long Football Club Name";
   assert.equal(gameTitle("epl", huge, " 10-0", OCT3), huge);
+});
+
+test("withShareImage: a finished game's metadata names its share image, which the final route has no file for", () => {
+  const meta = { title: "A vs B 1-0, Oct 12, 2026", openGraph: { title: "A vs B" }, twitter: { card: "summary_large_image" as const, title: "A vs B" } };
+  const out = withShareImage(meta, "/epl/games/401879267/opengraph-image", "A vs B on SportsDB");
+  const og = out.openGraph as { images: { url: string; width: number; height: number; alt: string }[] };
+  assert.equal(og.images[0].url, absoluteUrl("/epl/games/401879267/opengraph-image"));
+  assert.deepEqual([og.images[0].width, og.images[0].height], [1200, 630]);
+  assert.deepEqual((out.twitter as { images: string[] }).images, [absoluteUrl("/epl/games/401879267/opengraph-image")]);
+  assert.equal((out.twitter as { card: string }).card, "summary_large_image");
+  assert.equal(out.title, meta.title);
+});
+
+test("withShareImage: metadata that already has an image, or none at all, is left alone", () => {
+  const has = { openGraph: { images: [{ url: "https://sports-db.live/opengraph-image" }] }, twitter: { images: ["x"] } };
+  assert.equal(withShareImage(has, "/a/b", "alt"), has);
+  const none = {};
+  assert.equal(withShareImage(none, "/a/b", "alt"), none);
 });

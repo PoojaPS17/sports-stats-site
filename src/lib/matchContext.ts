@@ -6,7 +6,7 @@ import { pool } from "./db";
 import { isRegularSeasonGame } from "./gameStage";
 import { computeElo, computeTable, getTeamMap, isSoccer, type ResultRow } from "./analytics";
 import { matchProbabilities } from "./simulator";
-import { buildMatchweeks, getSeasonGames, supportsMatchweeks, weekPath } from "./matchweeks";
+import { buildMatchweeks, getSeasonGames, getSeasonsWithGames, supportsMatchweeks, weekPath } from "./matchweeks";
 import { isCricketLeague, isCupCompetition, UCL_LEAGUE_PHASE_FROM, type GameRow, type League } from "./queries";
 
 export type FormResult = "W" | "D" | "L";
@@ -118,7 +118,11 @@ export async function getMatchContext(league: League, game: GameRow): Promise<Ma
     const weeks = buildMatchweeks(league, await getSeasonGames(league, game.season_year));
     const w = weeks.find((x) => x.games.some((g) => g.espn_id === game.espn_id));
     if (w) {
-      week = { label: w.label, href: weekPath(league, w.index, game.season_year) };
+      // The latest season's rounds are canonical without the year (/epl/matchweek/6), the address the
+      // hub and the sitemap use; /epl/matchweek/2026/6 names it as canonical, so a link there would
+      // send crawlers to a second address for the same page. Older seasons have only the long form.
+      const seasons = await getSeasonsWithGames(league);
+      week = { label: w.label, href: weekPath(league, w.index, game.season_year === seasons[0] ? null : game.season_year) };
       weekGames = w.games.filter((g) => g.espn_id !== game.espn_id);
     }
   }

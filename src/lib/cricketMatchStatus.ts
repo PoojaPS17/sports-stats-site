@@ -133,6 +133,15 @@ export function cricketMatchDescription(m: SeoFields): string {
   // The description is clamped at 160 characters, so a result in full names comes first and stands as its own sentence.
   if (line) return `${line}${cricketMatchWhere(m.description, m.series_name)}${day ? `, ${day}` : ""}. Match scorecard with full batting and bowling figures, Playing XI, umpires and venue.`;
   if (kind === "result") return `${name} match scorecard and result, ${where}${day ? `, ${day}` : ""}${summary}. Full batting and bowling scorecard, Playing XI, umpires and venue.`;
+  if (kind === "live" && m.status_summary) {
+    // The state of play ("Afghanistan require another 347 runs with 7 wickets remaining") is what a
+    // searcher wants and what changes, so it leads and the series and date follow, each a whole sentence;
+    // the tail, then the date, then the series are dropped before the state would be cut.
+    const state = `${name} live score: ${m.status_summary.trim().replace(/[.\s]+$/, "")}.`;
+    const context = `${where}${day ? `, ${day}` : ""}.`;
+    const fits = [`${state} ${context} Scorecard, Playing XI and match facts, updating live.`, `${state} ${context}`, `${state} ${where}.`, state].find((d) => d.length <= 160);
+    if (fits) return fits;
+  }
   if (kind === "live") return `${name} live score and scorecard, ${where}${day ? `, ${day}` : ""}${summary}. Batting and bowling figures, Playing XI and match facts, updating while the match is in play.`;
   return `${name} live score and scorecard, ${where}${day ? `, starts ${day}` : ""}. Playing XI and match facts once play starts.`;
 }

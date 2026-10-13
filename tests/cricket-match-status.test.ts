@@ -99,8 +99,17 @@ test("cricketMatchDescription: a result leads with the match scorecard and the r
   );
   assert.equal(
     cricketMatchDescription({ ...base, ...m("in", "Stumps") }),
-    "India vs Australia live score and scorecard, 2nd ODI, Tour of India, Oct 2, 2026: Stumps. Batting and bowling figures, Playing XI and match facts, updating while the match is in play."
+    "India vs Australia live score: Stumps. 2nd ODI, Tour of India, Oct 2, 2026. Scorecard, Playing XI and match facts, updating live."
   );
+  // The state of play leads and stays whole: a long series name drops the tail, then the date, then the series, before the state is cut.
+  const long = { name: "Afghanistan v Bangladesh", series_name: "Bangladesh tour of United Arab Emirates 2026/27", description: null, date: "2026-10-09T04:00:00Z" };
+  const live = cricketMatchDescription({ ...long, ...m("in", "Afghanistan require another 347 runs with 7 wickets remaining.") });
+  assert.equal(live, "Afghanistan vs Bangladesh live score: Afghanistan require another 347 runs with 7 wickets remaining. Bangladesh tour of United Arab Emirates 2026/27.");
+  assert.ok(live.length <= 160 && !live.includes("…"));
+  const huge = cricketMatchDescription({ ...long, series_name: "The Extended Invitational Cricket Championship of the Gulf and Asia 2026/27 Super Series", ...m("in", "Afghanistan require another 347 runs with 7 wickets remaining") });
+  assert.equal(huge, "Afghanistan vs Bangladesh live score: Afghanistan require another 347 runs with 7 wickets remaining.");
+  // A live match with no summary yet keeps the general wording.
+  assert.match(cricketMatchDescription({ ...long, ...m("in", null) }), /^Afghanistan vs Bangladesh live score and scorecard,/);
   // With the stored sides, the result is written in full names, the winner first (ESPN's summary abbreviates: "BAN-WMN
   // U19 won by 30 runs"; the queries that find these pages type the names in full).
   assert.equal(

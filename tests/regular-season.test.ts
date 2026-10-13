@@ -523,3 +523,13 @@ test("a season whose only unfinished game was cancelled is finished", async () =
     }
   );
 });
+
+test("a game's round link is the canonical address: bare for the latest season, with the year for older ones", async () => {
+  const game = await queries.getGameByEspnId("epl", "m1");
+  const ctx = await matchContext.getMatchContext("epl", game!);
+  if (ctx?.week) {
+    const latest = (await (await import("../src/lib/matchweeks")).getSeasonsWithGames("epl"))[0];
+    const expected = game!.season_year === latest ? /^\/epl\/matchweek\/\d+$/ : /^\/epl\/matchweek\/\d{4}\/\d+$/;
+    assert.match(ctx.week.href, expected);
+  }
+});
