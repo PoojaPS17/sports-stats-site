@@ -2,7 +2,7 @@
 // The cricket match page, shared by its two routes (see CricketMatchPage below).
 import type { Metadata } from "next";
 import { teamDisplayName } from "@/lib/teamName";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { fitTitle, pageMeta } from "@/lib/metadata";
 import { absoluteUrl } from "@/lib/site";
 import { AdSlot } from "@/components/AdSlot";
@@ -86,8 +86,10 @@ async function loadSummary(id: string, stored: { series_espn_id: string; status_
 export async function CricketMatchPage({ id, mode }: { id: string; mode: CricketMatchMode }) {
   if (!/^\d+$/.test(id)) notFound();
   const stored = await getCricketSeriesMatch(id);
-  // Competitions SportsDB archives have their own match page with career links.
-  if (stored?.scorecard_league) redirect(`/${stored.scorecard_league}/games/${id}`);
+  // Competitions SportsDB archives have their own match page with career links. A match stays there once
+  // the game is stored, so the move is permanent: a 307 tells search engines this address is still the
+  // one to keep and to ask again.
+  if (stored?.scorecard_league) permanentRedirect(`/${stored.scorecard_league}/games/${id}`);
 
   const summary = await loadSummary(id, stored, mode);
   if (!summary && !stored) notFound();
