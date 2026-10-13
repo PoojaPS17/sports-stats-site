@@ -344,24 +344,35 @@ test("firstClassTitle: names too long for a result lose 'Test' before the date",
   assert.equal(long, "A Very Long Team Name Of Many Words v Another Very Long Team Name, Aug 23, 2026");
 });
 
-test("gameTitle: a scored game keeps its score, as before", () => {
-  assert.equal(gameTitle("odi", "India vs West Indies", " 351/7-352/5", "Oct 3, 2026"), "India vs West Indies 351/7-352/5");
-  assert.equal(gameTitle("epl", "Arsenal vs Chelsea", " 2-1", "Oct 3, 2026"), "Arsenal vs Chelsea 2-1");
+const day = (date: string, monthDay: string, year: string) => ({ date, monthDay, year });
+const OCT3 = day("Oct 3, 2026", "Oct 3", "2026");
+
+test("gameTitle: a scored cricket match keeps its score alone, which already tells its matches apart", () => {
+  assert.equal(gameTitle("odi", "India vs West Indies", " 351/7-352/5", OCT3), "India vs West Indies 351/7-352/5");
 });
 
 test("gameTitle: a cricket match with no score carries its date", () => {
-  assert.equal(gameTitle("wbbl", "Sydney Sixers Women vs Sydney Thunder Women", "", "Oct 3, 2026"), "Sydney Sixers Women vs Sydney Thunder Women, Oct 3, 2026");
-  assert.equal(gameTitle("t20i", "Belgium vs Malta", "", "Jun 11, 2022"), "Belgium vs Malta, Jun 11, 2022");
-});
-
-test("gameTitle: other sports' unscored games keep the bare sides", () => {
-  assert.equal(gameTitle("epl", "Nottingham Forest vs Arsenal", "", "Oct 18, 2026"), "Nottingham Forest vs Arsenal");
-  assert.equal(gameTitle("nba", "Dallas Mavericks vs Houston Rockets", "", "Oct 11, 2026"), "Dallas Mavericks vs Houston Rockets");
+  assert.equal(gameTitle("wbbl", "Sydney Sixers Women vs Sydney Thunder Women", "", OCT3), "Sydney Sixers Women vs Sydney Thunder Women, Oct 3, 2026");
+  assert.equal(gameTitle("t20i", "Belgium vs Malta", "", day("Jun 11, 2022", "Jun 11", "2022")), "Belgium vs Malta, Jun 11, 2022");
 });
 
 test("gameTitle: long cricket names with no score keep the day and lose the year, then the date", () => {
   const sides = "Perth Scorchers Women vs Hobart Hurricanes Women";
-  assert.equal(gameTitle("wbbl", sides, "", "Oct 3, 2026", "Oct 3"), `${sides}, Oct 3`);
+  assert.equal(gameTitle("wbbl", sides, "", OCT3), `${sides}, Oct 3`);
   const longer = "Rajasthan Royals vs Sunrisers Hyderabad Extra Long Name Indeed";
-  assert.equal(gameTitle("ipl", longer, "", "May 27, 2026", "May 27"), longer);
+  assert.equal(gameTitle("ipl", longer, "", day("May 27, 2026", "May 27", "2026")), longer);
+});
+
+test("gameTitle: football and the US leagues carry the day after the score, played or not", () => {
+  assert.equal(gameTitle("epl", "Arsenal vs Chelsea", " 2-1", OCT3), "Arsenal vs Chelsea 2-1, Oct 3, 2026");
+  assert.equal(gameTitle("epl", "Nottingham Forest vs Arsenal", "", day("Oct 18, 2026", "Oct 18", "2026")), "Nottingham Forest vs Arsenal, Oct 18, 2026");
+  assert.equal(gameTitle("nba", "Dallas Mavericks vs Houston Rockets", " 132-115", day("Oct 11, 2026", "Oct 11", "2026")), "Dallas Mavericks vs Houston Rockets 132-115, Oct 11, 2026");
+});
+
+test("gameTitle: a long name keeps the day, then the year, then the bare score, then the sides", () => {
+  assert.equal(gameTitle("nba", "Portland Trail Blazers vs San Antonio Spurs", " 112-108", day("Apr 11, 2027", "Apr 11", "2027")), "Portland Trail Blazers vs San Antonio Spurs 112-108, Apr 11");
+  assert.equal(gameTitle("epl", "Wolverhampton Wanderers vs Brighton & Hove Albion", " 1-0", OCT3), "Wolverhampton Wanderers vs Brighton & Hove Albion 1-0, 2026");
+  assert.equal(gameTitle("nba", "Los Angeles Clippers vs Oklahoma City Thunder", " 120-118", OCT3), "Los Angeles Clippers vs Oklahoma City Thunder 120-118, 2026");
+  const huge = "A Very Very Long Football Club Name vs Another Very Long Football Club Name";
+  assert.equal(gameTitle("epl", huge, " 10-0", OCT3), huge);
 });

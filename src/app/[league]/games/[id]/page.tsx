@@ -139,7 +139,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
     return pageMeta(firstClassTitle(teamDisplayName(first), teamDisplayName(second), date), description, `/${league}/games/${id}`, { ownImage: true });
   }
   const sides = `${teamDisplayName(first)} vs ${teamDisplayName(second)}`;
-  return pageMeta(gameTitle(league, sides, score, date, formatGameDate(game.date, league, { month: "short", day: "numeric" }, game.local_date)), description, `/${league}/games/${id}`, { ownImage: true });
+  return pageMeta(gameTitle(league, sides, score, { date, monthDay: formatGameDate(game.date, league, { month: "short", day: "numeric" }, game.local_date), year: formatGameDate(game.date, league, { year: "numeric" }, game.local_date) }), description, `/${league}/games/${id}`, { ownImage: true });
 }
 
 export default async function GameDetailPage({ params }: { params: Promise<{ league: string; id: string }> }) {
