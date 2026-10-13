@@ -19,5 +19,7 @@ test("the public game route stays dynamic and the final route is the cached copy
   const final = read("final/[id]/page.tsx");
   assert.match(final, /^export const revalidate = 86400;$/m);
   assert.match(final, /^export function generateStaticParams\(\) \{\s*return \[\];\s*\}/m);
-  assert.match(final, /export \{ default, generateMetadata \} from "\.\.\/\.\.\/\[id\]\/page";/, "the same page, so the two routes cannot drift apart");
+  assert.match(final, /export \{ default \} from "\.\.\/\.\.\/\[id\]\/page";/, "the same page, so the two routes cannot drift apart");
+  assert.match(final, /import \{ generateMetadata as gameMetadata \} from "\.\.\/\.\.\/\[id\]\/page";/, "the same metadata, with the share image named (no opengraph-image file sits under final/)");
+  assert.match(final, /withShareImage\(meta, `\/\$\{league\}\/games\/\$\{id\}\/opengraph-image`/);
 });

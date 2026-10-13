@@ -4,7 +4,18 @@
 // Such a render reads only the database, and nothing in a finished game moves, so it is kept for a
 // day: at the origin by Next (the age cap in next.config.ts still re-renders a copy older than five
 // minutes) and at the edge by Cloudflare, which follows the s-maxage this window becomes.
-export { default, generateMetadata } from "../../[id]/page";
+import type { Metadata } from "next";
+import { generateMetadata as gameMetadata } from "../../[id]/page";
+import { withShareImage } from "@/lib/gamePage";
+
+export { default } from "../../[id]/page";
+
+// The share image file lives beside the live route, so under this segment the page names it itself.
+export async function generateMetadata(props: { params: Promise<{ league: string; id: string }> }): Promise<Metadata> {
+  const { league, id } = await props.params;
+  const meta = await gameMetadata(props);
+  return withShareImage(meta, `/${league}/games/${id}/opengraph-image`, `${typeof meta.title === "string" ? meta.title : "Match page"} on SportsDB`);
+}
 
 export const revalidate = 86400;
 
