@@ -6,6 +6,7 @@ import { gameCalledOffLabel, isGameCalledOff, isNeverPlayed } from "./gameStatus
 import { isCricketLeague, isFirstClassCricket, isSoccerLeague, isUsSport, LEAGUE_LABEL, type League } from "./leagues";
 import { teamDisplayName } from "./teamName";
 import { scoreLineOrder } from "./cricketOrder";
+import { fitTitle } from "./metadata";
 import type { CricketTeamScorecard } from "./matchDetail";
 
 interface Status {
@@ -212,4 +213,25 @@ export function gameSections(game: Status): {
 } {
   const play = !neverPlayed(game);
   return { broadcastStrip: offWord(game) === null, winProbability: play, lineups: play, leaders: play, playerStats: play, playFacts: play, detailsMissingNote: play };
+}
+
+/**
+ * A Test's title: "Sri Lanka v India Test, Aug 23, 2026". The start day, not the month: a series plays several Tests in one
+ * month, and the month alone gave them all one title (622 title groups, 69% of the Test pages, before this). No two Tests
+ * between the same sides start on one day. Too long for a result, the match keeps its date and loses "Test".
+ */
+export function firstClassTitle(first: string, second: string, date: string): string {
+  return fitTitle(`${first} v ${second} Test, ${date}`, `${first} v ${second}, ${date}`);
+}
+
+/**
+ * Every other game's title: the sides and, once played, the score. A cricket match with no score on record (abandoned,
+ * no result, or yet to be played) has nothing to tell it from the same two sides' other fixtures, so it carries its date
+ * ("A vs B, Oct 3, 2026"; without the year, "A vs B, Oct 3", when the names are long). When two long names and a score
+ * would not fit a search result the score goes, then (if it fits) the date stands in for it.
+ */
+export function gameTitle(league: League, sides: string, score: string, date: string, dayOnly = date): string {
+  const dated = `${sides}, ${date}`;
+  if (isCricketLeague(league) && !score) return fitTitle(dated, `${sides}, ${dayOnly}`, sides);
+  return fitTitle(`${sides}${score}`, dated, sides);
 }
