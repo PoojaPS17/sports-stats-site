@@ -123,6 +123,17 @@ The articles up to this point read as competent beat-reporter news stories with 
 
 This amends, not replaces, §7's length/depth bar and the house style in §6: still no em dashes, no AI tells, the same fact-checking discipline, and every number sourced. It changes order and emphasis, not the length target.
 
+### 10. Craft notes from comparing against wire/broadcaster sport writing (added 2026-10-13)
+
+Prompted by a side-by-side read of a BBC Sport analysis piece. Most of what a piece like that does well comes from things we don't have (a named beat reporter on site, original interviews) and isn't worth chasing: no persona byline (§6), no invented scene-setting, no pretending to original reporting. Four things from it are genuinely portable and apply from here on:
+
+- **Attribute every claim that isn't provable from this site's own data to the specific outlet that reported it**, inline, the way a quote is attributed: `"...the fastest double century in the competition's history, per cricket.com.au."` rather than stating it as if SportsDB itself established it. This was already happening loosely (e.g. "cricket.com.au framed as..." in `davies-253-sheffield-shield-fastest-double-century`); it is now the rule for any record, superlative, or context claim this site's own pages don't carry, not just an occasional habit.
+- **One attributed human quote per article, when a real one exists, never more than that and never fabricated or paraphrased as a quote.** Pull it only from a specific outlet's own reporting (a press conference, a broadcast interview, an official statement) and name that outlet exactly as the source, the same way Stephen Warnock's quote above is "told BBC Radio 5 Live." If no outlet has a usable on-the-record quote for the story, the article runs without one; a quote is never required, and reaching for a weak or vague one just to have one is worse than skipping it. This does not relax the no-named-persona rule in §6: the desk quotes other people, it does not speak as one of them.
+- **Vary paragraph length on purpose, including some one-sentence paragraphs**, for a beat that needs emphasis (a turn in the story, the moment right after the headline number). The house style up to now has defaulted to uniform 3-5 sentence paragraphs throughout; that default stands for most of an article, but a short, standalone sentence is a legitimate tool, not a thing to smooth over into the next paragraph.
+- **Prefer one specific, checkable, colorful detail over a generic scene-setting sentence** when one is available and sourced (an exact chant, a specific sign or banner's wording, a specific gesture), the same way specific numbers are already preferred over vague ones. This is an extension of the existing "specific over generic" voice note in §6, not a new rule: it just means applying that same specificity bar to color, not only to stats.
+
+None of this changes §9: the headline stays numeric (`"the numbers behind X"` / `"X by the numbers"`), the stats block still leads, and the required leaderboard/comparison chart is still never optional. Quotes and color are seasoning on the data-first structure, not a replacement for it — that structure is this section's actual competitive edge, and a BBC-style analysis column is not something a stats-led desk should imitate wholesale.
+
 ## Explicitly out of scope
 
 - Any database table, admin UI, or publish/draft flag mechanism — file-based + git is the whole workflow (see §1).
