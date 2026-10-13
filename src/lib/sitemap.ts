@@ -6,6 +6,7 @@ import { ALL_LEAGUES, LEAGUES, hasNewsFeed, hasStandings, isCricketLeague, type 
 import { TOURS } from "./tennisTours";
 import { OTHER_TOUR_PLAYER_SQL } from "./tennis";
 import { absoluteUrl } from "./site";
+import { asianGamesHubIndexable } from "./asianGamesCricket";
 import { supportsMatchweeks, weekIndexPath, weekPath, getSeasonsWithGames, getSeasonGames, buildMatchweeks } from "./matchweeks";
 import { hasWeeks, loadWeeks } from "./matchweekPage";
 import { countedMeetingSql, supportsInjuryTracker, supportsScoreAnalytics } from "./analytics";
@@ -85,13 +86,14 @@ async function core(): Promise<Entry[]> {
     entry("/scores", "hourly", 0.8),
     entry("/f1", "daily", 0.7),
     entry("/f1/standings", "daily", 0.6),
-    entry("/asian-games", "daily", 0.6),
     entry("/asian-games/medal-tally", "daily", 0.5),
     entry("/methodology", "monthly", 0.3),
     entry("/contact", "yearly", 0.2),
     entry("/privacy", "yearly", 0.2),
     entry("/terms", "yearly", 0.2),
   ];
+  // The Asian Games hub only while it has something to show (see asianGamesCricket.ts); its medal tally always.
+  if (await asianGamesHubIndexable()) out.push(entry("/asian-games", "daily", 0.6));
   // The cricket series and match pages themselves are in cricket-series.xml and cricket-matches.xml.
   out.push(entry("/tennis", "hourly", 0.8), entry("/tennis/tournaments", "daily", 0.7), entry("/cricket/series", "hourly", 0.8));
   for (const t of TOURS) out.push(entry(`/tennis/${t}`, "daily", 0.7), entry(`/tennis/${t}/rankings`, "weekly", 0.6));
