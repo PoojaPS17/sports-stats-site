@@ -395,3 +395,45 @@ test("withShareImage: metadata that already has an image, or none at all, is lef
   const none = {};
   assert.equal(withShareImage(none, "/a/b", "alt"), none);
 });
+
+/* ---- MLB: result-first description, box score in the title ------------- */
+
+const mlbFinal = (over: Record<string, unknown> = {}) =>
+  finished({ home_name: "Atlanta Braves", away_name: "Los Angeles Dodgers", home_score: 1, away_score: 3, ...over });
+
+test("gameDescription: a finished MLB game leads with the winner and the score", () => {
+  assert.equal(
+    gameDescription("mlb", mlbFinal(), "Oct 6, 2026", " at Truist Park"),
+    "MLB: Los Angeles Dodgers beat Atlanta Braves 3-1 at Truist Park, Oct 6, 2026. Box score, player stats, win probability and head-to-head.",
+  );
+  assert.match(gameDescription("mlb", mlbFinal({ home_score: 5, away_score: 2 }), "Oct 6, 2026", ""), /^MLB: Atlanta Braves beat Los Angeles Dodgers 5-2, Oct 6, 2026\./);
+});
+
+test("gameDescription: an MLB game with no winner, no scores, no box score or called off keeps its usual wording", () => {
+  const usual = /^MLB: Los Angeles Dodgers at Atlanta Braves, Oct 6, 2026\./;
+  assert.match(gameDescription("mlb", mlbFinal({ home_score: 2, away_score: 2 }), "Oct 6, 2026", ""), usual);
+  assert.match(gameDescription("mlb", mlbFinal({ home_score: null, away_score: null }), "Oct 6, 2026", ""), usual);
+  assert.match(gameDescription("mlb", mlbFinal(), "Oct 6, 2026", "", "", false), usual);
+  assert.match(gameDescription("mlb", game({ home_name: "Atlanta Braves", away_name: "Los Angeles Dodgers" }), "Oct 6, 2026", ""), usual);
+  assert.match(gameDescription("mlb", mlbFinal({ status_detail: "Postponed" }), "Oct 6, 2026", ""), /This game was postponed\./);
+});
+
+test("gameDescription: other US leagues are unchanged by the MLB wording", () => {
+  assert.equal(gameDescription("nba", mlbFinal(), "Oct 6, 2026", ""), "NBA: Los Angeles Dodgers at Atlanta Braves, Oct 6, 2026. Scoring summary, win probability, team stats, box score and head-to-head.");
+});
+
+test("gameTitle: a finished MLB game names its box score when the title has room", () => {
+  const d = day("Oct 6, 2026", "Oct 6", "2026");
+  assert.equal(gameTitle("mlb", "Houston Astros vs Texas Rangers", " 5-2", d), "Houston Astros vs Texas Rangers 5-2 Box Score, Oct 6, 2026");
+});
+
+test("gameTitle: long MLB names drop 'Box Score' and fall back to the usual title", () => {
+  const d = day("Oct 6, 2026", "Oct 6", "2026");
+  assert.equal(gameTitle("mlb", "Los Angeles Dodgers vs Atlanta Braves", " 3-1", d), "Los Angeles Dodgers vs Atlanta Braves 3-1, Oct 6, 2026");
+});
+
+test("gameTitle: an MLB game not yet played, and the other US leagues, keep their titles", () => {
+  const d = day("Oct 6, 2026", "Oct 6", "2026");
+  assert.equal(gameTitle("mlb", "Houston Astros vs Texas Rangers", "", d), "Houston Astros vs Texas Rangers, Oct 6, 2026");
+  assert.equal(gameTitle("nba", "Dallas Mavericks vs Houston Rockets", " 132-115", d), "Dallas Mavericks vs Houston Rockets 132-115, Oct 6, 2026");
+});
