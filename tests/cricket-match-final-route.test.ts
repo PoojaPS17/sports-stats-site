@@ -66,3 +66,11 @@ test("other cricket paths and non-numeric ids are untouched", async () => {
     assert.equal(rewriteOf(res), null, path);
   }
 });
+
+test("a match that lives under its league is moved there permanently, not with a temporary redirect", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const src = readFileSync(fileURLToPath(new URL("../src/lib/cricketMatchPage.tsx", import.meta.url)), "utf8");
+  assert.match(src, /permanentRedirect\(`\/\$\{stored\.scorecard_league\}\/games\/\$\{id\}`\)/);
+  assert.doesNotMatch(src, /[^t]redirect\(`\/\$\{stored\.scorecard_league\}/, "a 307 tells search engines the old address is still the one to keep");
+});
