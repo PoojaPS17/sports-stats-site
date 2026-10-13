@@ -30,6 +30,25 @@ const nextConfig: NextConfig = {
       // The sport's front doors, for typed-in and linked addresses.
       { source: "/cricket", destination: "/cricket/series", permanent: true },
       { source: "/tennis/scores", destination: "/tennis", permanent: true },
+      // Browsers and crawlers ask for /favicon.ico whatever the page's <link> says; the icon is the
+      // generated one (src/app/icon.tsx), so they are sent there instead of getting a 404.
+      { source: "/favicon.ico", destination: "/icon", permanent: true },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          // Hardening that changes nothing a visitor sees: no content-type guessing, the browsers' own
+          // default referrer rule made explicit, no camera, microphone or location prompts (the site
+          // uses none), and no framing by another site. HSTS is set at Cloudflare, not here.
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        ],
+      },
     ];
   },
   async rewrites() {

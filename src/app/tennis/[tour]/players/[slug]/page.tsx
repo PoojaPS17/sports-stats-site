@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
-import { pageMeta } from "@/lib/metadata";
+import { fitTitle, pageMeta } from "@/lib/metadata";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema, tennisPlayerSchema } from "@/lib/structuredData";
 import { playerNotFound } from "@/lib/legacySlug";
@@ -42,7 +42,8 @@ export async function generateMetadata({ params }: { params: Promise<{ tour: str
   if (!player) return {};
   const ranking = await getTennisPlayerRanking(tour, player.espn_id);
   return pageMeta(
-    player.name,
+    // The bare name matched every query for the person; the sport and the tour say what the page is.
+    fitTitle(`${player.name} ${TOUR_LABEL[tour]} Tennis Results & Stats`, `${player.name} Tennis Results`, player.name),
     `${player.name}${ranking ? `, ${TOUR_LABEL[tour]} No. ${ranking.rank}` : ""}: match results with set scores, season win–loss record, titles and head-to-head records.`,
     `/tennis/${tour}/players/${player.slug}`
   );

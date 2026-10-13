@@ -1,17 +1,23 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { pageMeta } from "@/lib/metadata";
 import { currentEdition, isGamesOpen } from "@/lib/asianGamesEditions";
-import { isAsianGamesCricket } from "@/lib/cricketFeatured";
-import { getUpcomingCricketMatches, getLiveCricketMatches } from "@/lib/cricketSeries";
+import { asianGamesCricket, asianGamesWorthIndexing } from "@/lib/asianGamesCricket";
 import { SeriesMatchList } from "@/components/CricketSeries";
 import { SectionHeader } from "@/components/SectionHeader";
 import { AdSlot } from "@/components/AdSlot";
 
-export const metadata = pageMeta(
-  "Asian Games",
-  "Asian Games schedule, live cricket matches and the medal tally, 1951-2026.",
-  "/asian-games"
-);
+// Once the Games are over with no cricket left to show, the page says there is nothing on: it stays up
+// (the medal tally is linked from it) but is kept out of search results, and out of the sitemap.
+export async function generateMetadata(): Promise<Metadata> {
+  const { liveCricket, upcomingCricket } = await asianGamesCricket();
+  return pageMeta(
+    "Asian Games",
+    "Asian Games schedule, live cricket matches and the medal tally, 1951-2026.",
+    "/asian-games",
+    { noindex: !asianGamesWorthIndexing(isGamesOpen(currentEdition()), liveCricket.length + upcomingCricket.length) }
+  );
+}
 
 export const revalidate = 300;
 
@@ -19,13 +25,7 @@ export default async function AsianGamesPage() {
   const edition = currentEdition();
   const open = isGamesOpen(edition);
 
-  const [liveAll, upcomingAll] = await Promise.all([
-    getLiveCricketMatches(false, "asian games"),
-    getUpcomingCricketMatches(100, 20, false, "asian games"),
-  ]);
-  const liveCricket = liveAll.filter(isAsianGamesCricket);
-  const liveIds = new Set(liveCricket.map((m) => m.espn_id));
-  const upcomingCricket = upcomingAll.filter((m) => isAsianGamesCricket(m) && !liveIds.has(m.espn_id));
+  const { liveCricket, upcomingCricket } = await asianGamesCricket();
 
   return (
     <div className="flex flex-col gap-6">
