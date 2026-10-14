@@ -68,11 +68,11 @@ export function Footer() {
             title="Women's cricket"
             links={[
               { label: "WPL", href: "/wpl" },
-              { label: "Big Bash", href: "/wbbl" },
-              { label: "World Cup", href: "/wcwc" },
-              { label: "T20 World Cup", href: "/wt20wc" },
-              { label: "ODIs", href: "/wodi" },
-              { label: "T20Is", href: "/wt20i" },
+              { label: "Women's Big Bash", href: "/wbbl" },
+              { label: "Women's World Cup", href: "/wcwc" },
+              { label: "Women's T20 World Cup", href: "/wt20wc" },
+              { label: "Women's ODIs", href: "/wodi" },
+              { label: "Women's T20Is", href: "/wt20i" },
             ]}
           />
           <Column
@@ -80,12 +80,12 @@ export function Footer() {
             links={[
               { label: "Scores", href: "/tennis" },
               { label: "Calendar", href: "/tennis/tournaments" },
-              { label: "ATP rankings", href: "/tennis/atp" },
-              { label: "WTA rankings", href: "/tennis/wta" },
+              { label: "ATP rankings", href: "/tennis/atp/rankings" },
+              { label: "WTA rankings", href: "/tennis/wta/rankings" },
             ]}
           />
           <Column
-            title="F1 & more"
+            title="More"
             links={[
               { label: "F1 Calendar", href: "/f1" },
               { label: "F1 Standings", href: "/f1/standings" },
