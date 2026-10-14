@@ -91,7 +91,7 @@ export function HomeExplainersView({ lines, examples, newest }: { lines: SportLi
       </section>
 
       <section className="home-firstvisit" data-module="how-it-works" aria-labelledby="hx-how">
-        <SectionHeader plain description="Three steps, no account">
+        <SectionHeader plain description="Three steps">
           <span id="hx-how">How it works</span>
         </SectionHeader>
         <div className="hx-how">

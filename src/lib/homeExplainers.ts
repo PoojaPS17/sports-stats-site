@@ -98,7 +98,7 @@ export const HOW_STEPS: HowStep[] = [
   { n: 3, title: "Take it with you", text: "Send your page to another device with one link. Add your team's fixtures to your calendar; the feed updates itself as games finish." },
 ];
 
-export const HOW_NOTE = "No account, no email. Your picks are saved in this browser; a link moves them to another device.";
+export const HOW_NOTE = "Your picks are saved in this browser; a link moves them to another device.";
 
 /**
  * The cricket archive sentence for the trust module, read from the same years the cricket pages use, so it cannot fall
