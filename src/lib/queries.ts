@@ -1325,8 +1325,14 @@ export async function getCricketCenturies(league: League, limit: number | null =
   return rows;
 }
 
+// The header badge says when the data was last refreshed, so it reads the scraper heartbeat (stamped on every
+// successful 15-minute tick) and not max(games.updated_at), which only moves when a game row changes and read
+// "1h ago" through any quiet stretch while the scrapers were running fine. The row stamp is the fallback for a
+// database that has never recorded a tick, such as a fresh local one.
 export async function getLastUpdated(): Promise<string | null> {
-  const { rows } = await pool.query(`select max(updated_at) as updated_at from games`);
+  const { rows } = await pool.query(
+    `select coalesce((select last_ok_at from scrape_runs where scraper = 'scrape-tick'), (select max(updated_at) from games)) as updated_at`
+  );
   return rows[0]?.updated_at ? new Date(rows[0].updated_at).toISOString() : null;
 }
 
