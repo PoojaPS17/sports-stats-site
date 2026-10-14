@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { fitTitle, pageMeta } from "@/lib/metadata";
-import { tennisTournamentDescription, tennisTournamentTitleCandidates } from "@/lib/tennisTournamentSeo";
+import { tennisTournamentDescription, tennisTournamentTitleCandidates, tournamentDisplayName } from "@/lib/tennisTournamentSeo";
+import { JsonLd } from "@/components/JsonLd";
+import { breadcrumbSchema, tennisTournamentSchema } from "@/lib/structuredData";
 import { PageHeader } from "@/components/PageHeader";
 import { AdSlot } from "@/components/AdSlot";
 import { FollowButton } from "@/components/FollowButton";
@@ -52,14 +54,17 @@ export default async function TennisTournamentPage({ params }: { params: Promise
   const draws = groupMatches(matches)[0]?.draws ?? [];
   const range = formatTournamentRange(t.start_date, t.end_date);
   const tourLabel = t.tour === "both" ? "ATP · WTA" : t.tour.toUpperCase();
-  const info = { name: t.name, season: t.season, tourLabel, major: t.major, location: t.location, range };
+  const name = tournamentDisplayName(t.name, t.season);
+  const info = { name, season: t.season, tourLabel, major: t.major, location: t.location, range };
 
   return (
     <div className="flex flex-col gap-6">
+      <JsonLd data={tennisTournamentSchema(t)} />
+      <JsonLd data={breadcrumbSchema([{ label: "Tennis", href: "/tennis" }, { label: "Tournaments", href: "/tennis/tournaments" }, { label: `${name} ${t.season}` }])} />
       <PageHeader
         title={
           <>
-            {t.name} <span className="text-[var(--text-muted)]">{t.season}</span>
+            {name} <span className="text-[var(--text-muted)]">{t.season}</span>
           </>
         }
         subtitle={[tourLabel + (t.major ? " · Grand Slam" : ""), t.location, range].filter(Boolean).join(" · ")}
@@ -67,14 +72,14 @@ export default async function TennisTournamentPage({ params }: { params: Promise
         <Link href="/tennis/tournaments" className="nav-pill">
           Calendar
         </Link>
-        <FollowButton item={{ kind: "tournament", league: "tennis", refId: t.espn_id, label: `${t.name} ${t.season}`, sublabel: tourLabel, href: `/tennis/tournaments/${t.espn_id}` }} />
+        <FollowButton item={{ kind: "tournament", league: "tennis", refId: t.espn_id, label: `${name} ${t.season}`, sublabel: tourLabel, href: `/tennis/tournaments/${t.espn_id}` }} />
       </PageHeader>
 
       <AdSlot label="Tennis tournament top" />
 
       {t.champions.length > 0 && (
         <section>
-          <SectionHeader tools={<ImageActions filename={`${t.espn_id}-champions-tennis`} shareTitle={`${t.name} ${t.season} champions`} card={<TennisChampionsExportCard tournament={info} champions={t.champions} />} />}>Champions</SectionHeader>
+          <SectionHeader tools={<ImageActions filename={`${t.espn_id}-champions-tennis`} shareTitle={`${name} ${t.season} champions`} card={<TennisChampionsExportCard tournament={info} champions={t.champions} />} />}>Champions</SectionHeader>
           <div className="card grid gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-2">
             {t.champions.map((c) => (
               <div key={c.competition_type} className="flex items-baseline justify-between gap-3 text-sm">
@@ -116,7 +121,7 @@ export default async function TennisTournamentPage({ params }: { params: Promise
         </p>
       ) : (
         <section>
-          <SectionHeader tools={<ImageActions filename={`${t.espn_id}-draw-tennis`} width={860} shareTitle={`${t.name} ${t.season} draw`} card={<TennisDrawExportCard tournament={info} draws={draws} />} />}>Draw</SectionHeader>
+          <SectionHeader tools={<ImageActions filename={`${t.espn_id}-draw-tennis`} width={860} shareTitle={`${name} ${t.season} draw`} card={<TennisDrawExportCard tournament={info} draws={draws} />} />}>Draw</SectionHeader>
           <div className="card overflow-hidden">
             {draws.map((d) => (
               <TennisDrawSection key={d.type ?? "singles"} type={d.type} matches={d.matches} byRound />

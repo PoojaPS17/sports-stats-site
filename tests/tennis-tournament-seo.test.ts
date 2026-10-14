@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { fitTitle } from "../src/lib/metadata";
+import { absoluteUrl } from "../src/lib/site";
 import { tennisTournamentDescription, tennisTournamentTitleCandidates, tournamentState } from "../src/lib/tennisTournamentSeo";
 
 const open = {
@@ -47,4 +48,51 @@ test("the tournament page builds its title and description from the helpers", ()
   const page = readFileSync(fileURLToPath(new URL("../src/app/tennis/tournaments/[id]/page.tsx", import.meta.url)), "utf8");
   assert.match(page, /fitTitle\(\.\.\.tennisTournamentTitleCandidates\(t, today\)\)/);
   assert.match(page, /tennisTournamentDescription\(t, today\)/);
+});
+
+// Names as ESPN files them (the 2025 and 2026 calendars), and what people search.
+test("the sponsor, and a year already in the name, are dropped from the tournament name", async () => {
+  const { tournamentDisplayName } = await import("../src/lib/tennisTournamentSeo");
+  const cases: [string, number, string][] = [
+    ["Brisbane International presented by ANZ", 2026, "Brisbane International"],
+    ["Mubadala Abu Dhabi Open presented by Abu Dhabi Sports Council", 2026, "Mubadala Abu Dhabi Open"],
+    ["Transylvania Open powered by Kaufland", 2026, "Transylvania Open"],
+    ["BMW Open by Bitpanda", 2026, "BMW Open"],
+    ["Grand Prix Open Villa de Madrid by Silverway", 2026, "Grand Prix Open Villa de Madrid"],
+    ["Mifel Tennis Open by Telcel Oppo", 2026, "Mifel Tennis Open"],
+    ["Tucumán Open by McDonald's", 2025, "Tucumán Open"],
+    ["Axeria Open 2026 powered by Intaro Sport", 2026, "Axeria Open"],
+    ["Cerity Partners Hall of Fame Open for the Van Alen Cup Presented by the Margaret Fund", 2026, "Cerity Partners Hall of Fame Open for the Van Alen Cup"],
+    ["Next Gen ATP Finals presented by PIF", 2026, "Next Gen ATP Finals"],
+    ["Australian Open", 2026, "Australian Open"],
+    ["Wimbledon", 2026, "Wimbledon"],
+    ["China Open", 2026, "China Open"],
+    ["2026", 2026, "2026"], // nothing left once the year goes: kept as filed
+  ];
+  for (const [name, season, want] of cases) assert.equal(tournamentDisplayName(name, season), want, name);
+});
+
+test("titles, descriptions and schema use the clean name; the filed name stays as an alternate", async () => {
+  const { tennisTournamentSchema } = await import("../src/lib/structuredData");
+  const t = { ...done, name: "National Bank Open presented by Rogers", espn_id: "123", tour: "both" as const };
+  assert.deepEqual(tennisTournamentTitleCandidates(t, "2026-10-09")[0], "National Bank Open 2026 Results, Scores & Champions");
+  assert.match(tennisTournamentDescription(t, "2026-10-09"), /^National Bank Open 2026 \(Canadian Open\) results from Beijing/);
+  const s = tennisTournamentSchema(t);
+  assert.equal(s["@type"], "SportsEvent");
+  assert.equal(s.name, "National Bank Open 2026");
+  assert.deepEqual(s.alternateName, ["National Bank Open presented by Rogers", "Canadian Open"]);
+  assert.equal(s.startDate, "2026-09-24");
+  assert.equal(s.endDate, "2026-10-05");
+  assert.equal(s.url, absoluteUrl("/tennis/tournaments/123"));
+  assert.equal("organizer" in s, false, "a joint ATP and WTA event has no single organizer");
+  const plain = tennisTournamentSchema({ ...done, espn_id: "9", tour: "wta" });
+  assert.equal("alternateName" in plain, false);
+  assert.deepEqual(plain.organizer, { "@type": "SportsOrganization", name: "WTA" });
+});
+
+test("the tournament page emits the event and breadcrumb schema and shows the clean name", () => {
+  const src = readFileSync(fileURLToPath(new URL("../src/app/tennis/tournaments/[id]/page.tsx", import.meta.url)), "utf8");
+  assert.match(src, /tennisTournamentSchema\(t\)/);
+  assert.match(src, /breadcrumbSchema\(/);
+  assert.doesNotMatch(src, /\{t\.name\}/);
 });
