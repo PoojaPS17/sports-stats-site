@@ -7,9 +7,8 @@ import { after, before, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { renderToStaticMarkup } from "react-dom/server";
-import type { ReactElement } from "react";
 import { startTestDb, type TestDb } from "./helpers/testDb";
+import { renderWithCards } from "./helpers/exportCards";
 import { newerRankingNote, rankingAsOf, rankingLabel } from "../src/lib/tennisRankings";
 
 let db: TestDb;
@@ -126,7 +125,7 @@ test("getTennisRankingsAsOf is empty before the loader has run since the migrati
 /* ---- the page and the share image ---- */
 
 const text = (fragment: string) => fragment.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-const render = async () => renderToStaticMarkup((await Page({ params: Promise.resolve({ tour: "wta" }) })) as ReactElement);
+const render = async () => renderWithCards(await Page({ params: Promise.resolve({ tour: "wta" }) }));
 
 test("the page (and the share image) say which ranking they show", async () => {
   await store("wta", "1", 2, 37, "2026-09-10T07:00Z");
