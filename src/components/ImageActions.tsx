@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { CARD, CARD_FONT } from "@/lib/exportTheme";
 
 type Busy = "share" | "download" | null;
@@ -9,6 +10,15 @@ function cardAnalytics(imageUrl: string | undefined): { league: string; format: 
   if (!imageUrl) return null;
   const m = imageUrl.match(/^\/(\w+)\/games\/.+\/card\?format=(\w+)/);
   return m ? { league: m[1], format: m[2] } : null;
+}
+
+async function cardImagesLoaded(root: HTMLElement | null) {
+  if (!root) return;
+  const pending = [...root.querySelectorAll("img")].filter((img) => !img.complete);
+  await Promise.race([
+    Promise.all(pending.map((img) => new Promise((done) => { img.addEventListener("load", done, { once: true }); img.addEventListener("error", done, { once: true }); }))),
+    new Promise((done) => window.setTimeout(done, 3000)),
+  ]);
 }
 
 const pill =
@@ -25,7 +35,8 @@ function Icon({ children }: { children: ReactNode }) {
 // "Share image" + "Download image" for one data section. `card` is rendered off-screen
 // at a fixed width in the light export theme and captured from there - never the live,
 // responsive DOM - so labels never truncate and the picture looks the same wherever it
-// ends up. Share hands the PNG to the native share sheet where the browser supports
+// ends up. It is mounted only once the visitor reaches for a button (hover, focus, tap), not in the
+// page's HTML: otherwise every table on the page is in the document twice, for crawlers and for the wire. Share hands the PNG to the native share sheet where the browser supports
 // files (phones), copies the image to the clipboard on desktop, and saves it otherwise.
 // `linkUrl` is the address of the same picture rendered on the server (a path on this site): when given, a third button
 // copies that address, so the image travels as a link that unfurls in a chat or a post instead of as a file.
@@ -33,7 +44,12 @@ export function ImageActions({ filename, card, imageUrl, linkUrl, width = 720, s
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [copied, setCopied] = useState(false);
+  const [armed, setArmed] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  const arm = () => {
+    if (!imageUrl) setArmed(true);
+  };
 
   const render = async (): Promise<Blob> => {
     if (imageUrl) {
@@ -43,6 +59,9 @@ export function ImageActions({ filename, card, imageUrl, linkUrl, width = 720, s
     }
     // Loaded on the first click rather than shipped with every page that has a share button.
     const { toBlob } = await import("html-to-image");
+    // A tap with no earlier hover (phones) gets here before the card exists: mount it now and let its pictures load.
+    flushSync(() => setArmed(true));
+    await cardImagesLoaded(ref.current);
     const blob = ref.current ? await toBlob(ref.current, { pixelRatio: 2, cacheBust: true, backgroundColor: CARD.bg }) : null;
     if (!blob) throw new Error("render failed");
     return blob;
@@ -119,7 +138,7 @@ export function ImageActions({ filename, card, imageUrl, linkUrl, width = 720, s
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Image options">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Image options" onPointerEnter={arm} onFocus={arm} onTouchStart={arm}>
         <button type="button" onClick={share} disabled={busy !== null} className={pill}>
           {copied ? (
             <Icon>
@@ -151,7 +170,7 @@ export function ImageActions({ filename, card, imageUrl, linkUrl, width = 720, s
         )}
         {copied && <span className="text-xs text-[var(--text-muted)]">Paste it into X, WhatsApp or any chat.</span>}
       </div>
-      {card && (
+      {card && armed && (
         <div style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }} aria-hidden="true">
           <div ref={ref} style={{ width, boxSizing: "border-box", background: CARD.bg, padding: 20, fontFamily: CARD_FONT }}>
             {card}

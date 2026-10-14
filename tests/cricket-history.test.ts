@@ -4,6 +4,7 @@ import { createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { startTestDb, type TestDb } from "./helpers/testDb";
 import { outcome } from "./helpers/nextErrors";
+import { renderWithCards } from "./helpers/exportCards";
 import { ALL_LEAGUES, isCricketLeague } from "../src/lib/leagues";
 import { absoluteUrl } from "../src/lib/site";
 
@@ -54,7 +55,7 @@ test("getTeamHistory carries no_result and draws for a cricket team", async () =
 
 test("a cricket team's season history shows W, L, T, NR and Pts, and never a 0.000 percentage", async () => {
   const page = await HistoryPage(params({ league: "wbbl", slug: "sydney-sixers-women" }));
-  const markup = renderToStaticMarkup(page);
+  const markup = renderWithCards(page);
   const [table, image] = tables(markup);
   assert.deepEqual(heads(table), ["Season", "Finish", "W", "L", "T", "NR", "Pts"]);
   assert.deepEqual(heads(image), ["Season", "Finish", "W", "L", "T", "NR", "Pts"], "the page's share image has the same columns");
@@ -67,7 +68,7 @@ test("a cricket team's season history shows W, L, T, NR and Pts, and never a 0.0
 test("with no tied match in any season the T column is left out", async () => {
   await db.pool.query(`insert into teams (league, espn_id, name, slug) values ('wbbl', 'z', 'Hobart Hurricanes Women', 'hobart-hurricanes-women')`);
   await db.pool.query(`insert into standings (league, season, team_espn_id, wins, losses, draws, no_result, points, rank, win_percent) values ('wbbl', 2025, 'z', 7, 2, 0, 1, 15, 1, 0)`);
-  const markup = renderToStaticMarkup(await HistoryPage(params({ league: "wbbl", slug: "hobart-hurricanes-women" })));
+  const markup = renderWithCards(await HistoryPage(params({ league: "wbbl", slug: "hobart-hurricanes-women" })));
   for (const t of tables(markup)) assert.deepEqual(heads(t), ["Season", "Finish", "W", "L", "NR", "Pts"]);
   assert.doesNotMatch(markup, /0\.000/);
 });
