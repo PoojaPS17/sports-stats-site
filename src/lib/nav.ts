@@ -28,7 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "NFL", href: "/nfl" },
   { label: "NBA", href: "/nba" },
-  { label: "MLB", href: "/mlb", overflow: true },
+  { label: "MLB", href: "/mlb" },
   {
     label: "Cricket",
     picker: "cricket-series",
@@ -44,7 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "F1", href: "/f1" },
   { label: "Asian Games", href: "/asian-games", overflow: true },
-  { label: "Beyond the Scoreline", href: "/beyond-the-scoreline" },
+  { label: "Beyond the Scoreline", href: "/beyond-the-scoreline", overflow: true },
   { label: "Top Games", href: "/top-games", overflow: true },
 ];
 
