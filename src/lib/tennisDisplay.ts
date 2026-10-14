@@ -79,6 +79,22 @@ export function setCell(own: TennisSet | undefined, other: TennisSet | undefined
 }
 
 /**
+ * What a screen reader hears for one side's row of set cells: this side's games first, in set order ("6-4, 3-6, 7-5"), a
+ * match tie-break (a doubles decider) as its points ("10-6 match tie-break"). Null when no set has been played.
+ */
+export function setScoresLabel(own: TennisSet[] | undefined, other: TennisSet[] | undefined): string | null {
+  const parts: string[] = [];
+  for (let i = 0; i < Math.max(own?.length ?? 0, other?.length ?? 0); i++) {
+    const mine = own?.[i];
+    const theirs = other?.[i];
+    if (!mine) continue;
+    if (mine.tiebreak != null && mine.games <= 1 && (theirs?.games ?? 0) <= 1) parts.push(`${mine.tiebreak}-${theirs?.tiebreak ?? 0} match tie-break`);
+    else parts.push(`${mine.games}-${theirs?.games ?? 0}`);
+  }
+  return parts.length > 0 ? `Set scores ${parts.join(", ")}` : null;
+}
+
+/**
  * The ids of the matches that follow another on the same tournament, court and day, given every match of that day.
  * ESPN gives the first match on a court its real start and the rest an estimate that moves with the play before it.
  * Rows with `occupies: false` (occupiesCourt) are not counted as "earlier". The SQL twin is `after_court_match` in tennis.ts.

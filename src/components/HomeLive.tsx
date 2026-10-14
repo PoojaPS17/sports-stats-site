@@ -81,7 +81,7 @@ export function ComingUpList({ data, fill = false }: { data: HomeData; fill?: bo
         <div className={cols} data-has={hasAttr([...upcomingGames.map((g) => sportOfLeague(g.league)), ...(f1 ? ["f1" as const] : [])])}>
           {upcomingGames.map((g) => (
             <div key={`${g.league}-${g.espn_id}`} className="sf-item" data-sport={sportOfLeague(g.league)}>
-              <GameCard league={g.league} game={g} />
+              <GameCard league={g.league} game={g} showLeague />
             </div>
           ))}
           {f1 && (

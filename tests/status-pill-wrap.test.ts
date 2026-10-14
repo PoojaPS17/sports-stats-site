@@ -36,7 +36,7 @@ test("the stage and the kickoff are one flex item so they wrap together", () => 
 
 test("a GameCard's right-hand time/date cannot shrink or wrap", () => {
   const src = read("src/components/GameCard.tsx");
-  const row = src.slice(src.indexOf("<StatusPill"), src.indexOf("{rows[order[0]]}"));
+  const row = src.slice(src.indexOf("<StatusPill"), src.indexOf("{showLeague &&"));
   const right = row.slice(row.indexOf("/>") + 2);
   const classes = right.match(/className="[^"]*"/g) ?? [];
   assert.equal(classes.length, 3);

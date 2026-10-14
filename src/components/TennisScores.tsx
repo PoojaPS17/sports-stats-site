@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/LocalTime";
-import { ESTIMATED, ESTIMATED_TITLE, setCell, tennisMatchStatus } from "@/lib/tennisDisplay";
+import { ESTIMATED, ESTIMATED_TITLE, setCell, setScoresLabel, tennisMatchStatus } from "@/lib/tennisDisplay";
 import { displayCountry } from "@/lib/tennisCountry";
 import { formatTournamentRange, TENNIS_ZONE, tournamentInPlay } from "@/lib/tennisDates";
 import { COMPETITION_LABEL, COMPETITION_ORDER, type CompetitionType } from "@/lib/tennisCompetitions";
@@ -47,6 +47,8 @@ function shiftDay(day: string, delta: number): string {
 
 function SideRow({ tour, side, other, won, decided, setCount }: { tour: string; side: TennisSide; other: TennisSide; won: boolean; decided: boolean; setCount: number }) {
   const loser = decided && !won;
+  // The cells read as bare digits one after another; the group says what they are and the digits themselves stay out of the reading.
+  const setsLabel = setScoresLabel(side.sets, other.sets);
   const nameClass = loser ? "text-[var(--text-muted)]" : "font-semibold text-[var(--text)]";
   return (
     <div className="flex items-center gap-2 py-1">
@@ -79,12 +81,12 @@ function SideRow({ tour, side, other, won, decided, setCount }: { tour: string; 
         </svg>
       )}
       {setCount > 0 && (
-        <div className="flex shrink-0 gap-2.5 tabular-nums">
+        <div role={setsLabel ? "group" : undefined} aria-label={setsLabel ?? undefined} className="flex shrink-0 gap-2.5 tabular-nums">
           {Array.from({ length: setCount }, (_, i) => {
             const set = side.sets[i];
             const cell = setCell(set, other.sets[i]);
             return (
-              <span key={i} className={`${cell?.wide ? "w-8" : "w-5"} text-right text-[15px] ${set?.winner ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+              <span key={i} aria-hidden={setsLabel ? true : undefined} className={`${cell?.wide ? "w-8" : "w-5"} text-right text-[15px] ${set?.winner ? "font-bold text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
                 {cell?.text}
                 {cell?.sup != null && <sup className="ml-px text-[9px] font-medium">{cell.sup}</sup>}
               </span>

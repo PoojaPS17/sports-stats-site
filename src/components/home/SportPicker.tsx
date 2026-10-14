@@ -199,7 +199,7 @@ export function SportPicker({ ctx, lines, liveNow, counts, popular }: { ctx: Edi
           )}
           {counts && (
             <>
-              <span><b>{counts.playerPages.toLocaleString("en-GB")}</b> player pages</span>
+              <span><b>{counts.playerPages.toLocaleString("en-GB")}</b> players with stats</span>
               <span><b>{counts.cricketScorecards.toLocaleString("en-GB")}</b> cricket scorecards</span>
             </>
           )}
@@ -308,7 +308,7 @@ export function SportPicker({ ctx, lines, liveNow, counts, popular }: { ctx: Edi
               Clear my picks
             </button>
           )}
-          <small className="pk-note">{saveError ? "Couldn't save on this device" : sports.length === 0 ? "Pick at least one sport" : "Saved on this device. No account."}</small>
+          <small className="pk-note">{saveError ? "Couldn't save on this device" : sports.length === 0 ? "Pick at least one sport" : "Saved on this device."}</small>
         </div>
       </div>
     </div>
@@ -335,7 +335,7 @@ export function SportPicker({ ctx, lines, liveNow, counts, popular }: { ctx: Edi
       createPortal(
         <section className="pk-final bleed">
           <div className="pk-final-in">
-            <p className="pk-final-eyebrow">Two taps · no account · saved on this device</p>
+            <p className="pk-final-eyebrow">Two taps · saved on this device</p>
             <h2>
               Your sports, one page. <em>Built in ten seconds.</em>
             </h2>

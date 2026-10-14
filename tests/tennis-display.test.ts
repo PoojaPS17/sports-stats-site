@@ -1,7 +1,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
-import { tennisMatchCaption, tennisMatchStatus, setCell } from "../src/lib/tennisDisplay";
+import { tennisMatchCaption, tennisMatchStatus, setCell, setScoresLabel } from "../src/lib/tennisDisplay";
 import { TennisMatchLine } from "../src/components/TennisScores";
 import { MatchBox } from "../src/components/TennisTournamentExportCards";
 import type { TennisMatch, TennisSet } from "../src/lib/tennis";
@@ -207,4 +207,30 @@ test("tennisMatchCaption: a finished Final is captioned once, not 'Final · Fina
   assert.equal(tennisMatchCaption({ ...finished(), round: "Final" }), "Final · Court 4");
   assert.equal(tennisMatchCaption({ ...finished("Retired"), round: "Final" }), "Retired · Final · Court 4");
   assert.equal(tennisMatchCaption(live()), "2nd Set · Round of 16 · Court 4");
+});
+
+test("setScoresLabel: each side's row reads its own games first, set by set", () => {
+  const a = [set(6, null, true), set(3, null, false), set(7, 8, true)];
+  const b = [set(4, null, false), set(6, null, true), set(6, 6, false)];
+  assert.equal(setScoresLabel(a, b), "Set scores 6-4, 3-6, 7-6");
+  assert.equal(setScoresLabel(b, a), "Set scores 4-6, 6-3, 6-7");
+  assert.equal(setScoresLabel([], []), null);
+  assert.equal(setScoresLabel(undefined, undefined), null);
+});
+
+test("setScoresLabel: a doubles match tie-break reads as points, not a 1-0 set", () => {
+  assert.equal(setScoresLabel([set(4, null, false), set(1, 10, true)], [set(6, null, true), set(0, 6, false)]), "Set scores 4-6, 10-6 match tie-break");
+});
+
+test("the match line labels each side's set cells as a group and hides the bare digits from the reading", () => {
+  const m = fullMatch([set(6, null, true), set(3, null, false)], [set(4, null, false), set(6, null, true)]);
+  const markup = renderToStaticMarkup(TennisMatchLine({ match: m }));
+  assert.match(markup, /role="group" aria-label="Set scores 6-4, 3-6"/);
+  assert.match(markup, /role="group" aria-label="Set scores 4-6, 6-3"/);
+  assert.equal([...markup.matchAll(/aria-hidden="true"/g)].length, 4);
+});
+
+test("a match with no sets yet has no set group", () => {
+  const markup = renderToStaticMarkup(TennisMatchLine({ match: fullMatch([], [], { completed: false, status_state: "pre", winner_side: null }) }));
+  assert.doesNotMatch(markup, /Set scores/);
 });
