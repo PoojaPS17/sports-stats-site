@@ -15,6 +15,7 @@ import { h2hPath } from "./h2h";
 import { supportsProjections } from "./simulator";
 import { playerSport } from "./playerProfile";
 import { PERFORMANCE_CARD_LEAGUES } from "./performanceCardData";
+import { mlbStandoutSql } from "./mlbStandouts";
 import { noStatLineGameSql } from "./playerLog";
 import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { gameDayIso } from "./gameDay";
@@ -346,6 +347,21 @@ async function h2h(league: League): Promise<Entry[]> {
 // (same window games() already uses). jsonb_array_elements unpacks game_details.details->'leaders'
 // so this never needs a second, separately-maintained leaders table.
 async function performances(league: League): Promise<Entry[]> {
+  // ESPN's baseball summary carries no leaders, so MLB lists its standout box-score lines instead (see mlbStandouts.ts);
+  // the performance page applies the same test when it decides whether to be indexed.
+  if (league === "mlb") {
+    const { rows } = await pool.query(
+      `select distinct g.espn_id as game_espn_id, p.slug, g.updated_at
+       from player_game_stats s
+       join games g on g.league = s.league and g.espn_id = s.game_espn_id
+       join players p on p.league = s.league and p.espn_id = s.player_espn_id
+       where s.league = 'mlb' and g.completed
+         and g.season_year >= (select max(season_year) from games where league = 'mlb') - 1
+         and ${mlbStandoutSql("s")}
+       order by g.updated_at desc`,
+    );
+    return rows.map((r) => entry(`/mlb/games/${r.game_espn_id}/players/${r.slug}`, "monthly", 0.3, r.updated_at));
+  }
   // distinct: a player who leads more than one stat category in the same game (e.g. a
   // point guard leading both points and assists, a dual-threat QB leading passing and
   // rushing yards) produces one `leaders` array entry per category, so the
