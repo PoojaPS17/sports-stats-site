@@ -66,3 +66,11 @@ test("a plain-score league keeps the big numeral beside the name", () => {
   assert.ok(html.includes(">110<"));
   assert.ok(!html.includes("all out"));
 });
+
+test("showLeague names the competition on the card and in its accessible name; without it the card is unchanged", () => {
+  const g = row({ league: "ucl", completed: false, status_state: "pre", status_detail: "Scheduled", home_score: null, away_score: null, away_score_display: null, home_winner: null, away_winner: null, status_summary: null, local_date: null, home_name: "Arsenal", away_name: "Bayern" });
+  const html = renderToStaticMarkup(createElement(GameCard, { league: "ucl", game: g, showLeague: true }));
+  assert.match(html, /<p class="[^"]*">Champions League<\/p>/);
+  assert.match(html, /aria-label="Champions League: /);
+  assert.ok(!render(g).includes("Champions League"));
+});

@@ -9,6 +9,7 @@ import { Kickoff } from "./Kickoff";
 import { formatGameDate } from "@/lib/gameDay";
 import { gameAccessibleLabel, isUpcomingGame, sideScoreText } from "@/lib/gameDisplay";
 import { scoreLineSides } from "@/lib/gamePage";
+import { LEAGUE_LABEL } from "@/lib/leagues";
 
 function TeamRow({
   name,
@@ -66,7 +67,8 @@ function TeamRow({
   );
 }
 
-export function GameCard({ league, game }: { league: League; game: GameRow }) {
+/** `showLeague` names the competition on a card shown out of its own league page (the homepage lists mix Premier League, Champions League and cup fixtures). */
+export function GameCard({ league, game, showLeague = false }: { league: League; game: GameRow; showLeague?: boolean }) {
   const homeWon = game.home_winner ?? (game.home_score ?? 0) > (game.away_score ?? 0);
   const awayWon = game.away_winner ?? (game.away_score ?? 0) > (game.home_score ?? 0);
   const live = game.status_state === "in";
@@ -107,7 +109,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
   return (
     <Link prefetch={false}
       href={`/${league}/games/${game.espn_id}`}
-      aria-label={gameAccessibleLabel(league, game)}
+      aria-label={showLeague ? `${LEAGUE_LABEL[league]}: ${gameAccessibleLabel(league, game)}` : gameAccessibleLabel(league, game)}
       className={`card match block py-3 pr-4 ${live ? "match-live" : ""}`}
       style={stripeStyle(order[0] === "home" ? game.home_color : game.away_color, order[0] === "home" ? game.away_color : game.home_color)}
     >
@@ -135,6 +137,7 @@ export function GameCard({ league, game }: { league: League; game: GameRow }) {
           </span>
         )}
       </div>
+      {showLeague && <p className="mb-0.5 truncate text-xs font-medium text-[var(--text-muted)]">{LEAGUE_LABEL[league]}</p>}
       {rows[order[0]]}
       {rows[order[1]]}
       {game.completed && game.status_summary && (
