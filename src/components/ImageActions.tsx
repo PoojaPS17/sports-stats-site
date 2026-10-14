@@ -12,15 +12,6 @@ function cardAnalytics(imageUrl: string | undefined): { league: string; format: 
   return m ? { league: m[1], format: m[2] } : null;
 }
 
-async function cardImagesLoaded(root: HTMLElement | null) {
-  if (!root) return;
-  const pending = [...root.querySelectorAll("img")].filter((img) => !img.complete);
-  await Promise.race([
-    Promise.all(pending.map((img) => new Promise((done) => { img.addEventListener("load", done, { once: true }); img.addEventListener("error", done, { once: true }); }))),
-    new Promise((done) => window.setTimeout(done, 3000)),
-  ]);
-}
-
 const pill =
   "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60";
 
@@ -59,9 +50,9 @@ export function ImageActions({ filename, card, imageUrl, linkUrl, width = 720, s
     }
     // Loaded on the first click rather than shipped with every page that has a share button.
     const { toBlob } = await import("html-to-image");
-    // A tap with no earlier hover (phones) gets here before the card exists: mount it now and let its pictures load.
+    // A tap with no earlier hover (phones) gets here before the card exists: mount it now. Its logos are lazy and off-screen, so
+    // they never load by themselves; html-to-image fetches them while it draws, exactly as it did when the card was always there.
     flushSync(() => setArmed(true));
-    await cardImagesLoaded(ref.current);
     const blob = ref.current ? await toBlob(ref.current, { pixelRatio: 2, cacheBust: true, backgroundColor: CARD.bg }) : null;
     if (!blob) throw new Error("render failed");
     return blob;
