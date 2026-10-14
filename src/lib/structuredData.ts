@@ -9,6 +9,7 @@ import { scoreLineSides } from "./gamePage";
 import { cricketSchemaStatus } from "./cricketMatchStatus";
 // schema.org builders for the structured data blocks on key pages.
 import { LEAGUE_LABEL, type GameRow, type League } from "./queries";
+import { tournamentAliases, tournamentDisplayName } from "./tennisTournamentSeo";
 import { CONTACT_EMAIL, SITE_NAME, SITE_URL, absoluteUrl } from "./site";
 
 export function websiteSchema() {
@@ -153,6 +154,31 @@ export function tennisPlayerSchema(tour: string, player: { name: string; slug: s
     url: absoluteUrl(`/tennis/${tour}/players/${player.slug}`),
     jobTitle: "Tennis player",
     ...(player.headshot_url ? { image: player.headshot_url } : {}),
+  };
+}
+
+/**
+ * A tennis tournament edition (/tennis/tournaments/<id>). No competitors: a draw has 128 of them, and the page's draw
+ * is the place to read them. Dates are the Eastern calendar dates the site stores, so date-only. The sponsor is not
+ * part of the name (see tournamentDisplayName); the name ESPN files stays as `alternateName` when it differs.
+ */
+export function tennisTournamentSchema(t: { espn_id: string; name: string; season: number; location: string | null; tour: "atp" | "wta" | "both"; start_date: string | null; end_date: string | null }) {
+  const name = tournamentDisplayName(t.name, t.season);
+  const alternate = [...(t.name !== name ? [t.name] : []), ...tournamentAliases(name)];
+  const organizer = t.tour === "both" ? null : t.tour.toUpperCase();
+  return {
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    name: `${name} ${t.season}`,
+    ...(alternate.length ? { alternateName: alternate } : {}),
+    sport: "Tennis",
+    ...(t.start_date ? { startDate: t.start_date.slice(0, 10) } : {}),
+    ...(t.end_date ? { endDate: t.end_date.slice(0, 10) } : {}),
+    eventStatus: schemaStatusForLabel(null),
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    url: absoluteUrl(`/tennis/tournaments/${t.espn_id}`),
+    ...(t.location ? { location: place(t.location, null) } : {}),
+    ...(organizer ? { organizer: { "@type": "SportsOrganization", name: organizer } } : {}),
   };
 }
 

@@ -16,6 +16,31 @@ export interface TournamentSeoFields {
   champions: { competition_type: string; names: string[] }[];
 }
 
+// Other names the same event is searched under; keyed by the cleaned name.
+const ALIASES: Record<string, string[]> = {
+  "National Bank Open": ["Canadian Open"],
+};
+
+export function tournamentAliases(cleanName: string): string[] {
+  return ALIASES[cleanName] ?? [];
+}
+
+/**
+ * The name people search: ESPN files the sponsor into it ("Miami Open presented by Itau", "BMW Open by Bitpanda",
+ * "Transylvania Open powered by Kaufland"), and sometimes the year too ("Axeria Open 2026 powered by ..."), which the
+ * title adds again. The sponsor tail goes from its first "presented by", "powered by" or "by"; a name that would
+ * come out empty or tiny is left as filed.
+ */
+export function tournamentDisplayName(name: string, season: number): string {
+  const cut = name
+    .replace(/\s+(?:presented|powered)\s+by\b.*$/i, "")
+    .replace(/\s+by\s+.+$/i, "")
+    .replace(new RegExp(`\\s*\\b${season}\\b`, "g"), "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cut.length >= 3 ? cut : name;
+}
+
 export type TournamentState = "upcoming" | "live" | "finished";
 
 /** On `today` (an Eastern date, see tennisDates.ts): before its dates upcoming, inside them live until the singles final, then finished. */
@@ -28,7 +53,7 @@ export function tournamentState(t: TournamentSeoFields, today: string): Tourname
 
 /** Longest form first, for fitTitle; the bare name and season last. */
 export function tennisTournamentTitleCandidates(t: TournamentSeoFields, today: string): string[] {
-  const base = `${t.name} ${t.season}`;
+  const base = `${tournamentDisplayName(t.name, t.season)} ${t.season}`;
   switch (tournamentState(t, today)) {
     case "finished":
       return [`${base} Results, Scores & Champions`, `${base} Results & Scores`, `${base} Results`, base];
@@ -40,7 +65,9 @@ export function tennisTournamentTitleCandidates(t: TournamentSeoFields, today: s
 }
 
 export function tennisTournamentDescription(t: TournamentSeoFields, today: string): string {
-  const base = `${t.name} ${t.season}`;
+  const clean = tournamentDisplayName(t.name, t.season);
+  const alias = tournamentAliases(clean);
+  const base = `${clean} ${t.season}${alias.length ? ` (${alias.join(", ")})` : ""}`;
   const from = t.location ? ` from ${t.location}` : "";
   const range = formatTournamentRange(t.start_date, t.end_date);
   const when = range ? `, ${range}` : "";
