@@ -45,7 +45,7 @@ export function Nav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5 max-[400px]:gap-0.5 max-[340px]:gap-0">
-          {/* 176px until the nav has room at 1536px: the "More" menu folds Asian Games and Top Games out of the top-level nav so the rest fits from 1024px. */}
+          {/* 176px until the nav has room at 1536px: the "More" menu folds Asian Games, Beyond the Scoreline and Top Games out of the top-level nav so the sports (MLB included) fit from 1024px. */}
           <div className="hidden w-44 xl:block 2xl:w-64">
             <SearchBar />
           </div>
