@@ -113,7 +113,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ league:
         return (
           <section key={day}>
             <SectionHeader
-              action={{ label: "Full day →", href: `/${league}/scores/${iso}` }}
+              action={{ label: "Full day", href: `/${league}/scores/${iso}` }}
               tools={
                 <ImageActions
                   filename={`${league}-scores-${iso}`}
