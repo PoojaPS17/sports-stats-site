@@ -20,7 +20,7 @@ import { notPseudoAthleteSql } from "./pseudoAthlete";
 import { gameDayIso } from "./gameDay";
 import { dropNotNeeded } from "./playoffSeriesData";
 import { isPlaceholderTeamSql } from "./playoffSeries";
-import { isAliasTeamSql } from "./teamAliases";
+import { canonicalTeamIdSql, isAliasTeamSql } from "./teamAliases";
 import { listArticles } from "./beyondTheScoreline";
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -136,11 +136,12 @@ async function teams(league: League): Promise<Entry[]> {
     out.push(entry(`/${league}/teams/${slug}`, "daily", 0.8), entry(`/${league}/teams/${slug}/about`, "monthly", 0.3));
     if (supportsScoreAnalytics(league)) out.push(entry(`/${league}/teams/${slug}/history`, "monthly", 0.5));
   }
-  // One results page per team per season played.
+  // One results page per team per season played. A game stored under an alias id (see teamAliases.ts)
+  // counts for the canonical team: the alias's own page redirects, and the canonical page lists those games.
   const { rows: seasons } = await pool.query(
     `select distinct t.slug, g.season_year from games g
-     join teams t on t.league = g.league and t.espn_id in (g.home_team_espn_id, g.away_team_espn_id)
-     where g.league = $1 and g.season_year is not null and not ${isPlaceholderTeamSql("t")}
+     join teams t on t.league = g.league and t.espn_id in (${canonicalTeamIdSql("g.league", "g.home_team_espn_id")}, ${canonicalTeamIdSql("g.league", "g.away_team_espn_id")})
+     where g.league = $1 and g.season_year is not null and not ${isPlaceholderTeamSql("t")} and not ${isAliasTeamSql("t")}
      order by t.slug, g.season_year desc`,
     [league]
   );
