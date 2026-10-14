@@ -65,7 +65,14 @@ interface SeriesSeoFields {
   name: string;
   formats: string[];
   teams: { name: string }[];
+  /** Matches stored for the series. Absent or unknown, "between X and Y" is never claimed. */
+  match_count?: number;
 }
+
+// "Between X and Y" says the series is a contest of those two sides. A lone match (a Ranji Trophy edition with one
+// stored fixture) is not a series between two teams, and a bilateral tour has at least two matches (the shortest is
+// two Tests), so two is the least that earns the wording. A series with more than two teams never does.
+const MIN_BILATERAL_MATCHES = 2;
 
 function list(items: string[]): string {
   return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
@@ -83,7 +90,7 @@ export function cricketSeriesTitleCandidates(s: { name: string }, hasTable: bool
 const DESCRIPTION_LIMIT = 160;
 
 /**
- * What the page holds, the format in words, and the teams when there are four or fewer and they fit. With `leaders`
+ * What the page holds, the format in words, and the two teams when it is a genuine two-team series (two teams, at least two matches) and they fit. With `leaders`
  * (the series' most runs and most wickets, see cricketSeriesStats.ts) the format tail gives way to them, so the
  * snippet names the players and moves as the series does. `leaders` may be several wordings, fullest first: the first
  * that fits a search result is used (a scope note on the figures yields before the players do).
@@ -97,7 +104,11 @@ export function cricketSeriesDescription(s: SeriesSeoFields, hasTable: boolean, 
   const holds = hasTable ? "fixtures, results, points table and live scores" : "fixtures, results and live scores";
   const format = list(seriesFormatLabels(s.formats));
   const base = `${s.name}: ${holds} for every ${format ? `${format} ` : ""}match`;
-  const withTeams = s.teams.length > 0 && s.teams.length <= 4 ? `${base} between ${list(s.teams.map((t) => t.name))}.` : null;
+  // Facts only for a series too thin to be a contest: one stored match, or none.
+  if (s.match_count === 0) return `${s.name}: ${holds}, as matches are listed.`;
+  if (s.match_count === 1) return `${s.name}: ${holds} for its one ${format ? `${format} ` : ""}match, with the scorecard.`;
+  const bilateral = s.teams.length === 2 && s.match_count !== undefined && s.match_count >= MIN_BILATERAL_MATCHES;
+  const withTeams = bilateral ? `${base} between ${list(s.teams.map((t) => t.name))}.` : null;
   return withTeams && withTeams.length <= DESCRIPTION_LIMIT ? withTeams : `${base}, with the scorecard of each.`;
 }
 

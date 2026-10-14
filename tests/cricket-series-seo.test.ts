@@ -34,11 +34,12 @@ test("cricketSeriesDescription: what the page holds, the format in words, the te
   // The team list is dropped when it would push the description past what a search result shows (160 characters),
   // since a list cut mid-name says less than no list.
   assert.equal(cricketSeriesDescription(tri, true), "Pakistan Women's Under-19s T20 Tri-Series 2026/27: fixtures, results, points table and live scores for every youth T20 match, with the scorecard of each.");
+  // Three sides is no contest between them: the teams are not listed.
   assert.equal(
-    cricketSeriesDescription({ name: "U19 Tri-Series 2026/27", formats: ["Youth T20"], teams: [{ name: "Bangladesh U19" }, { name: "Pakistan U19" }, { name: "Nepal U19" }] }, true),
-    "U19 Tri-Series 2026/27: fixtures, results, points table and live scores for every youth T20 match between Bangladesh U19, Pakistan U19 and Nepal U19."
+    cricketSeriesDescription({ name: "U19 Tri-Series 2026/27", formats: ["Youth T20"], teams: [{ name: "Bangladesh U19" }, { name: "Pakistan U19" }, { name: "Nepal U19" }], match_count: 6 }, true),
+    "U19 Tri-Series 2026/27: fixtures, results, points table and live scores for every youth T20 match, with the scorecard of each."
   );
-  assert.equal(cricketSeriesDescription({ name: "India tour of Australia 2026-27", formats: ["Test", "T20I"], teams: [{ name: "India" }, { name: "Australia" }] }, false), "India tour of Australia 2026-27: fixtures, results and live scores for every Test and T20I match between India and Australia.");
+  assert.equal(cricketSeriesDescription({ name: "India tour of Australia 2026-27", formats: ["Test", "T20I"], teams: [{ name: "India" }, { name: "Australia" }], match_count: 8 }, false), "India tour of Australia 2026-27: fixtures, results and live scores for every Test and T20I match between India and Australia.");
   assert.equal(cricketSeriesDescription({ name: "Odd Cup", formats: ["Other match"], teams: [] }, false), "Odd Cup: fixtures, results and live scores for every match, with the scorecard of each.");
 });
 
@@ -96,4 +97,28 @@ test("seriesIsMultiDayOnly: true only when every class card is multi-day", () =>
   assert.equal(seriesIsMultiDayOnly(["List A", "Twenty20"]), false);
   // Nothing known is not "multi-day".
   assert.equal(seriesIsMultiDayOnly([]), false);
+});
+
+// "Between X and Y" only for a genuine two-team series: exactly two teams and at least two stored matches.
+const ranji = { name: "Ranji Trophy 2000-01", formats: ["First-class"], teams: [{ name: "Mumbai" }, { name: "Delhi" }] };
+test("cricketSeriesDescription: two-team series with many matches keeps 'between X and Y'", () => {
+  assert.equal(cricketSeriesDescription({ ...ranji, name: "Pakistan tour of England 2026", formats: ["Test"], teams: [{ name: "Pakistan" }, { name: "England" }], match_count: 3 }, false), "Pakistan tour of England 2026: fixtures, results and live scores for every Test match between Pakistan and England.");
+  assert.match(cricketSeriesDescription({ ...ranji, match_count: 2 }, false), / between Mumbai and Delhi\.$/);
+});
+
+test("cricketSeriesDescription: a single stored match is not described as a series between two teams", () => {
+  const d = cricketSeriesDescription({ ...ranji, match_count: 1 }, false);
+  assert.equal(d, "Ranji Trophy 2000-01: fixtures, results and live scores for its one first-class match, with the scorecard.");
+  assert.doesNotMatch(d, /between/);
+});
+
+test("cricketSeriesDescription: a multi-team tournament never says 'between'", () => {
+  const d = cricketSeriesDescription({ ...ranji, teams: [{ name: "Mumbai" }, { name: "Delhi" }, { name: "Goa" }], match_count: 12 }, false);
+  assert.equal(d, "Ranji Trophy 2000-01: fixtures, results and live scores for every first-class match, with the scorecard of each.");
+  assert.doesNotMatch(d, /between/);
+});
+
+test("cricketSeriesDescription: no matches stored, and an unknown count, never claim 'between'", () => {
+  assert.equal(cricketSeriesDescription({ ...ranji, match_count: 0 }, false), "Ranji Trophy 2000-01: fixtures, results and live scores, as matches are listed.");
+  assert.doesNotMatch(cricketSeriesDescription(ranji, false), /between/);
 });
