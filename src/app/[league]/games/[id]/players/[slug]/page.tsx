@@ -5,6 +5,7 @@ import { pageMeta } from "@/lib/metadata";
 import { loadPerformanceCardData, type PerformanceCardData } from "@/lib/performanceCardData";
 import { performanceTags } from "@/lib/performanceTags";
 import { getGameDetails } from "@/lib/queries";
+import { isMlbStandout } from "@/lib/mlbStandouts";
 import { gameLeadersShown, gameSections, hasNoBoxScore } from "@/lib/gamePage";
 import { ImageActions } from "@/components/ImageActions";
 import { LEAGUE_LABEL } from "@/lib/leagues";
@@ -31,6 +32,9 @@ export function generateStaticParams() {
 // Stored-only, same as the game page's own generateMetadata (games/[id]/page.tsx) — a game with no
 // stored box score has nothing to index here either way.
 async function isIndexedLeader(data: PerformanceCardData): Promise<boolean> {
+  // ESPN's baseball summary has no leaders, so an MLB line is indexed when it is a standout one (mlbStandouts.ts), the
+  // same test the sitemap lists it by.
+  if (data.league === "mlb") return data.game.completed && isMlbStandout(data.row.stats);
   const details = data.game.completed ? await getGameDetails(data.league, data.game.espn_id) : null;
   if (!details) return false;
   const noBoxScore = hasNoBoxScore(data.game, details.player_box);
