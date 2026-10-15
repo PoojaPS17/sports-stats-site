@@ -19,6 +19,7 @@ import { article as raysSweepYankeesAldsFirstEver } from "@/content/beyondTheSco
 import { article as guardians21StrikeoutsAldsComeback } from "@/content/beyondTheScoreline/guardians-21-strikeouts-alds-comeback";
 import { article as davies253SheffieldShieldFastestDoubleCentury } from "@/content/beyondTheScoreline/davies-253-sheffield-shield-fastest-double-century";
 import { article as brewers20NlcsLeadByTheNumbers } from "@/content/beyondTheScoreline/brewers-2-0-nlcs-lead-by-the-numbers";
+import { article as luus167TitansCsaPro50RunawayStart } from "@/content/beyondTheScoreline/luus-167-titans-csa-pro50-runaway-start";
 
 export type ArtPalette = "football" | "cricket" | "f1" | "asian-games" | "nfl" | "nba" | "mlb" | "tennis" | "neutral";
 
@@ -95,6 +96,7 @@ export const ARTICLES: BeyondTheScorelineArticle[] = [
   guardians21StrikeoutsAldsComeback,
   davies253SheffieldShieldFastestDoubleCentury,
   brewers20NlcsLeadByTheNumbers,
+  luus167TitansCsaPro50RunawayStart,
 ];
 
 assertUniqueSlugs(ARTICLES);
