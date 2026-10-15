@@ -4,7 +4,7 @@ import { CSAPro50RunLeadersChart } from "@/components/CSAPro50RunLeadersChart";
 
 export const article: BeyondTheScorelineArticle = {
   slug: "luus-167-titans-csa-pro50-runaway-start",
-  title: "Luus's 167 and Titans' 2-0 Start, by the Numbers",
+  title: "Luus's 167 Puts Titans Alone Atop the Pro50",
   dek: "Sune Luus's unbeaten 167 off 131 balls, backed by a 5 for 19 from Caitlin Wyngaard, gave Titans Women a 211-run win over Lions Women and a 2-0 start to the CSA Women's Pro50, with Luus now the competition's leading run-scorer.",
   publishedAt: "2026-10-15",
   readingMinutes: 5,
