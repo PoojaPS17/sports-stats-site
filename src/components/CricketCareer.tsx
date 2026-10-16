@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { SectionHeader } from "./SectionHeader";
 import { CricketSplitTabs } from "./CricketSplitTabs";
+import { CricketMatchLog } from "./CricketMatchLog";
+import type { CricketMatchLogRow } from "@/lib/cricketMatchLog";
 import { CRICKET_SPLIT_DIMENSIONS, LEAGUE_LABEL } from "@/lib/queries";
 import { cricketCareerNote } from "@/lib/cricketCareerNote";
 import { highScoreText, trunc2 } from "@/lib/cricketFormat";
@@ -61,10 +63,13 @@ export function CricketCareer({
   league,
   career,
   splits,
+  matchLog = [],
 }: {
   league: League;
   career: CricketCareerStats;
   splits: Record<CricketSplitDimension, CricketSplitRow[]>;
+  /** The player's latest matches, newest first (getPlayerCricketMatchLog). */
+  matchLog?: CricketMatchLogRow[];
 }) {
   const strikeRate = strikeRateTile(career.strikeRate, career.inningsWithBalls, career.inningsBatted, trunc2);
   return (
@@ -111,6 +116,16 @@ export function CricketCareer({
           )}
         </div>
       </section>
+
+      {matchLog.length > 0 && (
+        <section>
+          <SectionHeader>Match Log</SectionHeader>
+          <p className="-mt-2 mb-3 text-xs text-[var(--text-muted)]">
+            Latest {matchLog.length} {LEAGUE_LABEL[league]} {matchLog.length === 1 ? "match" : "matches"}, newest first. Each opens the full scorecard.
+          </p>
+          <CricketMatchLog league={league} rows={matchLog} />
+        </section>
+      )}
 
       <section>
         <SectionHeader>Career Splits</SectionHeader>

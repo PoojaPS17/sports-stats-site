@@ -1,3 +1,4 @@
+import { groupMatchLog, type CricketMatchLogRow } from "./cricketMatchLog";
 import { BETTING_TEXT_PG, isBettingApp } from "./betting";
 import { pool } from "./db";
 import { CALLED_OFF, isGameCalledOff } from "./gameStatus";
@@ -1263,6 +1264,40 @@ export async function getPlayerCricketSplits(
     [league, playerEspnId]
   );
   return rows;
+}
+
+/**
+ * A cricketer's most recent matches in one competition, newest first, with the figures of every innings he batted or bowled in.
+ * The limit counts matches, not innings. Reads only his own rows (player_game_stats_player_idx).
+ */
+export async function getPlayerCricketMatchLog(league: League, playerEspnId: string, limit = 20): Promise<CricketMatchLogRow[]> {
+  if (!isCricketLeague(league)) return [];
+  const { rows } = await pool.query(
+    `with recent as (
+       select pgs.game_espn_id, pgs.team_espn_id, pgs.stats, g.date, g.local_date, g.status_summary, g.home_team_espn_id, g.away_team_espn_id
+       from player_game_stats pgs
+       join games g on g.league = pgs.league and g.espn_id = pgs.game_espn_id
+       where pgs.league = $1 and pgs.player_espn_id = $2
+       order by g.date desc, pgs.game_espn_id desc
+       limit $3
+     )
+     select r.game_espn_id,
+            to_char(r.date at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as date,
+            r.local_date::text as local_date,
+            opp.name as opponent,
+            r.status_summary as result,
+            (inn->'batting'->>'runs')::int as runs,
+            (inn->'batting'->>'notOut')::boolean as "notOut",
+            (inn->'bowling'->>'wickets')::int as wickets,
+            (inn->'bowling'->>'conceded')::int as conceded,
+            (inn->'bowling'->>'overs')::numeric::float8 as overs
+     from recent r
+     left join teams opp on opp.league = $1 and opp.espn_id = (case when r.team_espn_id = r.home_team_espn_id then r.away_team_espn_id else r.home_team_espn_id end)
+     cross join lateral jsonb_array_elements(coalesce(r.stats->'innings', jsonb_build_array(r.stats))) with ordinality as i(inn, n)
+     order by r.date desc, r.game_espn_id desc, i.n`,
+    [league, playerEspnId, limit]
+  );
+  return groupMatchLog(rows);
 }
 
 export interface CenturyRow {

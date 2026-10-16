@@ -21,6 +21,7 @@ import {
   getPlayerFirstStoredYears,
   getPlayerOtherLeagues,
   getPlayerCricketSplits,
+  getPlayerCricketMatchLog,
   CRICKET_SPLIT_DIMENSIONS,
   type CricketSplitDimension,
   type CricketSplitRow,
@@ -156,11 +157,12 @@ export default async function PlayerPage({
   if (isCricketLeague(league) || !sport) {
     // Every split at once: they are tabs in the page now, so the player has one address and the
     // page renders the same for everyone (which is what lets it be cached).
-    const [career, otherFormats, firstYears, splitRows] = await Promise.all([
+    const [career, otherFormats, firstYears, splitRows, matchLog] = await Promise.all([
       cachedCareer(league, player.espn_id),
       getPlayerOtherFormats(league, player.espn_id),
       getPlayerFirstStoredYears(player.espn_id),
       Promise.all(CRICKET_SPLIT_DIMENSIONS.map((d) => getPlayerCricketSplits(league, player.espn_id, d.key))),
+      getPlayerCricketMatchLog(league, player.espn_id),
     ]);
     const splits = Object.fromEntries(CRICKET_SPLIT_DIMENSIONS.map((d, i) => [d.key, splitRows[i]])) as Record<CricketSplitDimension, CricketSplitRow[]>;
     return (
@@ -168,7 +170,7 @@ export default async function PlayerPage({
         {header(playerMeta(null, player))}
         <CricketOtherFormats name={player.name} formats={otherFormats} note={cricketFormatNote(player.name, league, firstYears, otherFormats.map((f) => f.league))} />
         {career ? (
-          <CricketCareer league={league} career={career} splits={splits} />
+          <CricketCareer league={league} career={career} splits={splits} matchLog={matchLog} />
         ) : (
           <p className="card px-4 py-6 text-sm text-[var(--text-muted)]">No matches on record yet.</p>
         )}
