@@ -90,7 +90,15 @@ export default async function F1StandingsPage({
                           {d.name}
                         </Link>
                       </td>
-                      <td className="py-2 text-[var(--text-muted)]">{d.constructor_name ?? "—"}</td>
+                      <td className="py-2 text-[var(--text-muted)]">
+                        {d.constructor_name && d.constructor_slug ? (
+                          <Link prefetch={false} href={`/f1/teams/${d.constructor_slug}`} className="hover:underline">
+                            {d.constructor_name}
+                          </Link>
+                        ) : (
+                          (d.constructor_name ?? "—")
+                        )}
+                      </td>
                       <td className="py-2 text-right tabular-nums text-[var(--text-muted)]">{d.wins ?? 0}</td>
                       <td className="py-2 pr-4 text-right font-bold tabular-nums">{d.points ?? 0}</td>
                     </tr>

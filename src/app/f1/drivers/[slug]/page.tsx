@@ -41,7 +41,9 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
   const driver = (await getF1DriverBySlug(slug)) ?? (await playerNotFound("f1", slug, (s) => `/f1/drivers/${s}`));
 
   const results = await getF1DriverResults(driver.espn_id);
-  const currentTeam = results.find((r) => r.constructor_name)?.constructor_name ?? null;
+  const latestWithTeam = results.find((r) => r.constructor_name);
+  const currentTeam = latestWithTeam?.constructor_name ?? null;
+  const currentTeamSlug = latestWithTeam?.constructor_slug ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,7 +52,17 @@ export default async function F1DriverPage({ params }: { params: Promise<{ slug:
         <TeamLogo name={driver.name} logoUrl={driver.headshot_url} size={56} priority />
         <div>
           <h1 className="page-title">{driver.name}</h1>
-          <p className="text-sm text-[var(--text-muted)]">F1{currentTeam && ` · ${currentTeam}`}</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            F1
+            {currentTeam && " · "}
+            {currentTeam && currentTeamSlug ? (
+              <Link prefetch={false} href={`/f1/teams/${currentTeamSlug}`} className="hover:underline">
+                {currentTeam}
+              </Link>
+            ) : (
+              currentTeam
+            )}
+          </p>
         </div>
       </div>
 

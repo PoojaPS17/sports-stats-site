@@ -126,7 +126,15 @@ export default async function F1EventPage({ params }: { params: Promise<{ id: st
                                 {r.driver_name}
                               </Link>
                             </td>
-                            <td className="py-2 pr-4 text-[var(--text-muted)]">{r.constructor_name ?? "—"}</td>
+                            <td className="py-2 pr-4 text-[var(--text-muted)]">
+                              {r.constructor_name && r.constructor_slug ? (
+                                <Link prefetch={false} href={`/f1/teams/${r.constructor_slug}`} className="hover:underline">
+                                  {r.constructor_name}
+                                </Link>
+                              ) : (
+                                (r.constructor_name ?? "—")
+                              )}
+                            </td>
                           </tr>
                         ))}
                     </tbody>
