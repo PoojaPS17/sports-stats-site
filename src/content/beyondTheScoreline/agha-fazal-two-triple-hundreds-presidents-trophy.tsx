@@ -4,7 +4,7 @@ import { PresidentsTrophySeasonTopScoresChart } from "@/components/PresidentsTro
 
 export const article: BeyondTheScorelineArticle = {
   slug: "agha-fazal-two-triple-hundreds-presidents-trophy",
-  title: "Two Triple Hundreds: The President's Trophy by the Numbers",
+  title: "Agha's 300, Fazal's 309: Pakistan's Triple-Century Season",
   dek: "Salman Agha's unbeaten 300 at Abbottabad and Abdullah Fazal's unbeaten 309 two weeks later have given this President's Trophy season two triple centuries, both from batters recently dropped by Pakistan's Test side, with State Bank of Pakistan unbeaten atop the table ahead of this month's final.",
   publishedAt: "2026-10-16",
   readingMinutes: 5,
