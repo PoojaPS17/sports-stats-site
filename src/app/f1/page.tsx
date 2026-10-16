@@ -1,7 +1,8 @@
 import { pageMeta } from "@/lib/metadata";
 import Link from "next/link";
-import { getF1Calendar, getF1Seasons } from "@/lib/f1";
+import { getF1Calendar, getF1ConstructorStandings, getF1Seasons } from "@/lib/f1";
 import { AdSlot } from "@/components/AdSlot";
+import { SectionHeader } from "@/components/SectionHeader";
 import { F1SeasonSelect } from "@/components/F1SeasonSelect";
 import { CalendarButton } from "@/components/CalendarButton";
 import { ImageActions } from "@/components/ImageActions";
@@ -19,7 +20,9 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
   const defaultSeason = seasons[0] ?? new Date().getUTCFullYear();
   const activeSeason = seasonParam && seasons.includes(Number(seasonParam)) ? Number(seasonParam) : defaultSeason;
 
-  const calendar = await getF1Calendar(activeSeason);
+  const [calendar, constructors] = await Promise.all([getF1Calendar(activeSeason), getF1ConstructorStandings(activeSeason)]);
+  // Only a team that still has a page of its own (a team that no longer exists has no slug).
+  const teams = constructors.filter((c) => c.slug);
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,6 +79,19 @@ export default async function F1CalendarPage({ searchParams }: { searchParams: P
             })}
           </div>
         </div>
+      )}
+
+      {teams.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <SectionHeader>Teams {activeSeason}</SectionHeader>
+          <div className="flex flex-wrap gap-1.5">
+            {teams.map((t) => (
+              <Link key={t.team_espn_id} prefetch={false} href={`/f1/teams/${t.slug}`} className="nav-pill text-sm text-[var(--text-muted)]">
+                {t.name}
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

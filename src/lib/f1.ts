@@ -93,12 +93,21 @@ export interface F1SessionResultRow {
   winner: boolean;
   /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
+  /** The team page's slug, or null for a team with no page (Sauber, Force India, ...). */
+  constructor_slug: string | null;
   car_number: string | null;
   /** ESPN's status name and laps completed as stored by the event backfill; null until it has run. */
   status: string | null;
   laps: number | null;
   /** Ret, DSQ, NC or DNS, shown in place of the position. */
   result_label: F1ResultLabel | null;
+}
+
+// The slug of each team that has a page, keyed by the name ESPN stored (the name the team page matches results on), so a
+// result row can link its team before f1TeamLabel() rewrites the name for display.
+async function getF1ConstructorSlugs(): Promise<Map<string, string>> {
+  const { rows } = await pool.query(`select name, slug from teams where league = 'f1'`);
+  return new Map(rows.map((r) => [r.name as string, r.slug as string]));
 }
 
 // A session's rows come back in the order they are shown: a race or sprint in classification order (retirements by laps
@@ -116,7 +125,8 @@ export async function getF1EventResults(eventEspnId: string): Promise<F1SessionR
      order by s.date asc, r.position asc nulls last`,
     [eventEspnId, F1_PRACTICE_ONLY_STATUS]
   );
-  type RawRow = Omit<F1SessionResultRow, "result_label"> & { season_year: number | null };
+  type RawRow = Omit<F1SessionResultRow, "result_label" | "constructor_slug"> & { season_year: number | null };
+  const slugs = await getF1ConstructorSlugs();
   const sessions = new Map<string, RawRow[]>();
   for (const r of rows as RawRow[]) {
     if (!sessions.has(r.session_espn_id)) sessions.set(r.session_espn_id, []);
@@ -128,7 +138,7 @@ export async function getF1EventResults(eventEspnId: string): Promise<F1SessionR
     const ordered = STATUS_SESSION_TYPES.includes(type)
       ? orderF1Classification(type === "Race" ? eventEspnId : null, sessionRows)
       : sessionRows.map((r) => ({ ...r, result_label: null as F1ResultLabel | null }));
-    for (const { season_year, ...r } of ordered) out.push({ ...r, constructor_name: f1TeamLabel(season_year, r.constructor_name) });
+    for (const { season_year, ...r } of ordered) out.push({ ...r, constructor_slug: (r.constructor_name && slugs.get(r.constructor_name)) || null, constructor_name: f1TeamLabel(season_year, r.constructor_name) });
   }
   return out;
 }
@@ -143,6 +153,8 @@ export interface F1DriverStandingRow {
   headshot_url: string | null;
   /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
+  /** The team page's slug, or null for a team with no page. */
+  constructor_slug: string | null;
 }
 
 // A driver's constructor isn't on the standings row itself (ESPN's standings entry is
@@ -174,7 +186,8 @@ export async function getF1DriverStandings(seasonYear: number): Promise<F1Driver
      order by fs.position asc nulls last`,
     [seasonYear]
   );
-  const table = rows.map((r) => ({ ...r, points: r.points == null ? null : Number(r.points), constructor_name: f1TeamLabel(seasonYear, r.constructor_name) }));
+  const slugs = await getF1ConstructorSlugs();
+  const table = rows.map((r) => ({ ...r, points: r.points == null ? null : Number(r.points), constructor_slug: (r.constructor_name && slugs.get(r.constructor_name)) || null, constructor_name: f1TeamLabel(seasonYear, r.constructor_name) }));
   return applyF1StandingsCorrections(seasonYear, "driver", table, (r) => r.driver_espn_id);
 }
 
@@ -249,6 +262,8 @@ export interface F1DriverResultRow {
   winner: boolean;
   /** The team's name in that season (f1TeamLabel), not the name ESPN stored. */
   constructor_name: string | null;
+  /** The team page's slug, or null for a team with no page. */
+  constructor_slug: string | null;
   /** ESPN's circuit name, which f1Dates.ts reads the race's day at (f1FormatDate). */
   circuit_name: string | null;
   /** Ret, DSQ, NC or DNS, shown in place of the position. */
@@ -288,7 +303,8 @@ export async function getF1DriverResults(driverEspnId: string, limit = 20): Prom
      limit $2`,
     [driverEspnId, limit, F1_PRACTICE_ONLY_STATUS]
   );
-  return (await withShownRaceResults(rows)).map(({ season_year, ...r }) => ({ ...r, event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
+  const slugs = await getF1ConstructorSlugs();
+  return (await withShownRaceResults(rows)).map(({ season_year, ...r }) => ({ ...r, event_name: f1RaceName(r.event_espn_id, r.event_name), constructor_slug: (r.constructor_name && slugs.get(r.constructor_name)) || null, constructor_name: f1TeamLabel(season_year, r.constructor_name) }));
 }
 
 export interface F1Constructor {
